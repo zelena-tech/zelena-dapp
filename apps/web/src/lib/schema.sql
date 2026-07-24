@@ -132,6 +132,20 @@ CREATE TABLE IF NOT EXISTS decision_log (
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Genoma versionado: los parametros evolutivos del sistema (presupuestos, caps,
+-- topes) viven aqui, NO hardcodeados. Append-only: cada cambio es una version
+-- nueva ligada a una entrada del decision_log; nada aplica retroactivamente
+-- (effective_from_epoch marca desde que epoca rige). Ver docs/specs/WP02-genoma.md.
+CREATE TABLE IF NOT EXISTS genome_versions (
+  id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+  version              INTEGER NOT NULL UNIQUE,
+  params               TEXT NOT NULL,           -- JSON de los parametros evolutivos
+  effective_from_epoch INTEGER NOT NULL,        -- epoca desde la que rige (nunca retroactivo)
+  decision_log_id      INTEGER,                 -- entrada del decision_log que la publica
+  created_at           TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (decision_log_id) REFERENCES decision_log(id)
+);
+
 CREATE TABLE IF NOT EXISTS proposals (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   title       TEXT NOT NULL,

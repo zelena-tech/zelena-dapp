@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { listAcademia, academiaAwardsToday, academiaAlreadyAwarded } from "@/lib/repo";
 import { getSession } from "@/lib/session";
-import { ACADEMIA_DAILY_CAP, ACADEMIA_BUDGET } from "@/lib/config";
+import { getDb } from "@/lib/db";
+import { getActiveGenome } from "@/lib/genome";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,7 @@ export default async function AcademiaPage() {
   const session = await getSession();
   const today = new Date().toISOString().slice(0, 10);
   const usedToday = session ? academiaAwardsToday(session.wallet, today) : 0;
+  const genome = getActiveGenome(getDb());
 
   return (
     <div className="space-y-8">
@@ -24,10 +26,10 @@ export default async function AcademiaPage() {
       {session ? (
         <div className="card flex flex-wrap items-center justify-between gap-3 p-4 text-sm">
           <span className="text-muted">
-            Contenidos con puntos hoy: <span className="text-primary">{usedToday}</span> / {ACADEMIA_DAILY_CAP}
+            Contenidos con puntos hoy: <span className="text-primary">{usedToday}</span> / {genome.ACADEMIA_DAILY_CAP}
           </span>
           <span className="text-faint">
-            2º del día 75% · 3º 50% · presupuesto de época Academia: {ACADEMIA_BUDGET.toLocaleString("es")} pts
+            2º del día 75% · 3º 50% · presupuesto de época Academia: {genome.ACADEMIA_BUDGET.toLocaleString("es")} pts
           </span>
         </div>
       ) : (

@@ -4,11 +4,12 @@
  * ACTIVAS (sin usar y no expiradas). Consumo atómico anti-doble-uso.
  */
 import type { DB } from "./db";
-import { TIER_INVITE_CAPS } from "./config";
+import { getActiveGenome } from "./genome";
 import { randomBytes } from "node:crypto";
 
-export function inviteCap(tier: string): number {
-  return TIER_INVITE_CAPS[tier] ?? TIER_INVITE_CAPS.Bronze;
+export function inviteCap(db: DB, tier: string): number {
+  const caps = getActiveGenome(db).TIER_INVITE_CAPS;
+  return caps[tier] ?? caps.Bronze;
 }
 
 export function countActiveInvites(db: DB, issuerWallet: string): number {
@@ -36,7 +37,7 @@ export function generateInvite(db: DB, issuerWallet: string, tier: string): stri
   // Transacción: el conteo y el insert son atómicos (fix TOCTOU, security-review #4).
   const tx = db.transaction((): string => {
     const active = countActiveInvites(db, issuerWallet);
-    if (active >= inviteCap(tier)) throw new InviteCapError();
+    if (active >= inviteCap(db, tier)) throw new InviteCapError();
     const code = genCode();
     db.prepare(
       `INSERT INTO invites (code, issuer_wallet, expires_at)

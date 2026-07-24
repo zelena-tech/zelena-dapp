@@ -27,7 +27,7 @@ describe("invitaciones", () => {
   });
 
   it("respeta el tope de tier (Bronze=2)", () => {
-    expect(inviteCap("Bronze")).toBe(2);
+    expect(inviteCap(db, "Bronze")).toBe(2);
     generateInvite(db, "ISSUER", "Bronze");
     generateInvite(db, "ISSUER", "Bronze");
     expect(countActiveInvites(db, "ISSUER")).toBe(2);

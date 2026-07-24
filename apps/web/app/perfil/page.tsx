@@ -10,7 +10,8 @@ import {
   getUser,
 } from "@/lib/repo";
 import { getDb } from "@/lib/db";
-import { REPUTATION_AXES, AXIS_LABEL, TIER_INVITE_CAPS } from "@/lib/config";
+import { REPUTATION_AXES, AXIS_LABEL } from "@/lib/config";
+import { getActiveGenome } from "@/lib/genome";
 import { ProgressBar, shortWallet } from "@/components/ui";
 import InviteGenerator from "@/components/InviteGenerator";
 
@@ -27,7 +28,7 @@ export default async function PerfilPage() {
   const points = totalPoints(wallet);
   const cla = claSignature(wallet);
   const tier = user?.tier ?? session.tier ?? "Bronze";
-  const cap = TIER_INVITE_CAPS[tier] ?? 2;
+  const cap = getActiveGenome(getDb()).TIER_INVITE_CAPS[tier] ?? 2;
 
   const invites = getDb()
     .prepare(

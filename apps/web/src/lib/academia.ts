@@ -10,11 +10,7 @@
  */
 import type { DB } from "./db";
 import { randomToken } from "./crypto";
-import {
-  ACADEMIA_DAILY_CAP,
-  ACADEMIA_DIMINISHING,
-  ACADEMIA_BUDGET,
-} from "./config";
+import { getActiveGenome } from "./genome";
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
@@ -123,19 +119,22 @@ export function gradeQuiz(
   const already = db.prepare(`SELECT 1 AS x FROM academia_awards WHERE wallet = ? AND content_id = ?`).get(wallet, content.id);
   if (already) return { passed: true, correct, points: 0 };
 
+  // Parámetros evolutivos desde el genoma activo (nunca hardcodeados — WP02).
+  const genome = getActiveGenome(db);
+
   const day = today();
   const usedToday = (
     db.prepare(`SELECT COUNT(*) AS n FROM academia_awards WHERE wallet = ? AND day = ?`).get(wallet, day) as {
       n: number;
     }
   ).n;
-  if (usedToday >= ACADEMIA_DAILY_CAP) {
+  if (usedToday >= genome.ACADEMIA_DAILY_CAP) {
     const err = new Error("Alcanzaste el máximo de contenidos con puntos por hoy.");
     (err as Error & { code?: string }).code = "DAILY_CAP";
     throw err;
   }
 
-  const multiplier = ACADEMIA_DIMINISHING[usedToday] ?? 0.5;
+  const multiplier = genome.ACADEMIA_DIMINISHING[usedToday] ?? 0.5;
   let points = Math.round(content.points * multiplier);
 
   // Presupuesto de época de Academia (separado).
@@ -144,8 +143,8 @@ export function gradeQuiz(
       n: number;
     }
   ).n;
-  if (academiaSpent + points > ACADEMIA_BUDGET) {
-    points = Math.max(0, ACADEMIA_BUDGET - academiaSpent);
+  if (academiaSpent + points > genome.ACADEMIA_BUDGET) {
+    points = Math.max(0, genome.ACADEMIA_BUDGET - academiaSpent);
   }
   if (points <= 0) {
     const err = new Error("Presupuesto de Academia de la época agotado.");

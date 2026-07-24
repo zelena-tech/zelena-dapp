@@ -11,16 +11,12 @@ function founderWallet(): string {
 }
 export const FOUNDER_WALLET = founderWallet();
 
-export const EPOCH_BUDGET = 100_000; // puntos ZWORK totales de la época
-export const ACADEMIA_BUDGET = 5_000; // presupuesto separado de Academia
-
+// CLA_VERSION es legal, no evolutivo: NO va en el genoma (WP02).
 export const CLA_VERSION = 1;
 
-export const TIER_INVITE_CAPS: Record<string, number> = {
-  Bronze: 2,
-  Silver: 5,
-  Gold: 10,
-};
+// NOTA (WP02): los parámetros EVOLUTIVOS del sistema (EPOCH_BUDGET, ACADEMIA_*,
+// TIER_INVITE_CAPS) ya NO viven aquí. Son configuración versionada en DB: léelos
+// SIEMPRE vía getActiveGenome() de lib/genome.ts. Nunca hardcodees valores nuevos.
 
 export const REPUTATION_AXES = [
   "ejecucion",
@@ -36,9 +32,3 @@ export const AXIS_LABEL: Record<Axis, string> = {
   comunidad: "Comunidad",
   gobernanza: "Gobernanza",
 };
-
-// Academia: cap diario de contenidos con puntos y rendimientos decrecientes.
-export const ACADEMIA_DAILY_CAP = 3;
-export const ACADEMIA_DIMINISHING = [1, 0.75, 0.5]; // 1º, 2º, 3º del día
-// Los puntos de Academia pesan la mitad para futuros votos.
-export const ACADEMIA_VOTE_WEIGHT = 0.5;
