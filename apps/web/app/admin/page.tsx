@@ -54,7 +54,8 @@ export default async function AdminPage() {
                     <span className="ml-2 text-xs text-faint">{shortWallet(a.wallet)}</span>
                   </div>
                   <span className={`tag ${a.status === "approved" ? "tag-sas" : a.status === "rejected" ? "border-red-900/60 text-red-400" : "border-line text-muted"}`}>
-                    {a.status}
+                    {/* Se califica la propuesta, no la persona (regla de producto doc 16). */}
+                    {a.status === "approved" ? "aprobada" : a.status === "rejected" ? "no seleccionada" : "en revisión"}
                   </span>
                 </div>
                 <p className="mt-2 text-sm text-muted">{a.approach}</p>
@@ -62,7 +63,7 @@ export default async function AdminPage() {
                 {a.status === "pending" ? (
                   <div className="mt-3 flex gap-2">
                     <AdminAction action="approveApplication" payload={{ applicationId: a.id }} label="Aprobar y asignar" variant="primary" />
-                    <AdminAction action="rejectApplication" payload={{ applicationId: a.id }} label="Rechazar" variant="danger" />
+                    <AdminAction action="rejectApplication" payload={{ applicationId: a.id }} label="No seleccionar" variant="danger" />
                   </div>
                 ) : null}
               </div>
