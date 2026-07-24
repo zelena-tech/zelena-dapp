@@ -1,0 +1,23 @@
+# Node
+node_modules/
+.next/
+out/
+dist/
+*.log
+.env
+.env.local
+.env.*.local
+
+# Rust / Soroban
+target/
+**/*.rs.bk
+.soroban/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# Zelena Dapp — datos locales y secretos del worker
+apps/web/data/
+packages/scripts/.service-account.secret

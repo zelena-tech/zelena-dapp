@@ -1,0 +1,14 @@
+{
+  "name": "zelena-dapp",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Dapp del ecosistema Zelena DAO (Next.js + Soroban).",
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev": "npm --workspace apps/web run dev",
+    "build": "npm --workspace apps/web run build",
+    "lint": "npm --workspace apps/web run lint",
+    "contracts:build": "bash -c 'cd packages/contracts && cargo build --target wasm32-unknown-unknown --release'"
+  },
+  "license": "SEE LICENSE IN LICENSE"
+}

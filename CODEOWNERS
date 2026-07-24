@@ -1,0 +1,10 @@
+# Revisores obligatorios de las rutas críticas (Founder / SAS).
+# Reemplaza @john por el usuario real de GitHub.
+
+*                                   @john
+/packages/contracts/                @john
+/packages/scripts/                  @john
+/apps/web/lib/                       @john
+/.github/                            @john
+/CLA.md                              @john
+/LICENSE                             @john

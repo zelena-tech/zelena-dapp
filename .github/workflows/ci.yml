@@ -1,0 +1,19 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm install --workspace apps/web
+      - run: npm --workspace apps/web run lint
+      - run: npm --workspace apps/web run build
+  cla-check:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Verificar que el autor del PR haya firmado el CLA (integrar CLA-bot)."

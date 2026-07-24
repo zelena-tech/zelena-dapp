@@ -1,0 +1,17 @@
+{
+  "name": "@zelena/scripts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Utilidades off-chain de Zelena: worker de anclaje de hashes en Stellar testnet.",
+  "scripts": {
+    "anchor": "node anchor-worker.mjs",
+    "anchor:watch": "node anchor-worker.mjs --watch"
+  },
+  "dependencies": {
+    "@stellar/stellar-sdk": "^12.3.0"
+  },
+  "optionalDependencies": {
+    "better-sqlite3": "^11.8.1"
+  }
+}

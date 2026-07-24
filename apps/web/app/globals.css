@@ -1,0 +1,163 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #080808;
+  color: #e8f0e2;
+  font-family: "Space Mono", ui-monospace, "Cascadia Mono", Consolas, "Courier New", monospace;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+/* Glow radial superior, marca Zelena */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(circle at 50% -10%, rgba(60, 225, 9, 0.06), transparent 55%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Scanlines de terminal, casi imperceptibles */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.16) 0px,
+    rgba(0, 0, 0, 0.16) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  opacity: 0.35;
+  pointer-events: none;
+  z-index: 1;
+}
+
+@layer base {
+  h1, h2, h3, .head {
+    font-family: "Space Mono", ui-monospace, "Cascadia Mono", Consolas, "Courier New", monospace;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    text-transform: uppercase;
+  }
+  ::selection {
+    background: rgba(60, 225, 9, 0.3);
+    color: #080808;
+  }
+  :focus-visible {
+    outline: 2px solid #3ce109;
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* Cajas: esquinas rectas, presencia mínima. El contenido manda. */
+  .card {
+    @apply border border-line bg-surface/60 transition-all duration-175;
+  }
+  .card-hover:hover {
+    @apply border-primary/60;
+    box-shadow: 0 0 24px -8px rgba(60, 225, 9, 0.35);
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-bold uppercase tracking-wider transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply bg-primary text-black hover:brightness-110;
+    box-shadow: 0 0 16px -4px rgba(60, 225, 9, 0.5);
+  }
+  .btn-ghost {
+    @apply border border-line-strong text-primary hover:border-primary/70 hover:bg-glow;
+  }
+  .btn-danger {
+    @apply border border-red-900/60 text-red-400 hover:bg-red-950/40;
+  }
+  .tag {
+    @apply inline-flex items-center border px-2 py-0.5 text-xs font-bold uppercase tracking-widest;
+  }
+  .tag-sas {
+    @apply border-primary/40 bg-glow text-primary;
+  }
+  .tag-dao {
+    @apply border-sky-700/50 bg-sky-950/30 text-sky-300;
+  }
+  .input {
+    @apply w-full border border-line bg-surface-2 px-3 py-2 text-sm text-white placeholder:text-faint focus:border-primary/60 focus:outline-none;
+  }
+  .label {
+    @apply mb-1 block text-xs font-bold uppercase tracking-widest text-muted;
+  }
+  .skeleton {
+    @apply relative overflow-hidden bg-surface-2;
+  }
+  .skeleton::after {
+    content: "";
+    @apply absolute inset-0 -translate-x-full;
+    background: linear-gradient(90deg, transparent, rgba(60, 225, 9, 0.08), transparent);
+    animation: shimmer 1.5s infinite;
+  }
+
+  /* ---- Lenguaje zine/terminal ---- */
+  .rule {
+    @apply border-t border-dashed border-line-strong;
+  }
+  .prompt {
+    @apply text-sm text-primary;
+  }
+  .prompt::before {
+    content: "$ ";
+    opacity: 0.7;
+  }
+  .cursor::after {
+    content: "▮";
+    @apply ml-0.5 inline-block text-primary;
+    animation: blink 1.1s step-end infinite;
+  }
+  .file-row {
+    @apply flex flex-wrap items-baseline gap-x-3 gap-y-1 border-t border-dashed border-line py-4 transition-colors duration-150;
+  }
+  .file-row:hover {
+    @apply border-primary/50 bg-glow/40;
+  }
+  .strike-zine {
+    text-decoration: line-through;
+    text-decoration-color: rgba(60, 225, 9, 0.65);
+    text-decoration-thickness: 2px;
+  }
+  .term {
+    @apply border border-line bg-black/60 p-5 text-sm leading-7;
+  }
+  .dots {
+    @apply text-faint;
+  }
+}
+
+.glow-text {
+  text-shadow: 0 0 18px rgba(60, 225, 9, 0.45);
+}
+
+.bar-track {
+  background: #0c0e0c;
+  border: 1px solid #1e2a18;
+}
+.bar-fill {
+  background: linear-gradient(90deg, #2ba307, #3ce109);
+  box-shadow: 0 0 10px -2px rgba(60, 225, 9, 0.6);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cursor::after { animation: none; }
+  .skeleton::after { animation: none; }
+}

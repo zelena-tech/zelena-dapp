@@ -1,0 +1,29 @@
+# QUEUE — Cola dinámica de trabajo
+
+Protocolo: tomar el primer `ready` cuyas dependencias estén `done`. Estados: `ready` · `in_progress` · `done` · `blocked` (técnico, con nota) · `needs_human` (falta algo de John) · `blocked_external` (gate legal/comercial).
+
+Los ítems `FBxx` (feedback de John, ver FEEDBACK.md) tienen prioridad sobre los WP.
+
+| ID | Work package | Estado | Depende de | Rama | Nota |
+|---|---|---|---|---|---|
+| WP00 | Limpieza + baseline verde | in_progress | — | wp/00-limpieza | Ejecutable esta noche |
+| WP01 | Verificación criptográfica de firma | ready | WP00 | wp/01-firma | Seguridad Alta #1 — prioridad máxima |
+| WP02 | Genoma v1 (config → DB versionada) | ready | WP00 | wp/02-genoma | Ejecutable esta noche |
+| WP03 | Capa DB lista para Turso/Postgres | ready | WP00 | wp/03-db | Implementar driver + tests locales; credenciales Turso = John |
+| WP04 | Identidad Privy | needs_human | WP01 | wp/04-privy | Requiere PRIVY_APP_ID/SECRET de John. Scaffolding detrás de flag sí es ejecutable |
+| WP05 | Deploy público + worker | needs_human | WP01, WP03 | — | Vercel/VPS login = John |
+| WP06 | Repo público + CLA-bot | needs_human | WP00 | — | Org GitHub = John |
+| WP07 | Motor de épocas (fitness) | ready | WP02 | wp/07-fitness | Ejecutable esta noche tras WP02 |
+| WP08 | Mutación por época (admin) | ready | WP07 | wp/08-mutacion | |
+| WP09 | Reglas conductuales UI | ready | WP00 | wp/09-ui-conductual | Ejecutable esta noche |
+| WP10 | Nómina Modo A+ | blocked_external | WP05 | wp/10-nomina | Gate: consulta legal/tributaria. UI + schema sí ejecutables detrás de flag |
+| WP11 | Simulador ABM | ready | WP02 | wp/11-sim | Ejecutable esta noche tras WP02 |
+| WP12 | Auditoría funciones latentes | ready | WP09 | wp/12-auditoria | Plantilla + página gobernanza |
+
+## Orden sugerido para el primer loop nocturno
+
+WP00 → WP01 → WP02 → WP09 → WP07 → WP11 → WP03 → WP08 → WP12 → scaffolding de WP04/WP10 detrás de flags → NIGHT-REPORT.md
+
+## Registro de cierres
+
+(El loop añade aquí una línea por WP cerrado: fecha · WP · commit · tests)
