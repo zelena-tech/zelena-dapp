@@ -9,7 +9,7 @@ Los ítems `FBxx` (feedback de John, ver FEEDBACK.md) tienen prioridad sobre los
 | WP00 | Limpieza + baseline verde | done | — | wp/00-limpieza | ✅ 4524dff · tag v0.1-genesis · develop |
 | WP01 | Verificación criptográfica de firma | done | WP00 | wp/01-firma | ✅ ed25519 + domain separator; H1/H3 cerrados |
 | WP02 | Genoma v1 (config → DB versionada) | done | WP00 | wp/02-genoma | ✅ genome_versions + getActiveGenome; consumidores migrados |
-| WP03 | Capa DB lista para Turso/Postgres | ready | WP00 | wp/03-db | Implementar driver + tests locales; credenciales Turso = John |
+| WP03 | Capa DB lista para Turso/Postgres | done | WP00 | wp/03-db | ✅ driver libSQL síncrono + tests archivo local; credenciales Turso remoto = John |
 | WP04 | Identidad Privy | needs_human | WP01 | wp/04-privy | Requiere PRIVY_APP_ID/SECRET de John. Scaffolding detrás de flag sí es ejecutable |
 | WP05 | Deploy público + worker | needs_human | WP01, WP03 | — | Vercel/VPS login = John |
 | WP06 | Repo público + CLA-bot | needs_human | WP00 | — | Org GitHub = John |
@@ -34,3 +34,4 @@ WP00 → WP01 → WP02 → WP09 → WP07 → WP11 → WP03 → WP08 → WP12 →
 - 2026-07-24 · WP09 · progreso propio + test anti-confiscación + copys de entrega (wp/09-ui-conductual) · test 40/40, build OK
 - 2026-07-24 · WP07 · motor de fitness puro + persistencia + cierre/firma en admin (wp/07-fitness) · test 52/52, build OK
 - 2026-07-24 · WP11 · simulador ABM puro + CLI (packages/scripts/sim) (wp/11-sim) · test 57/57, build OK
+- 2026-07-24 · WP03 · driver libSQL/Turso síncrono + tests archivo local + deploy.md (wp/03-db) · test 61/61, build OK

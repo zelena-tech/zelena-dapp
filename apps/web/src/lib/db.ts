@@ -1,14 +1,19 @@
 /**
  * Capa de datos ÚNICA. Todo acceso a persistencia pasa por aquí.
  *
- * Driver dual:
- *  1) better-sqlite3 si está disponible (rendimiento, prod local).
- *  2) node:sqlite (built-in de Node >=22) como fallback sin compilación nativa.
- * Ambos se adaptan a la misma superficie mínima: prepare().get/all/run,
- * exec(), pragma(), transaction(). Toda la app importa SOLO desde este archivo.
+ * Driver triple, misma superficie SÍNCRONA (prepare().get/all/run, exec, pragma,
+ * transaction). Toda la app importa SOLO desde este archivo.
+ *  1) libSQL/Turso (paquete `libsql`, síncrono, compatible better-sqlite3) — se
+ *     ACTIVA cuando hay DATABASE_URL/TURSO_DATABASE_URL. Sirve para el deploy
+ *     serverless persistente (Vercel no persiste SQLite local — fork F2) y para
+ *     un archivo libSQL local en dev/CI.
+ *  2) better-sqlite3 si está disponible (rendimiento, prod local).
+ *  3) node:sqlite (built-in de Node >=22) como fallback sin compilación nativa.
  *
- * Swap a Postgres/Turso (obligatorio en Vercel, donde SQLite no persiste):
- * reemplaza los drivers manteniendo esta interfaz. Ver docs/deploy.md.
+ * IMPORTANTE: se usa `libsql` (síncrono), NO `@libsql/client` (asíncrono): la capa
+ * de datos y todos sus consumidores son síncronos; un cliente async obligaría a
+ * reescribir toda la app. `libsql` habla con archivo local (`file:`), réplica
+ * embebida o Turso remoto (`libsql://…` + authToken). Ver docs/deploy.md.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -58,6 +63,42 @@ function tryBetterSqlite(file: string): DB | null {
   }
 }
 
+/** Driver libSQL/Turso: paquete `libsql` (síncrono, API compatible better-sqlite3). */
+function tryLibsql(url: string, authToken?: string): DB | null {
+  try {
+    const req = createRequire(import.meta.url);
+    const Database = req("libsql");
+    const db = authToken ? new Database(url, { authToken }) : new Database(url);
+    return {
+      prepare: (sql: string) => db.prepare(sql) as Stmt,
+      exec: (sql: string) => void db.exec(sql),
+      // Los pragmas locales (WAL, foreign_keys) no aplican en Turso remoto: best-effort.
+      pragma: (d: string) => {
+        try {
+          db.pragma(d);
+        } catch {
+          /* remoto/no soportado: ignorar */
+        }
+      },
+      transaction: <A extends unknown[], R>(fn: (...args: A) => R) => db.transaction(fn) as (...args: A) => R,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Abre explícitamente un DB libSQL (para tests y para el selector por env var). */
+export function openLibsql(url: string, authToken?: string): DB {
+  const db = tryLibsql(url, authToken);
+  if (!db) throw new Error("No se pudo abrir libSQL: ¿está instalado el paquete `libsql`?");
+  return db;
+}
+
+/** URL de libSQL configurada por entorno (Turso o archivo libSQL local), o null. */
+export function libsqlUrl(): string | null {
+  return process.env.TURSO_DATABASE_URL ?? process.env.DATABASE_URL ?? null;
+}
+
 /** Driver 2: node:sqlite (DatabaseSync, sin dependencias nativas externas). */
 function nodeSqlite(file: string): DB {
   const req = createRequire(import.meta.url);
@@ -101,9 +142,25 @@ export function openDb(file: string): DB {
 }
 
 function init(): DB {
-  const file = dbFilePath();
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  const db = openDb(file);
+  const url = libsqlUrl();
+  let db: DB;
+  if (url) {
+    // Driver libSQL/Turso seleccionado por env var (deploy serverless o archivo local).
+    const authToken = process.env.TURSO_AUTH_TOKEN ?? process.env.DATABASE_AUTH_TOKEN ?? undefined;
+    const libsql = tryLibsql(url, authToken);
+    if (libsql) {
+      db = libsql;
+    } else {
+      // `libsql` no instalado: degrada al archivo local con el driver estándar.
+      const file = dbFilePath();
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      db = openDb(file);
+    }
+  } else {
+    const file = dbFilePath();
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    db = openDb(file);
+  }
   db.pragma("journal_mode = WAL");
   db.pragma("foreign_keys = ON");
   db.exec(schemaSql());
