@@ -20,7 +20,10 @@ const csp = [
 const nextConfig = {
   reactStrictMode: true,
   experimental: {
-    serverComponentsExternalPackages: ["better-sqlite3"],
+    // Paquetes con addons nativos: se resuelven en runtime, no se bundlean
+    // (evita el warning "Critical dependency" de sodium-native vía stellar-sdk,
+    // usado server-side desde lib/crypto.ts para verificar firmas — WP01).
+    serverComponentsExternalPackages: ["better-sqlite3", "@stellar/stellar-sdk"],
   },
   async headers() {
     return [

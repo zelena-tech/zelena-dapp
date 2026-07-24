@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Markdown } from "@/components/Markdown";
 import { shortWallet } from "@/components/ui";
+import { claSigningPayload } from "@/lib/cla-signing";
 
 async function sha256Hex(str: string): Promise<string> {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
@@ -134,20 +135,26 @@ export default function Entrar() {
     setSigning(true);
     setError("");
     try {
+      // El servidor verifica ed25519 sobre ESTE mismo payload (hash + domain separator).
+      const payload = claSigningPayload(claHash);
       let signature = "";
       if (isDemo) {
         const { Keypair } = await import("@stellar/stellar-sdk");
         const kp = Keypair.fromSecret(secret);
-        const sig = kp.sign(new TextEncoder().encode(claHash) as unknown as Buffer);
+        const sig = kp.sign(new TextEncoder().encode(payload) as unknown as Buffer);
         signature = bytesToBase64(new Uint8Array(sig));
       } else {
         const freighter: any = await import("@stellar/freighter-api");
-        if (freighter.signMessage) {
-          const r = await freighter.signMessage(claHash, { address: wallet });
-          signature = typeof r === "string" ? r : r.signedMessage ?? JSON.stringify(r);
-        } else {
-          signature = "freighter-no-signMessage";
+        if (!freighter.signMessage) {
+          // Sin signMessage no hay firma real; NO enviar un placeholder (se anclaría
+          // on-chain sin valor probatorio — hallazgo H3). Bloquear el registro.
+          setError(
+            "Esta versión de Freighter no permite firmar mensajes. Usa la wallet de prueba para completar el registro."
+          );
+          return;
         }
+        const r = await freighter.signMessage(payload, { address: wallet });
+        signature = typeof r === "string" ? r : r.signedMessage ?? JSON.stringify(r);
       }
       const res = await fetch("/api/onboard", {
         method: "POST",
