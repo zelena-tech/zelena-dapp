@@ -1,6 +1,7 @@
 /** Consultas de lectura/derivación sobre la DB. Reputación y puntos DERIVADOS. */
 import { getDb } from "./db";
-import { REPUTATION_AXES, type Axis, EPOCH_BUDGET, ACADEMIA_BUDGET } from "./config";
+import { REPUTATION_AXES, type Axis } from "./config";
+import { getActiveGenome } from "./genome";
 
 export interface UserRow {
   wallet: string;
@@ -67,7 +68,8 @@ export function cohortStats() {
   const bounties = (db.prepare(`SELECT COUNT(*) AS n FROM projects`).get() as { n: number }).n;
   const points = (db.prepare(`SELECT COALESCE(SUM(points),0) AS n FROM points_ledger`).get() as { n: number }).n;
   const clas = (db.prepare(`SELECT COUNT(*) AS n FROM cla_signatures`).get() as { n: number }).n;
-  return { contributors, bounties, points, clas, epochBudget: EPOCH_BUDGET, academiaBudget: ACADEMIA_BUDGET };
+  const genome = getActiveGenome(db);
+  return { contributors, bounties, points, clas, epochBudget: genome.EPOCH_BUDGET, academiaBudget: genome.ACADEMIA_BUDGET };
 }
 
 export function listProjects(filters?: { type?: string; state?: string }) {

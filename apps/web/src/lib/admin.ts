@@ -2,7 +2,8 @@
 import { getDb } from "./db";
 import { transition, nextAction, type ProjectState } from "./state-machine";
 import { violatesB8, withinEpochBudget } from "./rules";
-import { EPOCH_BUDGET, FOUNDER_WALLET } from "./config";
+import { FOUNDER_WALLET } from "./config";
+import { getActiveGenome } from "./genome";
 
 export function approveApplication(appId: number): void {
   const db = getDb();
@@ -84,7 +85,8 @@ export function approveMilestone(milestoneId: number): { points: number; wallet:
   const currentTotal = (
     db.prepare(`SELECT COALESCE(SUM(points),0) AS n FROM points_ledger`).get() as { n: number }
   ).n;
-  if (!withinEpochBudget(currentTotal, points, EPOCH_BUDGET)) {
+  const epochBudget = getActiveGenome(db).EPOCH_BUDGET;
+  if (!withinEpochBudget(currentTotal, points, epochBudget)) {
     throw new Error("Emisión rechazada: excede el presupuesto de época.");
   }
 

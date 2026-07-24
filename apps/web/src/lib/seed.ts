@@ -6,7 +6,8 @@
  */
 import type { DB } from "./db"; // solo tipo: sin ciclo en runtime
 import { sha256Hex } from "./crypto";
-import { FOUNDER_WALLET, EPOCH_BUDGET, ACADEMIA_BUDGET } from "./config";
+import { FOUNDER_WALLET } from "./config";
+import { GENOME_V1, seedGenomeV1 } from "./genome";
 
 const DELINA = "GDELINACONTRIBUTORDEMOAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 const MARCOS = "GMARCOSDEVDEMOBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB";
@@ -20,10 +21,10 @@ export function seedIfEmpty(db: DB): void {
 }
 
 function seed(db: DB): void {
-  // ---- Periodo Génesis ----
+  // ---- Periodo Génesis (presupuestos = genoma v1) ----
   db.prepare(
     `INSERT INTO periods (id, name, epoch_budget, academia_budget, state) VALUES (1, 'Época Génesis', ?, ?, 'Open')`
-  ).run(EPOCH_BUDGET, ACADEMIA_BUDGET);
+  ).run(GENOME_V1.EPOCH_BUDGET, GENOME_V1.ACADEMIA_BUDGET);
 
   // ---- Usuarios ----
   const insUser = db.prepare(
@@ -246,6 +247,16 @@ function seed(db: DB): void {
     ],
   ];
   for (const d of decisions) insDec.run(d[0], d[1], d[2], sha256Hex(d.join("|")));
+
+  // ---- Genoma v1 (parámetros evolutivos versionados, WP02) ----
+  // Ligado a una entrada nueva del decision log; efectivo desde la época 1.
+  const genomeDec: [string, string, string] = [
+    "2026-07-01",
+    "Genoma v1 publicado",
+    "Los parámetros evolutivos del sistema (presupuesto de época, presupuesto y caps de Academia, topes de invitación por tier) se publican como genoma versionado v1, efectivo desde la época Génesis. En Zelena evolucionan las reglas, no las personas: cualquier cambio futuro será una versión nueva del genoma, ligada a una decisión y sin efecto retroactivo.",
+  ];
+  const genomeDecInfo = insDec.run(genomeDec[0], genomeDec[1], genomeDec[2], sha256Hex(genomeDec.join("|")));
+  seedGenomeV1(db, genomeDecInfo.lastInsertRowid as number);
 
   // ---- Votación seeded ----
   const prop = db
