@@ -9,6 +9,7 @@
  * nada aplica retroactivamente ni a mitad de época.
  */
 import type { DB } from "./db";
+import type { FitnessWeights } from "./fitness";
 
 export interface Genome {
   EPOCH_BUDGET: number; // puntos ZWORK totales por época
@@ -17,6 +18,7 @@ export interface Genome {
   ACADEMIA_DIMINISHING: number[]; // multiplicadores 1º/2º/3º del día
   ACADEMIA_VOTE_WEIGHT: number; // peso de los puntos de Academia para votos
   TIER_INVITE_CAPS: Record<string, number>; // invitaciones activas por tier
+  FITNESS_WEIGHTS: FitnessWeights; // meta-parámetros del motor de épocas (WP07)
 }
 
 /**
@@ -31,6 +33,7 @@ export const GENOME_V1: Genome = {
   ACADEMIA_DIMINISHING: [1, 0.75, 0.5],
   ACADEMIA_VOTE_WEIGHT: 0.5,
   TIER_INVITE_CAPS: { Bronze: 2, Silver: 5, Gold: 10 },
+  FITNESS_WEIGHTS: { retention: 0.35, quality: 0.35, participation: 0.2, disputes: 0.1 },
 };
 
 // Cache por-DB y por-época. Aislada por instancia de DB (WeakMap) para no filtrar

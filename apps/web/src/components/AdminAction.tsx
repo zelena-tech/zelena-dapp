@@ -12,7 +12,7 @@ export default function AdminAction({
   disabled = false,
 }: {
   action: string;
-  payload: Record<string, number>;
+  payload: Record<string, number | string>;
   label: string;
   variant?: Variant;
   disabled?: boolean;

@@ -132,6 +132,24 @@ CREATE TABLE IF NOT EXISTS decision_log (
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Reporte de fitness por epoca (WP07). Append-only: una fila por calculo de cierre.
+-- El humano firma la recomendacion (keep/revert); la firma genera una entrada en
+-- decision_log referenciada por decision_log_id. components = JSON explicable.
+CREATE TABLE IF NOT EXISTS epoch_fitness (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  epoch           INTEGER NOT NULL,
+  genome_version  INTEGER,
+  score           REAL NOT NULL,
+  components       TEXT NOT NULL,          -- JSON: desglose por componente (explicabilidad)
+  recommendation  TEXT NOT NULL,           -- keep | revert (propuesta del algoritmo)
+  prev_score      REAL,                    -- score de la epoca anterior (NULL si primera)
+  signed          INTEGER NOT NULL DEFAULT 0,
+  signed_decision TEXT,                    -- keep | revert (lo que firmo el humano)
+  decision_log_id INTEGER,                 -- entrada del decision_log de la firma
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (decision_log_id) REFERENCES decision_log(id)
+);
+
 -- Genoma versionado: los parametros evolutivos del sistema (presupuestos, caps,
 -- topes) viven aqui, NO hardcodeados. Append-only: cada cambio es una version
 -- nueva ligada a una entrada del decision_log; nada aplica retroactivamente

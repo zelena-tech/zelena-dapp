@@ -13,7 +13,7 @@ Los ítems `FBxx` (feedback de John, ver FEEDBACK.md) tienen prioridad sobre los
 | WP04 | Identidad Privy | needs_human | WP01 | wp/04-privy | Requiere PRIVY_APP_ID/SECRET de John. Scaffolding detrás de flag sí es ejecutable |
 | WP05 | Deploy público + worker | needs_human | WP01, WP03 | — | Vercel/VPS login = John |
 | WP06 | Repo público + CLA-bot | needs_human | WP00 | — | Org GitHub = John |
-| WP07 | Motor de épocas (fitness) | ready | WP02 | wp/07-fitness | Ejecutable esta noche tras WP02 |
+| WP07 | Motor de épocas (fitness) | done | WP02 | wp/07-fitness | ✅ fitness puro + epoch_fitness + cierre/firma en admin |
 | WP08 | Mutación por época (admin) | ready | WP07 | wp/08-mutacion | |
 | WP09 | Reglas conductuales UI | done | WP00 | wp/09-ui-conductual | ✅ bloque "Tu progreso" + test anti-confiscación + copys |
 | WP10 | Nómina Modo A+ | blocked_external | WP05 | wp/10-nomina | Gate: consulta legal/tributaria. UI + schema sí ejecutables detrás de flag |
@@ -32,3 +32,4 @@ WP00 → WP01 → WP02 → WP09 → WP07 → WP11 → WP03 → WP08 → WP12 →
 - 2026-07-24 · WP01 · verificación ed25519 + domain separator (wp/01-firma) · test 31/31, build OK
 - 2026-07-24 · WP02 · genoma versionado en DB + migración de consumidores (wp/02-genoma) · test 37/37, build OK
 - 2026-07-24 · WP09 · progreso propio + test anti-confiscación + copys de entrega (wp/09-ui-conductual) · test 40/40, build OK
+- 2026-07-24 · WP07 · motor de fitness puro + persistencia + cierre/firma en admin (wp/07-fitness) · test 52/52, build OK

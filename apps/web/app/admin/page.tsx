@@ -5,6 +5,8 @@ import { getDb } from "@/lib/db";
 import { listAcademia, listProjects, getMilestones } from "@/lib/repo";
 import { Tag, StateBadge, shortWallet, EmptyState } from "@/components/ui";
 import { nextAction, type ProjectState } from "@/lib/state-machine";
+import { currentEpoch } from "@/lib/genome";
+import { latestEpochFitness } from "@/lib/epochs";
 import AdminAction from "@/components/AdminAction";
 
 export const dynamic = "force-dynamic";
@@ -31,6 +33,8 @@ export default async function AdminPage() {
   }>;
   const projects = listProjects();
   const academia = listAcademia(true);
+  const epoch = currentEpoch(db);
+  const fitness = latestEpochFitness(db);
 
   return (
     <div className="space-y-12">
@@ -38,6 +42,79 @@ export default async function AdminPage() {
         <h1 className="font-head text-4xl font-bold text-white">Admin · Founder</h1>
         <p className="mt-2 text-muted">Aprueba aplicaciones, avanza estados, aprueba hitos y modera la Academia.</p>
       </header>
+
+      {/* Motor de épocas · Fitness (WP07) — el algoritmo propone, el founder firma */}
+      <section>
+        <h2 className="mb-4 font-head text-2xl font-bold text-white">Motor de épocas · Fitness</h2>
+        <div className="card p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm text-white">
+                Época actual: <span className="text-primary">{epoch}</span>
+              </p>
+              <p className="text-xs text-faint">Al cierre se mide el fitness del genoma y se recomienda mantener o revertir. Tú firmas.</p>
+            </div>
+            <AdminAction action="computeEpochFitness" payload={{ epoch }} label="Calcular fitness de la época" variant="primary" />
+          </div>
+
+          {fitness ? (
+            <div className="mt-5 space-y-4">
+              <div className="flex flex-wrap items-baseline gap-4">
+                <div className="font-head text-4xl font-bold text-primary glow-text">{fitness.score.toFixed(3)}</div>
+                <div className="text-sm text-muted">
+                  fitness de la época {fitness.epoch}
+                  {fitness.prevScore !== null ? ` · anterior ${fitness.prevScore.toFixed(3)}` : " · primera época (sin comparación)"}
+                </div>
+                <span className={`tag ${fitness.recommendation === "keep" ? "tag-sas" : "border-amber-700/50 text-amber-300"}`}>
+                  recomendación: {fitness.recommendation === "keep" ? "mantener" : "revertir"}
+                </span>
+                {fitness.signed ? (
+                  <span className="tag border-line text-faint">
+                    firmado: {fitness.signedDecision === "keep" ? "mantener" : "revertir"}
+                  </span>
+                ) : null}
+              </div>
+
+              {/* Desglose por componente (explicabilidad) */}
+              <div className="space-y-2">
+                {fitness.components.map((c) => (
+                  <div key={c.key} className="flex items-center justify-between rounded-md border border-line/50 px-3 py-2 text-sm">
+                    <span className="text-white">{c.label}</span>
+                    {c.value === null ? (
+                      <span className="text-xs text-faint">sin datos · {c.note}</span>
+                    ) : (
+                      <span className="text-xs text-muted">
+                        valor {c.value.toFixed(2)} · peso {c.weight} · aporta {c.contribution.toFixed(3)}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {!fitness.signed ? (
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <AdminAction
+                    action="signEpochDecision"
+                    payload={{ epochFitnessId: fitness.id, decision: "keep" }}
+                    label="Firmar: mantener genoma"
+                    variant="primary"
+                  />
+                  <AdminAction
+                    action="signEpochDecision"
+                    payload={{ epochFitnessId: fitness.id, decision: "revert" }}
+                    label="Firmar: revertir genoma"
+                    variant="danger"
+                  />
+                </div>
+              ) : (
+                <p className="text-xs text-faint">Decisión firmada y registrada en el decision log (visible en Gobernanza).</p>
+              )}
+            </div>
+          ) : (
+            <p className="mt-4 text-sm text-faint">Aún no has calculado el fitness de esta época.</p>
+          )}
+        </div>
+      </section>
 
       {/* Aplicaciones */}
       <section>
