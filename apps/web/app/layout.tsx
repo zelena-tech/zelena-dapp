@@ -5,6 +5,7 @@ import "@fontsource/space-mono/400-italic.css";
 import "./globals.css";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
+import MutationBanner from "@/components/MutationBanner";
 import { getSession } from "@/lib/session";
 
 export const metadata: Metadata = {
@@ -25,6 +26,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
         <div className="relative z-10 flex min-h-screen flex-col">
           <Nav session={session} />
+          <MutationBanner />
           <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-16 pt-8">{children}</main>
           <Footer />
         </div>

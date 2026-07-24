@@ -14,7 +14,7 @@ Los ítems `FBxx` (feedback de John, ver FEEDBACK.md) tienen prioridad sobre los
 | WP05 | Deploy público + worker | needs_human | WP01, WP03 | — | Vercel/VPS login = John |
 | WP06 | Repo público + CLA-bot | needs_human | WP00 | — | Org GitHub = John |
 | WP07 | Motor de épocas (fitness) | done | WP02 | wp/07-fitness | ✅ fitness puro + epoch_fitness + cierre/firma en admin |
-| WP08 | Mutación por época (admin) | ready | WP07 | wp/08-mutacion | |
+| WP08 | Mutación por época (admin) | done | WP07 | wp/08-mutacion | ✅ proponer/revertir ≤2 genes ≤15% + anuncio + guard + linaje |
 | WP09 | Reglas conductuales UI | done | WP00 | wp/09-ui-conductual | ✅ bloque "Tu progreso" + test anti-confiscación + copys |
 | WP10 | Nómina Modo A+ | blocked_external | WP05 | wp/10-nomina | Gate: consulta legal/tributaria. UI + schema sí ejecutables detrás de flag |
 | WP11 | Simulador ABM | done | WP02 | wp/11-sim | ✅ motor puro + CLI + reporte A/B/emisión/Gini |
@@ -35,3 +35,4 @@ WP00 → WP01 → WP02 → WP09 → WP07 → WP11 → WP03 → WP08 → WP12 →
 - 2026-07-24 · WP07 · motor de fitness puro + persistencia + cierre/firma en admin (wp/07-fitness) · test 52/52, build OK
 - 2026-07-24 · WP11 · simulador ABM puro + CLI (packages/scripts/sim) (wp/11-sim) · test 57/57, build OK
 - 2026-07-24 · WP03 · driver libSQL/Turso síncrono + tests archivo local + deploy.md (wp/03-db) · test 61/61, build OK
+- 2026-07-24 · WP08 · mutación por época (proponer/revertir/no-cambios + anuncio + guard + linaje) (wp/08-mutacion) · test 71/71, build OK

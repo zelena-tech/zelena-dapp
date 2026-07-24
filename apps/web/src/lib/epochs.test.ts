@@ -4,6 +4,7 @@ import path from "node:path";
 import { openDb, type DB } from "./db";
 import { seedIfEmpty } from "./seed";
 import { computeAndStoreEpochFitness, signEpochDecision } from "./epochs";
+import { recordNoMutation } from "./mutation";
 
 function seededDb(): DB {
   const db = openDb(":memory:");
@@ -39,8 +40,14 @@ describe("motor de épocas — persistencia y firma (WP07)", () => {
     expect(JSON.parse(row.components)).toHaveLength(4);
   });
 
+  it("no se puede firmar el cierre sin decidir la mutación de la época siguiente (guard WP08)", () => {
+    const report = computeAndStoreEpochFitness(db, 1);
+    expect(() => signEpochDecision(db, report.id, "keep")).toThrow(/mutación de la época 2/i);
+  });
+
   it("firmar la decisión crea una entrada en el decision log y marca el reporte", () => {
     const report = computeAndStoreEpochFitness(db, 1);
+    recordNoMutation(db, 2, "época 2 sin cambios de genoma"); // decisión requerida por el guard
     const decBefore = (db.prepare(`SELECT COUNT(*) AS n FROM decision_log`).get() as { n: number }).n;
 
     signEpochDecision(db, report.id, "keep");
