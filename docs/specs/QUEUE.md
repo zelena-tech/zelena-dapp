@@ -6,8 +6,8 @@ Los ítems `FBxx` (feedback de John, ver FEEDBACK.md) tienen prioridad sobre los
 
 | ID | Work package | Estado | Depende de | Rama | Nota |
 |---|---|---|---|---|---|
-| WP00 | Limpieza + baseline verde | in_progress | — | wp/00-limpieza | Ejecutable esta noche |
-| WP01 | Verificación criptográfica de firma | ready | WP00 | wp/01-firma | Seguridad Alta #1 — prioridad máxima |
+| WP00 | Limpieza + baseline verde | done | — | wp/00-limpieza | ✅ 4524dff · tag v0.1-genesis · develop |
+| WP01 | Verificación criptográfica de firma | done | WP00 | wp/01-firma | ✅ ed25519 + domain separator; H1/H3 cerrados |
 | WP02 | Genoma v1 (config → DB versionada) | ready | WP00 | wp/02-genoma | Ejecutable esta noche |
 | WP03 | Capa DB lista para Turso/Postgres | ready | WP00 | wp/03-db | Implementar driver + tests locales; credenciales Turso = John |
 | WP04 | Identidad Privy | needs_human | WP01 | wp/04-privy | Requiere PRIVY_APP_ID/SECRET de John. Scaffolding detrás de flag sí es ejecutable |
@@ -27,3 +27,6 @@ WP00 → WP01 → WP02 → WP09 → WP07 → WP11 → WP03 → WP08 → WP12 →
 ## Registro de cierres
 
 (El loop añade aquí una línea por WP cerrado: fecha · WP · commit · tests)
+
+- 2026-07-24 · WP00 · baseline `4524dff` (main, tag v0.1-genesis, rama develop) · npm install OK, test 20/20, build OK
+- 2026-07-24 · WP01 · verificación ed25519 + domain separator (wp/01-firma) · test 31/31, build OK
