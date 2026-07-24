@@ -9,6 +9,8 @@ import {
   approveMilestone,
   toggleContent,
 } from "@/lib/admin";
+import { getDb } from "@/lib/db";
+import { computeAndStoreEpochFitness, signEpochDecision } from "@/lib/epochs";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +22,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   const parsed = adminActionSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Entrada inválida." }, { status: 400 });
-  const { action, applicationId, projectId, milestoneId, contentId } = parsed.data;
+  const { action, applicationId, projectId, milestoneId, contentId, epoch, epochFitnessId, decision } = parsed.data;
 
   try {
     switch (action) {
@@ -46,6 +48,16 @@ export async function POST(req: NextRequest) {
         if (!contentId) throw new Error("Falta contentId.");
         toggleContent(contentId);
         break;
+      case "computeEpochFitness": {
+        const report = computeAndStoreEpochFitness(getDb(), epoch);
+        return NextResponse.json({ ok: true, report });
+      }
+      case "signEpochDecision": {
+        if (!epochFitnessId) throw new Error("Falta epochFitnessId.");
+        if (!decision) throw new Error("Falta la decisión (keep/revert).");
+        signEpochDecision(getDb(), epochFitnessId, decision);
+        break;
+      }
     }
     return NextResponse.json({ ok: true });
   } catch (e) {

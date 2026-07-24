@@ -55,11 +55,16 @@ export const adminActionSchema = z.object({
     "advanceState",
     "approveMilestone",
     "toggleContent",
+    "computeEpochFitness",
+    "signEpochDecision",
   ]),
   applicationId: z.number().int().positive().optional(),
   projectId: z.number().int().positive().optional(),
   milestoneId: z.number().int().positive().optional(),
   contentId: z.number().int().positive().optional(),
+  epoch: z.number().int().positive().optional(),
+  epochFitnessId: z.number().int().positive().optional(),
+  decision: z.enum(["keep", "revert"]).optional(),
 });
 
 export type OnboardInput = z.infer<typeof onboardSchema>;
