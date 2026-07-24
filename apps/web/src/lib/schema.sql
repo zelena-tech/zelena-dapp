@@ -92,12 +92,15 @@ CREATE TABLE IF NOT EXISTS applications (
 );
 
 -- Append-only. La reputacion por eje = SUM(delta) por (wallet, axis).
+-- period_id permite medir el crecimiento por epoca (delta de la epoca) sin romper
+-- el caracter append-only ni el calculo global por SUM.
 CREATE TABLE IF NOT EXISTS reputation_events (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   wallet      TEXT NOT NULL,
   axis        TEXT NOT NULL,  -- ejecucion | investigacion | comunidad | gobernanza
   delta       INTEGER NOT NULL,
   ref         TEXT NOT NULL,
+  period_id   INTEGER NOT NULL DEFAULT 1,
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

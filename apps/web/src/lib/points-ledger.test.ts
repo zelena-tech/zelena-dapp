@@ -79,6 +79,26 @@ describe("anti-confiscación del points_ledger (WP09)", () => {
     expect(negativeRows(db)).toBe(0);
   });
 
+  it("los créditos se registran en el período/época actual (WP09 fix: period_id)", () => {
+    const project = db.prepare(`SELECT id FROM projects ORDER BY id LIMIT 1`).get() as { id: number };
+    const assignee = "GPERIODDEMOAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+    db.prepare(
+      `INSERT INTO users (wallet, display_name, tier, invited_by, is_demo, cla_signed) VALUES (?, 'Exec', 'Bronze', NULL, 1, 1)`
+    ).run(assignee);
+    db.prepare(`UPDATE projects SET assignee_wallet = ?, state = 'Assigned' WHERE id = ?`).run(assignee, project.id);
+    const ms = db
+      .prepare(`SELECT id FROM milestones WHERE project_id = ? AND approved = 0 ORDER BY ord LIMIT 1`)
+      .get(project.id) as { id: number };
+
+    const epoch = (db.prepare(`SELECT id FROM periods ORDER BY id DESC LIMIT 1`).get() as { id: number }).id;
+    approveMilestone(ms.id, db);
+
+    const pl = db.prepare(`SELECT period_id FROM points_ledger WHERE wallet = ? ORDER BY id DESC LIMIT 1`).get(assignee) as { period_id: number };
+    const re = db.prepare(`SELECT period_id FROM reputation_events WHERE wallet = ? ORDER BY id DESC LIMIT 1`).get(assignee) as { period_id: number };
+    expect(pl.period_id).toBe(epoch);
+    expect(re.period_id).toBe(epoch);
+  });
+
   it("completar Academia ACREDITA puntos y no confisca a nadie", () => {
     const W = "GACADEMIADEMOAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
     const content = db.prepare(`SELECT id FROM academia_content ORDER BY id LIMIT 1`).get() as { id: number };

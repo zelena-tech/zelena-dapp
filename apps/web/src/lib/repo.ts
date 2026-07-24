@@ -29,6 +29,19 @@ export function reputationByAxis(wallet: string): Record<Axis, number> {
   return out;
 }
 
+/** Reputación GANADA en una época concreta (delta por eje), para medir crecimiento. */
+export function reputationByAxisInEpoch(wallet: string, epoch: number): Record<Axis, number> {
+  const rows = getDb()
+    .prepare(
+      `SELECT axis, COALESCE(SUM(delta),0) AS total FROM reputation_events WHERE wallet = ? AND period_id = ? GROUP BY axis`
+    )
+    .all(wallet, epoch) as Array<{ axis: Axis; total: number }>;
+  const out = {} as Record<Axis, number>;
+  for (const a of REPUTATION_AXES) out[a] = 0;
+  for (const r of rows) if (r.axis in out) out[r.axis] = r.total;
+  return out;
+}
+
 export function reputationHistory(wallet: string) {
   return getDb()
     .prepare(`SELECT axis, delta, ref, created_at FROM reputation_events WHERE wallet = ? ORDER BY id DESC`)

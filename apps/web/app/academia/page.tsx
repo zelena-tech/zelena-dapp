@@ -3,6 +3,7 @@ import { listAcademia, academiaAwardsToday, academiaAlreadyAwarded } from "@/lib
 import { getSession } from "@/lib/session";
 import { getDb } from "@/lib/db";
 import { getActiveGenome } from "@/lib/genome";
+import { EmptyState } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -39,8 +40,15 @@ export default async function AcademiaPage() {
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2">
-        {content.map((c) => {
+      {content.length === 0 ? (
+        <EmptyState
+          title="Aún no hay contenidos publicados"
+          message="La Academia se está preparando. Mientras tanto, explora el Ágora y toma tu primer bounty — tu reputación puede empezar hoy."
+          cta={{ href: "/agora", label: "Ir al Ágora" }}
+        />
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2">
+          {content.map((c) => {
           const awarded = session ? academiaAlreadyAwarded(session.wallet, c.id) : false;
           return (
             <Link key={c.id} href={`/academia/${c.slug}`} className="card card-hover flex flex-col p-6">
@@ -56,8 +64,9 @@ export default async function AcademiaPage() {
               </div>
             </Link>
           );
-        })}
-      </div>
+          })}
+        </div>
+      )}
     </div>
   );
 }

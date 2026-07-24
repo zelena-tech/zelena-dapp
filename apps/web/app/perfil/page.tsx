@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import {
   reputationByAxis,
+  reputationByAxisInEpoch,
   reputationHistory,
   pointsByBucket,
   totalPoints,
@@ -43,7 +44,10 @@ export default async function PerfilPage() {
   // Progreso propio de la época (auto-comparación, regla de producto doc 16).
   const epoch = currentEpoch(getDb());
   const progress = epochProgress(wallet, epoch);
-  const topAxis = REPUTATION_AXES.reduce((best, a) => (rep[a] > rep[best] ? a : best), REPUTATION_AXES[0]);
+  // "Eje que más creció" = mayor reputación GANADA en esta época (delta), no total de por vida.
+  const growth = reputationByAxisInEpoch(wallet, epoch);
+  const topAxis = REPUTATION_AXES.reduce((best, a) => (growth[a] > growth[best] ? a : best), REPUTATION_AXES[0]);
+  const topGrowth = growth[topAxis];
 
   return (
     <div className="space-y-10">
@@ -94,9 +98,13 @@ export default async function PerfilPage() {
             <div className="text-xs text-faint">hitos y trabajos aprobados esta época</div>
           </div>
           <div>
-            <div className="font-head text-3xl font-bold text-primary glow-text">{AXIS_LABEL[topAxis]}</div>
+            <div className="font-head text-3xl font-bold text-primary glow-text">
+              {topGrowth > 0 ? AXIS_LABEL[topAxis] : "—"}
+            </div>
             <div className="text-sm text-white">tu eje que más creció</div>
-            <div className="text-xs text-faint">{rep[topAxis]} en este eje</div>
+            <div className="text-xs text-faint">
+              {topGrowth > 0 ? `+${topGrowth} esta época` : "sin crecimiento de reputación esta época todavía"}
+            </div>
           </div>
         </div>
       </section>

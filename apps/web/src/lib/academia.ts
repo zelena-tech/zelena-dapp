@@ -10,7 +10,7 @@
  */
 import type { DB } from "./db";
 import { randomToken } from "./crypto";
-import { getActiveGenome } from "./genome";
+import { getActiveGenome, currentEpoch } from "./genome";
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
@@ -152,16 +152,17 @@ export function gradeQuiz(
     throw err;
   }
 
+  const periodId = currentEpoch(db);
   const tx = db.transaction(() => {
     db.prepare(
       `INSERT INTO academia_awards (wallet, content_id, day, ord_of_day, points) VALUES (?, ?, ?, ?, ?)`
     ).run(wallet, content.id, day, usedToday, points);
     db.prepare(
-      `INSERT INTO points_ledger (wallet, points, period_id, bucket, ref) VALUES (?, ?, 1, 'academia', ?)`
-    ).run(wallet, points, `Academia #${content.id}`);
+      `INSERT INTO points_ledger (wallet, points, period_id, bucket, ref) VALUES (?, ?, ?, 'academia', ?)`
+    ).run(wallet, points, periodId, `Academia #${content.id}`);
     db.prepare(
-      `INSERT INTO reputation_events (wallet, axis, delta, ref) VALUES (?, 'investigacion', ?, 'Academia completada')`
-    ).run(wallet, Math.max(1, Math.round(points / 15)));
+      `INSERT INTO reputation_events (wallet, axis, delta, ref, period_id) VALUES (?, 'investigacion', ?, 'Academia completada', ?)`
+    ).run(wallet, Math.max(1, Math.round(points / 15)), periodId);
   });
   tx();
 

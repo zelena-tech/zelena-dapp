@@ -6,7 +6,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
-import { openLibsql, type DB } from "./db";
+import { openLibsql, localFileFromUrl, type DB } from "./db";
 import { generateInvite, consumeInvite, countActiveInvites, InviteConsumeError } from "./invites";
 import { seedGenomeV1, getActiveGenome } from "./genome";
 import { seedIfEmpty } from "./seed";
@@ -68,6 +68,15 @@ describe("driver libSQL (archivo local) — paridad síncrona (WP03)", () => {
     const g = getActiveGenome(db, 1);
     expect(g.EPOCH_BUDGET).toBe(100_000);
     expect(g.TIER_INVITE_CAPS.Gold).toBe(10);
+  });
+
+  it("distingue URL remota (Turso) de archivo local — gate del fail-loud (WP03 fix)", () => {
+    // Remotas → null (init lanza en vez de degradar silenciosamente a SQLite efímero).
+    expect(localFileFromUrl("libsql://mi-db.turso.io")).toBeNull();
+    expect(localFileFromUrl("https://mi-db.turso.io")).toBeNull();
+    // Locales → ruta de archivo (se abre/crea localmente).
+    expect(localFileFromUrl("file:./data/zelena.db")).toMatch(/zelena\.db$/);
+    expect(localFileFromUrl("./data/zelena.db")).toMatch(/zelena\.db$/);
   });
 
   it("el flujo de seed completo (init) corre sobre libSQL local — reproducible", () => {

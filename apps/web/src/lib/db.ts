@@ -99,6 +99,16 @@ export function libsqlUrl(): string | null {
   return process.env.TURSO_DATABASE_URL ?? process.env.DATABASE_URL ?? null;
 }
 
+/** Ruta de archivo local si la URL es local (`file:` o path plano); null si es remota. */
+export function localFileFromUrl(url: string): string | null {
+  if (url.startsWith("file:")) {
+    const p = url.slice("file:".length).replace(/^\/\//, "");
+    return path.isAbsolute(p) ? p : path.join(process.cwd(), p);
+  }
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(url)) return null; // remota (libsql://, https://, wss://)
+  return path.isAbsolute(url) ? url : path.join(process.cwd(), url); // path plano
+}
+
 /** Driver 2: node:sqlite (DatabaseSync, sin dependencias nativas externas). */
 function nodeSqlite(file: string): DB {
   const req = createRequire(import.meta.url);
@@ -147,14 +157,24 @@ function init(): DB {
   if (url) {
     // Driver libSQL/Turso seleccionado por env var (deploy serverless o archivo local).
     const authToken = process.env.TURSO_AUTH_TOKEN ?? process.env.DATABASE_AUTH_TOKEN ?? undefined;
+    const localFile = localFileFromUrl(url);
+    // Para un archivo local, crea el directorio antes de abrir (primer arranque).
+    if (localFile) fs.mkdirSync(path.dirname(localFile), { recursive: true });
     const libsql = tryLibsql(url, authToken);
     if (libsql) {
       db = libsql;
+    } else if (!localFile) {
+      // URL REMOTA (Turso) pero el paquete `libsql` no cargó: FALLAR fuerte. Degradar
+      // a SQLite local sería el archivo efímero de Vercel (fork F2) sin aviso — el
+      // fallo exacto que WP03 existe para evitar.
+      throw new Error(
+        `DATABASE/TURSO URL remota configurada pero el paquete 'libsql' no está disponible. ` +
+          `Instala 'libsql' o corrige la URL; no se degrada silenciosamente a SQLite local.`
+      );
     } else {
-      // `libsql` no instalado: degrada al archivo local con el driver estándar.
-      const file = dbFilePath();
-      fs.mkdirSync(path.dirname(file), { recursive: true });
-      db = openDb(file);
+      // URL de archivo local: degradar al driver estándar sobre ese mismo archivo es aceptable.
+      fs.mkdirSync(path.dirname(localFile), { recursive: true });
+      db = openDb(localFile);
     }
   } else {
     const file = dbFilePath();
