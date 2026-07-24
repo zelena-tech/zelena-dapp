@@ -218,3 +218,29 @@ export function currentPeriod() {
     anchor_tx_id: string | null;
   };
 }
+
+/**
+ * Progreso propio de una época comparado consigo mismo (regla de producto doc 16:
+ * todo ranking muestra el progreso propio al lado; aquí compites contigo, no con otros).
+ * Puntos por época vía points_ledger.period_id; jamás confisca lo ganado.
+ */
+export interface EpochProgress {
+  epoch: number;
+  pointsThis: number;
+  pointsPrev: number;
+  deltaPoints: number;
+  deliverables: number; // entregas puntuadas (bucket ejecución) en la época
+  isFirstEpoch: boolean;
+}
+
+export function epochProgress(wallet: string, epoch: number): EpochProgress {
+  const db = getDb();
+  const sumFor = (p: number) =>
+    (db.prepare(`SELECT COALESCE(SUM(points),0) AS n FROM points_ledger WHERE wallet = ? AND period_id = ?`).get(wallet, p) as { n: number }).n;
+  const pointsThis = sumFor(epoch);
+  const pointsPrev = epoch > 1 ? sumFor(epoch - 1) : 0;
+  const deliverables = (
+    db.prepare(`SELECT COUNT(*) AS n FROM points_ledger WHERE wallet = ? AND period_id = ? AND bucket = 'ejecucion'`).get(wallet, epoch) as { n: number }
+  ).n;
+  return { epoch, pointsThis, pointsPrev, deltaPoints: pointsThis - pointsPrev, deliverables, isFirstEpoch: epoch <= 1 };
+}

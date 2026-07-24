@@ -8,10 +8,11 @@ import {
   totalPoints,
   claSignature,
   getUser,
+  epochProgress,
 } from "@/lib/repo";
 import { getDb } from "@/lib/db";
 import { REPUTATION_AXES, AXIS_LABEL } from "@/lib/config";
-import { getActiveGenome } from "@/lib/genome";
+import { getActiveGenome, currentEpoch } from "@/lib/genome";
 import { ProgressBar, shortWallet } from "@/components/ui";
 import InviteGenerator from "@/components/InviteGenerator";
 
@@ -39,6 +40,11 @@ export default async function PerfilPage() {
 
   const maxAxis = Math.max(10, ...REPUTATION_AXES.map((a) => rep[a]));
 
+  // Progreso propio de la época (auto-comparación, regla de producto doc 16).
+  const epoch = currentEpoch(getDb());
+  const progress = epochProgress(wallet, epoch);
+  const topAxis = REPUTATION_AXES.reduce((best, a) => (rep[a] > rep[best] ? a : best), REPUTATION_AXES[0]);
+
   return (
     <div className="space-y-10">
       <header className="flex flex-wrap items-end justify-between gap-4">
@@ -57,6 +63,43 @@ export default async function PerfilPage() {
           <div className="text-xs text-faint">no transferibles · fase Génesis</div>
         </div>
       </header>
+
+      {/* Tu progreso — compites contigo mismo; mismo peso visual que cualquier comparación */}
+      <section className="card p-6">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-head text-2xl font-bold text-white">Tu progreso</h2>
+          <span className="text-xs text-faint">
+            Época {progress.epoch}
+            {progress.isFirstEpoch ? " · tu primera época" : ""}
+          </span>
+        </div>
+        <p className="mt-1 text-sm text-muted">
+          Aquí la comparación es contigo: cuánto avanzaste respecto a tu época anterior. Nunca pierdes lo ganado.
+        </p>
+        <div className="mt-5 grid gap-5 sm:grid-cols-3">
+          <div>
+            <div className="font-head text-3xl font-bold text-primary glow-text">
+              {progress.pointsThis.toLocaleString("es")}
+            </div>
+            <div className="text-sm text-white">puntos esta época</div>
+            <div className="text-xs text-faint">
+              {progress.isFirstEpoch
+                ? "sin época anterior para comparar todavía"
+                : `${progress.deltaPoints >= 0 ? "+" : ""}${progress.deltaPoints.toLocaleString("es")} vs época anterior`}
+            </div>
+          </div>
+          <div>
+            <div className="font-head text-3xl font-bold text-primary glow-text">{progress.deliverables}</div>
+            <div className="text-sm text-white">entregas puntuadas</div>
+            <div className="text-xs text-faint">hitos y trabajos aprobados esta época</div>
+          </div>
+          <div>
+            <div className="font-head text-3xl font-bold text-primary glow-text">{AXIS_LABEL[topAxis]}</div>
+            <div className="text-sm text-white">tu eje que más creció</div>
+            <div className="text-xs text-faint">{rep[topAxis]} en este eje</div>
+          </div>
+        </div>
+      </section>
 
       {/* Ejes de reputación */}
       <section>
@@ -149,7 +192,12 @@ export default async function PerfilPage() {
       <section>
         <h2 className="mb-4 font-head text-2xl font-bold text-white">Historial de reputación</h2>
         {history.length === 0 ? (
-          <p className="text-sm text-faint">Sin eventos todavía. Toma un bounty o completa la Academia.</p>
+          <p className="text-sm text-faint">
+            Sin eventos todavía. Tu primer punto puede ser hoy: completa{" "}
+            <Link href="/academia" className="text-primary hover:underline">un contenido de Academia</Link>{" "}
+            (unos minutos) o{" "}
+            <Link href="/agora" className="text-primary hover:underline">toma un bounty del Ágora</Link>.
+          </p>
         ) : (
           <ol className="space-y-2">
             {history.map((h, i) => (

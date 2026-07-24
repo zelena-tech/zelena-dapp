@@ -1,5 +1,5 @@
 /** Operaciones de administración (solo founder). Mutan estado con guardas. */
-import { getDb } from "./db";
+import { getDb, type DB } from "./db";
 import { transition, nextAction, type ProjectState } from "./state-machine";
 import { violatesB8, withinEpochBudget } from "./rules";
 import { FOUNDER_WALLET } from "./config";
@@ -54,8 +54,7 @@ export function advanceState(projectId: number): ProjectState {
  * presupuesto de época, con reputación en el eje Ejecución.
  * Aplica la regla B8 salvo excepción Stage 0 (founder como único supervisor).
  */
-export function approveMilestone(milestoneId: number): { points: number; wallet: string } {
-  const db = getDb();
+export function approveMilestone(milestoneId: number, db: DB = getDb()): { points: number; wallet: string } {
   const ms = db.prepare(`SELECT * FROM milestones WHERE id = ?`).get(milestoneId) as
     | { id: number; project_id: number; amount_usd: number; approved: number; name: string }
     | undefined;
