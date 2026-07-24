@@ -3,7 +3,7 @@ import { getDb, type DB } from "./db";
 import { transition, nextAction, type ProjectState } from "./state-machine";
 import { violatesB8, withinEpochBudget } from "./rules";
 import { FOUNDER_WALLET } from "./config";
-import { getActiveGenome } from "./genome";
+import { getActiveGenome, currentEpoch } from "./genome";
 
 export function approveApplication(appId: number): void {
   const db = getDb();
@@ -89,14 +89,15 @@ export function approveMilestone(milestoneId: number, db: DB = getDb()): { point
     throw new Error("Emisión rechazada: excede el presupuesto de época.");
   }
 
+  const periodId = currentEpoch(db);
   const tx = db.transaction(() => {
     db.prepare(`UPDATE milestones SET approved = 1 WHERE id = ?`).run(milestoneId);
     db.prepare(
-      `INSERT INTO points_ledger (wallet, points, period_id, bucket, ref) VALUES (?, ?, 1, 'ejecucion', ?)`
-    ).run(wallet, points, `${project.title} · ${ms.name}`);
+      `INSERT INTO points_ledger (wallet, points, period_id, bucket, ref) VALUES (?, ?, ?, 'ejecucion', ?)`
+    ).run(wallet, points, periodId, `${project.title} · ${ms.name}`);
     db.prepare(
-      `INSERT INTO reputation_events (wallet, axis, delta, ref) VALUES (?, 'ejecucion', ?, ?)`
-    ).run(wallet, Math.max(1, Math.round(points / 10)), `Hito aprobado: ${ms.name}`);
+      `INSERT INTO reputation_events (wallet, axis, delta, ref, period_id) VALUES (?, 'ejecucion', ?, ?, ?)`
+    ).run(wallet, Math.max(1, Math.round(points / 10)), `Hito aprobado: ${ms.name}`, periodId);
   });
   tx();
   return { points, wallet };

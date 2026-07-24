@@ -37,3 +37,4 @@ WP00 → WP01 → WP02 → WP09 → WP07 → WP11 → WP03 → WP08 → WP12 →
 - 2026-07-24 · WP03 · driver libSQL/Turso síncrono + tests archivo local + deploy.md (wp/03-db) · test 61/61, build OK
 - 2026-07-24 · WP08 · mutación por época (proponer/revertir/no-cambios + anuncio + guard + linaje) (wp/08-mutacion) · test 71/71, build OK
 - 2026-07-24 · WP12 · auditoría de funciones latentes + registro público en gobernanza (wp/12-auditoria) · test 75/75, build OK
+- 2026-07-24 · review-fixes · fixes de la verificación adversarial: WP03 fail-loud en Turso remoto + mkdir local; WP09 "eje que más creció" real por época (reputation_events.period_id) + empty state Academia (wp/review-fixes) · test 77/77, build+lint OK
