@@ -1,5 +1,7 @@
 import { listDecisions, getOpenProposal, voteTally, userVote } from "@/lib/repo";
 import { getSession } from "@/lib/session";
+import { getDb } from "@/lib/db";
+import { listLatentAudits } from "@/lib/audits";
 import { EmptyState } from "@/components/ui";
 import VoteForm from "@/components/VoteForm";
 
@@ -8,6 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function GobernanzaPage() {
   const decisions = listDecisions();
   const proposal = getOpenProposal();
+  const audits = listLatentAudits(getDb());
   const session = await getSession();
   const tally = proposal ? voteTally(proposal.id) : null;
   const myVote = proposal && session ? userVote(proposal.id, session.wallet)?.choice ?? null : null;
@@ -69,12 +72,80 @@ export default async function GobernanzaPage() {
         )}
       </section>
 
+      {/* Auditoría de funciones latentes (WP12) — registro público */}
+      <section>
+        <h2 className="mb-1 font-head text-2xl font-bold text-white">Auditoría de funciones latentes</h2>
+        <p className="mb-4 max-w-2xl text-sm text-muted">
+          Cada mecánica se audita preguntando qué produce que no buscábamos, y para quién es funcional o
+          disfuncional. La transparencia de estas auditorías es parte de la legitimidad del sistema.
+        </p>
+        {audits.length === 0 ? (
+          <EmptyState
+            title="Sin auditorías todavía"
+            message="La primera auditoría se registra al cierre de la época 3. Volverá aquí, pública y trimestral."
+          />
+        ) : (
+          <ol className="space-y-3">
+            {audits.map((a) => (
+              <li key={a.id} className="card p-5">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <h3 className="font-head text-lg font-bold text-white">
+                    <span className="tag border-line text-muted">{a.mechanism}</span>{" "}
+                    <span className="ml-1 text-sm text-faint">{a.period}</span>
+                  </h3>
+                  <span
+                    className={`tag ${
+                      a.action === "mutation_proposed"
+                        ? "tag-sas"
+                        : a.action === "mechanism_change"
+                        ? "border-amber-700/50 text-amber-300"
+                        : "border-line text-faint"
+                    }`}
+                  >
+                    {a.action === "mutation_proposed"
+                      ? "mutación propuesta"
+                      : a.action === "mechanism_change"
+                      ? "cambio de mecánica"
+                      : "solo registro"}
+                  </span>
+                </div>
+                <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+                  <div>
+                    <dt className="text-xs text-faint">Función manifiesta</dt>
+                    <dd className="text-muted">{a.manifestFunction}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-faint">Función latente observada</dt>
+                    <dd className="text-muted">{a.latentObserved}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-faint">Funcional para</dt>
+                    <dd className="text-muted">{a.functionalFor}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-faint">Disfuncional para</dt>
+                    <dd className="text-muted">{a.dysfunctionalFor}</dd>
+                  </div>
+                </dl>
+                {a.action === "mutation_proposed" && a.decisionLogId ? (
+                  <p className="mt-3 text-xs">
+                    <a href={`#dec-${a.decisionLogId}`} className="text-primary hover:underline">
+                      → Ver la propuesta en el decision log{a.decisionTitle ? `: ${a.decisionTitle}` : ""}
+                    </a>
+                  </p>
+                ) : null}
+              </li>
+            ))}
+          </ol>
+        )}
+      </section>
+
       {/* Decision log */}
       <section>
         <h2 className="mb-4 font-head text-2xl font-bold text-white">Decision log</h2>
         <ol className="space-y-3">
           {decisions.map((d) => (
-            <li key={d.id} className="card card-hover p-5">
+            <li key={d.id} id={`dec-${d.id}`} className="card card-hover p-5">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <h3 className="font-head text-lg font-bold text-white">{d.title}</h3>
                 <span className="text-xs text-faint">{d.date}</span>

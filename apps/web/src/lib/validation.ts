@@ -60,6 +60,7 @@ export const adminActionSchema = z.object({
     "proposeMutation",
     "revertGenome",
     "recordNoMutation",
+    "createLatentAudit",
   ]),
   applicationId: z.number().int().positive().optional(),
   projectId: z.number().int().positive().optional(),
@@ -71,6 +72,15 @@ export const adminActionSchema = z.object({
   genes: z.array(z.object({ key: z.string(), value: z.number() })).min(1).max(2).optional(),
   justification: z.string().max(1000).optional(),
   targetVersion: z.number().int().positive().optional(),
+  // Auditoría de funciones latentes (WP12)
+  mechanism: z.string().max(60).optional(),
+  period: z.string().max(60).optional(),
+  manifestFunction: z.string().max(1000).optional(),
+  latentObserved: z.string().max(1000).optional(),
+  functionalFor: z.string().max(1000).optional(),
+  dysfunctionalFor: z.string().max(1000).optional(),
+  auditAction: z.enum(["none", "mutation_proposed", "mechanism_change"]).optional(),
+  auditDecisionLogId: z.number().int().positive().optional(),
 });
 
 export type OnboardInput = z.infer<typeof onboardSchema>;
