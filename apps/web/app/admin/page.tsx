@@ -8,8 +8,10 @@ import { nextAction, type ProjectState } from "@/lib/state-machine";
 import { currentEpoch, getActiveGenome } from "@/lib/genome";
 import { latestEpochFitness } from "@/lib/epochs";
 import { genomeLineage, pendingMutation } from "@/lib/mutation";
+import { listLatentAudits } from "@/lib/audits";
 import AdminAction from "@/components/AdminAction";
 import GenomeMutationPanel from "@/components/GenomeMutationPanel";
+import LatentAuditForm from "@/components/LatentAuditForm";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +44,7 @@ export default async function AdminPage() {
   const pending = pendingMutation(db);
   const latestVersion = lineage.length ? lineage[lineage.length - 1].version : 1;
   const numericGenes: Array<keyof typeof genome> = ["EPOCH_BUDGET", "ACADEMIA_BUDGET", "ACADEMIA_DAILY_CAP", "ACADEMIA_VOTE_WEIGHT"];
+  const audits = listLatentAudits(db);
 
   return (
     <div className="space-y-12">
@@ -167,6 +170,21 @@ export default async function AdminPage() {
               ))}
             </ol>
           </div>
+        </div>
+      </section>
+
+      {/* Auditoría de funciones latentes (WP12) */}
+      <section>
+        <h2 className="mb-4 font-head text-2xl font-bold text-white">Auditoría de funciones latentes</h2>
+        <div className="card space-y-4 p-6">
+          <p className="text-sm text-muted">
+            Merton: toda mecánica produce consecuencias no buscadas. Pregunta por mecánica: ¿qué produce que no
+            buscábamos? ¿funcional para quién? La disfunción puede entrar como propuesta de mutación.
+          </p>
+          <LatentAuditForm defaultPeriod={`Época ${epoch}`} />
+          <p className="text-xs text-faint">
+            {audits.length} auditoría(s) registrada(s). El registro completo es público en Gobernanza.
+          </p>
         </div>
       </section>
 

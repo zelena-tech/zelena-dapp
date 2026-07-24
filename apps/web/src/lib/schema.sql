@@ -150,6 +150,24 @@ CREATE TABLE IF NOT EXISTS epoch_fitness (
   FOREIGN KEY (decision_log_id) REFERENCES decision_log(id)
 );
 
+-- Auditoría de funciones latentes (WP12) — Doc 16 salvaguarda 1 (Merton): toda
+-- mecánica produce consecuencias no buscadas; se auditan trimestralmente. La
+-- disfunción detectada puede entrar como propuesta de mutación (WP08). Registro
+-- público (transparencia = legitimidad weberiana).
+CREATE TABLE IF NOT EXISTS latent_audits (
+  id                INTEGER PRIMARY KEY AUTOINCREMENT,
+  mechanism         TEXT NOT NULL,   -- invitaciones|academia|rankings|scoring|ritos|gobernanza|...
+  period            TEXT NOT NULL,   -- trimestre/época auditada
+  manifest_function TEXT NOT NULL,   -- para qué se diseñó
+  latent_observed   TEXT NOT NULL,   -- qué produce que no buscábamos
+  functional_for    TEXT NOT NULL,   -- ¿funcional para quién?
+  dysfunctional_for TEXT NOT NULL,   -- ¿disfuncional para quién?
+  action            TEXT NOT NULL DEFAULT 'none', -- none|mutation_proposed|mechanism_change
+  decision_log_id   INTEGER,         -- enlace a la propuesta/decisión (si aplica)
+  created_at        TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (decision_log_id) REFERENCES decision_log(id)
+);
+
 -- Decisión de mutación por época (WP08). Salvaguarda 4: cada época DEBE decidir
 -- la mutación de la siguiente, aunque la decisión sea "sin cambios" (excepción
 -- explícita, no silenciosa). No se puede cerrar una época sin esta decisión.

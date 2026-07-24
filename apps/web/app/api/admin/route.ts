@@ -12,6 +12,7 @@ import {
 import { getDb } from "@/lib/db";
 import { computeAndStoreEpochFitness, signEpochDecision } from "@/lib/epochs";
 import { proposeMutation, revertToVersion, recordNoMutation, type GeneChange } from "@/lib/mutation";
+import { createLatentAudit } from "@/lib/audits";
 
 export const dynamic = "force-dynamic";
 
@@ -23,8 +24,27 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   const parsed = adminActionSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Entrada inválida." }, { status: 400 });
-  const { action, applicationId, projectId, milestoneId, contentId, epoch, epochFitnessId, decision, genes, justification, targetVersion } =
-    parsed.data;
+  const {
+    action,
+    applicationId,
+    projectId,
+    milestoneId,
+    contentId,
+    epoch,
+    epochFitnessId,
+    decision,
+    genes,
+    justification,
+    targetVersion,
+    mechanism,
+    period,
+    manifestFunction,
+    latentObserved,
+    functionalFor,
+    dysfunctionalFor,
+    auditAction,
+    auditDecisionLogId,
+  } = parsed.data;
 
   try {
     switch (action) {
@@ -73,6 +93,19 @@ export async function POST(req: NextRequest) {
       case "recordNoMutation": {
         if (!epoch) throw new Error("Falta la época.");
         recordNoMutation(getDb(), epoch, justification ?? "");
+        break;
+      }
+      case "createLatentAudit": {
+        createLatentAudit(getDb(), {
+          mechanism: mechanism ?? "",
+          period: period ?? "",
+          manifestFunction: manifestFunction ?? "",
+          latentObserved: latentObserved ?? "",
+          functionalFor: functionalFor ?? "",
+          dysfunctionalFor: dysfunctionalFor ?? "",
+          action: auditAction ?? "none",
+          decisionLogId: auditDecisionLogId ?? null,
+        });
         break;
       }
     }
