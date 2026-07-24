@@ -48,22 +48,45 @@ el perfil con link a stellar.expert. El secreto de la cuenta de servicio nunca v
 npx vercel --prod
 ```
 
-**IMPORTANTE — persistencia de datos en Vercel:** `better-sqlite3` escribe en el sistema de
-archivos local, que en Vercel es **efímero y no persiste** entre invocaciones. Para producción
-hay que migrar la capa de datos a **Postgres (Neon/Supabase) o Turso/libSQL**. Toda la
-persistencia está aislada en un solo archivo — `apps/web/src/lib/db.ts` — precisamente para
-facilitar este swap:
+**IMPORTANTE — persistencia de datos en Vercel:** `better-sqlite3`/`node:sqlite` escriben en el
+sistema de archivos local, que en Vercel es **efímero y no persiste** entre invocaciones. La capa
+de datos (`apps/web/src/lib/db.ts`) ya soporta **libSQL/Turso** como driver, seleccionado por
+variable de entorno — sin cambiar código (WP03).
 
-1. Reemplaza el motor `better-sqlite3` por el cliente elegido (p. ej. `@libsql/client` para
-   Turso, que mantiene una API SQL casi idéntica y soporta el mismo `schema.sql`).
-2. Ajusta `getDb()` para devolver un wrapper con `prepare().get/all/run` equivalente.
-3. Mueve `DATABASE_URL`/credenciales a variables de entorno de Vercel (nunca al repo).
-4. El worker de anclaje puede correr como cron job (Vercel Cron o una VM) apuntando a la
-   misma base gestionada.
+### Swap a Turso/libSQL (ya implementado)
 
-Variables de entorno de producción: `SESSION_SECRET`, `FOUNDER_WALLET`, `DATABASE_URL`
-(cuando migres), `STELLAR_NETWORK=testnet`. El `SERVICE_ACCOUNT_SECRET` vive solo donde
-corre el worker, jamás en el frontend.
+El driver usa el paquete **`libsql`** (síncrono, compatible con la interfaz de `db.ts`; NO
+`@libsql/client`, que es asíncrono e incompatible con la capa síncrona actual). Se activa solo
+con configurar la env var:
+
+```bash
+# Turso remoto (producción):
+TURSO_DATABASE_URL=libsql://<tu-db>.turso.io
+TURSO_AUTH_TOKEN=<token de Turso>       # (o DATABASE_AUTH_TOKEN)
+
+# Archivo libSQL local (dev/CI, sin cuenta Turso):
+DATABASE_URL=file:./data/zelena.db
+```
+
+Reglas de selección en `getDb()`:
+1. Si hay `TURSO_DATABASE_URL` o `DATABASE_URL` → driver **libSQL** (`libsql`), con `TURSO_AUTH_TOKEN`/`DATABASE_AUTH_TOKEN` si aplica.
+2. Si no → `better-sqlite3` y, si no compila, `node:sqlite` (Node ≥22).
+
+El mismo `schema.sql` y el mismo `seed.ts` corren en ambos (seed reproducible; ver
+`db-libsql.test.ts`). Crear la cuenta y la DB en Turso y proveer las credenciales es tarea de
+John (fuera del alcance de WP03).
+
+### Pendiente para el deploy real (WP05)
+
+- **Rate limiting (`lib/rate-limit.ts`) es en memoria por proceso.** En serverless multi-instancia
+  NO es un control real (cada instancia tiene su contador; un cold start lo reinicia). Antes de
+  exponer a la cohorte hay que moverlo a storage compartido (Redis/Upstash con `INCR`+`EXPIRE`, o
+  el rate limiting nativo de la plataforma). Anotado como bloqueante de WP05, no de WP03.
+- El worker de anclaje puede correr como cron job (Vercel Cron o una VM) apuntando a la misma base.
+
+Variables de entorno de producción: `SESSION_SECRET`, `FOUNDER_WALLET`, `TURSO_DATABASE_URL` +
+`TURSO_AUTH_TOKEN` (o `DATABASE_URL` local), `STELLAR_NETWORK=testnet`. El
+`SERVICE_ACCOUNT_SECRET` vive solo donde corre el worker, jamás en el frontend.
 
 ## Notas
 
