@@ -11,6 +11,7 @@ import { getDb } from "./db";
 import { sha256Hex } from "./crypto";
 import { getActiveGenome } from "./genome";
 import { computeFitness, recommend, type EpochData, type FitnessComponent, type Recommendation } from "./fitness";
+import { mutationDecidedFor } from "./mutation";
 
 export interface EpochFitnessReport {
   id: number;
@@ -115,6 +116,14 @@ export function signEpochDecision(db: DB, epochFitnessId: number, decision: Reco
     | undefined;
   if (!row) throw new Error("Reporte de fitness no encontrado.");
   if (row.signed) throw new Error("La decisión de esta época ya fue firmada.");
+
+  // Guard (WP08 / salvaguarda 4): no se cierra una época sin haber decidido la
+  // mutación de la siguiente — aunque la decisión sea "sin cambios" (explícita).
+  if (!mutationDecidedFor(db, row.epoch + 1)) {
+    throw new Error(
+      `Antes de cerrar la época ${row.epoch} debes decidir la mutación de la época ${row.epoch + 1} (proponer, revertir o registrar "sin cambios").`
+    );
+  }
 
   const tx = db.transaction(() => {
     const title = `Cierre de época ${row.epoch}: ${decision === "keep" ? "mantener genoma" : "revertir genoma"}`;

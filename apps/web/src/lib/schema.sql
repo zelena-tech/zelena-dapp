@@ -150,6 +150,20 @@ CREATE TABLE IF NOT EXISTS epoch_fitness (
   FOREIGN KEY (decision_log_id) REFERENCES decision_log(id)
 );
 
+-- Decisión de mutación por época (WP08). Salvaguarda 4: cada época DEBE decidir
+-- la mutación de la siguiente, aunque la decisión sea "sin cambios" (excepción
+-- explícita, no silenciosa). No se puede cerrar una época sin esta decisión.
+CREATE TABLE IF NOT EXISTS mutation_decisions (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  epoch           INTEGER NOT NULL,       -- época a la que aplica la decisión
+  kind            TEXT NOT NULL,           -- mutation | no_change
+  genome_version  INTEGER,                 -- versión propuesta (si kind=mutation)
+  decision_log_id INTEGER,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (epoch),
+  FOREIGN KEY (decision_log_id) REFERENCES decision_log(id)
+);
+
 -- Genoma versionado: los parametros evolutivos del sistema (presupuestos, caps,
 -- topes) viven aqui, NO hardcodeados. Append-only: cada cambio es una version
 -- nueva ligada a una entrada del decision_log; nada aplica retroactivamente

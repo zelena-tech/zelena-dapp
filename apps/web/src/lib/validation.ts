@@ -57,6 +57,9 @@ export const adminActionSchema = z.object({
     "toggleContent",
     "computeEpochFitness",
     "signEpochDecision",
+    "proposeMutation",
+    "revertGenome",
+    "recordNoMutation",
   ]),
   applicationId: z.number().int().positive().optional(),
   projectId: z.number().int().positive().optional(),
@@ -65,6 +68,9 @@ export const adminActionSchema = z.object({
   epoch: z.number().int().positive().optional(),
   epochFitnessId: z.number().int().positive().optional(),
   decision: z.enum(["keep", "revert"]).optional(),
+  genes: z.array(z.object({ key: z.string(), value: z.number() })).min(1).max(2).optional(),
+  justification: z.string().max(1000).optional(),
+  targetVersion: z.number().int().positive().optional(),
 });
 
 export type OnboardInput = z.infer<typeof onboardSchema>;

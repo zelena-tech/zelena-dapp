@@ -5,9 +5,11 @@ import { getDb } from "@/lib/db";
 import { listAcademia, listProjects, getMilestones } from "@/lib/repo";
 import { Tag, StateBadge, shortWallet, EmptyState } from "@/components/ui";
 import { nextAction, type ProjectState } from "@/lib/state-machine";
-import { currentEpoch } from "@/lib/genome";
+import { currentEpoch, getActiveGenome } from "@/lib/genome";
 import { latestEpochFitness } from "@/lib/epochs";
+import { genomeLineage, pendingMutation } from "@/lib/mutation";
 import AdminAction from "@/components/AdminAction";
+import GenomeMutationPanel from "@/components/GenomeMutationPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +37,11 @@ export default async function AdminPage() {
   const academia = listAcademia(true);
   const epoch = currentEpoch(db);
   const fitness = latestEpochFitness(db);
+  const genome = getActiveGenome(db, epoch);
+  const lineage = genomeLineage(db);
+  const pending = pendingMutation(db);
+  const latestVersion = lineage.length ? lineage[lineage.length - 1].version : 1;
+  const numericGenes: Array<keyof typeof genome> = ["EPOCH_BUDGET", "ACADEMIA_BUDGET", "ACADEMIA_DAILY_CAP", "ACADEMIA_VOTE_WEIGHT"];
 
   return (
     <div className="space-y-12">
@@ -113,6 +120,53 @@ export default async function AdminPage() {
           ) : (
             <p className="mt-4 text-sm text-faint">Aún no has calculado el fitness de esta época.</p>
           )}
+        </div>
+      </section>
+
+      {/* Genoma · Mutación por época (WP08) */}
+      <section>
+        <h2 className="mb-4 font-head text-2xl font-bold text-white">Genoma · Mutación por época</h2>
+        <div className="card space-y-6 p-6">
+          <div>
+            <p className="text-sm text-white">Genoma activo (época {epoch}):</p>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              {numericGenes.map((g) => (
+                <div key={String(g)} className="rounded-md border border-line/50 px-3 py-2 text-sm">
+                  <div className="text-xs text-faint">{String(g)}</div>
+                  <div className="font-mono text-white">{Number(genome[g]).toLocaleString("es")}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {pending && pending.changes.length > 0 ? (
+            <div className="rounded-md border border-primary/30 bg-primary/[0.06] p-3 text-sm">
+              <span className="font-bold text-primary">Mutación anunciada</span> para la época {pending.targetEpoch}:{" "}
+              {pending.changes.map((c) => `${c.key} = ${c.to.toLocaleString("es")} (antes ${c.from.toLocaleString("es")})`).join(" · ")}
+            </div>
+          ) : (
+            <p className="text-xs text-faint">No hay mutación propuesta para la época {epoch + 1} todavía.</p>
+          )}
+
+          <GenomeMutationPanel
+            current={genome as unknown as Record<string, number>}
+            nextEpoch={epoch + 1}
+            latestVersion={latestVersion}
+          />
+
+          {/* Linaje del genoma (auditoría) */}
+          <div>
+            <p className="mb-2 text-sm font-semibold text-white">Linaje del genoma</p>
+            <ol className="space-y-1 text-xs">
+              {lineage.map((l) => (
+                <li key={l.version} className="flex flex-wrap items-baseline gap-x-2 rounded-md border border-line/40 px-3 py-2">
+                  <span className="font-mono text-primary">v{l.version}</span>
+                  <span className="text-faint">efectiva época {l.effectiveFromEpoch}</span>
+                  {l.reason ? <span className="text-muted">· {l.reason}</span> : null}
+                </li>
+              ))}
+            </ol>
+          </div>
         </div>
       </section>
 

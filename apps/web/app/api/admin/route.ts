@@ -11,6 +11,7 @@ import {
 } from "@/lib/admin";
 import { getDb } from "@/lib/db";
 import { computeAndStoreEpochFitness, signEpochDecision } from "@/lib/epochs";
+import { proposeMutation, revertToVersion, recordNoMutation, type GeneChange } from "@/lib/mutation";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,8 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   const parsed = adminActionSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Entrada inválida." }, { status: 400 });
-  const { action, applicationId, projectId, milestoneId, contentId, epoch, epochFitnessId, decision } = parsed.data;
+  const { action, applicationId, projectId, milestoneId, contentId, epoch, epochFitnessId, decision, genes, justification, targetVersion } =
+    parsed.data;
 
   try {
     switch (action) {
@@ -56,6 +58,21 @@ export async function POST(req: NextRequest) {
         if (!epochFitnessId) throw new Error("Falta epochFitnessId.");
         if (!decision) throw new Error("Falta la decisión (keep/revert).");
         signEpochDecision(getDb(), epochFitnessId, decision);
+        break;
+      }
+      case "proposeMutation": {
+        if (!genes || genes.length === 0) throw new Error("Falta el/los gen(es) a mutar.");
+        const r = proposeMutation(getDb(), genes as GeneChange[], justification ?? "");
+        return NextResponse.json({ ok: true, mutation: r });
+      }
+      case "revertGenome": {
+        if (!targetVersion) throw new Error("Falta la versión de destino.");
+        const r = revertToVersion(getDb(), targetVersion, justification ?? "");
+        return NextResponse.json({ ok: true, mutation: r });
+      }
+      case "recordNoMutation": {
+        if (!epoch) throw new Error("Falta la época.");
+        recordNoMutation(getDb(), epoch, justification ?? "");
         break;
       }
     }
