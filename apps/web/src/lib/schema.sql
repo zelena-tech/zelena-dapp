@@ -5,6 +5,16 @@
 PRAGMA journal_mode = WAL;
 PRAGMA foreign_keys = ON;
 
+-- users.wallet es la clave de usuario de TODO el esquema (projects.assignee_wallet,
+-- points_ledger.wallet, assignments.owner_wallet…). Mientras el equipo interno no
+-- tenga wallet ni login Entra (WP13) su principal es el placeholder determinista
+-- `pending:<slug>` (ver lib/roles.ts); WP13 vincula la identidad real.
+--
+-- role e is_supervisor (WP14): `role` es la posición en el registro de contribuidor
+-- (WP13: founder|core|contributor) y `is_supervisor` es un flag SEPARADO, porque
+-- supervisor no es un rol (plano 07 §5: Vale es `core` Y supervisora del dashboard).
+-- El default es conservador (contributor / no supervisor) y se deriva de is_founder
+-- al sembrar el roster, para no cambiar el significado de ninguna fila existente.
 CREATE TABLE IF NOT EXISTS users (
   wallet        TEXT PRIMARY KEY,
   display_name  TEXT NOT NULL,
@@ -14,6 +24,8 @@ CREATE TABLE IF NOT EXISTS users (
   is_demo       INTEGER NOT NULL DEFAULT 0,
   is_founder    INTEGER NOT NULL DEFAULT 0,
   cla_signed    INTEGER NOT NULL DEFAULT 0,
+  role          TEXT NOT NULL DEFAULT 'contributor', -- founder | core | contributor
+  is_supervisor INTEGER NOT NULL DEFAULT 0,          -- flag independiente de role
   created_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -267,6 +279,98 @@ CREATE TABLE IF NOT EXISTS academia_awards (
   created_at  TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE (wallet, content_id)
 );
+
+-- ============================================================================
+-- MÓDULO EQUIPO (WP14) — el trabajo real del equipo interno.
+-- Dos vistas de la misma pieza de trabajo: `assignments` es la vista interna;
+-- `projects` (Ágora) es la vista pública/bounty. El puente es
+-- assignments.published_as_project_id — se enlaza, NUNCA se duplica.
+-- ============================================================================
+
+-- Iniciativa = contenedor de trabajo (WMS, DAO, Harmony, Productos Nuevos,
+-- Sistema Operativo…). El horizonte es de la iniciativa (spec WP14); cuando sus
+-- asignaciones tienen horizontes distintos, la iniciativa toma el MÁS urgente.
+CREATE TABLE IF NOT EXISTS initiatives (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  slug       TEXT NOT NULL UNIQUE,
+  name       TEXT NOT NULL,
+  horizon    TEXT NOT NULL DEFAULT 'Ahora',   -- Ahora | Siguiente | Parqueado
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Máquina de estados en lib/team-state-machine.ts (función PURA, igual que la del
+-- Ágora en lib/state-machine.ts; son dos máquinas distintas y no se comparten):
+--   Backlog → Asignada → En curso → En revisión → Hecha
+--   rama Bloqueada (motivo OBLIGATORIO) y retorno al estado previo. Sin saltos.
+-- status_before_block guarda el estado desde el que se bloqueó para poder volver.
+-- blocked_at permite al dashboard (WP15) contar días bloqueado.
+-- needs_founder = bandeja de gates de John (decisión, visual, inversión).
+-- import_key = idempotencia del importador de CSV; NULL para lo creado en la app.
+CREATE TABLE IF NOT EXISTS assignments (
+  id                      INTEGER PRIMARY KEY AUTOINCREMENT,
+  title                   TEXT NOT NULL,
+  description             TEXT NOT NULL DEFAULT '',
+  initiative_id           INTEGER,
+  owner_wallet            TEXT,
+  status                  TEXT NOT NULL DEFAULT 'Backlog',
+  status_before_block     TEXT,
+  priority                TEXT NOT NULL DEFAULT 'Normal',  -- Urgent | High | Normal | Low
+  size                    TEXT,                            -- S | M | L (opcional)
+  horizon                 TEXT NOT NULL DEFAULT 'Ahora',   -- horizonte propio de la fila
+  due_date                TEXT,                            -- YYYY-MM-DD
+  acceptance_criteria     TEXT NOT NULL DEFAULT '',
+  spec_url                TEXT,
+  blocked_reason          TEXT,
+  blocked_at              TEXT,
+  needs_founder           INTEGER NOT NULL DEFAULT 0,
+  published_as_project_id INTEGER,                         -- puente con el Ágora
+  created_by              TEXT,
+  import_key              TEXT UNIQUE,
+  created_at              TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at              TEXT NOT NULL DEFAULT (datetime('now')),
+  closed_at               TEXT,                            -- cuándo pasó a Hecha
+  FOREIGN KEY (initiative_id) REFERENCES initiatives(id),
+  FOREIGN KEY (owner_wallet) REFERENCES users(wallet),
+  FOREIGN KEY (published_as_project_id) REFERENCES projects(id)
+);
+
+-- Append-only: historial de transiciones. Se califican ENTREGAS (doc 16), así que
+-- esto registra qué le pasó a la pieza de trabajo, nunca un juicio sobre la persona.
+-- `day` alimenta el digest diario de WP15 sin recalcular fechas.
+CREATE TABLE IF NOT EXISTS assignment_events (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  assignment_id INTEGER NOT NULL,
+  action        TEXT NOT NULL,
+  from_status   TEXT NOT NULL,
+  to_status     TEXT NOT NULL,
+  reason        TEXT,
+  actor_wallet  TEXT NOT NULL,
+  day           TEXT NOT NULL,                             -- YYYY-MM-DD
+  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (assignment_id) REFERENCES assignments(id)
+);
+
+-- Check-in diario async (rito 1): hecho / haciendo / bloqueado.
+-- UNIQUE (wallet, day) = uno por persona por día, editable el mismo día.
+CREATE TABLE IF NOT EXISTS checkins (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  wallet     TEXT NOT NULL,
+  day        TEXT NOT NULL,                                -- YYYY-MM-DD
+  done       TEXT NOT NULL DEFAULT '',
+  doing      TEXT NOT NULL DEFAULT '',
+  blocked    TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (wallet, day),
+  FOREIGN KEY (wallet) REFERENCES users(wallet)
+);
+
+CREATE INDEX IF NOT EXISTS idx_assign_owner ON assignments(owner_wallet);
+CREATE INDEX IF NOT EXISTS idx_assign_initiative ON assignments(initiative_id);
+CREATE INDEX IF NOT EXISTS idx_assign_status ON assignments(status);
+CREATE INDEX IF NOT EXISTS idx_assign_events ON assignment_events(assignment_id);
+CREATE INDEX IF NOT EXISTS idx_assign_events_day ON assignment_events(day);
+CREATE INDEX IF NOT EXISTS idx_checkins_day ON checkins(day);
 
 CREATE INDEX IF NOT EXISTS idx_rep_wallet ON reputation_events(wallet);
 CREATE INDEX IF NOT EXISTS idx_points_wallet ON points_ledger(wallet);

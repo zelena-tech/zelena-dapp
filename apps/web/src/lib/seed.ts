@@ -8,6 +8,7 @@ import type { DB } from "./db"; // solo tipo: sin ciclo en runtime
 import { sha256Hex } from "./crypto";
 import { FOUNDER_WALLET } from "./config";
 import { GENOME_V1, seedGenomeV1 } from "./genome";
+import { seedTeam } from "./team";
 
 const DELINA = "GDELINACONTRIBUTORDEMOAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 const MARCOS = "GMARCOSDEVDEMOBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB";
@@ -15,9 +16,16 @@ const SOFIA = "GSOFIADESIGNDEMOCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC";
 
 export function seedIfEmpty(db: DB): void {
   const has = db.prepare(`SELECT COUNT(*) AS n FROM users`).get() as { n: number };
-  if (has.n > 0) return;
-  const tx = db.transaction(() => seed(db));
-  tx();
+  if (has.n === 0) {
+    const tx = db.transaction(() => seed(db));
+    tx();
+  }
+  // Roster real del equipo + iniciativas (WP14). A diferencia del seed de la cohorte
+  // demo, esto SÍ corre en cada arranque porque es idempotente: los 6 del plano 07
+  // deben existir con su principal `pending:<slug>` aunque la base ya tenga usuarios
+  // (WP13 vinculará su identidad real). No escribe correos ni datos personales.
+  const txTeam = db.transaction(() => seedTeam(db));
+  txTeam();
 }
 
 function seed(db: DB): void {
@@ -27,14 +35,16 @@ function seed(db: DB): void {
   ).run(GENOME_V1.EPOCH_BUDGET, GENOME_V1.ACADEMIA_BUDGET);
 
   // ---- Usuarios ----
+  // role/is_supervisor (WP14) se derivan de is_founder: el founder es `founder` y
+  // supervisor; la cohorte demo de comunidad es `contributor` (los valores default).
   const insUser = db.prepare(
-    `INSERT INTO users (wallet, display_name, tier, invited_by, status, is_demo, is_founder, cla_signed)
-     VALUES (?, ?, ?, ?, 'active', ?, ?, 1)`
+    `INSERT INTO users (wallet, display_name, tier, invited_by, status, is_demo, is_founder, cla_signed, role, is_supervisor)
+     VALUES (?, ?, ?, ?, 'active', ?, ?, 1, ?, ?)`
   );
-  insUser.run(FOUNDER_WALLET, "John (Founder)", "Gold", null, 1, 1);
-  insUser.run(DELINA, "Delina", "Silver", FOUNDER_WALLET, 1, 0);
-  insUser.run(MARCOS, "Marcos", "Bronze", FOUNDER_WALLET, 1, 0);
-  insUser.run(SOFIA, "Sofía", "Bronze", FOUNDER_WALLET, 1, 0);
+  insUser.run(FOUNDER_WALLET, "John (Founder)", "Gold", null, 1, 1, "founder", 1);
+  insUser.run(DELINA, "Delina", "Silver", FOUNDER_WALLET, 1, 0, "contributor", 0);
+  insUser.run(MARCOS, "Marcos", "Bronze", FOUNDER_WALLET, 1, 0, "contributor", 0);
+  insUser.run(SOFIA, "Sofía", "Bronze", FOUNDER_WALLET, 1, 0, "contributor", 0);
 
   // ---- Invitaciones GENESIS (6, del founder, sin usar) ----
   const insInvite = db.prepare(

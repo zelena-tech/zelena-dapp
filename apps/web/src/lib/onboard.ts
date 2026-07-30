@@ -67,8 +67,11 @@ export function performOnboard(db: DB, input: OnboardInput): OnboardResult {
 
   // 5. Alta atómica: usuario + firma + cola de anclaje.
   const tx = db.transaction(() => {
+    // La puerta de comunidad (invitación + CLA) da rol `contributor` y nunca
+    // supervisión: `core` solo lo otorga el alta corporativa (WP13) o el roster.
     db.prepare(
-      `INSERT INTO users (wallet, display_name, tier, invited_by, is_demo, cla_signed) VALUES (?, ?, 'Bronze', ?, ?, 1)`
+      `INSERT INTO users (wallet, display_name, tier, invited_by, is_demo, cla_signed, role, is_supervisor)
+       VALUES (?, ?, 'Bronze', ?, ?, 1, 'contributor', 0)`
     ).run(wallet, name, issuer, isDemo ? 1 : 0);
     db.prepare(
       `INSERT INTO cla_signatures (wallet, cla_version, cla_hash, signature, anchor_status) VALUES (?, ?, ?, ?, 'pending')`
