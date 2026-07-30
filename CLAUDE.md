@@ -34,14 +34,40 @@ En desarrollo local el bot corre en modo **polling** (`getUpdates`) — no requi
 - `docs/blueprints/` — planos: arquitectura, interacciones, evolución, contratos.
 - `docs/architecture.md`, `docs/security-review.md`, `docs/deploy.md` — estado actual.
 
+## Metodología de desarrollo — LEE ESTO ANTES DE ORQUESTAR
+
+**`docs/METODOLOGIA.md` gobierna cómo se construye este repo:** tres capas, **harness → loop → graph** (entorno → retroalimentación → flujo). Ninguna sustituye a otra; se anidan.
+
+Reglas operativas que salen de ahí y son obligatorias:
+
+- **Diagnostica la capa antes de arreglar.** ¿Falta una capacidad, se perdió estado? → harness. ¿El resultado no es confiable, o para sin prueba? → loop. ¿Hace falta orden, paralelismo o compuertas? → graph. Elegir mal la capa es gastar esfuerzo donde no está el problema.
+- **No se hace loop sobre la confianza, se hace sobre la evidencia.** "El agente dice que terminó" no es condición de parada. La evidencia es: `npx vitest run` + `npx tsc --noEmit` + `npx next lint` (+ `next build` al integrar) **y** los criterios de aceptación del spec.
+- **Máximo 2 WPs por ola**, en worktrees aislados y con **archivos propios disjuntos**. Cuatro agentes de golpe agotaron el presupuesto de sesión el 30-jul y mataron a un verificador.
+- **El verificador adversarial no es el implementador**: contexto separado y prompt de refutación.
+- **Nunca un recorte silencioso.** Si se omite una fase por presupuesto, se reporta.
+- **Si un nodo muere, se REANUDA** (`resumeFromRunId`), no se relanza desde cero.
+
+Para correr una ola usa el grafo ejecutable, no re-derives las olas a mano:
+
+```
+Workflow({ name: "ola", args: { ola: "1", base: "<rama>", wps: [
+  { id: "WP21", rama: "wp/21-hardening", spec: "docs/specs/...", archivos: ["..."] }
+] } })
+```
+
+Sus guardas abortan solo (0 tokens) si la base está roja, si hay más de 2 WPs, o si dos WPs comparten archivos. La topología de las olas vive en `docs/workflow-v1.2.md`.
+
 ## Protocolo de loop autónomo (modo nocturno)
 
-1. Lee `docs/specs/QUEUE.md`. Toma el primer WP en estado `ready` (todas sus dependencias `done`).
-2. Márcalo `in_progress`. Crea rama `wp/XX-nombre` desde `develop` (nunca trabajes en `main`).
-3. Lee su spec completo en `docs/specs/`. Implementa EXACTAMENTE el alcance; el NO-alcance es ley.
-4. Corre `npm test`. Rojo → arregla. Si tras 2 intentos serios sigue rojo: revierte a estado limpio, marca el WP `blocked` con una nota de por qué, y pasa al siguiente `ready`.
-5. Verde → commit convencional (`feat(wp02): ...`), marca `done` en QUEUE.md con hash del commit.
-6. Repite hasta que no queden WPs `ready`. Entonces escribe `docs/specs/NIGHT-REPORT.md`: qué se hizo, qué quedó bloqueado y por qué, decisiones tomadas, qué revisar en localhost.
+El loop **L1** de `docs/METODOLOGIA.md`. Sus siete partes, explícitas:
+
+1. **Disparador:** lee `docs/specs/QUEUE.md` y toma el primer WP `ready` con todas sus dependencias `done`. (Los `FBxx` de John tienen prioridad sobre los WP.)
+2. **Estado:** márcalo `in_progress`. Rama `wp/XX-nombre` desde `develop` (nunca trabajes en `main`).
+3. **Objetivo:** lee su spec completo en `docs/specs/`. Implementa EXACTAMENTE el alcance; el NO-alcance es ley. El objetivo son sus **criterios de aceptación binarios**, no "que quede bien".
+4. **Evidencia:** `npm test` desde `apps/web` (más `tsc` y `lint`). **Feedback:** la salida del test, no una impresión.
+5. **Parada:** rojo → arregla; **tope de 2 intentos serios**; si sigue rojo, revierte a estado limpio, marca el WP `blocked` con el motivo real y pasa al siguiente `ready`. Verde **y criterios cumplidos** → commit convencional (`feat(wp02): ...`) y `done` en QUEUE.md con el hash.
+6. **Escalamiento:** lo que necesita a John es `needs_human` / `blocked_external` — no lo intentes.
+7. **Cierre:** cuando no queden WPs `ready`, escribe el reporte en `docs/specs/`: qué se hizo, qué quedó bloqueado y por qué, decisiones a ratificar, y qué revisar en localhost. **Un hueco declarado es aceptable; uno oculto no.**
 
 ## Guardrails (no negociables)
 
