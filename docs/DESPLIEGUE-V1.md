@@ -16,8 +16,9 @@ En [portal.azure.com](https://portal.azure.com) → Microsoft Entra ID → App r
 - Tras crear: copiar **Application (client) ID** y **Directory (tenant) ID**
 - Certificates & secrets → New client secret → copiar el **Value** (se muestra una sola vez)
 - API permissions: `User.Read` (delegado) basta para v1 — no hace falta consentimiento de admin adicional si eres admin del tenant
+- Generar además un **`NEXTAUTH_SECRET`** propio (32+ bytes aleatorios, distinto de `SESSION_SECRET`) y anotar el **`NEXTAUTH_URL`** (la URL pública de la app). Sin esos dos, la puerta corporativa no arranca aunque tengas las credenciales de Entra.
 
-**Entregar al equipo (por gestor de secretos, nunca por chat):** `AZURE_AD_CLIENT_ID`, `AZURE_AD_CLIENT_SECRET`, `AZURE_AD_TENANT_ID`.
+**Entregar al equipo (por gestor de secretos, nunca por chat):** `AZURE_AD_CLIENT_ID`, `AZURE_AD_CLIENT_SECRET`, `AZURE_AD_TENANT_ID`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, y `AUTH_ENTRA_ENABLED=1` para encender.
 
 ### A2. Azure — recursos (~30 min, o delegar a Dev 2 con permisos)
 - Resource group `rg-zelena-workspace`
@@ -30,7 +31,8 @@ En [portal.azure.com](https://portal.azure.com) → Microsoft Entra ID → App r
 ### A3. Bot de Telegram + API key (~5 min)
 - En Telegram: **@BotFather** → `/newbot` → nombre y usuario del bot → copiar el **token**.
 - En [console.anthropic.com](https://console.anthropic.com): crear **ANTHROPIC_API_KEY**.
-- Ambos van a `apps/web/.env.local` (local) y a App Settings (Azure). En local el bot corre en modo polling — no necesita URL pública.
+- Generar además un **`TELEGRAM_WEBHOOK_SECRET`** (cadena aleatoria). Es obligatorio **también en local**: el script de polling hace de puente al mismo handler del webhook, que rechaza cualquier request sin él.
+- Los tres van a `apps/web/.env.local` (local) y a App Settings (Azure), más `TELEGRAM_ENABLED=1` para encender. En local el bot corre en modo polling — no necesita URL pública.
 
 ### A4. Decisiones (5 min)
 - ¿Quién es supervisor además de John? (ve el dashboard completo; sugerido: Vale)
@@ -59,7 +61,7 @@ Todo esto es ejecutable esta noche con el loop de `CLAUDE.md` (subagentes en par
 ```
 claude
 > Lee CLAUDE.md y procesa el release v1 según el orden de QUEUE.md: WP14, WP15,
-> scaffolding de WP13 con mock, driver Postgres de WP16 y scaffolding de WP19.
+> scaffolding de WP13 con mock, driver Azure SQL (`mssql`) de WP16 y scaffolding de WP19.
 > Usa subagentes en paralelo donde los WPs no compartan archivos.
 > Al terminar escribe docs/specs/NIGHT-REPORT.md.
 ```
@@ -136,7 +138,7 @@ Cifras de referencia para presupuestar; confirmar en la calculadora de Azure con
 | Riesgo | Respuesta |
 |---|---|
 | Consentimiento de admin en Entra se traba | John es admin del tenant; `User.Read` no requiere permisos elevados. Si se traba: flag apagado y v1 arranca con la puerta de invitación mientras se resuelve. |
-| Migración SQLite→Azure SQL rompe algo | La capa `lib/db.ts` aísla; la suite (77 tests) corre contra Azure SQL antes de desplegar. Foco en las diferencias de dialecto ya listadas en WP16 (fechas, JSON, paginación) y en el test de carrera del consumo de invitaciones. Nada de datos reales que perder aún. |
+| Migración SQLite→Azure SQL rompe algo | La capa `lib/db.ts` aísla y el traductor de dialecto tiene 38 tests. **Ojo (hallazgo D3-03): correr la suite completa contra Azure SQL NO es posible hoy** — los tests abren SQLite `:memory:` hardcodeado. Escribir ese harness es **WP24** y es prerequisito de confiar en la instancia. Foco en las diferencias ya listadas en WP16 (fechas, JSON, paginación) y en el test de carrera del consumo de invitaciones. Nada de datos reales que perder aún. |
 | El equipo no adopta la herramienta | Riesgo #1 y es social, no técnico. Mitigación: importar el trabajo REAL (no ejemplos), check-in de 30 segundos, y John lo usa primero. Si en 2 semanas los check-ins bajan del 50%, el problema es el diseño, no la gente. |
 | Rate limit con múltiples instancias | v1 corre en una instancia. Documentado en WP16; si se escala, mover a Redis. |
 | Se cuela alcance de "automatizar" | Graph, notificaciones y correos NO están en v1. El NO-alcance de cada spec es ley. |

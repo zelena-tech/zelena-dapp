@@ -2,7 +2,7 @@
 
 CONTEXTO — Decisión de John: Azure, coherente con el tenant de Microsoft (Entra ID) y con el FMS que ya corre ahí. El equipo ya tiene el know-how.
 
-RESULTADO ESPERADO — v1 en una URL interna estable, con Postgres gestionado, secretos fuera del repo y el worker de anclaje corriendo.
+RESULTADO ESPERADO — v1 en una URL interna estable, con **Azure SQL Database** gestionada (driver `mssql`), secretos fuera del repo y el worker de anclaje corriendo.
 
 ALCANCE
 - **Azure App Service (Node 20)** para `apps/web` (Next.js en modo standalone). Alternativa si el equipo prefiere contenedor: Azure Container Apps — decisión de Dev 2, documentada como ADR.
@@ -23,7 +23,7 @@ ALCANCE
 - **Red**: regla de firewall para "Allow Azure services" o private endpoint; nunca abierto a 0.0.0.0.
 - **Rate limiting**: App Service no es serverless efímero, así que el in-memory actual funciona con una sola instancia. Si se escala a >1 instancia: mover a Redis/Postgres. Documentar el límite.
 - **Worker de anclaje**: WebJob de App Service o container job, con la cuenta de servicio de testnet. Nunca llaves de mainnet ahí.
-- **Backups**: retención automática de Postgres activada (7 días mínimo).
+- **Backups**: retención automática de **Azure SQL** activada (7 días mínimo; viene por defecto).
 - Smoke test post-deploy: login Entra → /equipo/hoy → cambiar estado de una asignación → dashboard refleja el cambio.
 
 NO-ALCANCE — Dominio final + certificado (puede ser *.azurewebsites.net en v1). CI/CD completo con GitHub Actions (siguiente iteración, tras WP06). Alta disponibilidad, escalado automático. Mainnet. Migrar el desarrollo local a Azure SQL (en local se sigue con SQLite: rápido, sin costo, sin red).

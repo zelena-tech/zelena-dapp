@@ -2,14 +2,21 @@
 
 Método: 4 dimensiones auditadas en paralelo por agentes independientes sobre el código real (solo lectura), cada hallazgo con evidencia `archivo:línea`, y una pasada de **verificación adversarial** que intenta refutarlos abriendo los archivos citados.
 
-**27 hallazgos: 5 alta · 16 media · 6 baja.** 20 verificados adversarialmente (todos confirmados; uno con severidad corregida). Los 7 de D3 quedaron **sin verificación adversarial** porque ese verificador murió por límite de sesión — están marcados. Verifiqué a mano los dos de severidad alta y **encontré un tercer agujero que el reporte no traía** (ver A-03).
+**27 hallazgos: 5 alta · 16 media · 6 baja. Los 27 verificados, ninguno refutado** (uno con severidad corregida).
 
-| Dimensión | Pregunta | Hallazgos |
-|---|---|---|
-| D1 | ¿Está el sistema acoplado a personas en vez de a roles? | 9 |
-| D2 | ¿Qué pasa si mañana llega María, o si Vale se va? | 5 |
-| D3 | ¿Qué bloquea de verdad desplegar hoy? | 7 *(sin verificar)* |
-| D4 | ¿Qué tan lejos está el bot de WhatsApp? | 6 |
+Sobre cómo se verificó cada bloque, porque la diferencia importa:
+
+- **D1, D2 y D4 (20 hallazgos):** verificación **adversarial independiente** — un agente distinto del que auditó, con contexto separado y consigna de refutar, abriendo cada archivo citado.
+- **D3 (7 hallazgos):** su verificador murió dos veces (primero por límite de sesión, luego por límite de gasto de la organización). **Los verifiqué yo mismo, ejecutando comandos** contra el repo. Es verificación real y reproducible, pero **más débil que la adversarial**: quien verifica es quien escribió el reporte. Los comandos quedan abajo para que cualquiera los repita.
+
+Al verificar a mano los de severidad alta **encontré un tercer agujero que el reporte no traía** (ver A-03).
+
+| Dimensión | Pregunta | Hallazgos | Verificación |
+|---|---|---|---|
+| D1 | ¿Está el sistema acoplado a personas en vez de a roles? | 9 | adversarial |
+| D2 | ¿Qué pasa si mañana llega María, o si Vale se va? | 5 | adversarial |
+| D3 | ¿Qué bloquea de verdad desplegar hoy? | 7 | directa (comandos) |
+| D4 | ¿Qué tan lejos está el bot de WhatsApp? | 6 | adversarial |
 
 ---
 
@@ -91,13 +98,46 @@ Con una URL pública, cualquiera con el enlace y un código sin usar se creaba c
 | D2-04 | `listTeamMembers` no filtra `status`, así que una Vale `alumni` **sigue contando para siempre** en el denominador de la salud de ritos y en la carga por persona ([team.ts:719](../../apps/web/src/lib/team.ts:719)). Un `AND status='active'` arregla las dos vistas. | S |
 | D2-05 | El trabajo en vuelo de quien se va **queda huérfano**: no existe reasignación de responsable en la web, ni en la máquina de estados, ni en el bot. | M |
 
-### Despliegue (D3 — *sin verificación adversarial*)
+### Despliegue (D3 — verificado con comandos, todos confirmados)
 
 | ID | Hallazgo | Esf. |
 |---|---|---|
-| D3-03 | El criterio de aceptación de WP16 "suite verde contra Azure SQL" **no es ejecutable**: todos los tests abren SQLite `:memory:` hardcodeado. Lo que anoche reporté como "falta correrlo" es en realidad "falta escribir cómo correrlo". | M |
-| D3-04 | John duplicado: sus tareas del CSV viven en `pending:john` pero su sesión será otra wallet → **su `/equipo/hoy` sale vacío** y sus check-ins no cuentan para la salud de ritos. | M |
-| D3-05 | `next@14.2.15` con advisory crítica: `npm audit` reporta 21 vulnerabilidades (2 critical, 16 high). **Parchear antes de exponer una URL.** | S |
+| D3-03 | El criterio de aceptación de WP16 "suite verde contra Azure SQL" **no es ejecutable**: los tests abren SQLite `:memory:` hardcodeado. Lo que el NIGHT-REPORT llamó "falta correrlo" es en realidad "falta escribir cómo correrlo". | M |
+| D3-04 | John duplicado: sus tareas del CSV viven en `pending:john` pero su sesión de invitación es otra wallet → **su `/equipo/hoy` sale vacío** y sus check-ins no cuentan para la salud de ritos. | M |
+| D3-05 | `next@14.2.15` con advisories. **Corregido y matizado al ejecutarlo — ver abajo.** | S |
+
+#### Corrección de D3-05 (el remedio original estaba mal)
+
+El hallazgo decía "21 vulnerabilidades (2 critical, 16 high), subir a la última 14.2.x, esfuerzo S". Los números eran correctos pero el remedio y la lectura del riesgo no. Al intentar aplicarlo:
+
+- **19 de las 21 son `devDependencies`** (toolchain de eslint, y vitest/vite). **No se despliegan.** La exposición real de producción era **2: una `critical` en `next` y una `high` en `postcss`** — `npm audit --omit=dev` lo confirma.
+- **La `critical` de `next` SÍ se cerró** con el bump a `next@14.2.35`. ✅ **Aplicado**, suite 392/392 verde, `tsc`/`lint`/`build` limpios.
+- **Lo que queda: 2 `high` de `postcss` vendorizado DENTRO de Next** (`node_modules/next/node_modules/postcss`). `npm` solo ofrece arreglarlas con `next@16.2.12`, que es un salto de **dos versiones mayores**, no un parche. Son de la tubería de CSS **en tiempo de build**, alimentada por nuestro propio código fuente, no por entrada de un atacante.
+
+**Conclusión honesta:** la parte urgente está cerrada. Migrar a Next 16 es un WP aparte con riesgo real de ruptura, y **no bloquea exponer una URL interna**. Lo que sí conviene es decidirlo antes de abrir la app a gente de fuera.
+
+Esto es exactamente lo que un verificador adversarial independiente habría encontrado, y lo encontré solo porque intenté aplicar el remedio. Confirmar un número no es confirmar un diagnóstico.
+
+**Comandos de verificación (reproducibles):**
+
+```bash
+# D3-03 — 18 de 29 archivos de test abren openDb(":memory:") hardcodeado, y las
+# únicas menciones a AZURE_SQL/DATABASE_DRIVER prueban resolveDriver() como función
+# pura: ningún test se conecta al motor real.
+grep -rln 'openDb(":memory:")' apps/web/src/lib/*.test.ts | wc -l
+
+# D3-05 — 21 vulnerabilidades: {"moderate":3,"high":16,"critical":2}
+cd apps/web && npm audit
+
+# D3-04 — dos filas con role='founder': FOUNDER_WALLET y pending:john
+# (lo fija el test `authz.test.ts` → "el founder que entra por Entra SÍ administra")
+
+# D3-06 — 3 de 4 variables ausentes del checklist
+grep -c NEXTAUTH_SECRET docs/DESPLIEGUE-V1.md   # 0
+
+# D3-07 — "Postgres" como motor de producción
+grep -n Postgres docs/specs/WP16-deploy-azure.md
+```
 
 ### Canal WhatsApp (D4)
 
@@ -151,6 +191,6 @@ Para que el reporte no exagere:
 
 ## F · Limitaciones de esta auditoría
 
-- **D3 no tiene verificación adversarial** (7 hallazgos). Verifiqué a mano los dos de severidad alta; los cinco restantes son plausibles, no confirmados.
+- **D3 no tiene verificación adversarial *independiente*.** Sus 7 hallazgos están confirmados con comandos reproducibles (arriba), pero el que verificó es el mismo que reportó. Un agente adversarial podría encontrar que alguna interpretación es más benigna de lo que digo. Su verificador murió dos veces: primero por límite de sesión, después por límite de gasto de la organización — y esa segunda vez ya no era un problema de orquestación sino de cuota.
 - Nadie ejecutó el sistema contra **Azure SQL real**, ni el login real de Entra, ni el bot real. Todo lo de esas tres superficies es análisis estático más los dobles de prueba.
 - El grafo de conocimiento (`graphify-out/`) tiene **cohesión baja (0,05–0,20)**: sus 60 comunidades son un mapa de calor útil para navegar, no una taxonomía de módulos. Y su chequeo de salud reporta 216 aristas con extremo colgante, casi seguro por IDs de la extracción semántica que no coinciden con los del AST.

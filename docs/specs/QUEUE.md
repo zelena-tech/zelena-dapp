@@ -29,7 +29,8 @@ Los ítems `FBxx` (feedback de John, ver FEEDBACK.md) tienen prioridad sobre los
 
 | **AUTHZ** | **Autorización por rol + fuga del backlog interno** | done | WP13, WP14 | — | ✅ `298b441` · gate por rol contra la base; `/equipo` solo equipo interno; sin códigos GENESIS en producción |
 | **WP20** | **Roster como DATOS + panel de Equipo en /admin** | ready | AUTHZ | wp/20-roster | 🔴 El corazón de "roles, no personas": hoy cambiar un rol exige PR porque el arranque re-impone la constante |
-| **WP21** | **Endurecer producción (parchear Next + docs)** | ready | — | wp/21-hardening | 🔴 Bloquea exponer URL: 2 critical + 16 high en `npm audit` |
+| **WP21** | **Endurecer producción (parchear Next + docs)** | done | — | — | ✅ `next@14.2.35` cierra la crítica de producción; docs corregidas (Postgres→Azure SQL, env vars de A1/A3). Queda: 2 high de postcss dentro de Next, solo arreglables con Next 16 → **WP26** |
+| **WP26** | **Migración a Next 16 (2 high de postcss vendorizado)** | ready | WP21 | wp/26-next16 | No bloquea URL interna (son de build, no de runtime). Decidirlo antes de abrir a externos. Salto de 2 mayores: riesgo real |
 | **WP22** | **Ciclo de vida: alta, baja y reasignación** | ready | WP20 | wp/22-ciclo-vida | Hoy la baja es SQL a mano y el trabajo de quien sale queda huérfano |
 | **WP24** | **Suite/smoke ejecutable contra Azure SQL** | needs_human | WP21 | wp/24-azure-verify | El criterio "suite verde contra Azure SQL" no es ejecutable hoy. Credenciales = John |
 | **WP25** | **Identidad canónica del founder (John duplicado)** | ready | WP20 | wp/25-identidad | Requiere decisión de John: ¿`pending:john` canónico o la wallet demo? |
