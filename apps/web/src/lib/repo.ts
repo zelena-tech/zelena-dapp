@@ -1,5 +1,5 @@
 /** Consultas de lectura/derivación sobre la DB. Reputación y puntos DERIVADOS. */
-import { getDb } from "./db";
+import { getDb, type DB } from "./db";
 import { REPUTATION_AXES, type Axis } from "./config";
 import { getActiveGenome } from "./genome";
 
@@ -75,9 +75,13 @@ export function claSignature(wallet: string) {
     | undefined;
 }
 
-export function cohortStats() {
-  const db = getDb();
-  const contributors = (db.prepare(`SELECT COUNT(*) AS n FROM users`).get() as { n: number }).n;
+export function cohortStats(db: DB = getDb()) {
+  // Excluye los placeholders `pending:*` del roster interno (WP14): son los 6 del
+  // equipo esperando su identidad real (WP13), no contribuidores de la cohorte DAO.
+  // Sin este filtro la home publica los contaria como cohorte (4 -> 10).
+  const contributors = (
+    db.prepare(`SELECT COUNT(*) AS n FROM users WHERE wallet NOT LIKE 'pending:%'`).get() as { n: number }
+  ).n;
   const bounties = (db.prepare(`SELECT COUNT(*) AS n FROM projects`).get() as { n: number }).n;
   const points = (db.prepare(`SELECT COALESCE(SUM(points),0) AS n FROM points_ledger`).get() as { n: number }).n;
   const clas = (db.prepare(`SELECT COUNT(*) AS n FROM cla_signatures`).get() as { n: number }).n;
