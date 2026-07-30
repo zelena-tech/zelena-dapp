@@ -19,10 +19,54 @@ Los ítems `FBxx` (feedback de John, ver FEEDBACK.md) tienen prioridad sobre los
 | WP10 | Nómina Modo A+ | blocked_external | WP05 | wp/10-nomina | Gate: consulta legal/tributaria. UI + schema sí ejecutables detrás de flag |
 | WP11 | Simulador ABM | done | WP02 | wp/11-sim | ✅ motor puro + CLI + reporte A/B/emisión/Gini |
 | WP12 | Auditoría funciones latentes | done | WP09 | wp/12-auditoria | ✅ latent_audits + registro público gobernanza + form admin + link a mutación |
+| **WP13** | **Login SSO Entra ID (@zelena.tech)** | ready | WP00 | wp/13-entra | Scaffolding + tests con mock ejecutables ya; credenciales Entra = John |
+| **WP14** | **Módulo equipo (proyectos + asignaciones)** | ready | WP00 | wp/14-equipo | Ejecutable ya; roles finos tras WP13 |
+| **WP15** | **Dashboard de seguimiento** | ready | WP14 | wp/15-dashboard | |
+| **WP16** | **Despliegue en Azure (reemplaza WP05)** | needs_human | WP03, WP13 | wp/16-azure | Driver Postgres ejecutable ya; suscripción y recursos = John |
+| **WP17** | **Entornos por cliente (backlog + marca + inventario)** | v1.1 | WP14 | wp/17-clientes | Congelado hasta cumplir los criterios de uso de v1. CERO secretos almacenados |
+| **WP18** | **Capa OKR (objetivos y resultados clave)** | v1.1 | WP15 | wp/18-okr | Congelado hasta cumplir los criterios de uso de v1 |
+| **WP19** | **Asistente personal de Telegram para John (backlog agent)** | needs_human | WP14 | wp/19-telegram | Bot token (@BotFather) + ANTHROPIC_API_KEY = John. v1 = solo John |
+
+> ## Release v1 "Organizar" — NÚCLEO CONGELADO
+>
+> **v1 = WP13 + WP14 + WP15 + WP16 + WP19. Nada más.** WP17 y WP18 son v1.1 y solo se descongelan cuando v1 cumpla sus criterios de USO (no de features):
+>
+> 1. El 100% de las tareas nuevas de John entran por el sistema (bot o web), cero por WhatsApp/cabeza.
+> 2. ≥10 asignaciones reales cerradas contra criterios de aceptación.
+> 3. El dashboard reemplazó ≥2 reuniones de estado por semana.
+> 4. Los 5 del equipo hicieron login y tienen asignaciones reales.
+>
+> **Estrategia de interfaz:** el equipo trabaja en el tablero web con login Entra; Telegram es el asistente personal de John (captura por cliente/proyecto, backlog conversacional, 3 focos del día). Una sola fuente de verdad.
+>
+> **Frontera con Odoo (decisión de John):** facturación, cotizaciones y contabilidad viven en Odoo, FUERA de la dapp — información sensible no se toca ni se replica. La dapp solo guarda presupuesto por proyecto y el registro verificable de pagos (WP10). Integración por referencia, si algún día, nunca por copia.
+>
+> **Gate de bonificaciones (decisión de John tras crítica):** NO se construye módulo de bonos. El equipo interno corre el sistema de puntos y épocas YA construido (ZWORK + fitness + cierres) — eso ES el piloto manual de Harmony que exige la auditoría. Dinero real sobre scores: solo tras 3 épocas cerradas + calibración + gate legal (WP10). Los WPs de comunidad (WP04 Privy, WP06 repo público, WP10 nómina) siguen en cola pero NO bloquean v1: primero organizar, luego automatizar, al final descentralizar.
+>
+> WP05 (Vercel/Turso) queda **superseded** por WP16. El driver libSQL de WP03 se conserva para desarrollo local.
 
 ## Orden sugerido para el primer loop nocturno
 
 WP00 → WP01 → WP02 → WP09 → WP07 → WP11 → WP03 → WP08 → WP12 → scaffolding de WP04/WP10 detrás de flags → NIGHT-REPORT.md
+
+## Orden sugerido para el loop del release v1 (núcleo congelado)
+
+WP14 (modelo + importador CSV + /equipo/hoy) → WP15 (dashboard + digest) → WP13 scaffolding con mock de Entra → driver Azure SQL (`mssql`) de WP16 → WP19 scaffolding (polling + herramientas con mock) → al llegar credenciales de John: WP13 real + WP16 despliegue + WP19 bot real
+
+**Motor de base de datos (decisión de John):** producción = **Azure SQL Database** (driver `mssql`), más económica y coherente con el stack Microsoft; con managed identity, sin contraseña de DB en configuración. Desarrollo local sigue con SQLite. El driver libSQL de WP03 se conserva pero no se usa en producción.
+
+**Regla de seguridad transversal (WP17):** ningún campo de la base de datos almacena secretos, contraseñas ni tokens de clientes. El inventario guarda dónde vive la credencial y quién responde por ella, nunca su valor. Verificación obligatoria en el PR.
+
+## Owners humanos del release v1 (roster real — plano 07)
+
+| WP | Owner humano | Apoyo |
+|---|---|---|
+| WP13 Entra SSO | Fausto | John (secretos) |
+| WP14 Módulo equipo | Fausto (backend) | David (UI) |
+| WP15 Dashboard | David | Vale (define qué se mide) |
+| WP16 Azure | Fausto | John (suscripción) |
+| WP17 Entornos cliente | Fausto (modelo/RBAC) + David (UI) | Juan (dueño del inventario de credenciales) |
+| WP18 OKRs | Vale (dueña del ciclo) | David (UI), John (define OKRs) |
+| Gate de calidad de todos | Vale | — |
 
 ## Registro de cierres
 
