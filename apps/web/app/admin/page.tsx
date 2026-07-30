@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
-import { FOUNDER_WALLET } from "@/lib/config";
+import { FOUNDER_WALLET, telegramStatus } from "@/lib/config";
 import { getDb } from "@/lib/db";
 import { listAcademia, listProjects, getMilestones } from "@/lib/repo";
 import { Tag, StateBadge, shortWallet, EmptyState } from "@/components/ui";
@@ -9,7 +9,9 @@ import { currentEpoch, getActiveGenome } from "@/lib/genome";
 import { latestEpochFitness } from "@/lib/epochs";
 import { genomeLineage, pendingMutation } from "@/lib/mutation";
 import { listLatentAudits } from "@/lib/audits";
+import { founderTeamWallet, linkForWallet, listBotActions } from "@/lib/bot-store";
 import AdminAction from "@/components/AdminAction";
+import BotLinkPanel from "@/components/BotLinkPanel";
 import GenomeMutationPanel from "@/components/GenomeMutationPanel";
 import LatentAuditForm from "@/components/LatentAuditForm";
 
@@ -45,6 +47,10 @@ export default async function AdminPage() {
   const latestVersion = lineage.length ? lineage[lineage.length - 1].version : 1;
   const numericGenes: Array<keyof typeof genome> = ["EPOCH_BUDGET", "ACADEMIA_BUDGET", "ACADEMIA_DAILY_CAP", "ACADEMIA_VOTE_WEIGHT"];
   const audits = listLatentAudits(db);
+  // WP19: log del asistente de Telegram + estado del alta.
+  const botActions = listBotActions(db, 50);
+  const botLink = linkForWallet(db, founderTeamWallet(db, session.wallet));
+  const botStatus = telegramStatus();
 
   return (
     <div className="space-y-12">
@@ -185,6 +191,67 @@ export default async function AdminPage() {
           <p className="text-xs text-faint">
             {audits.length} auditoría(s) registrada(s). El registro completo es público en Gobernanza.
           </p>
+        </div>
+      </section>
+
+      {/* Asistente de Telegram (WP19) — alta + log de todo lo que hizo el bot */}
+      <section>
+        <h2 className="mb-4 font-head text-2xl font-bold text-white">Asistente de Telegram</h2>
+        <div className="card space-y-5 p-6">
+          <BotLinkPanel
+            linked={!!botLink?.telegram_user_id}
+            linkedAt={botLink?.linked_at ?? null}
+            enabled={botStatus.enabled}
+            missing={botStatus.missing}
+          />
+
+          <div>
+            <p className="mb-2 text-sm font-semibold text-white">Log del bot</p>
+            <p className="mb-3 text-xs text-faint">
+              Toda acción del asistente queda aquí. Se registra qué se hizo y sobre qué pieza, nunca el texto del
+              mensaje ni el audio: solo se conserva la nota o la asignación resultante.
+            </p>
+            {botActions.length === 0 ? (
+              <EmptyState title="Sin actividad" message="Cuando el bot atienda un mensaje, aparecerá aquí." />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="text-faint">
+                    <tr>
+                      <th className="py-1 pr-3">Cuándo</th>
+                      <th className="py-1 pr-3">Acción</th>
+                      <th className="py-1 pr-3">Resultado</th>
+                      <th className="py-1 pr-3">Sobre</th>
+                      <th className="py-1">Detalle</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {botActions.map((a) => (
+                      <tr key={a.id} className="border-t border-line/40">
+                        <td className="py-1 pr-3 text-faint">{a.created_at}</td>
+                        <td className="py-1 pr-3 font-mono text-white">{a.action}</td>
+                        <td className="py-1 pr-3">
+                          <span
+                            className={`tag ${
+                              a.outcome === "ok"
+                                ? "tag-sas"
+                                : a.outcome === "error"
+                                  ? "border-red-900/60 text-red-400"
+                                  : "border-line text-muted"
+                            }`}
+                          >
+                            {a.outcome}
+                          </span>
+                        </td>
+                        <td className="py-1 pr-3 text-muted">{a.target ?? "—"}</td>
+                        <td className="py-1 text-muted">{a.detail ?? "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       </section>
 

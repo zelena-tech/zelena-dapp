@@ -2,7 +2,14 @@ import { describe, it, expect, beforeEach } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import { openDb, type DB } from "./db";
-import { getActiveGenome, currentEpoch, seedGenomeV1, clearGenomeCache, GENOME_V1 } from "./genome";
+import {
+  getActiveGenome,
+  currentEpoch,
+  dailyFocusHour,
+  seedGenomeV1,
+  clearGenomeCache,
+  GENOME_V1,
+} from "./genome";
 import { seedIfEmpty } from "./seed";
 
 function freshDb(): DB {
@@ -34,6 +41,23 @@ describe("genoma versionado (WP02)", () => {
     expect(g.ACADEMIA_DIMINISHING).toEqual([1, 0.75, 0.5]);
     expect(g.ACADEMIA_VOTE_WEIGHT).toBe(0.5);
     expect(g.TIER_INVITE_CAPS).toEqual({ Bronze: 2, Silver: 5, Gold: 10 });
+    // WP19: la hora de los 3 focos del día es un gen, no un literal del bot.
+    expect(g.DAILY_FOCUS_HOUR).toBe(7);
+  });
+
+  it("la hora de los 3 focos sale del genoma y una versión nueva la cambia (WP19)", () => {
+    seedGenomeV1(db);
+    expect(dailyFocusHour(db, 1)).toBe(7);
+
+    // Publica un genoma v2 con otra hora, efectivo desde la época 2.
+    const v2 = { ...GENOME_V1, DAILY_FOCUS_HOUR: 6 };
+    db.prepare(
+      `INSERT INTO genome_versions (version, params, effective_from_epoch, decision_log_id) VALUES (2, ?, 2, NULL)`
+    ).run(JSON.stringify(v2));
+    clearGenomeCache(db);
+
+    expect(dailyFocusHour(db, 1)).toBe(7); // época en curso intacta
+    expect(dailyFocusHour(db, 2)).toBe(6);
   });
 
   it("sin ninguna versión en DB cae al genoma v1 (bootstrap)", () => {
