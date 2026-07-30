@@ -1,24 +1,30 @@
 /**
  * Capa de datos ÚNICA. Todo acceso a persistencia pasa por aquí.
  *
- * Driver triple, misma superficie SÍNCRONA (prepare().get/all/run, exec, pragma,
+ * Driver múltiple, misma superficie SÍNCRONA (prepare().get/all/run, exec, pragma,
  * transaction). Toda la app importa SOLO desde este archivo.
- *  1) libSQL/Turso (paquete `libsql`, síncrono, compatible better-sqlite3) — se
- *     ACTIVA cuando hay DATABASE_URL/TURSO_DATABASE_URL. Sirve para el deploy
- *     serverless persistente (Vercel no persiste SQLite local — fork F2) y para
- *     un archivo libSQL local en dev/CI.
- *  2) better-sqlite3 si está disponible (rendimiento, prod local).
- *  3) node:sqlite (built-in de Node >=22) como fallback sin compilación nativa.
+ *  1) Azure SQL Database (paquete `mssql`) — PRODUCCIÓN v1 (WP16). Se ACTIVA con
+ *     AZURE_SQL_SERVER (o DATABASE_DRIVER=mssql). `mssql` es asíncrono, así que va
+ *     detrás de un puente síncrono (worker_threads + Atomics.wait) y de un
+ *     traductor de dialecto T-SQL. Ver `db-mssql.ts` y `sql-dialect.ts`.
+ *  2) libSQL/Turso (paquete `libsql`, síncrono, compatible better-sqlite3) — se
+ *     ACTIVA cuando hay DATABASE_URL/TURSO_DATABASE_URL. Se conserva para un
+ *     archivo libSQL local en dev/CI (WP05 quedó superseded por WP16).
+ *  3) better-sqlite3 si está disponible (rendimiento, prod local).
+ *  4) node:sqlite (built-in de Node >=22) como fallback sin compilación nativa.
  *
- * IMPORTANTE: se usa `libsql` (síncrono), NO `@libsql/client` (asíncrono): la capa
- * de datos y todos sus consumidores son síncronos; un cliente async obligaría a
- * reescribir toda la app. `libsql` habla con archivo local (`file:`), réplica
- * embebida o Turso remoto (`libsql://…` + authToken). Ver docs/deploy.md.
+ * DESARROLLO LOCAL SIGUE CON SQLITE: rápido, sin costo, sin red (NO-alcance de WP16).
+ *
+ * IMPORTANTE: para libSQL se usa `libsql` (síncrono), NO `@libsql/client`
+ * (asíncrono): la capa de datos y todos sus consumidores son síncronos. `libsql`
+ * habla con archivo local (`file:`), réplica embebida o Turso remoto
+ * (`libsql://…` + authToken). Ver docs/deploy.md.
  */
 import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { seedIfEmpty } from "./seed";
+import { azureSqlConfigFromEnv, describeAzureSql, openAzureSql, type EnvLike } from "./db-mssql";
 
 export interface Stmt {
   run(...params: unknown[]): { changes: number | bigint; lastInsertRowid: number | bigint };
@@ -151,8 +157,48 @@ export function openDb(file: string): DB {
   return tryBetterSqlite(file) ?? nodeSqlite(file);
 }
 
+export type DbDriver = "mssql" | "libsql" | "sqlite";
+
+/**
+ * Qué driver toca, según el entorno. PURA respecto del `env` que recibe.
+ *
+ * 1. `DATABASE_DRIVER` explícito manda (mssql | libsql | sqlite).
+ * 2. Configuración de Azure SQL presente → `mssql` (producción v1).
+ * 3. URL de libSQL/Turso → `libsql`.
+ * 4. Si no → SQLite local (desarrollo).
+ */
+export function resolveDriver(env: EnvLike = process.env): DbDriver {
+  const explicit = env.DATABASE_DRIVER?.trim().toLowerCase();
+  if (explicit) {
+    if (explicit === "mssql" || explicit === "libsql" || explicit === "sqlite") return explicit;
+    throw new Error(`DATABASE_DRIVER='${explicit}' no es válido (mssql | libsql | sqlite).`);
+  }
+  if (env.AZURE_SQL_SERVER || env.AZURE_SQL_CONNECTION_STRING) return "mssql";
+  if (env.TURSO_DATABASE_URL || env.DATABASE_URL) return "libsql";
+  return "sqlite";
+}
+
 function init(): DB {
-  const url = libsqlUrl();
+  const driver = resolveDriver();
+  if (driver === "mssql") {
+    // Azure SQL (producción v1). Si la configuración está pero el driver no carga,
+    // se LANZA: degradar a SQLite local en producción es el fallo exacto que esto
+    // existe para evitar (mismo criterio que la URL remota de Turso, más abajo).
+    const config = azureSqlConfigFromEnv();
+    if (!config) {
+      throw new Error(
+        "DATABASE_DRIVER=mssql pero falta la configuración de Azure SQL " +
+          "(AZURE_SQL_SERVER + AZURE_SQL_DATABASE, o AZURE_SQL_CONNECTION_STRING). Ver docs/deploy.md."
+      );
+    }
+    const remote = openAzureSql(config);
+    remote.exec(schemaSql());
+    seedIfEmpty(remote);
+    console.info(`[db] Azure SQL activo: ${describeAzureSql(config)}`);
+    return remote;
+  }
+
+  const url = driver === "libsql" ? libsqlUrl() : null;
   let db: DB;
   if (url) {
     // Driver libSQL/Turso seleccionado por env var (deploy serverless o archivo local).

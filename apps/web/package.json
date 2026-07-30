@@ -32,7 +32,9 @@
     "vitest": "^2.1.4"
   },
   "optionalDependencies": {
+    "@azure/identity": "^4.5.0",
     "better-sqlite3": "^11.8.1",
-    "libsql": "^0.5.29"
+    "libsql": "^0.5.29",
+    "mssql": "^11.0.1"
   }
 }
