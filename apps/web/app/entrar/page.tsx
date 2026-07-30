@@ -1,10 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Markdown } from "@/components/Markdown";
 import { shortWallet } from "@/components/ui";
 import { claSigningPayload } from "@/lib/cla-signing";
+import { EntraSignInButton, EntraSignInError } from "@/components/EntraSignInButton";
+import { EntraSecondEmailBanner } from "@/components/EntraSecondEmailBanner";
 
 async function sha256Hex(str: string): Promise<string> {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
@@ -21,6 +23,11 @@ const STEPS = ["Invitación", "Wallet", "Firma del CLA"];
 
 export default function Entrar() {
   const router = useRouter();
+  const params = useSearchParams();
+  // Rechazo de la puerta corporativa (WP13): llega como ?error=<motivo>. No afecta
+  // en nada al flujo de invitación, que sigue siendo el de siempre.
+  const entraError = params.get("error");
+  const entraMotivo = params.get("motivo") ?? undefined;
   const [step, setStep] = useState(1);
 
   // Paso 1
@@ -181,6 +188,13 @@ export default function Entrar() {
         <h1 className="font-head text-4xl font-bold text-white">Entrar</h1>
         <p className="mt-2 text-muted">Invitación → wallet → CLA anclado. Sin CLA no hay acceso al Ágora.</p>
       </header>
+
+      {/* WP13 · Dos puertas, UN registro (plano 05). Estos tres bloques desaparecen
+          por completo si la puerta corporativa está apagada o no hay nada que decir:
+          con el flag apagado la página se ve exactamente igual que antes. */}
+      {entraError ? <EntraSignInError reason={entraError} motivo={entraMotivo} /> : null}
+      <EntraSecondEmailBanner />
+      <EntraSignInButton />
 
       {/* Stepper */}
       <div className="flex items-center gap-2">

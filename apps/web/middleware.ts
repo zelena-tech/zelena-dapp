@@ -11,6 +11,15 @@ import { SESSION_COOKIE, verifySession } from "@/lib/jwt";
  *    team entra por Entra (WP13) y firma el CLA DESPUÉS del login — exigir
  *    claSigned aquí dejaría al equipo fuera de su propio tablero. Las páginas ya
  *    redirigen por su cuenta; esto es la segunda capa.
+ *
+ * WP13 confirma esta frontera y NO la mueve: el alta por Entra emite la MISMA cookie
+ * `zelena_session` con `claSigned: false`, así que quien entra por la puerta
+ * corporativa llega a `/equipo/hoy` (solo sesión) y sigue necesitando firmar el CLA
+ * para `/perfil` y `/admin`. El CLA es requisito para cobrar, no para entrar.
+ *
+ * `/api/auth/**` (NextAuth + intercambio de sesión) queda FUERA del matcher a
+ * propósito: es el camino por el que se OBTIENE la sesión; protegerlo con la sesión
+ * sería un bucle.
  */
 const PROTECTED_CLA = ["/perfil", "/admin"];
 const PROTECTED_SESSION = ["/equipo"];
