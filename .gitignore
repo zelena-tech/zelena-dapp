@@ -21,3 +21,6 @@ target/
 # Zelena Dapp — datos locales y secretos del worker
 apps/web/data/
 packages/scripts/.service-account.secret
+
+# Salida de graphify (grafo de conocimiento, artefactos generados)
+graphify-out/

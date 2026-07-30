@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
-import { FOUNDER_WALLET } from "@/lib/config";
+import { adminActor } from "@/lib/authz";
 import { adminActionSchema } from "@/lib/validation";
 import {
   approveApplication,
@@ -18,7 +18,8 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   const session = await getSession();
-  if (!session || session.wallet !== FOUNDER_WALLET) {
+  // Gate por ROL resuelto contra la base, no por la wallet de una persona.
+  if (!adminActor(session)) {
     return NextResponse.json({ error: "Solo el founder puede administrar." }, { status: 403 });
   }
   const body = await req.json().catch(() => null);

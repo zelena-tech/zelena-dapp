@@ -14,6 +14,23 @@ const DELINA = "GDELINACONTRIBUTORDEMOAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 const MARCOS = "GMARCOSDEVDEMOBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB";
 const SOFIA = "GSOFIADESIGNDEMOCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC";
 
+/**
+ * ¿Se pueden sembrar las invitaciones de demostración?
+ *
+ * Los códigos `GENESIS-0001..0006` son PREDECIBLES y están publicados en el README y
+ * en CLAUDE.md como credencial de demo. En una URL pública eso es una puerta abierta:
+ * cualquiera con el enlace y un código sin usar se crea una cuenta. Por eso en
+ * producción NO se siembran, salvo que se pida explícitamente con `SEED_DEMO=1`
+ * (útil para un entorno de demostración deliberado, nunca para el interno).
+ *
+ * El resto del seed (época, genoma v1, founder, decision log, Academia) sí corre:
+ * es el bootstrap que la app necesita para arrancar, y no concede acceso a nadie.
+ */
+export function demoInvitesAllowed(env: NodeJS.ProcessEnv = process.env): boolean {
+  if (env.SEED_DEMO === "1") return true;
+  return env.NODE_ENV !== "production";
+}
+
 export function seedIfEmpty(db: DB): void {
   const has = db.prepare(`SELECT COUNT(*) AS n FROM users`).get() as { n: number };
   if (has.n === 0) {
@@ -47,11 +64,15 @@ function seed(db: DB): void {
   insUser.run(SOFIA, "Sofía", "Bronze", FOUNDER_WALLET, 1, 0, "contributor", 0);
 
   // ---- Invitaciones GENESIS (6, del founder, sin usar) ----
-  const insInvite = db.prepare(
-    `INSERT INTO invites (code, issuer_wallet, expires_at) VALUES (?, ?, datetime('now','+30 days'))`
-  );
-  for (let i = 1; i <= 6; i++) {
-    insInvite.run("GENESIS-" + String(i).padStart(4, "0"), FOUNDER_WALLET);
+  // Códigos PREDECIBLES y publicados en los docs: nunca en producción (ver
+  // `demoInvitesAllowed`). El founder genera invitaciones reales desde /admin.
+  if (demoInvitesAllowed()) {
+    const insInvite = db.prepare(
+      `INSERT INTO invites (code, issuer_wallet, expires_at) VALUES (?, ?, datetime('now','+30 days'))`
+    );
+    for (let i = 1; i <= 6; i++) {
+      insInvite.run("GENESIS-" + String(i).padStart(4, "0"), FOUNDER_WALLET);
+    }
   }
 
   // ---- CLA signatures ----

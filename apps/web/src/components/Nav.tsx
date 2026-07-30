@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FOUNDER_WALLET } from "@/lib/config";
+import { claimsPuedenAdministrar } from "@/lib/authz";
 import type { SessionData } from "@/lib/jwt";
 import { Logo, shortWallet } from "./ui";
 
@@ -11,7 +11,10 @@ const LINKS = [
 ];
 
 export default function Nav({ session }: { session: SessionData | null }) {
-  const isFounder = session?.wallet === FOUNDER_WALLET;
+  // Por ROL, no por la wallet de una persona. Aquí basta con los claims de la
+  // cookie: esto solo decide si se DIBUJA el enlace; el gate real vive en
+  // /admin y en /api/admin, que resuelven el rol contra la base.
+  const isFounder = claimsPuedenAdministrar(session ?? {});
   // El módulo equipo (WP14) es trabajo interno: solo tiene sentido con sesión.
   const links = session ? [{ href: "/equipo/hoy", label: "Equipo" }, ...LINKS] : LINKS;
   return (

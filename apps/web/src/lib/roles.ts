@@ -171,6 +171,23 @@ export function puedeVerTodoElEquipo(claims: RoleClaims): boolean {
   return effectiveRole(claims) === "founder" || effectiveIsSupervisor(claims);
 }
 
+/**
+ * ¿Es del EQUIPO INTERNO? El módulo `/equipo` (WP14/WP15) es trabajo interno de la
+ * SAS: backlog, cargas, bloqueos y check-ins.
+ *
+ * Esto NO es lo mismo que `puedeVerTodoElEquipo`: un `core` es del equipo interno
+ * (ve el tablero de proyectos) pero no supervisa (no ve el dashboard de John). Y un
+ * `contributor` de la comunidad DAO no es equipo interno: entra por la puerta de
+ * invitación al Ágora, la Academia y la gobernanza, que son sus espacios.
+ *
+ * Sin esta regla, cualquier sesión —incluida la de cualquier contribuidor de la
+ * cohorte Génesis— podía leer el backlog interno completo en `/equipo/proyectos`.
+ */
+export function esEquipoInterno(claims: RoleClaims): boolean {
+  const role = effectiveRole(claims);
+  return role === "founder" || role === "core" || effectiveIsSupervisor(claims);
+}
+
 /** Etiqueta humana del rol para la UI. */
 export const ROLE_LABEL: Record<Role, string> = {
   founder: "Founder",

@@ -8,7 +8,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/session";
-import { FOUNDER_WALLET, telegramStatus } from "@/lib/config";
+import { telegramStatus } from "@/lib/config";
+import { adminActor } from "@/lib/authz";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { BotStoreError, founderTeamWallet, issueLinkCode, linkForWallet, unlinkTelegram } from "@/lib/bot-store";
 
@@ -17,7 +18,10 @@ export const dynamic = "force-dynamic";
 export async function POST(req: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Entra para vincular Telegram." }, { status: 401 });
-  if (session.wallet !== FOUNDER_WALLET) {
+  const db = getDb();
+  // Gate por ROL contra la base: el founder que entra por Entra llega con su
+  // principal del roster, no con FOUNDER_WALLET, y debe poder dar de alta el bot.
+  if (!adminActor(session, db)) {
     return NextResponse.json({ error: "El asistente de Telegram es del founder en v1." }, { status: 403 });
   }
   if (!rateLimit(`telegram:vincular:${session.wallet}:${clientIp(req.headers)}`, 10, 60_000)) {
@@ -25,7 +29,6 @@ export async function POST(req: NextRequest) {
   }
 
   const body = (await req.json().catch(() => null)) as { action?: string } | null;
-  const db = getDb();
   // El vínculo cuelga de la identidad de EQUIPO del founder (su fila del roster),
   // que es donde vive su trabajo, no de la wallet con la que abrió sesión.
   const wallet = founderTeamWallet(db, session.wallet);
@@ -53,10 +56,10 @@ export async function POST(req: NextRequest) {
 export async function GET() {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Entra para ver el estado." }, { status: 401 });
-  if (session.wallet !== FOUNDER_WALLET) {
+  const db = getDb();
+  if (!adminActor(session, db)) {
     return NextResponse.json({ error: "El asistente de Telegram es del founder en v1." }, { status: 403 });
   }
-  const db = getDb();
   const link = linkForWallet(db, founderTeamWallet(db, session.wallet));
   return NextResponse.json({
     ok: true,

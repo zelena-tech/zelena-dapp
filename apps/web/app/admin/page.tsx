@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
-import { FOUNDER_WALLET, telegramStatus } from "@/lib/config";
+import { telegramStatus } from "@/lib/config";
+import { adminActor } from "@/lib/authz";
 import { getDb } from "@/lib/db";
 import { listAcademia, listProjects, getMilestones } from "@/lib/repo";
 import { Tag, StateBadge, shortWallet, EmptyState } from "@/components/ui";
@@ -20,9 +21,11 @@ export const dynamic = "force-dynamic";
 export default async function AdminPage() {
   const session = await getSession();
   if (!session) redirect("/entrar");
-  if (session.wallet !== FOUNDER_WALLET) redirect("/perfil");
 
   const db = getDb();
+  // Gate por ROL contra la base (no por la wallet de una persona): así el founder
+  // que entra por la puerta corporativa (principal `pending:*`) conserva su panel.
+  if (!adminActor(session, db)) redirect("/perfil");
   const applications = db
     .prepare(
       `SELECT a.*, p.title AS project_title FROM applications a
