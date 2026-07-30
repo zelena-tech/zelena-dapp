@@ -27,6 +27,26 @@ Los ítems `FBxx` (feedback de John, ver FEEDBACK.md) tienen prioridad sobre los
 | **WP18** | **Capa OKR (objetivos y resultados clave)** | v1.1 | WP15 | wp/18-okr | Congelado hasta cumplir los criterios de uso de v1 |
 | **WP19** | **Asistente personal de Telegram para John (backlog agent)** | needs_human | WP14 | wp/19-telegram | ✅ scaffolding COMPLETO y testeado tras flag `TELEGRAM_ENABLED` (5 herramientas, borradores con confirmación, polling). Falta bot token + ANTHROPIC_API_KEY = John (paso A3). Audio: falta decidir proveedor de transcripción |
 
+| **AUTHZ** | **Autorización por rol + fuga del backlog interno** | done | WP13, WP14 | — | ✅ `298b441` · gate por rol contra la base; `/equipo` solo equipo interno; sin códigos GENESIS en producción |
+| **WP20** | **Roster como DATOS + panel de Equipo en /admin** | ready | AUTHZ | wp/20-roster | 🔴 El corazón de "roles, no personas": hoy cambiar un rol exige PR porque el arranque re-impone la constante |
+| **WP21** | **Endurecer producción (parchear Next + docs)** | ready | — | wp/21-hardening | 🔴 Bloquea exponer URL: 2 critical + 16 high en `npm audit` |
+| **WP22** | **Ciclo de vida: alta, baja y reasignación** | ready | WP20 | wp/22-ciclo-vida | Hoy la baja es SQL a mano y el trabajo de quien sale queda huérfano |
+| **WP24** | **Suite/smoke ejecutable contra Azure SQL** | needs_human | WP21 | wp/24-azure-verify | El criterio "suite verde contra Azure SQL" no es ejecutable hoy. Credenciales = John |
+| **WP25** | **Identidad canónica del founder (John duplicado)** | ready | WP20 | wp/25-identidad | Requiere decisión de John: ¿`pending:john` canónico o la wallet demo? |
+| **WP23** | **Canal WhatsApp + notificaciones salientes** | blocked_external | WP17, WP22 | wp/23-whatsapp | Fase automatizar. Gates: decisión de fase + cuenta Meta (plantillas pre-aprobadas) + WP17 descongelado. Etapa A (puerto de canal) es ejecutable ya |
+
+> ## Release v1.2 "Roles, no personas" — grafo en `docs/workflow-v1.2.md`
+>
+> Origen: `docs/specs/AUDITORIA-v1.md` (27 hallazgos) + la visión de John del 30-jul.
+>
+> **El principio:** el sistema se diseña para ROLES, no para personas. Que Vale sea hoy la líder de proyectos y el gate de calidad no puede significar que el sistema esté cableado a Vale: si entra María o Andrea a ese rol, deben poder hacer todo lo que hace Vale **sin que nadie toque código**.
+>
+> **Criterio binario del principio — la "prueba de la persona nueva":** dar de alta a alguien, hacerla supervisora, asignarle trabajo importado del CSV, que el bot la reconozca, y darle de baja reasignando su trabajo — todo desde la interfaz, sin un `git commit`. Mientras no pase, el principio es aspiración, no propiedad del sistema. Corolario: **aplica también al founder** — el gate "la wallet de John" era exactamente ese bug.
+>
+> **Olas:** (1) WP21 ∥ WP20 · (2) WP22 ∥ WP24 · (3) WP25 · (4) WP17 ∥ WP18 solo con criterios de USO · (5) WP23.
+>
+> **Regla nueva de ejecución:** máximo **2 WPs por ola**, y el verificador adversarial en **invocación aparte** de los implementadores. Lección del 30-jul: cuatro agentes de golpe agotaron el presupuesto de sesión y mataron al verificador de D3, que quedó con 7 hallazgos sin confirmar.
+
 > ## Release v1 "Organizar" — NÚCLEO CONGELADO
 >
 > **v1 = WP13 + WP14 + WP15 + WP16 + WP19. Nada más.** WP17 y WP18 son v1.1 y solo se descongelan cuando v1 cumpla sus criterios de USO (no de features):
