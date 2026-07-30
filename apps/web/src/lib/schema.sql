@@ -411,9 +411,15 @@ CREATE INDEX IF NOT EXISTS idx_assign_events ON assignment_events(assignment_id)
 CREATE INDEX IF NOT EXISTS idx_assign_events_day ON assignment_events(day);
 CREATE INDEX IF NOT EXISTS idx_checkins_day ON checkins(day);
 
--- WP13: indices NO unicos a proposito (ver la nota de users.entra_oid). La unicidad
--- de entra_oid la impone lib/entra.ts; aqui solo se busca velocidad de lookup.
-CREATE INDEX IF NOT EXISTS idx_users_entra_oid ON users(entra_oid);
+-- WP13: indice PARCIAL unico. entra_oid es nullable (la mayoria de filas lo tienen a
+-- NULL) y un UNIQUE normal pasaria en SQLite pero rompe en SQL Server, que trata los
+-- NULL como iguales entre si y solo admitiria UNA fila sin vincular. El filtro
+-- `WHERE entra_oid IS NOT NULL` es la forma portable: indice parcial en SQLite,
+-- indice filtrado en T-SQL. WP13 lo dejo NO unico porque lib/sql-dialect.ts
+-- descartaba la clausula WHERE en silencio; ese bug ya esta corregido y con test, asi
+-- que la unicidad vuelve a la base. La comprobacion de lib/entra.ts se conserva: da
+-- un mensaje util en vez de un error de constraint.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_entra_oid ON users(entra_oid) WHERE entra_oid IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_user_emails_wallet ON user_emails(wallet);
 
 CREATE INDEX IF NOT EXISTS idx_rep_wallet ON reputation_events(wallet);

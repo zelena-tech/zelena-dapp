@@ -60,6 +60,37 @@ describe("dialecto T-SQL — DDL (WP16)", () => {
     expect(out[0]).toMatch(/\[nota\] NVARCHAR\(MAX\)/);
   });
 
+  // Hallazgo de WP13: la cola de un CREATE INDEX se descartaba en silencio, así que
+  // un índice PARCIAL de SQLite salía como índice SIN filtro. Importa porque un
+  // UNIQUE sobre columna nullable pasa en SQLite (admite varios NULL) y rompe en
+  // SQL Server (los NULL son iguales entre sí: solo admite uno).
+  it("un índice PARCIAL conserva su WHERE (índice filtrado en T-SQL)", () => {
+    const out = translateSchema(
+      `CREATE TABLE users (wallet TEXT PRIMARY KEY, entra_oid TEXT);
+       CREATE UNIQUE INDEX IF NOT EXISTS idx_oid ON users(entra_oid) WHERE entra_oid IS NOT NULL;`
+    );
+    const idx = out.find((s) => s.includes("idx_oid"))!;
+    expect(idx).toMatch(/CREATE UNIQUE INDEX idx_oid ON users \(entra_oid\)/);
+    expect(idx).toMatch(/WHERE entra_oid IS NOT NULL/);
+  });
+
+  it("un índice sin filtro no gana un WHERE de la nada", () => {
+    const out = translateSchema(
+      `CREATE TABLE t (wallet TEXT NOT NULL);
+       CREATE INDEX idx_t ON t(wallet);`
+    );
+    expect(out.find((s) => s.includes("idx_t"))!).not.toMatch(/WHERE/i);
+  });
+
+  it("una cola no reconocida en CREATE INDEX LANZA en vez de emitir T-SQL 'parecido'", () => {
+    expect(() =>
+      translateSchema(
+        `CREATE TABLE t (wallet TEXT NOT NULL);
+         CREATE INDEX idx_t ON t(wallet) COLLATE NOCASE;`
+      )
+    ).toThrow(UnsupportedSqlError);
+  });
+
   it("REAL → FLOAT (o DECIMAL si se pide)", () => {
     expect(translateSchema("CREATE TABLE t (score REAL NOT NULL);")[0]).toMatch(/\[score\] FLOAT NOT NULL/);
     expect(translateSchema("CREATE TABLE t (score REAL NOT NULL);", { realAs: "DECIMAL" })[0]).toMatch(

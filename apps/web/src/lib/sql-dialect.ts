@@ -912,11 +912,26 @@ export function translateSchema(sqliteSchema: string, options: DialectOptions = 
       continue;
     }
 
-    const idx = /^CREATE\s+(UNIQUE\s+)?INDEX\s+(IF\s+NOT\s+EXISTS\s+)?([A-Za-z_][\w]*)\s+ON\s+([A-Za-z_][\w]*)\s*\(([^)]*)\)/i.exec(
+    const idx = /^CREATE\s+(UNIQUE\s+)?INDEX\s+(IF\s+NOT\s+EXISTS\s+)?([A-Za-z_][\w]*)\s+ON\s+([A-Za-z_][\w]*)\s*\(([^)]*)\)(.*)$/is.exec(
       s
     );
     if (idx) {
-      const create = `CREATE ${idx[1] ? "UNIQUE " : ""}INDEX ${idx[3]} ON ${idx[4]} (${idx[5].trim()})`;
+      // Cola tras la lista de columnas. SQLite admite un índice PARCIAL
+      // (`... WHERE expr`); su equivalente en SQL Server es el índice FILTRADO, con
+      // la misma sintaxis. Traducirlo importa: sin el filtro, un UNIQUE sobre una
+      // columna nullable pasa en SQLite (admite varios NULL) y ROMPE en SQL Server
+      // (trata los NULL como iguales y solo admite uno). Descartar la cola en
+      // silencio era exactamente eso: emitir T-SQL "parecido".
+      const tail = (idx[6] ?? "").trim().replace(/;$/, "").trim();
+      let filter = "";
+      if (tail) {
+        const where = /^WHERE\s+([\s\S]+)$/i.exec(tail);
+        if (!where) {
+          throw new UnsupportedSqlError(`cola no reconocida en CREATE INDEX: '${tail}'`);
+        }
+        filter = ` WHERE ${translateDates(where[1]).trim()}`;
+      }
+      const create = `CREATE ${idx[1] ? "UNIQUE " : ""}INDEX ${idx[3]} ON ${idx[4]} (${idx[5].trim()})${filter}`;
       out.push(
         idx[2]
           ? `IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'${idx[3]}' AND object_id = OBJECT_ID(N'[${idx[4]}]'))\n${create}`
