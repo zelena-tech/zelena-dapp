@@ -26,7 +26,46 @@ CREATE TABLE IF NOT EXISTS users (
   cla_signed    INTEGER NOT NULL DEFAULT 0,
   role          TEXT NOT NULL DEFAULT 'contributor', -- founder | core | contributor
   is_supervisor INTEGER NOT NULL DEFAULT 0,          -- flag independiente de role
+  -- WP13 (puerta corporativa Entra ID). `entra_oid` es el `oid` del token: un GUID
+  -- opaco por tenant, NO un correo (los correos viven en user_emails). NULL = esta
+  -- fila todavia no tiene identidad corporativa vinculada.
+  --
+  -- Por que NO lleva UNIQUE en el esquema: es NULLABLE y la mayoria de filas la
+  -- tienen a NULL. SQLite admite varios NULL en un UNIQUE, pero SQL Server (Azure,
+  -- WP16) trata los NULL como iguales y solo admitiria UNO. Un `UNIQUE` aqui
+  -- funcionaria en local y romperia el alta en produccion al segundo usuario sin
+  -- vincular. La unicidad se garantiza en lib/entra.ts (linkEntraIdentity valida
+  -- que ningun otro principal tenga ese oid, dentro de la misma transaccion).
+  entra_oid     TEXT,
+  auth_provider TEXT NOT NULL DEFAULT 'invite',      -- entra | invite
   created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Correos vinculados al registro de contribuidor (doc 15 §2, plano 05: la identidad
+-- ES el registro; los correos son credenciales vinculadas, no la identidad).
+--
+--  - `kind = 'primary'`   → con el que entra. El corporativo entra SIEMPRE como primary.
+--  - `kind = 'recovery'`  → segundo correo personal. Obligatorio para core: si la
+--    persona sale de la organizacion pierde la puerta corporativa pero NO su
+--    progreso, y sigue entrando por la puerta de comunidad con este correo.
+--  - `is_corporate = 1`   → es del dominio del tenant (@zelena.tech). Un correo
+--    corporativo NO puede ser recovery: moriria con la baja.
+--
+-- UNIQUE (email) es la garantia de "un humano = UN registro" (criterio 5): dos
+-- filas de `users` no pueden reclamar el mismo correo, asi que la puerta corporativa
+-- y la de comunidad convergen en el mismo principal. `email` es NOT NULL, por lo
+-- que este UNIQUE si se traduce fielmente a T-SQL.
+CREATE TABLE IF NOT EXISTS user_emails (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  wallet       TEXT NOT NULL,        -- principal de users (pending:<slug> | entra:<oid> | wallet Stellar)
+  email        TEXT NOT NULL,        -- normalizado en minusculas por lib/entra.ts
+  kind         TEXT NOT NULL DEFAULT 'primary',  -- primary | recovery
+  is_corporate INTEGER NOT NULL DEFAULT 0,
+  -- El prefijo `is_` no es cosmetico: es lo que hace que lib/sql-dialect.ts (WP16)
+  -- materialice la columna como BIT en Azure SQL y no como INT.
+  is_verified  INTEGER NOT NULL DEFAULT 0,       -- 1 = lo verifico el proveedor (Entra)
+  created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (email)
 );
 
 CREATE TABLE IF NOT EXISTS invites (
@@ -371,6 +410,11 @@ CREATE INDEX IF NOT EXISTS idx_assign_status ON assignments(status);
 CREATE INDEX IF NOT EXISTS idx_assign_events ON assignment_events(assignment_id);
 CREATE INDEX IF NOT EXISTS idx_assign_events_day ON assignment_events(day);
 CREATE INDEX IF NOT EXISTS idx_checkins_day ON checkins(day);
+
+-- WP13: indices NO unicos a proposito (ver la nota de users.entra_oid). La unicidad
+-- de entra_oid la impone lib/entra.ts; aqui solo se busca velocidad de lookup.
+CREATE INDEX IF NOT EXISTS idx_users_entra_oid ON users(entra_oid);
+CREATE INDEX IF NOT EXISTS idx_user_emails_wallet ON user_emails(wallet);
 
 CREATE INDEX IF NOT EXISTS idx_rep_wallet ON reputation_events(wallet);
 CREATE INDEX IF NOT EXISTS idx_points_wallet ON points_ledger(wallet);
