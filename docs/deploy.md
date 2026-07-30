@@ -148,9 +148,43 @@ SQLite local en producción es el fallo exacto que esto existe para evitar.
 | `SESSION_SECRET` | sí | firma de la cookie de sesión. La app no arranca sin él en producción. |
 | `FOUNDER_WALLET` | sí | acceso a `/admin`. |
 | `STELLAR_NETWORK` | sí | `testnet`. **Nunca** mainnet en v1. |
-| `AZURE_AD_TENANT_ID` / `AZURE_AD_CLIENT_ID` / `AZURE_AD_CLIENT_SECRET` | WP13 | login Entra. |
 | `SERVICE_ACCOUNT_SECRET` | worker | cuenta de **testnet** del anclaje. Vive SOLO donde corre el worker, jamás en el frontend. |
 | `ZELENA_DB_WORKER` | no | ruta alternativa al worker del puente (por defecto `src/lib/db-query.worker.mjs`). |
+
+### Puerta corporativa Entra ID (WP13)
+
+Con `AUTH_ENTRA_ENABLED` apagado o ausente, la puerta corporativa **no existe**
+(`/api/auth/*` responde 503) y el flujo de invitación + wallet queda intacto. No la
+enciendas hasta tener las cuatro variables siguientes.
+
+| Variable | Obligatoria | Para qué |
+|---|---|---|
+| `AUTH_ENTRA_ENABLED` | no | flag de la puerta corporativa. Acepta `1\|true\|yes`; cualquier otra cosa = APAGADO. |
+| `AZURE_AD_CLIENT_ID` | WP13 | *Application (client) ID* del app registration (paso A1). |
+| `AZURE_AD_CLIENT_SECRET` | WP13 | el *Value* del client secret. El portal lo muestra **una sola vez**. |
+| `AZURE_AD_TENANT_ID` | WP13 | *Directory (tenant) ID*. Es contra este valor que se valida el claim `tid`: **es la restricción de tenant**. |
+| `NEXTAUTH_SECRET` | WP13 | secreto propio de NextAuth (independiente de `SESSION_SECRET`), firma el JWT efímero que vive hasta el intercambio. 32+ bytes aleatorios. |
+| `NEXTAUTH_URL` | WP13 | URL pública de la app. NextAuth construye la URL de callback con ella; si no coincide con la Redirect URI registrada, Entra rechaza el login. |
+| `ZELENA_CORPORATE_DOMAIN` | no | dominio corporativo aceptado; por defecto `zelena.tech`. |
+
+**Redirect URI a registrar en Entra** (no es una variable, pero va junta):
+`<NEXTAUTH_URL>/api/auth/callback/microsoft-entra-id` — coincide **exactamente** con
+la del paso A1 de `DESPLIEGUE-V1.md`.
+
+### Asistente de Telegram (WP19)
+
+Con `TELEGRAM_ENABLED` apagado el webhook responde **404**. El webhook además
+**rechaza si no hay `TELEGRAM_WEBHOOK_SECRET` configurado**, en vez de aceptar a
+cualquiera: un endpoint público sin secreto es escritura anónima en la base.
+
+| Variable | Obligatoria | Para qué |
+|---|---|---|
+| `TELEGRAM_ENABLED` | no | flag del bot. Por defecto APAGADO. |
+| `TELEGRAM_BOT_TOKEN` | WP19 | token de @BotFather. Solo entorno/Key Vault, **nunca** en una tabla. |
+| `TELEGRAM_WEBHOOK_SECRET` | WP19 | *secret token* del webhook, validado en cada request en tiempo constante. Necesario **también en local**, porque el script de polling hace de puente al mismo handler. |
+| `ANTHROPIC_API_KEY` | WP19 | clasificación de mensajes con *tool use*. |
+| `ANTHROPIC_BOT_MODEL` | no | por defecto `claude-haiku-4-5-20251001`. |
+| `ZELENA_APP_URL` | no | solo para el script de polling; por defecto `http://localhost:3000`. |
 
 **Cero secretos en la base de datos** (regla transversal): ninguna tabla guarda
 contraseñas, tokens ni claves. El log de arranque imprime servidor/base/método de

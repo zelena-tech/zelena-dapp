@@ -30,12 +30,15 @@ CREATE TABLE IF NOT EXISTS users (
   -- opaco por tenant, NO un correo (los correos viven en user_emails). NULL = esta
   -- fila todavia no tiene identidad corporativa vinculada.
   --
-  -- Por que NO lleva UNIQUE en el esquema: es NULLABLE y la mayoria de filas la
-  -- tienen a NULL. SQLite admite varios NULL en un UNIQUE, pero SQL Server (Azure,
-  -- WP16) trata los NULL como iguales y solo admitiria UNO. Un `UNIQUE` aqui
-  -- funcionaria en local y romperia el alta en produccion al segundo usuario sin
-  -- vincular. La unicidad se garantiza en lib/entra.ts (linkEntraIdentity valida
-  -- que ningun otro principal tenga ese oid, dentro de la misma transaccion).
+  -- Por que la unicidad NO va aqui como `UNIQUE` de columna: es NULLABLE y la
+  -- mayoria de filas la tienen a NULL. SQLite admite varios NULL en un UNIQUE, pero
+  -- SQL Server (Azure, WP16) trata los NULL como iguales y solo admitiria UNO: un
+  -- `UNIQUE` de columna funcionaria en local y romperia el alta en produccion al
+  -- segundo usuario sin vincular. La unicidad vive en el indice PARCIAL unico
+  -- `idx_users_entra_oid ... WHERE entra_oid IS NOT NULL` (al final del archivo), que
+  -- es la forma portable: indice parcial en SQLite, indice filtrado en T-SQL.
+  -- lib/entra.ts conserva su comprobacion en la misma transaccion, para dar un
+  -- mensaje util en vez de un error de constraint.
   entra_oid     TEXT,
   auth_provider TEXT NOT NULL DEFAULT 'invite',      -- entra | invite
   created_at    TEXT NOT NULL DEFAULT (datetime('now'))

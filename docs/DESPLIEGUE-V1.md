@@ -81,6 +81,34 @@ claude
 | 7. Alta de los 6 + importar el CSV real | John | paso 6 |
 | 8. Primer check-in diario de todos | Equipo | paso 7 |
 
+### Comandos reales del paso 7 (importar el CSV)
+
+⚠️ **Antes de arrancar por primera vez tras el loop: borra la base local.** El repo no
+tiene sistema de migraciones — `schema.sql` se aplica con `CREATE TABLE IF NOT EXISTS`,
+que **no** añade columnas a una base que ya existe. Las olas de v1 añadieron columnas a
+`users` (`role`, `is_supervisor`, `entra_oid`, `auth_provider`), así que una base vieja
+falla al arrancar. Es desechable y se resiembra sola:
+
+```bash
+rm -f apps/web/data/zelena.db apps/web/data/zelena.db-shm apps/web/data/zelena.db-wal
+```
+
+Luego arranca la app una vez (`npm run dev`) para que cree y siembre la base, y importa:
+
+```bash
+node packages/scripts/import-tareas.mjs --dry-run "C:/Users/Omnia/Desktop/DAO/Zelena_Tareas_Import.csv"
+```
+
+`--dry-run` valida y reporta sin escribir: revisa que no haya filas rechazadas (el
+importador **rechaza** valores desconocidos de Status/Priority/Horizonte/Assignee en vez
+de adivinar). Cuando el reporte esté limpio, corre el mismo comando sin `--dry-run`. Es
+**idempotente**: reimportar no duplica, y **no pisa el `status`** de una asignación que
+el equipo ya movió en la app — solo actualiza título, descripción, prioridad, criterio y
+responsable.
+
+En Azure (paso 6) las columnas nuevas del esquema requieren un `ALTER TABLE` explícito
+si la base ya existía; en una base nueva no hay nada que hacer.
+
 **Definición de "v1 desplegada":** los 6 entran con su correo, ven sus asignaciones y hacen check-in; John captura tareas desde Telegram y recibe sus 3 focos del día; el dashboard responde sin preguntar.
 
 **Definición de "v1 exitosa" (descongelar v1.1 — se mide con ~2 semanas de USO, no de código):** los 4 criterios de QUEUE.md — 100% de tareas nuevas de John por el sistema, ≥10 asignaciones cerradas contra criterios, ≥2 reuniones de estado reemplazadas, los 5 con asignaciones reales.

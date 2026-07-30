@@ -19,13 +19,13 @@ Los ítems `FBxx` (feedback de John, ver FEEDBACK.md) tienen prioridad sobre los
 | WP10 | Nómina Modo A+ | blocked_external | WP05 | wp/10-nomina | Gate: consulta legal/tributaria. UI + schema sí ejecutables detrás de flag |
 | WP11 | Simulador ABM | done | WP02 | wp/11-sim | ✅ motor puro + CLI + reporte A/B/emisión/Gini |
 | WP12 | Auditoría funciones latentes | done | WP09 | wp/12-auditoria | ✅ latent_audits + registro público gobernanza + form admin + link a mutación |
-| **WP13** | **Login SSO Entra ID (@zelena.tech)** | ready | WP00 | wp/13-entra | Scaffolding + tests con mock ejecutables ya; credenciales Entra = John |
-| **WP14** | **Módulo equipo (proyectos + asignaciones)** | ready | WP00 | wp/14-equipo | Ejecutable ya; roles finos tras WP13 |
-| **WP15** | **Dashboard de seguimiento** | ready | WP14 | wp/15-dashboard | |
-| **WP16** | **Despliegue en Azure (reemplaza WP05)** | needs_human | WP03, WP13 | wp/16-azure | Driver Postgres ejecutable ya; suscripción y recursos = John |
+| **WP13** | **Login SSO Entra ID (@zelena.tech)** | needs_human | WP00 | wp/13-entra | ✅ scaffolding COMPLETO y testeado tras flag `AUTH_ENTRA_ENABLED` (NextAuth v4 + mock). Solo falta encender: credenciales Entra = John (paso A1) |
+| **WP14** | **Módulo equipo (proyectos + asignaciones)** | done | WP00 | wp/14-equipo | ✅ modelo + máquina pura + importador CSV + `/equipo/hoy` + `/equipo/proyectos` + check-in |
+| **WP15** | **Dashboard de seguimiento** | done | WP14 | wp/15-dashboard | ✅ bloqueos primero + bandeja `needs_founder` + carga + salud de ritos + digest exportable |
+| **WP16** | **Despliegue en Azure (reemplaza WP05)** | needs_human | WP03, WP13 | wp/16-azure | ✅ driver **`mssql`/Azure SQL** + dialecto T-SQL + puente síncrono, testeados sin Azure. Suscripción, recursos y suite contra la instancia real = John (paso 6) |
 | **WP17** | **Entornos por cliente (backlog + marca + inventario)** | v1.1 | WP14 | wp/17-clientes | Congelado hasta cumplir los criterios de uso de v1. CERO secretos almacenados |
 | **WP18** | **Capa OKR (objetivos y resultados clave)** | v1.1 | WP15 | wp/18-okr | Congelado hasta cumplir los criterios de uso de v1 |
-| **WP19** | **Asistente personal de Telegram para John (backlog agent)** | needs_human | WP14 | wp/19-telegram | Bot token (@BotFather) + ANTHROPIC_API_KEY = John. v1 = solo John |
+| **WP19** | **Asistente personal de Telegram para John (backlog agent)** | needs_human | WP14 | wp/19-telegram | ✅ scaffolding COMPLETO y testeado tras flag `TELEGRAM_ENABLED` (5 herramientas, borradores con confirmación, polling). Falta bot token + ANTHROPIC_API_KEY = John (paso A3). Audio: falta decidir proveedor de transcripción |
 
 > ## Release v1 "Organizar" — NÚCLEO CONGELADO
 >
@@ -82,3 +82,14 @@ WP14 (modelo + importador CSV + /equipo/hoy) → WP15 (dashboard + digest) → W
 - 2026-07-24 · WP08 · mutación por época (proponer/revertir/no-cambios + anuncio + guard + linaje) (wp/08-mutacion) · test 71/71, build OK
 - 2026-07-24 · WP12 · auditoría de funciones latentes + registro público en gobernanza (wp/12-auditoria) · test 75/75, build OK
 - 2026-07-24 · review-fixes · fixes de la verificación adversarial: WP03 fail-loud en Turso remoto + mkdir local; WP09 "eje que más creció" real por época (reputation_events.period_id) + empty state Academia (wp/review-fixes) · test 77/77, build+lint OK
+
+### Release v1 "Organizar" — loop del 2026-07-30
+
+- 2026-07-30 · docs-v1 · specs WP13–WP19, planos 05/06/07 y DESPLIEGUE-V1.md traídos al repo (estaban sin versionar en el checkout principal) `8a0c7b1`
+- 2026-07-30 · WP14 · módulo equipo: iniciativas, asignaciones, máquina de estados PURA, importador CSV idempotente, `/equipo/hoy`, `/equipo/proyectos`, check-in diario (wp/14-equipo) `cb49bc7` · test 154/154, build+lint OK
+- 2026-07-30 · WP16 · driver `mssql`/Azure SQL + dialecto T-SQL + puente síncrono (worker_threads + Atomics.wait) probado contra backend async falso (wp/16-azure) `b8328b2` · test 131/131, build+lint OK
+- 2026-07-30 · integración ola 1 · frontera roster/cohorte en `cohortStats()` (la home contaba los 6 `pending:*` como cohorte), `/equipo` añadido al middleware como PROTECTED_SESSION, lockfile sincronizado `16f0113` · test 211/211
+- 2026-07-30 · WP15 · dashboard: bloqueos primero con días derivados de `assignment_events`, bandeja `needs_founder`, carga por persona (repartir, no rankear), salud de ritos, métricas de época, digest diario exportable (wp/15-dashboard) `fc6975c` · test 242/242, build+lint OK
+- 2026-07-30 · WP13 · scaffolding de login Entra tras flag `AUTH_ENTRA_ENABLED`: NextAuth v4, validación de `tid`, `user_emails`, vinculación al roster SIN mutar la PK, banner de segundo correo (wp/13-entra) `fb722d1` · test 249/249, build+lint OK
+- 2026-07-30 · integración ola 2 · **bug cruzado**: `sql-dialect.ts` descartaba en silencio la cláusula `WHERE` de un `CREATE INDEX` (un índice parcial de SQLite salía sin filtro y un UNIQUE nullable habría roto en Azure SQL al segundo usuario). Corregido + 3 tests; la unicidad de `entra_oid` vuelve al esquema como índice parcial único; banner montado en todo `/equipo` `18728ce` · test 283/283, build+lint OK
+- 2026-07-30 · WP19 · scaffolding del asistente de Telegram tras flag `TELEGRAM_ENABLED`: 5 herramientas cerradas, borradores con Confirmar/Editar/Descartar (nada se crea sin confirmar), `telegram_links` con código hasheado, webhook con secret en tiempo constante, log `bot_actions` en admin, hora de los 3 focos en el GENOMA (wp/19-telegram) `fe45bc1` · test 381/381, build+lint OK
