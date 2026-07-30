@@ -73,6 +73,74 @@ export function entraStatus(): { enabled: boolean; configured: boolean; missing:
   return { enabled: isEntraEnabled(), configured: missing.length === 0, missing };
 }
 
+// ---------------------------------------------------------------------------
+// Asistente de Telegram (WP19)
+// ---------------------------------------------------------------------------
+// Mismo patrón que la puerta de Entra: se lee `process.env` EN CADA LLAMADA para
+// poder testear el flag encendido y apagado sin recargar módulos, y para que el
+// build no congele un valor. Ningún secreto se lee fuera de `process.env` ni se
+// escribe en disco o en la base de datos.
+
+/**
+ * Feature flag del bot. APAGADO por defecto: mientras John no cree el bot con
+ * @BotFather (paso A3 de DESPLIEGUE-V1) el scaffolding existe, está testeado con
+ * mocks y no atiende ninguna petición real.
+ */
+export function isTelegramEnabled(): boolean {
+  const v = (process.env.TELEGRAM_ENABLED ?? "").trim().toLowerCase();
+  return v === "1" || v === "true" || v === "yes";
+}
+
+/** Token del bot (Bot API). Nunca se registra en logs ni se guarda en la DB. */
+export function telegramBotToken(): string | null {
+  return process.env.TELEGRAM_BOT_TOKEN ?? null;
+}
+
+/**
+ * Secret token del webhook de Telegram. Solo hace falta en Azure: en local el
+ * bot corre en modo polling (`getUpdates`) y no hay URL pública que proteger.
+ */
+export function telegramWebhookSecret(): string | null {
+  return process.env.TELEGRAM_WEBHOOK_SECRET ?? null;
+}
+
+/** API key de Anthropic para clasificar los mensajes. */
+export function anthropicApiKey(): string | null {
+  return process.env.ANTHROPIC_API_KEY ?? null;
+}
+
+/**
+ * Modelo económico para el bot (WP19). Es una decisión de infraestructura, no un
+ * parámetro evolutivo del sistema: no va al genoma (mismo criterio que
+ * CLA_VERSION). Se puede sobreescribir por entorno sin recompilar.
+ */
+export const BOT_MODEL_DEFAULT = "claude-haiku-4-5-20251001";
+
+export function botModel(): string {
+  return (process.env.ANTHROPIC_BOT_MODEL ?? BOT_MODEL_DEFAULT).trim();
+}
+
+/** Variables que faltan para encender el flag (diagnóstico, sin valores). */
+export function telegramMissingVars(opts: { webhook?: boolean } = {}): string[] {
+  const missing: string[] = [];
+  if (!process.env.TELEGRAM_BOT_TOKEN) missing.push("TELEGRAM_BOT_TOKEN");
+  if (!process.env.ANTHROPIC_API_KEY) missing.push("ANTHROPIC_API_KEY");
+  // El secret del webhook solo es obligatorio en el despliegue (modo webhook).
+  if (opts.webhook && !process.env.TELEGRAM_WEBHOOK_SECRET) missing.push("TELEGRAM_WEBHOOK_SECRET");
+  return missing;
+}
+
+/** Estado del bot para la UI y el diagnóstico. Sin secretos. */
+export function telegramStatus(opts: { webhook?: boolean } = {}): {
+  enabled: boolean;
+  configured: boolean;
+  missing: string[];
+  model: string;
+} {
+  const missing = telegramMissingVars(opts);
+  return { enabled: isTelegramEnabled(), configured: missing.length === 0, missing, model: botModel() };
+}
+
 export const REPUTATION_AXES = [
   "ejecucion",
   "investigacion",

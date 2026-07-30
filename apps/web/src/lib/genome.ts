@@ -19,6 +19,13 @@ export interface Genome {
   ACADEMIA_VOTE_WEIGHT: number; // peso de los puntos de Academia para votos
   TIER_INVITE_CAPS: Record<string, number>; // invitaciones activas por tier
   FITNESS_WEIGHTS: FitnessWeights; // meta-parámetros del motor de épocas (WP07)
+  /**
+   * Hora local (0-23) a la que el asistente propone los 3 focos del día (WP19).
+   * Es un parámetro del sistema, así que vive AQUÍ y no hardcodeado en el bot:
+   * si John quiere que lleguen a otra hora, se publica una versión nueva del
+   * genoma y queda en el linaje. Nada retroactivo sobre épocas cerradas.
+   */
+  DAILY_FOCUS_HOUR: number;
 }
 
 /**
@@ -34,6 +41,7 @@ export const GENOME_V1: Genome = {
   ACADEMIA_VOTE_WEIGHT: 0.5,
   TIER_INVITE_CAPS: { Bronze: 2, Silver: 5, Gold: 10 },
   FITNESS_WEIGHTS: { retention: 0.35, quality: 0.35, participation: 0.2, disputes: 0.1 },
+  DAILY_FOCUS_HOUR: 7,
 };
 
 // Cache por-DB y por-época. Aislada por instancia de DB (WeakMap) para no filtrar
@@ -71,6 +79,14 @@ export function getActiveGenome(db: DB, epoch?: number): Genome {
   const genome = row ? (JSON.parse(row.params) as Genome) : GENOME_V1;
   perDb.set(e, genome);
   return genome;
+}
+
+/**
+ * Hora de los 3 focos del día (WP19), leída del genoma activo. El bot llama aquí:
+ * nunca lleva la hora como literal.
+ */
+export function dailyFocusHour(db: DB, epoch?: number): number {
+  return getActiveGenome(db, epoch).DAILY_FOCUS_HOUR;
 }
 
 /** Invalida la cache de una DB (tras insertar/publicar una versión; útil en tests). */

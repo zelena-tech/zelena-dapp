@@ -427,3 +427,86 @@ CREATE INDEX IF NOT EXISTS idx_points_wallet ON points_ledger(wallet);
 CREATE INDEX IF NOT EXISTS idx_ms_project ON milestones(project_id);
 CREATE INDEX IF NOT EXISTS idx_app_project ON applications(project_id);
 CREATE INDEX IF NOT EXISTS idx_reading_wallet ON reading_sessions(wallet);
+
+-- ============================================================================
+-- ASISTENTE DE TELEGRAM (WP19) — el bot personal de John.
+--
+-- CERO SECRETOS AQUI. El token del bot y la API key viven en variables de
+-- entorno / Key Vault, nunca en una fila. El codigo de alta se guarda HASHEADO
+-- (sha256): la dapp muestra el texto plano una sola vez y la base solo conserva
+-- con que comparar.
+--
+-- Tampoco se guarda ningun dato de horas, ubicacion ni "ultima vez visto": el
+-- seguimiento es por objetivos, no por horas (NO-alcance explicito de WP19).
+-- El texto crudo de los mensajes y los audios NO se persisten: solo la pieza
+-- resultante (la nota o la asignacion) y una linea de log sin contenido.
+-- ============================================================================
+
+-- Identidad: telegram_user_id -> principal de `users`. La PK de users (wallet)
+-- NUNCA muta (regla heredada de WP13): esto VINCULA, no reescribe.
+-- Alta en dos pasos: la dapp crea la fila con link_code_hash y sin
+-- telegram_user_id; John envia `/start CODIGO` y ahi se completa el vinculo.
+-- is_authorized = permiso de ESCRITURA. v1: exactamente uno (John).
+CREATE TABLE IF NOT EXISTS telegram_links (
+  id               INTEGER PRIMARY KEY AUTOINCREMENT,
+  wallet           TEXT NOT NULL,
+  telegram_user_id TEXT,             -- NULL mientras el alta esta pendiente
+  link_code_hash   TEXT,             -- sha256 del codigo de un solo uso; NULL al consumirse
+  code_expires_at  TEXT,
+  is_authorized    INTEGER NOT NULL DEFAULT 0,
+  linked_at        TEXT,             -- cuando se consumio el codigo
+  created_at       TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (wallet) REFERENCES users(wallet)
+);
+
+-- Indices PARCIALES unicos (misma leccion que idx_users_entra_oid de WP13): las
+-- dos columnas son nullable y un UNIQUE normal pasaria en SQLite pero en SQL
+-- Server solo admitiria UNA fila sin vincular.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_telegram_links_uid ON telegram_links(telegram_user_id) WHERE telegram_user_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_telegram_links_code ON telegram_links(link_code_hash) WHERE link_code_hash IS NOT NULL;
+
+-- Notas de reunion: la pieza RESULTANTE de un `/nota` o de un audio. Es lo unico
+-- que se conserva del mensaje original.
+CREATE TABLE IF NOT EXISTS notes (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  author      TEXT NOT NULL,
+  text        TEXT NOT NULL,
+  meeting_ref TEXT,
+  created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (author) REFERENCES users(wallet)
+);
+
+-- Estado PENDIENTE de confirmacion. Nada se escribe en assignments/checkins/notes
+-- sin que John toque `Confirmar`: la pieza propuesta espera aqui, no alla. Evita
+-- asignaciones fantasma salidas de una reunion.
+-- payload_json = la pieza YA ESTRUCTURADA (titulo, responsable, fecha...), nunca
+-- el mensaje crudo.
+CREATE TABLE IF NOT EXISTS bot_drafts (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  wallet       TEXT NOT NULL,
+  tool         TEXT NOT NULL,        -- una de las 5 herramientas
+  payload_json TEXT NOT NULL,
+  status       TEXT NOT NULL DEFAULT 'pendiente',  -- pendiente | confirmado | descartado
+  created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+  resolved_at  TEXT,
+  FOREIGN KEY (wallet) REFERENCES users(wallet)
+);
+
+-- Log de TODA accion del bot, visible en admin. Append-only.
+-- `detail` describe la pieza (titulo, id, alcance), nunca el mensaje del usuario.
+-- `sender_ref` solo se llena cuando el remitente NO esta registrado: es el minimo
+-- para diagnosticar un id desconocido que insiste, y no lleva contenido alguno.
+CREATE TABLE IF NOT EXISTS bot_actions (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  wallet     TEXT,
+  sender_ref TEXT,
+  action     TEXT NOT NULL,
+  outcome    TEXT NOT NULL,          -- ok | rechazado | ignorado | no_entendido | error
+  target     TEXT,
+  detail     TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_bot_actions_wallet ON bot_actions(wallet);
+CREATE INDEX IF NOT EXISTS idx_bot_drafts_wallet ON bot_drafts(wallet);
+CREATE INDEX IF NOT EXISTS idx_notes_author ON notes(author);
