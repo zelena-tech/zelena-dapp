@@ -23,6 +23,18 @@ export interface SessionData extends JWTPayload {
   isFounder: boolean;
   claSigned: boolean;
   isDemo: boolean;
+  /**
+   * WP14 — OPCIONALES a propósito: una cookie firmada antes de WP14 no los trae y
+   * debe seguir siendo válida. Léelos SIEMPRE con `effectiveRole` /
+   * `effectiveIsSupervisor` de lib/roles.ts, que derivan el fallback de `isFounder`.
+   * `role` ∈ founder | core | contributor (valores de WP13); `isSupervisor` es un
+   * flag independiente (plano 07 §5: Vale es `core` Y supervisora).
+   *
+   * La cookie es una PISTA, no la autoridad: para autorizar, lib/team.ts resuelve
+   * role/is_supervisor contra la tabla `users`.
+   */
+  role?: string;
+  isSupervisor?: boolean;
 }
 
 export async function signSession(data: Omit<SessionData, keyof JWTPayload>): Promise<string> {

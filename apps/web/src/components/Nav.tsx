@@ -12,6 +12,8 @@ const LINKS = [
 
 export default function Nav({ session }: { session: SessionData | null }) {
   const isFounder = session?.wallet === FOUNDER_WALLET;
+  // El módulo equipo (WP14) es trabajo interno: solo tiene sentido con sesión.
+  const links = session ? [{ href: "/equipo/hoy", label: "Equipo" }, ...LINKS] : LINKS;
   return (
     <header className="sticky top-0 z-30 border-b border-line/60 bg-bg/80 backdrop-blur">
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
@@ -19,7 +21,7 @@ export default function Nav({ session }: { session: SessionData | null }) {
           <Logo />
         </Link>
         <div className="hidden items-center gap-1 md:flex">
-          {LINKS.map((l) => (
+          {links.map((l) => (
             <Link
               key={l.href}
               href={l.href}
