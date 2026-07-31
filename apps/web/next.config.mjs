@@ -19,6 +19,14 @@ const csp = [
 
 const nextConfig = {
   reactStrictMode: true,
+  // Azure App Service (WP16): `standalone` emite .next/standalone con su propio
+  // server.js y solo las dependencias que el runtime realmente usa, en vez de
+  // exigir todo node_modules en el servidor. Arranque en App Service:
+  //   node .next/standalone/apps/web/server.js
+  // Ojo al desplegar: `standalone` NO copia .next/static ni public/ — hay que
+  // copiarlos junto al bundle (es el paso que más se olvida).
+  // No afecta `npm run dev` ni los tests.
+  output: "standalone",
   experimental: {
     // Paquetes con addons nativos: se resuelven en runtime, no se bundlean
     // (evita el warning "Critical dependency" de sodium-native vía stellar-sdk,
