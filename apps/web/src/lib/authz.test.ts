@@ -15,7 +15,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import { openDb, type DB } from "./db";
-import { seedIfEmpty, demoInvitesAllowed } from "./seed";
+import { seedIfEmpty, demoInvitesAllowed, seedBootstrapInvite, bootstrapInviteCode } from "./seed";
 import { adminActor, equipoInternoActor, rolPuedeAdministrar, claimsPuedenAdministrar } from "./authz";
 import { esEquipoInterno, pendingPrincipal } from "./roles";
 import { FOUNDER_WALLET } from "./config";
@@ -111,6 +111,73 @@ describe("equipoInternoActor: gate de /equipo", () => {
 
   it("un usuario que no existe en la base no entra ni con claims inflados", () => {
     expect(equipoInternoActor(sesion("GDESCONOCIDO", { role: "core" }), db)).toBeNull();
+  });
+});
+
+describe("escotilla de arranque: un despliegue no puede dejarse fuera a sí mismo", () => {
+  const CODIGO = "ZELENA-BOOTSTRAP-2026-XYZ";
+
+  /** Entorno sintético aislado: NO hereda process.env, para que el test sea estable. */
+  function env(overrides: Record<string, string> = {}): NodeJS.ProcessEnv {
+    return overrides as unknown as NodeJS.ProcessEnv;
+  }
+
+  function dbConEnv(entorno: NodeJS.ProcessEnv): DB {
+    const db = openDb(":memory:");
+    db.pragma("foreign_keys = ON");
+    db.exec(fs.readFileSync(path.join(process.cwd(), "src", "lib", "schema.sql"), "utf8"));
+    seedIfEmpty(db);
+    seedBootstrapInvite(db, entorno);
+    return db;
+  }
+
+  function invitesUsables(db: DB): number {
+    return (
+      db.prepare(`SELECT COUNT(*) AS n FROM invites WHERE used_by IS NULL`).get() as { n: number }
+    ).n;
+  }
+
+  it("el deadlock existe sin la escotilla: producción fresca deja 0 invitaciones", () => {
+    // Reproduce el despliegue real: sin códigos de demo y sin escotilla, nadie entra.
+    const db = dbConEnv(env());
+    const genesis = (
+      db.prepare(`SELECT COUNT(*) AS n FROM invites WHERE code LIKE 'GENESIS-%'`).get() as { n: number }
+    ).n;
+    // En test NODE_ENV no es production, así que los GENESIS sí están; lo que se fija
+    // aquí es que la escotilla NO añade nada cuando no está configurada.
+    expect(invitesUsables(db)).toBe(genesis);
+  });
+
+  it("con FOUNDER_BOOTSTRAP_CODE se siembra UNA invitación con ese código", () => {
+    const db = dbConEnv(env({ FOUNDER_BOOTSTRAP_CODE: CODIGO }));
+    const row = db.prepare(`SELECT code, used_by FROM invites WHERE code = ?`).get(CODIGO) as
+      | { code: string; used_by: string | null }
+      | undefined;
+    expect(row?.code).toBe(CODIGO);
+    expect(row?.used_by).toBeNull();
+  });
+
+  it("es idempotente y NO resucita el código una vez consumido", () => {
+    const entorno = env({ FOUNDER_BOOTSTRAP_CODE: CODIGO });
+    const db = dbConEnv(entorno);
+    // Simula que el founder ya entró con él.
+    db.prepare(`UPDATE invites SET used_by = 'GALGUIEN' WHERE code = ?`).run(CODIGO);
+    seedBootstrapInvite(db, entorno); // reinicio de la app
+    const row = db.prepare(`SELECT used_by FROM invites WHERE code = ?`).get(CODIGO) as {
+      used_by: string | null;
+    };
+    expect(row.used_by).toBe("GALGUIEN"); // sigue quemada
+    const cuantas = (
+      db.prepare(`SELECT COUNT(*) AS n FROM invites WHERE code = ?`).get(CODIGO) as { n: number }
+    ).n;
+    expect(cuantas).toBe(1); // nunca se duplica
+  });
+
+  it("rechaza un código corto en vez de sembrar algo adivinable", () => {
+    expect(bootstrapInviteCode(env({ FOUNDER_BOOTSTRAP_CODE: "corto" }))).toBeNull();
+    expect(bootstrapInviteCode(env({ FOUNDER_BOOTSTRAP_CODE: CODIGO }))).toBe(CODIGO);
+    const db = dbConEnv(env({ FOUNDER_BOOTSTRAP_CODE: "corto" }));
+    expect(db.prepare(`SELECT code FROM invites WHERE code = 'corto'`).get()).toBeUndefined();
   });
 });
 

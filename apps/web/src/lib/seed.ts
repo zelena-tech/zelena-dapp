@@ -31,6 +31,31 @@ export function demoInvitesAllowed(env: NodeJS.ProcessEnv = process.env): boolea
   return env.NODE_ENV !== "production";
 }
 
+/**
+ * Código de arranque del founder, para romper el DEADLOCK de un despliegue nuevo.
+ *
+ * El problema que resuelve: en producción no se siembran las invitaciones de demo
+ * (son públicas), y NO existe camino de sesión para un usuario que ya está en la
+ * base — `performOnboard` rechaza wallets registradas y la única otra puerta es
+ * Entra. Resultado: en una base de producción fresca, si Entra no está configurado
+ * o falla, NADIE puede entrar, ni el founder — y no puede emitir invitaciones porque
+ * `/admin` exige sesión. Un despliegue capaz de dejarse fuera a sí mismo.
+ *
+ * La escotilla: si se define `FOUNDER_BOOTSTRAP_CODE`, se siembra **UNA** invitación
+ * con ese valor. No reabre el agujero de D3-02 porque:
+ *  - no está publicado en ningún sitio: lo eliges tú y vive en App Settings;
+ *  - se exige longitud >= 16 para que no sea adivinable;
+ *  - las invitaciones son de un solo uso, así que se quema al entrar.
+ *
+ * Devuelve null si no está configurado o es demasiado corto (fallo silencioso NO:
+ * `seedBootstrapInvite` avisa por consola cuando lo descarta por corto).
+ */
+export function bootstrapInviteCode(env: NodeJS.ProcessEnv = process.env): string | null {
+  const raw = (env.FOUNDER_BOOTSTRAP_CODE ?? "").trim();
+  if (!raw) return null;
+  return raw.length >= 16 ? raw : null;
+}
+
 export function seedIfEmpty(db: DB): void {
   const has = db.prepare(`SELECT COUNT(*) AS n FROM users`).get() as { n: number };
   if (has.n === 0) {
@@ -43,6 +68,30 @@ export function seedIfEmpty(db: DB): void {
   // (WP13 vinculará su identidad real). No escribe correos ni datos personales.
   const txTeam = db.transaction(() => seedTeam(db));
   txTeam();
+
+  // Escotilla de arranque. Va FUERA del `if (users vacía)` a propósito: así funciona
+  // aunque configures la variable después del primer arranque. Es idempotente y no
+  // resucita el código una vez consumido (la fila sigue ahí con `used_by`).
+  seedBootstrapInvite(db);
+}
+
+/** Siembra la invitación de arranque del founder si está configurada y no existe. */
+export function seedBootstrapInvite(db: DB, env: NodeJS.ProcessEnv = process.env): void {
+  const raw = (env.FOUNDER_BOOTSTRAP_CODE ?? "").trim();
+  if (!raw) return;
+  const code = bootstrapInviteCode(env);
+  if (!code) {
+    // Ruidoso a propósito: una variable mal puesta no debe fallar en silencio.
+    console.warn(
+      "[seed] FOUNDER_BOOTSTRAP_CODE ignorado: necesita al menos 16 caracteres para no ser adivinable."
+    );
+    return;
+  }
+  const exists = db.prepare(`SELECT code FROM invites WHERE code = ?`).get(code);
+  if (exists) return; // ya sembrada (usada o no): nunca se resucita
+  db.prepare(
+    `INSERT INTO invites (code, issuer_wallet, expires_at) VALUES (?, ?, datetime('now','+7 days'))`
+  ).run(code, FOUNDER_WALLET);
 }
 
 function seed(db: DB): void {

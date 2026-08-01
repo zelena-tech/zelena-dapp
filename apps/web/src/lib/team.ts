@@ -711,12 +711,24 @@ export function actorFromSession(
   };
 }
 
-/** Miembros del equipo con su rol (para selects y para el dashboard de WP15). */
+/**
+ * Miembros ACTIVOS del equipo con su rol (para selects y para el dashboard de WP15).
+ *
+ * El filtro `status = 'active'` no es cosmético: de aquí derivan la carga por persona
+ * y el DENOMINADOR de la salud de ritos. Sin él, quien se va de la organización sigue
+ * contando como si le tocara hacer check-in, y el porcentaje del equipo baja para
+ * siempre por alguien que ya no está.
+ *
+ * Salir del denominador NO borra nada: sus asignaciones, puntos e historial siguen
+ * intactos (doc 16: jamás se confisca lo ganado). Sale de las métricas de lo activo,
+ * no de la historia.
+ */
 export function listTeamMembers(db: DB) {
   return db
     .prepare(
       `SELECT wallet, display_name, role, is_supervisor FROM users
-        WHERE role IN ('founder','core') ORDER BY role DESC, display_name`
+        WHERE role IN ('founder','core') AND status = 'active'
+        ORDER BY role DESC, display_name`
     )
     .all() as Array<{ wallet: string; display_name: string; role: Role; is_supervisor: number }>;
 }

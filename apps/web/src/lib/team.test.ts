@@ -126,6 +126,37 @@ describe("seed idempotente del roster (WP14)", () => {
     expect(members.map((m) => m.wallet)).not.toContain("GDEMOCONTRIB0001");
     expect(members).toHaveLength(6);
   });
+
+  // D2-04: quien se va sale del denominador de los ritos y de la carga, pero NO de
+  // la historia. Sin este filtro, una persona `alumni` bajaba el % del equipo para
+  // siempre por alguien que ya no está.
+  it("un miembro `alumni` sale de listTeamMembers, pero conserva su historial", () => {
+    const db = freshDb();
+    const vale = pendingPrincipal("vale");
+
+    expect(listTeamMembers(db).map((m) => m.wallet)).toContain(vale);
+
+    // Le acreditamos algo ANTES de la baja, para comprobar que no se confisca.
+    db.prepare(
+      `INSERT INTO points_ledger (wallet, points, period_id, bucket, ref) VALUES (?, 40, 1, 'ejecucion', 'demo')`
+    ).run(vale);
+
+    db.prepare(`UPDATE users SET status = 'alumni' WHERE wallet = ?`).run(vale);
+
+    const activos = listTeamMembers(db);
+    expect(activos.map((m) => m.wallet)).not.toContain(vale);
+    expect(activos).toHaveLength(5); // el denominador del rito baja de 6 a 5
+
+    // Y lo ganado sigue ahí: salir del equipo activo no borra el historial.
+    const total = (
+      db.prepare(`SELECT COALESCE(SUM(points),0) AS n FROM points_ledger WHERE wallet = ?`).get(vale) as {
+        n: number;
+      }
+    ).n;
+    expect(total).toBe(40);
+    // Su fila sigue existiendo: la identidad es el registro (plano 05).
+    expect(db.prepare(`SELECT wallet FROM users WHERE wallet = ?`).get(vale)).toBeTruthy();
+  });
 });
 
 describe("criterio 2 — visibilidad: cada quien lo suyo; founder y supervisor todo", () => {

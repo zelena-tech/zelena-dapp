@@ -29,6 +29,7 @@ export const TEAM_ACTIONS = [
   "empezar",
   "enviar_a_revision",
   "aprobar",
+  "devolver",
   "bloquear",
   "desbloquear",
 ] as const;
@@ -49,7 +50,16 @@ const LINEAR: Record<
   empezar: { from: "Asignada", to: "En curso" },
   enviar_a_revision: { from: "En curso", to: "En revisión" },
   aprobar: { from: "En revisión", to: "Hecha" },
+  // `devolver` es el ÚNICO paso hacia atrás de la cadena, y existe porque revisar
+  // sin poder devolver no es revisar. Va con motivo obligatorio: sin el "qué falta",
+  // devolver una entrega es un juicio; con él, es información para terminarla.
+  // NO es lo mismo que `bloquear`: bloquear dice "esto no puede avanzar por algo
+  // externo"; devolver dice "esto vuelve a tus manos con algo concreto por ajustar".
+  devolver: { from: "En revisión", to: "En curso" },
 };
+
+/** Acciones que exigen un motivo escrito. */
+const NEEDS_REASON: readonly TeamAction[] = ["bloquear", "devolver"];
 
 export function isTeamStatus(v: unknown): v is TeamStatus {
   return typeof v === "string" && (TEAM_STATUSES as readonly string[]).includes(v);
@@ -67,8 +77,12 @@ export class InvalidTeamTransitionError extends Error {
 }
 
 export class BlockReasonRequiredError extends Error {
-  constructor() {
-    super("Para bloquear una asignación hay que escribir el motivo del bloqueo.");
+  constructor(action: TeamAction = "bloquear") {
+    super(
+      action === "devolver"
+        ? "Para devolver una entrega hay que escribir qué falta ajustar."
+        : "Para bloquear una asignación hay que escribir el motivo del bloqueo."
+    );
     this.name = "BlockReasonRequiredError";
   }
 }
@@ -108,10 +122,23 @@ export function teamTransition(
     throw new InvalidTeamTransitionError(state.status, action);
   }
 
+  if (NEEDS_REASON.includes(action) && !(reason ?? "").trim()) {
+    throw new BlockReasonRequiredError(action);
+  }
+
   if (action === "bloquear") {
-    const motivo = (reason ?? "").trim();
-    if (!motivo) throw new BlockReasonRequiredError();
-    return { status: "Bloqueada", statusBeforeBlock: state.status, blockedReason: motivo };
+    return {
+      status: "Bloqueada",
+      statusBeforeBlock: state.status,
+      blockedReason: (reason ?? "").trim(),
+    };
+  }
+
+  if (action === "devolver") {
+    // Vuelve a 'En curso' SIN dejar `blockedReason`: la pieza no está trabada, está
+    // en manos de quien la entrega. El "qué falta" queda en el evento append-only
+    // (assignment_events), que es donde vive la historia de la entrega.
+    return { status: LINEAR.devolver.to, statusBeforeBlock: null, blockedReason: null };
   }
 
   if (action === "desbloquear") {
@@ -141,6 +168,8 @@ export const TEAM_ACTION_LABEL: Record<TeamAction, string> = {
   empezar: "Empezar",
   enviar_a_revision: "Enviar a revisión",
   aprobar: "Aprobar entrega",
+  // Habla de la ENTREGA y de lo que falta, nunca de quien la hizo (doc 16).
+  devolver: "Pedir ajustes",
   bloquear: "Bloquear",
   desbloquear: "Desbloquear",
 };
