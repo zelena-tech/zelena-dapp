@@ -19,12 +19,15 @@ import {
   actorFromSession,
   assignmentsForOwner,
   getCheckin,
+  listInitiatives,
+  listTeamMembers,
   ownProgress,
   today,
   visibleAssignments,
   type AssignmentView,
 } from "@/lib/team";
 import TeamAssignmentActions from "@/components/TeamAssignmentActions";
+import TeamNewAssignment from "@/components/TeamNewAssignment";
 import TeamCheckinForm from "@/components/TeamCheckinForm";
 import { TeamHorizonBadge, TeamPriorityBadge, TeamStatusBadge } from "@/components/TeamStatusBadge";
 import { EmptyState } from "@/components/ui";
@@ -133,6 +136,14 @@ export default async function EquipoHoyPage() {
           Ver proyectos por iniciativa
         </Link>
       </header>
+
+      {/* Alta rápida: capturar lo que acaba de salir en una reunión, sin salir de aquí. */}
+      <TeamNewAssignment
+        personas={listTeamMembers(db).map((m) => ({ wallet: m.wallet, nombre: m.display_name }))}
+        iniciativas={listInitiatives(db).map((i) => ({ id: i.id, nombre: i.name }))}
+        puedeAsignarAOtros={seesAll}
+        miWallet={actor.wallet}
+      />
 
       {/* Tu progreso — compites contigo mismo, con el mismo peso visual que el resto */}
       <section className="card p-6">

@@ -18,6 +18,7 @@ import {
   assignmentsByInitiative,
   assignmentsForOwner,
   actorFromSession,
+  createAssignmentAs,
   checkinsOfDay,
   createAssignment,
   getAssignment,
@@ -592,5 +593,104 @@ describe("criterio 6 — vocabulario auditado: se califican entregas, nunca pers
     expect(cols).toContain("published_as_project_id");
     const row: AssignmentRow | undefined = getAssignment(db, 1);
     expect(row).toBeUndefined(); // sin trabajo sembrado; el puente es solo un enlace
+  });
+});
+
+// Alta desde la web (FB del día 1). Hasta ahora el trabajo solo entraba por el
+// importador de CSV o por el bot; sin esto no se puede añadir nada durante el día.
+describe("createAssignmentAs — quién puede ponerle trabajo a quién", () => {
+  let db: DB;
+  beforeEach(() => {
+    db = freshDb();
+  });
+
+  const actorDe = (wallet: string, role: TeamActor["role"], isSupervisor = false): TeamActor => ({
+    wallet,
+    name: wallet,
+    role,
+    isSupervisor,
+  });
+
+  it("el founder puede asignarle trabajo a otra persona, y nace 'Asignada'", () => {
+    const id = createAssignmentAs(db, actorDe(JOHN, "founder", true), {
+      title: "Revisar la propuesta de analítica",
+      ownerWallet: DAVID,
+    });
+    const row = getAssignment(db, id)!;
+    expect(row.owner_wallet).toBe(DAVID);
+    expect(row.status).toBe("Asignada");
+    expect(row.created_by).toBe(JOHN);
+  });
+
+  it("una supervisora que NO es founder también puede (es por rol, no por persona)", () => {
+    const id = createAssignmentAs(db, actorDe(VALE, "core", true), {
+      title: "Auditar los copys del bot",
+      ownerWallet: DAVID,
+    });
+    expect(getAssignment(db, id)!.owner_wallet).toBe(DAVID);
+  });
+
+  it("un `core` NO puede poner trabajo en la cola de otra persona", () => {
+    expect(() =>
+      createAssignmentAs(db, actorDe(FAUSTO, "core"), { title: "Algo", ownerWallet: DAVID })
+    ).toThrow(TeamError);
+    // Y no deja rastro: nada a medio crear.
+    const n = (db.prepare(`SELECT COUNT(*) AS n FROM assignments`).get() as { n: number }).n;
+    expect(n).toBe(0);
+  });
+
+  it("un `core` SÍ puede capturar lo suyo o dejarlo sin dueño", () => {
+    const propio = createAssignmentAs(db, actorDe(FAUSTO, "core"), {
+      title: "Lo mío",
+      ownerWallet: FAUSTO,
+    });
+    expect(getAssignment(db, propio)!.status).toBe("Asignada");
+
+    const huerfano = createAssignmentAs(db, actorDe(FAUSTO, "core"), { title: "Para alguien" });
+    const row = getAssignment(db, huerfano)!;
+    // Sin dueño va al Backlog: el estado nunca miente diciendo que está asignado.
+    expect(row.owner_wallet).toBeNull();
+    expect(row.status).toBe("Backlog");
+  });
+
+  it("rechaza un responsable que no está en el registro", () => {
+    expect(() =>
+      createAssignmentAs(db, actorDe(JOHN, "founder", true), {
+        title: "X",
+        ownerWallet: "GNOEXISTE0001",
+      })
+    ).toThrow(TeamError);
+  });
+
+  it("deja evento append-only el mismo día, así el digest ve lo creado hoy", () => {
+    const id = createAssignmentAs(db, actorDe(JOHN, "founder", true), {
+      title: "Con evento",
+      ownerWallet: DAVID,
+    });
+    const ev = db
+      .prepare(`SELECT action, to_status, actor_wallet, day FROM assignment_events WHERE assignment_id = ?`)
+      .all(id) as Array<{ action: string; to_status: string; actor_wallet: string; day: string }>;
+    expect(ev).toHaveLength(1);
+    expect(ev[0].action).toBe("crear");
+    expect(ev[0].to_status).toBe("Asignada");
+    expect(ev[0].actor_wallet).toBe(JOHN);
+    expect(ev[0].day).toBe(today());
+  });
+
+  it("una pieza recién creada es operable por la máquina de estados, sin saltos", () => {
+    const id = createAssignmentAs(db, actorDe(JOHN, "founder", true), {
+      title: "Ciclo completo",
+      ownerWallet: DAVID,
+    });
+    const actorDavid = actorDe(DAVID, "core");
+    applyAssignmentAction(db, { assignmentId: id, action: "empezar", actor: actorDavid });
+    applyAssignmentAction(db, { assignmentId: id, action: "enviar_a_revision", actor: actorDavid });
+    const row = applyAssignmentAction(db, {
+      assignmentId: id,
+      action: "devolver",
+      reason: "falta el caso de wallet vacía",
+      actor: actorDe(JOHN, "founder", true),
+    });
+    expect(row.status).toBe("En curso");
   });
 });

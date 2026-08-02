@@ -321,6 +321,50 @@ export function createAssignment(db: DB, input: CreateAssignmentInput): number {
   return Number(info.lastInsertRowid);
 }
 
+/**
+ * Alta desde la web, con la regla de quién puede asignarle trabajo a quién.
+ *
+ *  - Cualquiera del equipo interno puede CREAR trabajo: capturar lo propio no debe
+ *    requerir permiso, o la gente vuelve a apuntarlo en una libreta.
+ *  - Asignárselo a OTRA persona es de founder y supervisores. Un `core` que intente
+ *    poner trabajo en la cola ajena recibe 403; sin dueño o consigo mismo, adelante.
+ *
+ * La regla es por ROL (`puedeVerTodoElEquipo`), nunca por nombre: cuando entre otra
+ * persona a ese rol, hereda la capacidad sin tocar código.
+ */
+export function createAssignmentAs(
+  db: DB,
+  actor: TeamActor,
+  input: CreateAssignmentInput
+): number {
+  const destino = (input.ownerWallet ?? "").trim() || null;
+  const paraOtro = destino !== null && destino !== actor.wallet;
+  if (paraOtro && !puedeVerTodoElEquipo({ role: actor.role, isSupervisor: actor.isSupervisor })) {
+    throw new TeamError(403, "Solo el founder o un supervisor pueden asignarle trabajo a otra persona.");
+  }
+  if (destino) {
+    const existe = db.prepare(`SELECT wallet FROM users WHERE wallet = ?`).get(destino);
+    if (!existe) throw new TeamError(400, "Esa persona no está en el registro.");
+  }
+  // Con dueño, la pieza nace 'Asignada'; sin dueño, al Backlog. Así el estado no
+  // miente: nada aparece como asignado a nadie.
+  const status: TeamStatus = destino ? "Asignada" : "Backlog";
+  const day = today();
+  let id = 0;
+  const tx = db.transaction(() => {
+    id = createAssignment(db, { ...input, ownerWallet: destino, status, createdBy: actor.wallet });
+    // Evento append-only desde el minuto cero: la historia de la entrega empieza
+    // aquí, y es lo que hace que el digest del día vea las piezas creadas hoy.
+    // `from_status` es NOT NULL, así que el nacimiento se registra como Backlog→X.
+    db.prepare(
+      `INSERT INTO assignment_events (assignment_id, action, from_status, to_status, reason, actor_wallet, day)
+       VALUES (?, 'crear', 'Backlog', ?, NULL, ?, ?)`
+    ).run(id, status, actor.wallet, day);
+  });
+  tx();
+  return id;
+}
+
 export function getAssignment(db: DB, id: number): AssignmentRow | undefined {
   return db.prepare(`SELECT * FROM assignments WHERE id = ?`).get(id) as AssignmentRow | undefined;
 }
@@ -741,6 +785,32 @@ export const assignmentActionSchema = z.object({
   assignmentId: z.number().int().positive(),
   action: z.enum(TEAM_ACTIONS),
   reason: z.string().trim().max(500).optional(),
+});
+
+/**
+ * Alta de una asignación desde la web.
+ *
+ * Los campos opcionales se omiten en vez de exigir vacíos: crear una tarea en 5
+ * segundos durante una reunión es el caso que importa; el detalle se completa
+ * después. Solo el título es obligatorio.
+ */
+export const createAssignmentSchema = z.object({
+  title: z.string().trim().min(1, "La asignación necesita un título.").max(200),
+  description: z.string().max(4000).optional(),
+  initiativeId: z.coerce.number().int().positive().nullable().optional(),
+  ownerWallet: z.string().trim().max(120).nullable().optional(),
+  priority: z.enum(PRIORITIES).optional(),
+  size: z.enum(SIZES).nullable().optional(),
+  horizon: z.enum(HORIZONS).optional(),
+  // `YYYY-MM-DD` o vacío. No se acepta texto libre: alimenta el orden del día.
+  dueDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "La fecha debe ser AAAA-MM-DD.")
+    .nullable()
+    .optional(),
+  acceptanceCriteria: z.string().max(4000).optional(),
+  specUrl: z.string().trim().max(500).nullable().optional(),
+  needsFounder: z.boolean().optional(),
 });
 
 export const checkinSchema = z.object({
