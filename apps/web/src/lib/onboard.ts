@@ -11,7 +11,7 @@ import { consumeInvite, InviteConsumeError } from "./invites";
 import { claCanonicalHash } from "./cla";
 import { claSigningPayload } from "./cla-signing";
 import { verifyWalletSignature } from "./crypto";
-import { CLA_VERSION } from "./config";
+import { CLA_VERSION, isBootstrapCode } from "./config";
 
 export class OnboardError extends Error {
   status: number;
@@ -69,10 +69,17 @@ export function performOnboard(db: DB, input: OnboardInput): OnboardResult {
   const tx = db.transaction(() => {
     // La puerta de comunidad (invitación + CLA) da rol `contributor` y nunca
     // supervisión: `core` solo lo otorga el alta corporativa (WP13) o el roster.
+    //
+    // ÚNICA excepción: la escotilla de arranque (`FOUNDER_BOOTSTRAP_CODE`). Sin ella,
+    // entrar con ese código daba `contributor` y el founder quedaba fuera de /admin
+    // y de /equipo — o sea, la escotilla no resolvía el deadlock que existe para
+    // resolver. Ese código es un secreto de App Settings, de un solo uso, y por
+    // diseño concede administración: es la llave de root del despliegue.
+    const esArranque = isBootstrapCode(code);
     db.prepare(
       `INSERT INTO users (wallet, display_name, tier, invited_by, is_demo, cla_signed, role, is_supervisor)
-       VALUES (?, ?, 'Bronze', ?, ?, 1, 'contributor', 0)`
-    ).run(wallet, name, issuer, isDemo ? 1 : 0);
+       VALUES (?, ?, 'Bronze', ?, ?, 1, ?, ?)`
+    ).run(wallet, name, issuer, isDemo ? 1 : 0, esArranque ? "founder" : "contributor", esArranque ? 1 : 0);
     db.prepare(
       `INSERT INTO cla_signatures (wallet, cla_version, cla_hash, signature, anchor_status) VALUES (?, ?, ?, ?, 'pending')`
     ).run(wallet, CLA_VERSION, claHash, signature);

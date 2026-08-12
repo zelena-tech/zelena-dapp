@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { Keypair } from "@stellar/stellar-sdk";
 import fs from "node:fs";
 import path from "node:path";
@@ -115,5 +115,77 @@ describe("performOnboard — verificación de firma antes de consumir invitació
     expect(err).toBeInstanceOf(OnboardError);
     expect((err as OnboardError).status).toBe(400);
     expect(inviteUsedBy(db, code)).toBeNull();
+  });
+});
+
+// La escotilla de arranque tiene que dejarte ADMINISTRAR, no solo entrar. Sin esto,
+// entrar con FOUNDER_BOOTSTRAP_CODE daba `contributor` y el founder quedaba fuera de
+// /admin y de /equipo: la escotilla no resolvía el deadlock que existe para resolver.
+describe("escotilla de arranque: el código de founder concede administración", () => {
+  const BOOT = "ZELENA-BOOTSTRAP-2026-XYZ";
+  let db: DB;
+  let hash: string;
+  let kp: Keypair;
+  let wallet: string;
+  let goodSig: string;
+  let prev: string | undefined;
+
+  beforeEach(() => {
+    db = freshDb();
+    hash = claCanonicalHash();
+    kp = Keypair.random();
+    wallet = kp.publicKey();
+    goodSig = b64(kp.sign(Buffer.from(claSigningPayload(hash), "utf8")));
+    prev = process.env.FOUNDER_BOOTSTRAP_CODE;
+    process.env.FOUNDER_BOOTSTRAP_CODE = BOOT;
+  });
+
+  afterEach(() => {
+    if (prev === undefined) delete process.env.FOUNDER_BOOTSTRAP_CODE;
+    else process.env.FOUNDER_BOOTSTRAP_CODE = prev;
+  });
+
+  function rolDe(w: string) {
+    return db.prepare(`SELECT role, is_supervisor FROM users WHERE wallet = ?`).get(w) as {
+      role: string;
+      is_supervisor: number;
+    };
+  }
+
+  it("entrar con el código de arranque crea un FOUNDER supervisor", () => {
+    seedInvite(db, BOOT, "ISSUER");
+    performOnboard(db, { code: BOOT, wallet, name: "John", isDemo: true, claHash: hash, signature: goodSig });
+    const r = rolDe(wallet);
+    expect(r.role).toBe("founder");
+    expect(r.is_supervisor).toBe(1);
+  });
+
+  it("cualquier OTRO código sigue dando contributor sin supervisión", () => {
+    seedInvite(db, "GENESIS-0001", "ISSUER");
+    performOnboard(db, {
+      code: "GENESIS-0001",
+      wallet,
+      name: "Alguien",
+      isDemo: true,
+      claHash: hash,
+      signature: goodSig,
+    });
+    const r = rolDe(wallet);
+    expect(r.role).toBe("contributor");
+    expect(r.is_supervisor).toBe(0);
+  });
+
+  it("un código de arranque DEMASIADO CORTO no concede founder", () => {
+    process.env.FOUNDER_BOOTSTRAP_CODE = "corto";
+    seedInvite(db, "corto", "ISSUER");
+    performOnboard(db, { code: "corto", wallet, name: "X", isDemo: true, claHash: hash, signature: goodSig });
+    expect(rolDe(wallet).role).toBe("contributor");
+  });
+
+  it("sin la variable configurada, ningún código concede founder", () => {
+    delete process.env.FOUNDER_BOOTSTRAP_CODE;
+    seedInvite(db, BOOT, "ISSUER");
+    performOnboard(db, { code: BOOT, wallet, name: "X", isDemo: true, claHash: hash, signature: goodSig });
+    expect(rolDe(wallet).role).toBe("contributor");
   });
 });

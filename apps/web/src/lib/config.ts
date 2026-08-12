@@ -155,3 +155,33 @@ export const AXIS_LABEL: Record<Axis, string> = {
   comunidad: "Comunidad",
   gobernanza: "Gobernanza",
 };
+
+/**
+ * Código de arranque del founder, para romper el DEADLOCK de un despliegue nuevo.
+ *
+ * El problema que resuelve: en producción no se siembran las invitaciones de demo
+ * (son públicas), y NO existe camino de sesión para un usuario que ya está en la
+ * base — `performOnboard` rechaza wallets registradas y la única otra puerta es
+ * Entra. Resultado: en una base de producción fresca, si Entra no está configurado
+ * o falla, NADIE puede entrar, ni el founder — y no puede emitir invitaciones porque
+ * `/admin` exige sesión. Un despliegue capaz de dejarse fuera a sí mismo.
+ *
+ * ⚠️ ESTE CÓDIGO CONCEDE EL ROL `founder`. Trátalo como una contraseña de root:
+ * quien lo tenga se convierte en administrador del sistema. Es de un solo uso (las
+ * invitaciones se queman), vive solo en App Settings y exige >= 16 caracteres para
+ * no ser adivinable. No reabre el agujero de los códigos GENESIS publicados porque
+ * no está publicado en ninguna parte.
+ *
+ * Devuelve null si no está configurado o es demasiado corto.
+ */
+export function bootstrapInviteCode(env: NodeJS.ProcessEnv = process.env): string | null {
+  const raw = (env.FOUNDER_BOOTSTRAP_CODE ?? "").trim();
+  if (!raw) return null;
+  return raw.length >= 16 ? raw : null;
+}
+
+/** ¿Este código de invitación es la escotilla de arranque del founder? */
+export function isBootstrapCode(code: string, env: NodeJS.ProcessEnv = process.env): boolean {
+  const boot = bootstrapInviteCode(env);
+  return !!boot && code.trim() === boot;
+}
