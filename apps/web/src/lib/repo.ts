@@ -76,11 +76,21 @@ export function claSignature(wallet: string) {
 }
 
 export function cohortStats(db: DB = getDb()) {
-  // Excluye los placeholders `pending:*` del roster interno (WP14): son los 6 del
-  // equipo esperando su identidad real (WP13), no contribuidores de la cohorte DAO.
-  // Sin este filtro la home publica los contaria como cohorte (4 -> 10).
+  // Cohorte PUBLICA de la DAO = quienes entraron por la puerta de comunidad, o sea
+  // `role = 'contributor'`. El equipo interno (`founder`/`core`) no es cohorte.
+  //
+  // Antes esto filtraba por el FORMATO del principal (`NOT LIKE 'pending:%'`), y esa
+  // era la logica equivocada: servia para excluir al roster de WP14, pero contaba
+  // como cohorte a cualquier miembro del equipo que entrara por Entra, porque su
+  // principal es `entra:<oid>` y no `pending:*`. Verificado: al dar de alta a una
+  // persona `core` por Entra la cuenta publica subia de 4 a 5.
+  //
+  // Filtrar por ROL no depende del formato del principal, asi que sigue siendo
+  // correcto cuando la identidad se unifique (WP25) o aparezcan wallets reales.
+  // Nota: el founder queda FUERA del conteo. Cuando WP25 deje una sola fila de
+  // founder se puede decidir si vuelve a contarse como contribuidor #1.
   const contributors = (
-    db.prepare(`SELECT COUNT(*) AS n FROM users WHERE wallet NOT LIKE 'pending:%'`).get() as { n: number }
+    db.prepare(`SELECT COUNT(*) AS n FROM users WHERE role = 'contributor'`).get() as { n: number }
   ).n;
   const bounties = (db.prepare(`SELECT COUNT(*) AS n FROM projects`).get() as { n: number }).n;
   const points = (db.prepare(`SELECT COALESCE(SUM(points),0) AS n FROM points_ledger`).get() as { n: number }).n;

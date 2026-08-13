@@ -766,12 +766,18 @@ export function actorFromSession(
  * Salir del denominador NO borra nada: sus asignaciones, puntos e historial siguen
  * intactos (doc 16: jamás se confisca lo ganado). Sale de las métricas de lo activo,
  * no de la historia.
+ *
+ * `is_demo = 0` excluye al founder DEMO que crea `seed.ts`. Sin ese filtro esta
+ * función devolvía 7 personas con John repetido (`pending:john` y la wallet demo),
+ * lo que duplicaba su nombre en los desplegables de responsable y ponía el
+ * denominador del rito en 7 en vez de 6. La causa de fondo —dos filas para el mismo
+ * humano— es WP25; esto la contiene hasta que se unifique la identidad del founder.
  */
 export function listTeamMembers(db: DB) {
   return db
     .prepare(
       `SELECT wallet, display_name, role, is_supervisor FROM users
-        WHERE role IN ('founder','core') AND status = 'active'
+        WHERE role IN ('founder','core') AND status = 'active' AND is_demo = 0
         ORDER BY role DESC, display_name`
     )
     .all() as Array<{ wallet: string; display_name: string; role: Role; is_supervisor: number }>;
