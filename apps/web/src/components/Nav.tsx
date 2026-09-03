@@ -4,6 +4,9 @@ import type { SessionData } from "@/lib/jwt";
 import { Logo, shortWallet } from "./ui";
 
 const LINKS = [
+  { href: "/equipo/hoy", label: "Mi día" },
+  { href: "/equipo/proyectos", label: "Proyectos" },
+  { href: "/clientes", label: "Clientes" },
   { href: "/agora", label: "Ágora" },
   { href: "/academia", label: "Academia" },
   { href: "/gobernanza", label: "Gobernanza" },

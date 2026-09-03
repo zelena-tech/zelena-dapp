@@ -53,14 +53,29 @@ export default function Entrar() {
     }
   }, [step, claText]);
 
-  async function verifyCode() {
+  // Prellenado desde el QR proyectado: /entrar?code=ESPECIALIZACION-2026.
+  // Se lee de window.location.search (no useSearchParams) para no forzar el
+  // bailout a CSR de toda la página en `next build`.
+  useEffect(() => {
+    const fromUrl = new URLSearchParams(window.location.search).get("code");
+    if (!fromUrl) return;
+    const normalized = fromUrl.trim().toUpperCase();
+    if (normalized.length < 3) return;
+    setCode(normalized);
+    void verifyCode(normalized);
+    // Solo al montar: la URL no cambia dentro del wizard.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function verifyCode(raw?: string) {
+    const value = (raw ?? code).trim();
     setCodeState("checking");
     setCodeMsg("");
     try {
       const res = await fetch("/api/invite/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: code.trim() }),
+        body: JSON.stringify({ code: value }),
       });
       const data = await res.json();
       if (res.ok && data.ok) {
@@ -219,7 +234,10 @@ export default function Entrar() {
                 setCodeState("idle");
               }}
             />
-            <p className="mt-1 text-xs text-faint">Un solo uso, ligado a la wallet del invitador, expira a 30 días.</p>
+            <p className="mt-1 text-xs text-faint">
+              Las invitaciones personales son de un solo uso, ligadas a la wallet del invitador y expiran a 30 días.
+              Los códigos de cohorte admiten varias entradas hasta agotar sus cupos.
+            </p>
           </div>
           {codeState === "valid" ? (
             <p className="text-sm text-primary">Código válido. Puedes continuar.</p>
@@ -228,7 +246,11 @@ export default function Entrar() {
           ) : null}
           <div className="flex gap-2">
             {codeState !== "valid" ? (
-              <button className="btn btn-ghost" onClick={verifyCode} disabled={codeState === "checking" || code.length < 3}>
+              <button
+                className="btn btn-ghost"
+                onClick={() => void verifyCode()}
+                disabled={codeState === "checking" || code.length < 3}
+              >
                 {codeState === "checking" ? "Validando…" : "Validar código"}
               </button>
             ) : (

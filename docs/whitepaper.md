@@ -12,7 +12,7 @@ Zelena es una firma de gestión de activos digitales que ayuda a pequeñas y med
 
 Este whitepaper describe la **Zelena DAO**: la capa comunitaria y de gobernanza del ecosistema. La DAO se articula sobre una arquitectura de dos entidades. Una sociedad (**Zelena SAS**) es titular de la propiedad intelectual y de los ingresos; una comunidad gobernada (**Zelena DAO**) coordina el trabajo, mide el valor y acumula reputación. Un acuerdo de servicios une a ambas.
 
-El documento distingue con cuidado entre lo que ya está validado, lo que es hipótesis y lo que aún no existe. El producto validado es la **Capa 1: FMS** (sistema de gestión de fulfillment), adoptado orgánicamente por unas diez empresas en Colombia. La capa de incentivos on-chain (**Harmony**) es una hipótesis en validación, no un producto con encaje de mercado confirmado. La misma disciplina aplica a la DAO: primero se valida la **cooperación** de una cohorte real; solo después se invierte en tokenomics líquida, mainnet o gobernanza compleja.
+El documento distingue con cuidado entre lo que ya está validado, lo que es hipótesis y lo que aún no existe. El producto validado es la **Capa 1: WMS** (sistema de gestión de bodega), adoptado orgánicamente por unas diez empresas en Colombia. La capa de incentivos on-chain (**Harmony**) es una hipótesis en validación, no un producto con encaje de mercado confirmado. La misma disciplina aplica a la DAO: primero se valida la **cooperación** de una cohorte real; solo después se invierte en tokenomics líquida, mainnet o gobernanza compleja.
 
 El corazón económico del modelo es un **triángulo de tres activos**, cada uno con un rol único: **USDC** paga el trabajo, la **reputación** otorga voto y acceso, y **ZWORK** representa un derecho residual sobre el éxito del ecosistema. Ninguno sustituye a otro.
 
@@ -30,13 +30,13 @@ Zelena parte de una creencia central: **el valor que entregas debería determina
 
 ---
 
-## 3. Zelena hoy: FMS validado y la hipótesis Harmony
+## 3. Zelena hoy: WMS validado y la hipótesis Harmony
 
-### 3.1 Capa 1 — FMS (validado)
+### 3.1 Capa 1 — WMS (validado)
 
 El **Fulfillment Management System** es un sistema de gestión logística de extremo a extremo que controla el ciclo completo de fulfillment desde una sola plataforma. Nació resolviendo un problema real de un cliente real. Hoy tiene alrededor de diez clientes en producción en Colombia, todos por recomendación boca a boca, con cero inversión en publicidad y sin capital externo.
 
-El FMS cubre once módulos (autenticación con roles, productos, órdenes, picking optimizado por ruta, packing, ubicaciones, recepción, reportes de avería, métricas de desempeño, facturación y traslados). El módulo de **métricas de desempeño** es el activo estratégico más fuerte: Zelena ya es dueña de los datos donde se mide el desempeño, lo que crea el derecho natural a extenderse hacia la compensación.
+El WMS cubre once módulos (autenticación con roles, productos, órdenes, picking optimizado por ruta, packing, ubicaciones, recepción, reportes de avería, métricas de desempeño, facturación y traslados). El módulo de **métricas de desempeño** es el activo estratégico más fuerte: Zelena ya es dueña de los datos donde se mide el desempeño, lo que crea el derecho natural a extenderse hacia la compensación.
 
 **Estatus:** problema real y validado. Demanda clara y confirmada.
 
@@ -44,7 +44,7 @@ El FMS cubre once módulos (autenticación con roles, productos, órdenes, picki
 
 **Harmony** es un sistema de recompensas on-chain que conecta el desempeño real del operario con pagos verificables, transparentes y automáticos en moneda local, construido sobre Stellar/Soroban. El operario nunca sabe que interactúa con una blockchain.
 
-Harmony **no es un producto con encaje de mercado confirmado.** Una auditoría externa estableció que la fricción del incentivo manual es observada pero **no está validada como un dolor prioritario que las empresas paguen por automatizar.** No se sabe aún si las empresas pagarían por un producto dedicado, si Harmony es un producto independiente o una función del FMS, ni si existe la confianza suficiente para delegar el cálculo de pagos. La solución puede estar más desarrollada que validado el problema.
+Harmony **no es un producto con encaje de mercado confirmado.** Una auditoría externa estableció que la fricción del incentivo manual es observada pero **no está validada como un dolor prioritario que las empresas paguen por automatizar.** No se sabe aún si las empresas pagarían por un producto dedicado, si Harmony es un producto independiente o una función del WMS, ni si existe la confianza suficiente para delegar el cálculo de pagos. La solución puede estar más desarrollada que validado el problema.
 
 Por eso la prioridad presente es **validación, no infraestructura.** Este whitepaper trata a Harmony como una hipótesis sólida, respaldada por un posicionamiento fuerte, nunca como un hecho de mercado.
 
@@ -221,7 +221,7 @@ Cuatro workstreams: **Dapp v0.1** en testnet (onboarding, Ágora, perfil, puntos
 
 Criterios de éxito clave: ≥15 contribuidores con CLA anclado, ≥10 bounties completados y distribuidos, **≥60% de retención a 8 semanas**, ≥3 periodos cerrados con merkle root, ≥3 PRs externos merged bajo CLA-check. La regla de decisión es explícita: si la retención cae por debajo del 30%, se **detiene la construcción** — el problema sería la propuesta de valor al contribuidor, no la Dapp.
 
-Lo que **NO** está en este milestone, a propósito: mainnet, dinero real, USDC, anchors, ZWORK transferible, auditoría de contratos, app móvil, puente FMS→Soroban y cualquier integración externa. Todo eso pertenece a fases posteriores y solo se justifica si la retención y la ejecución pasan.
+Lo que **NO** está en este milestone, a propósito: mainnet, dinero real, USDC, anchors, ZWORK transferible, auditoría de contratos, app móvil, puente WMS→Soroban y cualquier integración externa. Todo eso pertenece a fases posteriores y solo se justifica si la retención y la ejecución pasan.
 
 ### 11.2 Horizontes posteriores
 

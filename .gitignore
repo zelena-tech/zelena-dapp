@@ -21,3 +21,9 @@ target/
 # Zelena Dapp — datos locales y secretos del worker
 apps/web/data/
 packages/scripts/.service-account.secret
+
+# Datos de clientes reales, worktrees de agentes y copia de docs para deploy: nunca publicos
+apps/web/src/lib/__fixtures__/*grafo*.json
+.claude/
+apps/web/docs/
+_to_delete/

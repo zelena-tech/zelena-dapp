@@ -8,14 +8,41 @@ import type { DB } from "./db"; // solo tipo: sin ciclo en runtime
 import { sha256Hex } from "./crypto";
 import { FOUNDER_WALLET } from "./config";
 import { GENOME_V1, seedGenomeV1 } from "./genome";
+import { createCohortInvite } from "./invites";
 
 const DELINA = "GDELINACONTRIBUTORDEMOAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 const MARCOS = "GMARCOSDEVDEMOBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB";
 const SOFIA = "GSOFIADESIGNDEMOCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC";
 
+/**
+ * Código de cohorte de la especialización: un solo código para decenas de
+ * personas (QR proyectado en clase → /entrar?code=ESPECIALIZACION-2026).
+ */
+export const COHORT_CODE = "ESPECIALIZACION-2026";
+const COHORT_MAX_USES = 150;
+const COHORT_EXPIRES_DAYS = 14;
+
+/**
+ * Se siembra en CADA arranque, no solo cuando la base está vacía: es
+ * idempotente (INSERT OR IGNORE, no reinicia `uses` ni la expiración) y sobre
+ * una base ya poblada `seed()` nunca corre, así que si viviera solo ahí dentro
+ * el código de la cohorte no existiría jamás en la base de John.
+ */
+export function seedCohortInvite(db: DB): void {
+  createCohortInvite(db, {
+    code: COHORT_CODE,
+    issuerWallet: FOUNDER_WALLET,
+    maxUses: COHORT_MAX_USES,
+    expiresDays: COHORT_EXPIRES_DAYS,
+  });
+}
+
 export function seedIfEmpty(db: DB): void {
   const has = db.prepare(`SELECT COUNT(*) AS n FROM users`).get() as { n: number };
-  if (has.n > 0) return;
+  if (has.n > 0) {
+    seedCohortInvite(db);
+    return;
+  }
   const tx = db.transaction(() => seed(db));
   tx();
 }
@@ -43,6 +70,9 @@ function seed(db: DB): void {
   for (let i = 1; i <= 6; i++) {
     insInvite.run("GENESIS-" + String(i).padStart(4, "0"), FOUNDER_WALLET);
   }
+
+  // ---- Código de cohorte multiuso (demo de clase). No toca el cupo del tier ----
+  seedCohortInvite(db);
 
   // ---- CLA signatures ----
   const claText = "Zelena CLA v1 canonical"; // referencia; el hash real lo calcula el cliente

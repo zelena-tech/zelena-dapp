@@ -183,7 +183,14 @@ function init(): DB {
   }
   db.pragma("journal_mode = WAL");
   db.pragma("foreign_keys = ON");
+  // ANTES del schema: sobre una base preexistente, schema.sql declara indices que
+  // usan columnas nuevas (p. ej. idx_users_email sobre users.email). Como el
+  // CREATE TABLE IF NOT EXISTS no toca la tabla vieja, el indice reventaria antes
+  // de llegar a la migracion. En una base nueva no hace nada (la tabla no existe).
+  applyMigrations(db);
   db.exec(schemaSql());
+  // DESPUES del schema: columnas nuevas sobre tablas que acaba de crear schema.sql.
+  applyMigrations(db);
   seedIfEmpty(db);
   return db;
 }
@@ -191,4 +198,40 @@ function init(): DB {
 export function getDb(): DB {
   if (!g.__zelenaDb) g.__zelenaDb = init();
   return g.__zelenaDb;
+}
+
+/**
+ * Migraciones idempotentes de columnas. `CREATE TABLE IF NOT EXISTS` no toca
+ * una tabla que ya existe, y `ALTER TABLE ADD COLUMN` falla si la columna ya
+ * está. Como schema.sql se ejecuta en CADA arranque, las columnas nuevas sobre
+ * tablas viejas necesitan este paso.
+ *
+ * Añadir una entrada aquí es el procedimiento para toda columna nueva sobre
+ * una tabla preexistente.
+ */
+const COLUMNAS_NUEVAS: Array<{ tabla: string; columna: string; ddl: string }> = [
+  { tabla: "users", columna: "email", ddl: "TEXT" },
+  { tabla: "users", columna: "recovery_email", ddl: "TEXT" },
+  { tabla: "users", columna: "is_supervisor", ddl: "INTEGER NOT NULL DEFAULT 0" },
+  // Codigo de cohorte multiuso: NULL en max_uses = un solo uso (semantica original).
+  { tabla: "invites", columna: "max_uses", ddl: "INTEGER" },
+  { tabla: "invites", columna: "uses", ddl: "INTEGER NOT NULL DEFAULT 0" },
+];
+
+export function applyMigrations(db: DB): string[] {
+  const aplicadas: string[] = [];
+  for (const { tabla, columna, ddl } of COLUMNAS_NUEVAS) {
+    let existe = false;
+    try {
+      const cols = db.prepare(`PRAGMA table_info(${tabla})`).all() as Array<{ name: string }>;
+      if (cols.length === 0) continue; // la tabla no existe todavia: la crea schema.sql
+      existe = cols.some((c) => c.name === columna);
+    } catch {
+      continue;
+    }
+    if (existe) continue;
+    db.exec(`ALTER TABLE ${tabla} ADD COLUMN ${columna} ${ddl}`);
+    aplicadas.push(`${tabla}.${columna}`);
+  }
+  return aplicadas;
 }

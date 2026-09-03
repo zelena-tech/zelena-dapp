@@ -17,7 +17,7 @@ graph TB
         NOMINA["api/nomina<br/>registro pagos USDC"]:::nuevo
     end
 
-    subgraph Datos["Base de datos (SQLite → Turso)"]
+    subgraph Datos["Base de datos (SQLite en local → Azure SQL en producción)"]
         DB[("users · invites · cla_signatures · projects · milestones<br/>reputation_events · points_ledger · periods · decision_log<br/>proposals · votes · academia_*")]
         DBNEW[("genome_versions · epoch_fitness<br/>latent_audits · payroll_payments · user_emails")]:::nuevo
     end
@@ -47,7 +47,7 @@ graph TB
 
 ## Principios que no se negocian
 
-1. **Toda la DB detrás de `lib/db.ts`** (swap de motor sin tocar lógica).
+1. **Toda la DB detrás de `lib/db.ts`** (swap de motor sin tocar lógica). Hoy: SQLite en local, **Azure SQL** en producción (driver `mssql`, autenticación por managed identity). Este principio es lo que hizo que cambiar de motor costara minutos y no un refactor.
 2. **Funciones puras para las reglas** (`state-machine`, `rules`, `fitness`, `genome`): testeables y reutilizables por el simulador.
 3. **Append-only donde importa**: reputación, puntos, genoma, decision log — los saldos se derivan, nunca se mutan.
 4. **La app no custodia fondos.** Los pagos se ejecutan fuera (multisig SAS) y la app registra + verifica contra Horizon. La custodia on-chain llega con el escrow de M2, auditado.

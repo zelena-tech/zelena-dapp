@@ -1,6 +1,6 @@
 # Zelena Dapp — Instrucciones para Claude Code
 
-Dapp de la Zelena DAO (Milestone 1 "Génesis"). Monorepo Next.js 14 + TypeScript estricto + Tailwind + SQLite (capa aislada para swap a Turso/Postgres). Testnet only: **sin mainnet, sin dinero real, sin secretos en el repo.**
+Dapp de la Zelena DAO (Milestone 1 "Génesis"). Monorepo Next.js 14 + TypeScript estricto + Tailwind. Base de datos: **SQLite en desarrollo local, Azure SQL Database en producción** (driver `mssql`, autenticación por managed identity) — todo detrás de la capa aislada `lib/db.ts`. Testnet only: **sin mainnet, sin dinero real, sin secretos en el repo.**
 
 ## Comandos
 
@@ -11,6 +11,20 @@ node packages/scripts/anchor-worker.mjs --watch  # worker de anclaje testnet (co
 ```
 
 Login demo: código de invitación `GENESIS-0001` + wallet demo.
+
+## Fase actual: v1 "Organizar" — NÚCLEO CONGELADO (WP13, WP14, WP15, WP16, WP19)
+
+Orden estratégico: **organizar → automatizar → descentralizar.** v1 = login Entra (@zelena.tech) + módulo equipo + dashboard + despliegue Azure + asistente personal de Telegram para John. **WP17 y WP18 están congelados (v1.1)**: solo se descongelan cuando se cumplan los criterios de USO definidos en QUEUE.md. Los WPs de comunidad/DAO (WP04, WP06, WP10) tampoco son v1. Checklist: `docs/DESPLIEGUE-V1.md`. Identidad dual y fases: `docs/blueprints/05-identidad-y-fases.md`.
+
+Nada de la fase "automatizar" entra en v1: sin Microsoft Graph, sin envío de correos/Teams, sin notificaciones. Lo financiero (facturación, cotizaciones, contabilidad) vive en Odoo, FUERA de esta app — nunca se replica aquí. El NO-alcance de cada spec es ley.
+
+## Ejecución con subagentes
+
+Dentro de una misma ola, los WPs que no comparten archivos pueden ejecutarse con subagentes en paralelo (uno por WP, cada uno en su rama `wp/XX`). Consulta el grafo de dependencias en `docs/workflow-v1.1.md`: WP2/WP7 comparten `rules.ts`/`genome.ts` → secuenciales; WP14-backend, WP13-scaffold y WP16-driver no se tocan entre sí → paralelos. Tras cada ola: merge ordenado a `develop`, suite completa verde antes de la siguiente.
+
+## Nota técnica del bot de Telegram (WP19)
+
+En desarrollo local el bot corre en modo **polling** (`getUpdates`) — no requiere URL pública. El webhook con secret token se activa solo al desplegar en Azure. Sin `TELEGRAM_BOT_TOKEN`/`ANTHROPIC_API_KEY` en el entorno, el scaffolding se construye y testea con mocks detrás del flag `TELEGRAM_ENABLED=false`.
 
 ## Documentos que gobiernan el trabajo
 
