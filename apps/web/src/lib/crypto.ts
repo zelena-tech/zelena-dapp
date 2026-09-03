@@ -24,11 +24,23 @@ export function verifyWalletSignature(pubkey: string, payload: string, signature
   }
   const sig = Buffer.from(signatureB64, "base64");
   if (sig.length !== 64) return false; // firma ed25519 = 64 bytes exactos
-  try {
-    return kp.verify(Buffer.from(payload, "utf8"), sig);
-  } catch {
-    return false;
+  // Se aceptan DOS preimágenes del mismo payload, en este orden:
+  //   1. los bytes UTF-8 del payload (lo que firma la wallet de prueba);
+  //   2. el SHA-256 de esos bytes (algunas versiones de Freighter hashean el
+  //      mensaje antes de firmarlo).
+  // Ambas siguen exigiendo la llave privada de `pubkey` y siguen atadas al mismo
+  // payload con domain separator: la segunda no debilita nada (SHA-256 es
+  // resistente a colisiones), solo evita rechazar firmas legítimas de wallets
+  // reales. Un placeholder sin llave sigue fallando en las dos.
+  const preimagenes = [Buffer.from(payload, "utf8"), createHash("sha256").update(payload, "utf8").digest()];
+  for (const pre of preimagenes) {
+    try {
+      if (kp.verify(pre, sig)) return true;
+    } catch {
+      /* siguiente preimagen */
+    }
   }
+  return false;
 }
 
 export function hmacHex(secret: string, input: string): string {
