@@ -21,6 +21,17 @@ export const onboardSchema = z.object({
   signature: z.string().trim().min(4).max(400),
 });
 
+/**
+ * Reingreso de una wallet YA registrada: no consume invitación, no crea usuario.
+ * La autenticación es la firma ed25519 sobre el payload del CLA (solo el titular
+ * de la llave puede producirla), así que no hay código de invitación involucrado.
+ */
+export const loginSchema = z.object({
+  wallet,
+  claHash: z.string().trim().length(64),
+  signature: z.string().trim().min(4).max(400),
+});
+
 export const applySchema = z.object({
   projectId: z.number().int().positive(),
   approach: z.string().trim().min(20).max(2000),
@@ -84,3 +95,4 @@ export const adminActionSchema = z.object({
 });
 
 export type OnboardInput = z.infer<typeof onboardSchema>;
+export type LoginInput = z.infer<typeof loginSchema>;

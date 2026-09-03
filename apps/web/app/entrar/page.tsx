@@ -22,6 +22,8 @@ const STEPS = ["Invitación", "Wallet", "Firma del CLA"];
 export default function Entrar() {
   const router = useRouter();
   const [step, setStep] = useState(1);
+  // Reingreso: la wallet ya está registrada, se entra firmando el CLA (sin invitación).
+  const [returning, setReturning] = useState(false);
 
   // Paso 1
   const [code, setCode] = useState("");
@@ -120,30 +122,66 @@ export default function Entrar() {
     setWalletMsg("");
     try {
       const freighter: any = await import("@stellar/freighter-api");
-      const connected = await freighter.isConnected?.();
-      const isOk = typeof connected === "object" ? connected.isConnected : connected;
-      if (!isOk) {
-        setWalletMsg("Freighter no está instalado. Usa la wallet de prueba.");
+      const conn = await freighter.isConnected?.();
+      const instalada = typeof conn === "object" ? conn.isConnected : conn;
+      if (!instalada) {
+        setWalletMsg("No se detecta Freighter en este navegador. Instálalo desde freighter.app o usa la wallet de prueba.");
         return;
       }
+      // PERMISO EXPLÍCITO: sin requestAccess, getAddress devuelve vacío en una
+      // app que el usuario no ha autorizado todavía — era la causa de que
+      // "conectar" no hiciera nada.
       let addr = "";
-      if (freighter.getAddress) {
-        const r = await freighter.getAddress();
-        addr = typeof r === "string" ? r : r.address;
-      } else if (freighter.getPublicKey) {
-        addr = await freighter.getPublicKey();
+      const permitido = await freighter.isAllowed?.().catch(() => null);
+      const yaPermitido = typeof permitido === "object" ? permitido?.isAllowed : permitido;
+      if (!yaPermitido && freighter.requestAccess) {
+        const r = await freighter.requestAccess();
+        if (r?.error) {
+          setWalletMsg("Freighter rechazó la conexión: " + String(r.error));
+          return;
+        }
+        addr = typeof r === "string" ? r : r?.address ?? "";
       }
+      if (!addr && freighter.getAddress) {
+        const r = await freighter.getAddress();
+        if (r?.error) {
+          setWalletMsg("Freighter no devolvió la dirección: " + String(r.error));
+          return;
+        }
+        addr = typeof r === "string" ? r : r?.address ?? "";
+      }
+      if (!addr && freighter.getPublicKey) addr = await freighter.getPublicKey();
       if (!addr) {
-        setWalletMsg("No se obtuvo la dirección de Freighter. Usa la wallet de prueba.");
+        setWalletMsg("Abre la extensión de Freighter, desbloquéala y vuelve a pulsar Conectar.");
         return;
       }
+      const red = await freighter.getNetwork?.().catch(() => null);
+      const nombreRed = typeof red === "object" ? red?.network : red;
       setWallet(addr);
       setSecret("");
       setIsDemo(false);
-      setWalletMsg("Freighter conectado.");
-    } catch {
+      setWalletMsg(
+        "Freighter conectado" + (nombreRed ? ` (red ${String(nombreRed).toLowerCase()})` : "") + "."
+      );
+    } catch (e) {
       setWalletMsg("Freighter no disponible en este navegador. Usa la wallet de prueba.");
     }
+  }
+
+  /** La firma de Freighter llega como string base64, Uint8Array o Buffer serializado. */
+  function normalizarFirma(raw: unknown): string {
+    if (typeof raw === "string") return raw;
+    if (raw instanceof Uint8Array) return bytesToBase64(raw);
+    if (Array.isArray(raw)) return bytesToBase64(Uint8Array.from(raw as number[]));
+    if (raw && typeof raw === "object") {
+      const o = raw as Record<string, unknown>;
+      if (Array.isArray(o.data)) return bytesToBase64(Uint8Array.from(o.data as number[]));
+      const vals = Object.values(o);
+      if (vals.length > 0 && vals.every((v) => typeof v === "number")) {
+        return bytesToBase64(Uint8Array.from(vals as number[]));
+      }
+    }
+    return "";
   }
 
   async function signAndFinish() {
@@ -169,16 +207,44 @@ export default function Entrar() {
           return;
         }
         const r = await freighter.signMessage(payload, { address: wallet });
-        signature = typeof r === "string" ? r : r.signedMessage ?? JSON.stringify(r);
+        if (r?.error) {
+          setError("Freighter no firmó: " + String(r.error));
+          return;
+        }
+        signature = normalizarFirma(r?.signedMessage ?? r);
+        if (!signature) {
+          setError("No se pudo leer la firma devuelta por Freighter. Reintenta o usa la wallet de prueba.");
+          return;
+        }
       }
-      const res = await fetch("/api/onboard", {
+
+      // Wallet ya registrada (o reingreso explícito): sesión por firma, sin gastar invitación.
+      const soloEntrar = returning || !code.trim();
+      if (!soloEntrar) {
+        const res = await fetch("/api/onboard", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: code.trim(), wallet, name: name.trim(), isDemo, claHash, signature }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) {
+          router.push("/perfil");
+          router.refresh();
+          return;
+        }
+        if (res.status !== 409) {
+          setError(data.error ?? "No se pudo completar el registro.");
+          return;
+        }
+      }
+      const resLogin = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: code.trim(), wallet, name: name.trim(), isDemo, claHash, signature }),
+        body: JSON.stringify({ wallet, claHash, signature }),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? "No se pudo completar el registro.");
+      const dataLogin = await resLogin.json().catch(() => ({}));
+      if (!resLogin.ok) {
+        setError(dataLogin.error ?? "No se pudo iniciar sesión con esta wallet.");
         return;
       }
       router.push("/perfil");
@@ -254,43 +320,98 @@ export default function Entrar() {
                 {codeState === "checking" ? "Validando…" : "Validar código"}
               </button>
             ) : (
-              <button className="btn btn-primary" onClick={() => setStep(2)}>
+              <button
+                className="btn btn-primary"
+                onClick={() => {
+                  setReturning(false);
+                  setStep(2);
+                }}
+              >
                 Continuar
               </button>
             )}
+          </div>
+          <div className="border-t border-line pt-4">
+            <p className="text-xs text-faint">
+              ¿Tu wallet ya está registrada (por ejemplo la del fundador o la de una entrada anterior)? No necesitas
+              código: entra firmando el CLA con tu wallet.
+            </p>
+            <button
+              className="btn btn-ghost mt-2"
+              onClick={() => {
+                setReturning(true);
+                setWalletMsg("");
+                setStep(2);
+              }}
+            >
+              Ya estoy registrado — entrar con mi wallet
+            </button>
           </div>
         </div>
       )}
 
       {/* Paso 2 */}
       {step === 2 && (
-        <div className="card space-y-4 p-6">
-          <h2 className="font-head text-xl font-bold text-white">Conecta tu wallet</h2>
-          <div className="flex flex-wrap gap-2">
-            <button className="btn btn-ghost" onClick={connectFreighter}>Conectar Freighter</button>
-            <button className="btn btn-ghost" onClick={useDemoWallet}>Usar wallet de prueba</button>
+        <div className="card space-y-5 p-6">
+          <div>
+            <h2 className="font-head text-xl font-bold text-white">Conecta tu wallet</h2>
+            <p className="mt-1 text-sm text-muted">
+              {returning
+                ? "Firma con la wallet que ya está registrada. No se consume ninguna invitación."
+                : "Tu wallet es tu identidad en la DAO. Todo ocurre en testnet: no hay dinero real."}
+            </p>
           </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-md border border-line-strong bg-surface-2 p-4">
+              <p className="label">Tu propia wallet</p>
+              <p className="mt-1 text-xs text-muted">
+                Freighter (extensión de navegador). Es la opción para entrar como fundador o con tu wallet de siempre.
+              </p>
+              <button className="btn btn-primary mt-3 w-full" onClick={connectFreighter}>
+                Conectar Freighter
+              </button>
+            </div>
+            <div className="rounded-md border border-line bg-surface-2 p-4">
+              <p className="label">Wallet de prueba</p>
+              <p className="mt-1 text-xs text-muted">
+                Se genera en tu navegador en un segundo. Ideal para invitados que solo quieren ver la DAO.
+              </p>
+              <button className="btn btn-ghost mt-3 w-full" onClick={useDemoWallet}>
+                Crear wallet de prueba
+              </button>
+            </div>
+          </div>
+
           {walletMsg ? <p className="text-sm text-muted">{walletMsg}</p> : null}
           {wallet ? (
-            <div className="rounded-md border border-line bg-surface-2 p-3">
-              <p className="text-xs text-faint">Wallet {isDemo ? "(demo)" : "(Freighter)"}</p>
+            <div className="rounded-md border border-primary/40 bg-glow p-3">
+              <p className="text-xs text-faint">Wallet {isDemo ? "de prueba (demo)" : "conectada (Freighter)"}</p>
               <p className="break-all font-mono text-sm text-white">{wallet}</p>
             </div>
           ) : null}
-          <div>
-            <label className="label" htmlFor="name">Nombre visible</label>
-            <input
-              id="name"
-              className="input"
-              placeholder="Cómo te verá la comunidad"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              maxLength={40}
-            />
-          </div>
+
+          {!returning ? (
+            <div>
+              <label className="label" htmlFor="name">Nombre visible</label>
+              <input
+                id="name"
+                className="input"
+                placeholder="Cómo te verá la comunidad"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                maxLength={40}
+              />
+            </div>
+          ) : null}
+
           <div className="flex justify-between">
             <button className="btn btn-ghost" onClick={() => setStep(1)}>Atrás</button>
-            <button className="btn btn-primary" onClick={() => setStep(3)} disabled={!wallet || name.trim().length < 2}>
+            <button
+              className="btn btn-primary"
+              onClick={() => setStep(3)}
+              disabled={!wallet || (!returning && name.trim().length < 2)}
+            >
               Continuar
             </button>
           </div>
@@ -317,8 +438,8 @@ export default function Entrar() {
           {error ? <p className="text-sm text-red-400">{error}</p> : null}
           <div className="flex justify-between">
             <button className="btn btn-ghost" onClick={() => setStep(2)}>Atrás</button>
-            <button className="btn btn-primary" onClick={signAndFinish} disabled={!claHash || signing}>
-              {signing ? "Firmando…" : "Firmar y entrar"}
+            <button className="btn btn-primary" onClick={() => void signAndFinish()} disabled={!claHash || signing}>
+              {signing ? "Firmando…" : returning ? "Firmar y entrar con mi wallet" : "Firmar y entrar"}
             </button>
           </div>
         </div>

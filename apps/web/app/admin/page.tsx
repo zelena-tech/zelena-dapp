@@ -18,9 +18,19 @@ export const dynamic = "force-dynamic";
 export default async function AdminPage() {
   const session = await getSession();
   if (!session) redirect("/entrar");
-  if (session.wallet !== FOUNDER_WALLET) redirect("/perfil");
-
   const db = getDb();
+  // Acceso al panel: el fundador por configuración, o cualquier wallet marcada
+  // como supervisora en la base (users.is_supervisor). Permite dar seguimiento
+  // desde la wallet propia sin reconfigurar FOUNDER_WALLET ni re-sembrar.
+  const supervisora =
+    session.wallet === FOUNDER_WALLET ||
+    (
+      db.prepare(`SELECT is_supervisor FROM users WHERE wallet = ?`).get(session.wallet) as
+        | { is_supervisor: number }
+        | undefined
+    )?.is_supervisor === 1;
+  if (!supervisora) redirect("/perfil");
+
   const applications = db
     .prepare(
       `SELECT a.*, p.title AS project_title FROM applications a

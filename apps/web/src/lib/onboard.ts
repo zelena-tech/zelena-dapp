@@ -81,3 +81,46 @@ export function performOnboard(db: DB, input: OnboardInput): OnboardResult {
 
   return { wallet, name, tier: "Bronze", isDemo };
 }
+
+export interface LoginInput {
+  wallet: string;
+  claHash: string;
+  signature: string;
+}
+
+export interface LoginResult {
+  wallet: string;
+  name: string;
+  tier: string;
+  isDemo: boolean;
+}
+
+/**
+ * Reingreso de una wallet ya registrada (WP-demo). No consume invitación ni
+ * escribe nada: firma la sesión si —y solo si— la firma ed25519 sobre el payload
+ * del CLA corresponde a esa wallet. Es autenticación real, no un bypass: quien
+ * no tenga la llave privada no puede producir la firma.
+ *
+ * Existe porque el onboarding es de un solo uso por wallet (409) y sin esto
+ * nadie podía volver a entrar tras perder la cookie — en un despliegue nuevo,
+ * ni el propio fundador.
+ */
+export function performLogin(db: DB, input: LoginInput): LoginResult {
+  const { wallet, claHash, signature } = input;
+
+  if (claHash !== claCanonicalHash()) {
+    throw new OnboardError(400, "El hash del CLA no coincide con la versión oficial.");
+  }
+  if (!verifyWalletSignature(wallet, claSigningPayload(claHash), signature)) {
+    throw new OnboardError(401, "Firma inválida: no corresponde a la wallet declarada.");
+  }
+  const user = db
+    .prepare(`SELECT wallet, display_name, tier, is_demo, cla_signed FROM users WHERE wallet = ?`)
+    .get(wallet) as
+    | { wallet: string; display_name: string; tier: string; is_demo: number; cla_signed: number }
+    | undefined;
+  if (!user) throw new OnboardError(404, "Esta wallet no está registrada. Usa un código de invitación.");
+  if (!user.cla_signed) throw new OnboardError(403, "Esta wallet no tiene el CLA firmado.");
+
+  return { wallet: user.wallet, name: user.display_name, tier: user.tier, isDemo: user.is_demo === 1 };
+}
