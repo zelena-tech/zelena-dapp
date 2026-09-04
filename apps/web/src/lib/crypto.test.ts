@@ -61,3 +61,20 @@ describe("verifyWalletSignature — preimagen alternativa (wallets que hashean)"
     expect(verifyWalletSignature(kp.publicKey(), payload, Buffer.alloc(64).toString("base64"))).toBe(false);
   });
 });
+
+describe("verifyWalletSignature — SEP-53 (el formato de Freighter)", () => {
+  it("acepta la firma sobre sha256('Stellar Signed Message:\n' + payload)", async () => {
+    const { Keypair } = await import("@stellar/stellar-sdk");
+    const { createHash } = await import("node:crypto");
+    const kp = Keypair.random();
+    const payload = claSigningPayload("b".repeat(64));
+    const sep53 = createHash("sha256").update(Buffer.from("Stellar Signed Message:\n" + payload, "utf8")).digest();
+
+    expect(verifyWalletSignature(kp.publicKey(), payload, kp.sign(sep53).toString("base64"))).toBe(true);
+    // Sigue rechazando lo que debe rechazar
+    const otra = Keypair.random();
+    expect(verifyWalletSignature(otra.publicKey(), payload, kp.sign(sep53).toString("base64"))).toBe(false);
+    const otroPayload = claSigningPayload("c".repeat(64));
+    expect(verifyWalletSignature(kp.publicKey(), otroPayload, kp.sign(sep53).toString("base64"))).toBe(false);
+  });
+});

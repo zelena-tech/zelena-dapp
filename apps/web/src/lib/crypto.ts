@@ -24,16 +24,7 @@ export function verifyWalletSignature(pubkey: string, payload: string, signature
   }
   const sig = Buffer.from(signatureB64, "base64");
   if (sig.length !== 64) return false; // firma ed25519 = 64 bytes exactos
-  // Se aceptan DOS preimágenes del mismo payload, en este orden:
-  //   1. los bytes UTF-8 del payload (lo que firma la wallet de prueba);
-  //   2. el SHA-256 de esos bytes (algunas versiones de Freighter hashean el
-  //      mensaje antes de firmarlo).
-  // Ambas siguen exigiendo la llave privada de `pubkey` y siguen atadas al mismo
-  // payload con domain separator: la segunda no debilita nada (SHA-256 es
-  // resistente a colisiones), solo evita rechazar firmas legítimas de wallets
-  // reales. Un placeholder sin llave sigue fallando en las dos.
-  const preimagenes = [Buffer.from(payload, "utf8"), createHash("sha256").update(payload, "utf8").digest()];
-  for (const pre of preimagenes) {
+  for (const pre of preimagenesAceptadas(payload)) {
     try {
       if (kp.verify(pre, sig)) return true;
     } catch {
@@ -41,6 +32,36 @@ export function verifyWalletSignature(pubkey: string, payload: string, signature
     }
   }
   return false;
+}
+
+/** Prefijo de SEP-53 (Stellar: "Sign and Verify Messages"), que usan las wallets reales. */
+const SEP53_PREFIX = "Stellar Signed Message:" + String.fromCharCode(10);
+
+/**
+ * Preimágenes aceptadas para una misma firma del CLA, en orden de preferencia:
+ *
+ *   1. los bytes UTF-8 del payload — lo que firma la wallet de prueba del navegador;
+ *   2. su SHA-256 — wallets que hashean antes de firmar;
+ *   3. SEP-53: SHA-256 del payload con el prefijo "Stellar Signed Message:
+" —
+ *      lo que hace Freighter en sus versiones recientes;
+ *   4. el payload prefijado sin hashear — variante de implementaciones antiguas.
+ *
+ * TODAS están atadas al MISMO payload con domain separator y TODAS exigen la
+ * llave privada de la wallet: aceptar varias no debilita la prueba (SHA-256 es
+ * resistente a colisiones y el prefijo es constante), solo evita rechazar firmas
+ * legítimas por el formato que eligió la wallet. Un placeholder sin llave falla
+ * en las cuatro.
+ */
+function preimagenesAceptadas(payload: string): Buffer[] {
+  const plano = Buffer.from(payload, "utf8");
+  const prefijado = Buffer.from(SEP53_PREFIX + payload, "utf8");
+  return [
+    plano,
+    createHash("sha256").update(plano).digest(),
+    createHash("sha256").update(prefijado).digest(),
+    prefijado,
+  ];
 }
 
 export function hmacHex(secret: string, input: string): string {

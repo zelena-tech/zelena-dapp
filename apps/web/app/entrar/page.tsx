@@ -42,6 +42,8 @@ export default function Entrar() {
   const [claHash, setClaHash] = useState("");
   const [signing, setSigning] = useState(false);
   const [error, setError] = useState("");
+  // Detalle técnico del último fallo de firma (visible para poder diagnosticar en vivo).
+  const [detalle, setDetalle] = useState("");
 
   useEffect(() => {
     if (step === 3 && !claText) {
@@ -112,6 +114,7 @@ export default function Entrar() {
       setWallet(pub);
       setSecret(sec);
       setIsDemo(true);
+      setName((n) => n.trim() || `${pub.slice(0, 4)}…${pub.slice(-4)}`);
       setWalletMsg("Wallet de prueba generada y guardada localmente (marcada como demo).");
     } catch {
       setWalletMsg("No se pudo generar la wallet de prueba.");
@@ -160,11 +163,25 @@ export default function Entrar() {
       setWallet(addr);
       setSecret("");
       setIsDemo(false);
+      setName((n) => n.trim() || `${addr.slice(0, 4)}…${addr.slice(-4)}`);
       setWalletMsg(
         "Freighter conectado" + (nombreRed ? ` (red ${String(nombreRed).toLowerCase()})` : "") + "."
       );
     } catch (e) {
       setWalletMsg("Freighter no disponible en este navegador. Usa la wallet de prueba.");
+    }
+  }
+
+  /** Vuelca a texto cualquier respuesta de la extensión, para poder leer el fallo. */
+  function describir(v: unknown): string {
+    try {
+      if (v === null || v === undefined) return String(v);
+      if (typeof v === "string") return v.length > 120 ? v.slice(0, 120) + "…" : v;
+      if (v instanceof Uint8Array) return `Uint8Array(${v.length})`;
+      const j = JSON.stringify(v);
+      return j.length > 220 ? j.slice(0, 220) + "…" : j;
+    } catch {
+      return String(v);
     }
   }
 
@@ -187,6 +204,7 @@ export default function Entrar() {
   async function signAndFinish() {
     setSigning(true);
     setError("");
+    setDetalle("");
     try {
       // El servidor verifica ed25519 sobre ESTE mismo payload (hash + domain separator).
       const payload = claSigningPayload(claHash);
@@ -207,8 +225,9 @@ export default function Entrar() {
           return;
         }
         const r = await freighter.signMessage(payload, { address: wallet });
+        setDetalle("Freighter devolvió: " + describir(r));
         if (r?.error) {
-          setError("Freighter no firmó: " + String(r.error));
+          setError("Freighter no firmó: " + describir(r.error));
           return;
         }
         signature = normalizarFirma(r?.signedMessage ?? r);
@@ -216,6 +235,7 @@ export default function Entrar() {
           setError("No se pudo leer la firma devuelta por Freighter. Reintenta o usa la wallet de prueba.");
           return;
         }
+        setDetalle(`Firma recibida (${signature.length} caracteres base64) · wallet ${wallet.slice(0, 6)}…`);
       }
 
       // Wallet ya registrada (o reingreso explícito): sesión por firma, sin gastar invitación.
@@ -405,6 +425,11 @@ export default function Entrar() {
             </div>
           ) : null}
 
+          {!wallet ? (
+            <p className="text-xs text-faint">Conecta una wallet para continuar.</p>
+          ) : !returning && name.trim().length < 2 ? (
+            <p className="text-xs text-primary">Escribe un nombre visible (mínimo 2 letras) para continuar.</p>
+          ) : null}
           <div className="flex justify-between">
             <button className="btn btn-ghost" onClick={() => setStep(1)}>Atrás</button>
             <button
@@ -436,6 +461,9 @@ export default function Entrar() {
             Firmando como <span className="text-white">{name || shortWallet(wallet)}</span> · {shortWallet(wallet)}
           </div>
           {error ? <p className="text-sm text-red-400">{error}</p> : null}
+          {detalle ? (
+            <p className="break-all font-mono text-[10px] text-faint">{detalle}</p>
+          ) : null}
           <div className="flex justify-between">
             <button className="btn btn-ghost" onClick={() => setStep(2)}>Atrás</button>
             <button className="btn btn-primary" onClick={() => void signAndFinish()} disabled={!claHash || signing}>
