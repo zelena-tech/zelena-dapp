@@ -63,7 +63,7 @@ export default function Landing() {
           <span className="text-paper">tuya, portátil, imposible de borrar</span>.
         </p>
         <p className="mt-3 text-xs uppercase tracking-widest text-faint">
-          Real work, Real rewards. Del piso a la wallet.
+          Real Work, Real Rewards.
         </p>
         <div className="mt-10 flex flex-wrap items-center gap-3">
           <Link href="/entrar" className="btn btn-primary">

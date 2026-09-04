@@ -7,7 +7,7 @@ export default function Footer() {
       <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-10 md:flex-row md:items-start md:justify-between">
         <div className="max-w-xs space-y-2">
           <Logo />
-          <p className="text-sm text-faint">Real work, Real rewards. Del piso a la wallet.</p>
+          <p className="text-sm text-faint">Real Work, Real Rewards.</p>
           <p className="text-xs text-faint">Todo corre en testnet. ZWORK no es transferible en fase Génesis.</p>
         </div>
         <div className="flex gap-12 text-sm">
