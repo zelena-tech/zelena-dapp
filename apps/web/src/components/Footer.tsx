@@ -26,7 +26,7 @@ export default function Footer() {
         </div>
       </div>
       <div className="border-t border-line/40 px-4 py-4 text-center text-xs text-faint">
-        © 2026 Zelena · Comunidad gobernada sobre Stellar / Soroban · No es asesoría legal ni oferta de valores.
+        © 2026 Zelena · Comunidad gobernada sobre Stellar
       </div>
     </footer>
   );
