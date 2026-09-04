@@ -12,10 +12,25 @@ export const inviteVerifySchema = z.object({
   code: z.string().trim().min(3).max(40),
 });
 
+/**
+ * Nombres reservados: sin esto, cualquiera puede registrarse como
+ * "John (Founder)" y aparecer junto al fundador en las listas públicas.
+ */
+const RESERVADOS = ["founder", "fundador", "zelena", "admin", "guardian", "guardián", "soporte", "oficial"];
+
+const nombreVisible = z
+  .string()
+  .trim()
+  .min(2)
+  .max(40)
+  .refine((n) => !RESERVADOS.some((r) => n.toLowerCase().includes(r)), {
+    message: "Ese nombre está reservado. Usa tu nombre o tu alias.",
+  });
+
 export const onboardSchema = z.object({
   code: z.string().trim().min(3).max(40),
   wallet,
-  name: z.string().trim().min(2).max(40),
+  name: nombreVisible,
   isDemo: z.boolean(),
   claHash: z.string().trim().length(64),
   signature: z.string().trim().min(4).max(400),

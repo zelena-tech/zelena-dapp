@@ -26,7 +26,8 @@ export async function POST(req: NextRequest) {
   try {
     result = performLogin(getDb(), parsed.data);
   } catch (e) {
-    if (e instanceof OnboardError) return NextResponse.json({ error: e.message }, { status: e.status });
+    if (e instanceof OnboardError)
+      return NextResponse.json({ error: e.message, reason: e.reason }, { status: e.status });
     return NextResponse.json({ error: "No se pudo iniciar sesión." }, { status: 400 });
   }
 

@@ -73,6 +73,8 @@ body::after {
   }
   .btn {
     @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-bold uppercase tracking-wider transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50;
+    /* Objetivo táctil cómodo en teléfono, que es desde donde entra la cohorte. */
+    min-height: 44px;
   }
   .btn-primary {
     @apply bg-primary text-black hover:brightness-110;
@@ -94,7 +96,11 @@ body::after {
     @apply border-sky-700/50 bg-sky-950/30 text-sky-300;
   }
   .input {
-    @apply w-full border border-line bg-surface-2 px-3 py-2 text-sm text-white placeholder:text-faint focus:border-primary/60 focus:outline-none;
+    @apply w-full border border-line bg-surface-2 px-3 py-2.5 text-white placeholder:text-faint focus:border-primary/60 focus:outline-none;
+    /* 16px exactos: por debajo, Safari en iOS hace zoom al enfocar el campo y no
+       lo deshace al salir, dejando la página descuadrada en pleno registro. */
+    font-size: 16px;
+    min-height: 44px;
   }
   .label {
     @apply mb-1 block text-xs font-bold uppercase tracking-widest text-muted;

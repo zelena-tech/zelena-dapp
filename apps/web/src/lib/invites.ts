@@ -89,6 +89,17 @@ export function createCohortInvite(db: DB, input: CohortInviteInput): boolean {
        VALUES (?, ?, datetime('now', ?), ?, 0)`
     )
     .run(code, issuerWallet, `+${expiresDays} days`, maxUses);
+
+  // Sobre una base YA sembrada el INSERT no hace nada, así que ampliar los cupos
+  // o el plazo era imposible sin tocar la base a mano. Este UPDATE solo puede
+  // subir: nunca reduce cupos ni acorta la expiración, y jamás toca `uses`.
+  db.prepare(
+    `UPDATE invites
+        SET max_uses = MAX(max_uses, ?),
+            expires_at = MAX(expires_at, datetime('now', ?))
+      WHERE code = ? AND max_uses IS NOT NULL`
+  ).run(maxUses, `+${expiresDays} days`, code);
+
   return Number(info.changes) === 1;
 }
 

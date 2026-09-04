@@ -69,6 +69,9 @@ export default function Landing() {
           <Link href="/entrar" className="btn btn-primary">
             [ tengo_invitación ]
           </Link>
+          <Link href="/ecosistema" className="btn btn-ghost">
+            Qué estamos construyendo
+          </Link>
           <Link href="/agora" className="btn btn-ghost">
             ver_bounties →
           </Link>

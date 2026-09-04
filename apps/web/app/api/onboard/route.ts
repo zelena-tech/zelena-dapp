@@ -22,7 +22,8 @@ export async function POST(req: NextRequest) {
     // Verifica firma ANTES de consumir la invitación (ver lib/onboard.ts).
     result = performOnboard(db, parsed.data);
   } catch (e) {
-    if (e instanceof OnboardError) return NextResponse.json({ error: e.message }, { status: e.status });
+    if (e instanceof OnboardError)
+      return NextResponse.json({ error: e.message, reason: e.reason }, { status: e.status });
     return NextResponse.json({ error: "No se pudo completar el registro." }, { status: 400 });
   }
 

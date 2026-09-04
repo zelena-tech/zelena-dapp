@@ -19,8 +19,13 @@ const SOFIA = "GSOFIADESIGNDEMOCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC";
  * personas (QR proyectado en clase → /entrar?code=ESPECIALIZACION-2026).
  */
 export const COHORT_CODE = "ESPECIALIZACION-2026";
-const COHORT_MAX_USES = 150;
-const COHORT_EXPIRES_DAYS = 14;
+/**
+ * Cupos con holgura deliberada: una cohorte de ~150 personas consume MÁS de un
+ * cupo por persona (pestaña privada, cambio de teléfono, almacenamiento borrado,
+ * reintentos). Igualar cupos y asistentes deja a los últimos fuera.
+ */
+const COHORT_MAX_USES = Number(process.env.COHORT_MAX_USES ?? 400);
+const COHORT_EXPIRES_DAYS = Number(process.env.COHORT_EXPIRES_DAYS ?? 45);
 
 /**
  * Se siembra en CADA arranque, no solo cuando la base está vacía: es

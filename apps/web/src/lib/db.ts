@@ -181,6 +181,10 @@ function init(): DB {
     fs.mkdirSync(path.dirname(file), { recursive: true });
     db = openDb(file);
   }
+  // Antes que nada: si otra conexión tiene la base tomada, esperar en lugar de
+  // fallar con SQLITE_BUSY. Importa con la base en almacenamiento de red, donde
+  // los bloqueos tardan más que en disco local.
+  db.pragma("busy_timeout = 5000");
   db.pragma("journal_mode = WAL");
   db.pragma("foreign_keys = ON");
   // ANTES del schema: sobre una base preexistente, schema.sql declara indices que
