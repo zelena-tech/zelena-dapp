@@ -61,9 +61,9 @@ export function IntroEcosistema({ compacta = false }: { compacta?: boolean }) {
       <header>
         <Type
           lines={[
-            "> zelena --que-estamos-construyendo",
-            "> midiendo aporte, no antigüedad…",
-            "> registro: público y verificable.",
+            "> conectando a zelena…",
+            "> lo que construyas queda con tu nombre.",
+            "> empecemos.",
           ]}
         />
         <div className="mt-8" />

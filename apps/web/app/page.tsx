@@ -46,8 +46,8 @@ export default function Landing() {
         <Type
           lines={[
             "> conectando a zelena…",
-            "> red: testnet — sin humo, sin dinero real todavía.",
-            "> acceso: SOLO POR INVITACIÓN.",
+            "> no preguntamos qué estudiaste.",
+            "> preguntamos qué vas a construir.",
           ]}
         />
         <h1 className="mt-8 max-w-4xl text-4xl leading-[1.02] text-paper sm:text-6xl md:text-7xl">

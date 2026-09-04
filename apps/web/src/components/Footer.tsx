@@ -8,7 +8,6 @@ export default function Footer() {
         <div className="max-w-xs space-y-2">
           <Logo />
           <p className="text-sm text-faint">Real Work, Real Rewards.</p>
-          <p className="text-xs text-faint">Todo corre en testnet. ZWORK no es transferible en fase Génesis.</p>
         </div>
         <div className="flex gap-12 text-sm">
           <div className="space-y-2">
