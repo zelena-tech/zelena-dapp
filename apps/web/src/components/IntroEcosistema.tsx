@@ -63,7 +63,7 @@ export function IntroEcosistema({ compacta = false }: { compacta?: boolean }) {
           lines={[
             "> conectando a zelena…",
             "> lo que construyas queda con tu nombre.",
-            "> empecemos.",
+            "> tu parte empieza aquí.",
           ]}
         />
         <div className="mt-8" />
