@@ -109,34 +109,43 @@ export function IntroEcosistema({ compacta = false }: { compacta?: boolean }) {
         </p>
       </Bloque>
 
-      {/* ---------- 02 Dos capas ---------- */}
-      <Bloque n="02" titulo="Qué existe hoy, sin adornos">
+      {/* ---------- 02 De dónde viene ---------- */}
+      <Bloque n="02" titulo="De dónde viene esto">
         <div className="grid gap-4 md:grid-cols-2">
           <div className="card p-6">
             <div className="flex items-center justify-between gap-2">
-              <span className="label mb-0">Capa 1 · WMS</span>
-              <span className="tag tag-sas">Validado</span>
+              <span className="label mb-0">Capa 1 · Logística</span>
+              <span className="tag tag-sas">En operación</span>
             </div>
-            <h3 className="mt-3 font-head text-lg font-bold text-paper">El negocio que ya factura</h3>
+            <h3 className="mt-3 font-head text-lg font-bold text-paper">Software que ya mueve bodegas</h3>
             <p className="mt-2 text-sm leading-7 text-muted">
-              Sistema de gestión logística con alrededor de <span className="text-paper">diez clientes</span> en
-              producción en Colombia. Once módulos. Todo por recomendación de boca en boca, sin publicidad y{" "}
-              <span className="text-paper">sin capital externo</span>.
+              Construimos tecnología para el sector logístico: control de bodega y fulfillment de punta a punta,{" "}
+              <span className="text-paper">once módulos</span> y cerca de{" "}
+              <span className="text-paper">diez empresas</span> operando en Colombia. Llegamos ahí por
+              recomendación, sin publicidad y sin capital externo.
             </p>
           </div>
           <div className="card p-6">
             <div className="flex items-center justify-between gap-2">
               <span className="label mb-0">Capa 2 · DAO</span>
-              <span className="tag tag-dao">Hipótesis en validación</span>
+              <span className="tag tag-dao">Primera cohorte</span>
             </div>
-            <h3 className="mt-3 font-head text-lg font-bold text-paper">La comunidad que se organiza</h3>
+            <h3 className="mt-3 font-head text-lg font-bold text-paper">La comunidad que lo construye</h3>
             <p className="mt-2 text-sm leading-7 text-muted">
-              La misma infraestructura que mide el desempeño de un operario puede pagar a quienes construyen los
-              productos. Lo decimos como es:{" "}
-              <span className="text-paper">la solución puede estar más desarrollada que validado el problema</span>.
-              Por eso primero se valida la cooperación de una cohorte real.
+              Si el desempeño se puede medir con datos, el reconocimiento se puede repartir con{" "}
+              <span className="text-paper">las mismas reglas para todos</span>. Eso es la DAO: quienes construyen
+              estos productos, con su trabajo medido, pagado por hitos y registrado a su nombre.
             </p>
           </div>
+        </div>
+
+        <div className="mt-4 border-l-2 border-primary bg-glow p-5">
+          <span className="label">Por qué podemos hacer esto y no es solo discurso</span>
+          <p className="mt-2 max-w-3xl text-sm leading-7 text-paper">
+            Ya somos dueños de los datos donde se mide el desempeño real del trabajo, todos los días, en
+            operaciones que facturan. Sobre esa base se puede construir compensación verificable.{" "}
+            <span className="text-muted">Sin ella, todo lo demás es opinión.</span>
+          </p>
         </div>
       </Bloque>
 
@@ -223,32 +232,25 @@ export function IntroEcosistema({ compacta = false }: { compacta?: boolean }) {
         </div>
       </Bloque>
 
-      {/* ---------- 06 Lo que no prometemos ---------- */}
-      <Bloque n={compacta ? "05" : "06"} titulo="Lo que no te vamos a prometer">
-        <ul className="space-y-3">
-          {[
-            "Todo corre en testnet. No hay dinero real en juego y no lo habrá hasta que exista auditoría, acuerdo de anchor y claridad legal sobre los pagos.",
-            "ZWORK no se puede vender, comprar ni intercambiar. Que algún día sea transferible depende de una decisión de gobernanza y de revisión legal y tributaria, nunca por defecto.",
-            "Esto no es una oferta de valores ni asesoría financiera, legal o de inversión.",
-            "Hoy estamos en Stage 0: el fundador concentra el poder por diseño. Lo que lo compensa no es una promesa, es el registro público de decisiones, cada una con su razón y su hash.",
-          ].map((t) => (
-            <li key={t} className="flex gap-3 text-sm leading-7 text-muted">
-              <span className="mt-2 h-1.5 w-1.5 shrink-0 bg-primary-dim" aria-hidden />
-              <span>{t}</span>
-            </li>
-          ))}
-        </ul>
-        <blockquote className="rule mt-8 pt-6">
+      {/* ---------- 06 Lo que sí prometemos ---------- */}
+      <Bloque n={compacta ? "05" : "06"} titulo="Lo que sí prometemos">
+        <p className="max-w-2xl text-sm leading-7 text-muted">
+          Esta es la primera vuelta completa del sistema con personas reales, y corre en red de pruebas: entras a
+          construirlo, no a un producto terminado. Lo que está escrito y anclado es esto:
+        </p>
+        <blockquote className="mt-6">
           <p className="max-w-2xl font-head text-xl leading-snug text-paper md:text-2xl">
             No se promete precio.{" "}
             <span className="text-primary glow-text">Se promete memoria.</span>
           </p>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-muted">
-            El score que acumules desde el primer día cuenta para cualquier asignación futura, proporcional a tu
-            historial. Es un compromiso escrito y anclado, no una intención.
+            El puntaje que acumules desde el primer día cuenta para cualquier asignación futura, proporcional a tu
+            historial. Es un compromiso escrito y anclado, no una intención. Si te alejas, tu historial se congela
+            y sigue siendo tuyo cuando vuelvas.
           </p>
         </blockquote>
       </Bloque>
+
     </div>
   );
 }
