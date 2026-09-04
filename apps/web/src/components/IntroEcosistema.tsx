@@ -1,4 +1,5 @@
 import React from "react";
+import Type from "./Type";
 
 /**
  * Intro del ecosistema: lo que ve alguien que llega por primera vez, antes de
@@ -58,7 +59,14 @@ export function IntroEcosistema({ compacta = false }: { compacta?: boolean }) {
     <div className="space-y-14">
       {/* ---------- Portada ---------- */}
       <header>
-        <div className="prompt mb-6">zelena --que-estamos-construyendo</div>
+        <Type
+          lines={[
+            "> zelena --que-estamos-construyendo",
+            "> midiendo aporte, no antigüedad…",
+            "> registro: público y verificable.",
+          ]}
+        />
+        <div className="mt-8" />
         <h1 className="max-w-3xl font-head text-4xl font-bold leading-[1.04] text-paper sm:text-5xl md:text-6xl">
           El valor que entregas
           <br />

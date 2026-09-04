@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import IntroEcosistema from "@/components/IntroEcosistema";
+import PruebaEnVivo from "@/components/PruebaEnVivo";
+
+export const dynamic = "force-dynamic"; // las cifras se leen en cada visita
 
 export const metadata: Metadata = {
   title: "El ecosistema",  // el layout le añade "· Zelena DAO"
@@ -12,6 +15,9 @@ export default function EcosistemaPage() {
   return (
     <div className="space-y-12">
       <IntroEcosistema />
+
+      {/* Cifras reales leídas de la base, con enlace al explorador de Stellar. */}
+      <PruebaEnVivo />
 
       <section className="rule pt-8">
         <div className="card p-6 md:p-8">
