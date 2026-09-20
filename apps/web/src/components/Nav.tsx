@@ -13,6 +13,7 @@ const LINKS = [
   { href: "/academia", label: "Academia" },
   { href: "/gobernanza", label: "Gobernanza" },
   { href: "/whitepaper", label: "Whitepaper" },
+  { href: "/empresas", label: "Empresas" },
 ];
 
 export default function Nav({ session }: { session: SessionData | null }) {

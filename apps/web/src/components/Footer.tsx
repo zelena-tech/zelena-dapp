@@ -17,6 +17,11 @@ export default function Footer() {
             <Link href="/agora" className="block text-muted hover:text-primary">Ágora</Link>
           </div>
           <div className="space-y-2">
+            <div className="label">Empresas</div>
+            <Link href="/empresas" className="block text-muted hover:text-primary">Para empresas</Link>
+            <Link href="/empresas/servicios" className="block text-muted hover:text-primary">Servicios</Link>
+          </div>
+          <div className="space-y-2">
             <div className="label">Comunidad</div>
             <Link href="/academia" className="block text-muted hover:text-primary">Academia</Link>
             <Link href="/entrar" className="block text-muted hover:text-primary">Entrar</Link>
