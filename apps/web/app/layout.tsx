@@ -2,6 +2,12 @@ import type { Metadata, Viewport } from "next";
 import "@fontsource/space-mono/400.css";
 import "@fontsource/space-mono/700.css";
 import "@fontsource/space-mono/400-italic.css";
+// Serif editorial para los titulares comerciales. Auto-hospedada: la CSP
+// de esta app es font-src 'self' data:, que bloquea Google Fonts.
+import "@fontsource/playfair-display/400.css";
+import "@fontsource/playfair-display/700.css";
+import "@fontsource/playfair-display/400-italic.css";
+import "@fontsource/playfair-display/700-italic.css";
 import "./globals.css";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";

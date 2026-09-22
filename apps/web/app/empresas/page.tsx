@@ -50,47 +50,30 @@ export default function Empresas() {
   return (
     <div className="space-y-24 md:space-y-32">
       {/* ===== HERO ===== */}
-      <section className="grid items-center gap-12 pt-4 md:pt-10 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-16">
-        <div className="flex flex-col gap-7">
-          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-line-strong bg-surface px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.1em] text-primary">
-            <span className="h-1.5 w-1.5 animate-pulseline rounded-full bg-primary" />
-            Infraestructura de Nómina por Desempeño · Construido en Stellar
-          </span>
+      <section className="flex flex-col gap-8 pt-6 md:pt-14">
+        <span className="inline-flex w-fit items-center gap-2 rounded-full border border-line-strong bg-surface px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.1em] text-primary">
+          <span className="h-1.5 w-1.5 animate-pulseline rounded-full bg-primary" />
+          Infraestructura de Nómina por Desempeño · Construido en Stellar
+        </span>
 
-          <h1 className="max-w-3xl text-3xl normal-case italic leading-[1.08] text-paper sm:text-4xl lg:text-[52px] lg:leading-[1.05]">
-            Software e incentivos que hacen la logística de{" "}
-            <span className="text-primary glow-text">LATAM</span> más rápida, inteligente y
-            rentable.
-          </h1>
+        <h1 className="max-w-5xl font-serif text-4xl font-normal normal-case leading-[1.12] tracking-normal text-paper sm:text-5xl lg:text-[76px] lg:leading-[1.08]">
+          Software e incentivos que hacen la logística de{" "}
+          <em className="font-normal italic text-primary">LATAM</em> más rápida, inteligente y
+          rentable.
+        </h1>
 
-          <p className="max-w-xl text-base leading-7 text-muted lg:text-lg">
-            ZELENA ayuda a los operadores de almacenes a modernizar sus operaciones y recompensar
-            el desempeño real — en moneda local, entregado automáticamente a través de Stellar.
-          </p>
+        <p className="max-w-2xl text-base leading-7 text-muted lg:text-lg">
+          ZELENA ayuda a los operadores de almacenes a modernizar sus operaciones y recompensar el
+          desempeño real — en moneda local, entregado automáticamente a través de Stellar.
+        </p>
 
-          <div className="flex flex-wrap items-center gap-4">
-            <Link href="/empresas/servicios" className="btn btn-primary normal-case tracking-normal">
-              Agenda una demostración
-            </Link>
-            <a href="#como-funciona" className="inline-flex min-h-[44px] items-center gap-2 text-sm text-muted transition-colors hover:text-primary">
-              Mira cómo funciona <span aria-hidden>↓</span>
-            </a>
-          </div>
-        </div>
-
-        {/* Foto en su recuadro, con la etiqueta flotante de marca */}
-        <div className="relative mx-auto w-full max-w-[380px]">
-          <div className="overflow-hidden border border-primary/35 bg-surface shadow-glow">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/hero.jpg"
-              alt="Equipo de almacén celebrando resultados"
-              className="aspect-[5/6] w-full object-cover"
-            />
-          </div>
-          <p className="absolute -bottom-4 -left-4 border border-line-strong bg-surface-2 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.18em] text-primary shadow-glow">
-            Trabajo real · Recompensas reales
-          </p>
+        <div className="flex flex-wrap items-center gap-4 pt-2">
+          <Link href="/empresas/servicios" className="btn btn-primary normal-case tracking-normal">
+            Agenda una demostración
+          </Link>
+          <a href="#como-funciona" className="inline-flex min-h-[44px] items-center gap-2 text-sm text-muted transition-colors hover:text-primary">
+            Mira cómo funciona <span aria-hidden>↓</span>
+          </a>
         </div>
       </section>
 
@@ -117,8 +100,8 @@ export default function Empresas() {
       <section id="productos" className="space-y-12">
         <div className="space-y-5">
           <p className="label">Productos</p>
-          <h2 className="max-w-3xl text-3xl normal-case leading-[1.05] text-paper sm:text-4xl lg:text-5xl">
-            Una plataforma. <span className="text-primary italic glow-text">Dos fases.</span>
+          <h2 className="max-w-3xl font-serif text-3xl font-normal normal-case leading-[1.15] tracking-normal text-paper sm:text-4xl lg:text-[52px]">
+            Una plataforma. <em className="font-normal italic text-primary">Dos fases.</em>
           </h2>
           <p className="max-w-xl text-base leading-7 text-muted">
             Las operaciones y los incentivos nunca debieron vivir en sistemas separados.
@@ -150,7 +133,7 @@ export default function Empresas() {
             </span>
             <h3 className="text-4xl leading-none text-paper">Harmony</h3>
             <p className="text-lg normal-case leading-snug text-paper">
-              Incentivos reales <span className="text-primary italic">para tu equipo.</span>
+              Incentivos reales <em className="font-normal italic text-primary">para tu equipo.</em>
             </p>
             <p className="text-base leading-7 text-muted">
               Gamificación y bonos por desempeño integrados para motivar a tu personal de almacén.
@@ -168,8 +151,8 @@ export default function Empresas() {
       <section id="como-funciona" className="space-y-12">
         <div className="space-y-5">
           <p className="label">Cómo funciona</p>
-          <h2 className="max-w-3xl text-3xl normal-case leading-[1.05] text-paper sm:text-4xl lg:text-5xl">
-            De la operación <span className="text-primary italic glow-text">a tu billetera.</span>
+          <h2 className="max-w-3xl font-serif text-3xl font-normal normal-case leading-[1.15] tracking-normal text-paper sm:text-4xl lg:text-[52px]">
+            De la operación <em className="font-normal italic text-primary">a tu billetera.</em>
           </h2>
         </div>
 
@@ -191,9 +174,9 @@ export default function Empresas() {
       <section className="space-y-12">
         <div className="space-y-5">
           <p className="label">Por qué Stellar</p>
-          <h2 className="max-w-4xl text-3xl normal-case leading-[1.05] text-paper sm:text-4xl lg:text-5xl">
+          <h2 className="max-w-4xl font-serif text-3xl font-normal normal-case leading-[1.15] tracking-normal text-paper sm:text-4xl lg:text-[52px]">
             Construimos sobre infraestructura de escala{" "}
-            <span className="text-primary italic glow-text">global.</span>
+            <em className="font-normal italic text-primary">global.</em>
           </h2>
         </div>
 
@@ -240,9 +223,9 @@ export default function Empresas() {
       <section>
         <div className="card flex flex-col items-start gap-8 border-primary/30 p-8 md:p-12 lg:flex-row lg:items-center lg:justify-between lg:gap-12">
           <div className="max-w-2xl space-y-4">
-            <h2 className="text-2xl normal-case leading-tight text-paper sm:text-3xl lg:text-4xl">
+            <h2 className="font-serif text-2xl font-normal normal-case leading-snug tracking-normal text-paper sm:text-3xl lg:text-[40px]">
               ¿Listo para el futuro de{" "}
-              <span className="text-primary italic glow-text">la colaboración?</span>
+              <em className="font-normal italic text-primary">la colaboración?</em>
             </h2>
             <p className="text-base leading-7 text-muted lg:text-lg">
               Agenda una demostración y descubre cómo ZELENA moderniza tu operación.
