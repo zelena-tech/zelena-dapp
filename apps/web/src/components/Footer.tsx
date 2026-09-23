@@ -10,22 +10,22 @@ export default function Footer() {
           <p className="text-sm text-faint">Real Work, Real Rewards.</p>
         </div>
         <div className="flex gap-12 text-sm">
-          <div className="space-y-2">
+          <div className="space-y-0.5">
             <div className="label">Recursos</div>
-            <Link href="/whitepaper" className="block text-muted hover:text-primary">Whitepaper</Link>
-            <Link href="/gobernanza" className="block text-muted hover:text-primary">Decision log</Link>
-            <Link href="/agora" className="block text-muted hover:text-primary">Ágora</Link>
+            <Link href="/whitepaper" className="block py-1.5 text-muted hover:text-primary">Whitepaper</Link>
+            <Link href="/gobernanza" className="block py-1.5 text-muted hover:text-primary">Decision log</Link>
+            <Link href="/agora" className="block py-1.5 text-muted hover:text-primary">Ágora</Link>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-0.5">
             <div className="label">Empresas</div>
-            <Link href="/empresas" className="block text-muted hover:text-primary">Para empresas</Link>
-            <Link href="/empresas/servicios" className="block text-muted hover:text-primary">Servicios</Link>
+            <Link href="/empresas" className="block py-1.5 text-muted hover:text-primary">Para empresas</Link>
+            <Link href="/empresas/servicios" className="block py-1.5 text-muted hover:text-primary">Servicios</Link>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-0.5">
             <div className="label">Comunidad</div>
-            <Link href="/academia" className="block text-muted hover:text-primary">Academia</Link>
-            <Link href="/entrar" className="block text-muted hover:text-primary">Entrar</Link>
-            <Link href="/perfil" className="block text-muted hover:text-primary">Mi perfil</Link>
+            <Link href="/academia" className="block py-1.5 text-muted hover:text-primary">Academia</Link>
+            <Link href="/entrar" className="block py-1.5 text-muted hover:text-primary">Entrar</Link>
+            <Link href="/perfil" className="block py-1.5 text-muted hover:text-primary">Mi perfil</Link>
           </div>
         </div>
       </div>

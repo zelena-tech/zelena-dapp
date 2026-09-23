@@ -12,6 +12,7 @@ import { listLatentAudits } from "@/lib/audits";
 import AdminAction from "@/components/AdminAction";
 import GenomeMutationPanel from "@/components/GenomeMutationPanel";
 import LatentAuditForm from "@/components/LatentAuditForm";
+import { nombreInteres } from "@/lib/servicios";
 
 export const dynamic = "force-dynamic";
 
@@ -55,6 +56,17 @@ export default async function AdminPage() {
   const latestVersion = lineage.length ? lineage[lineage.length - 1].version : 1;
   const numericGenes: Array<keyof typeof genome> = ["EPOCH_BUDGET", "ACADEMIA_BUDGET", "ACADEMIA_DAILY_CAP", "ACADEMIA_VOTE_WEIGHT"];
   const audits = listLatentAudits(db);
+  const leads = db
+    .prepare(`SELECT * FROM leads ORDER BY id DESC LIMIT 100`)
+    .all() as Array<{
+    id: number;
+    nombre: string;
+    email: string;
+    empresa: string | null;
+    interes: string;
+    mensaje: string | null;
+    created_at: string;
+  }>;
 
   return (
     <div className="space-y-12">
@@ -196,6 +208,36 @@ export default async function AdminPage() {
             {audits.length} auditoría(s) registrada(s). El registro completo es público en Gobernanza.
           </p>
         </div>
+      </section>
+
+      {/* Solicitudes comerciales desde /empresas/contacto */}
+      <section>
+        <h2 className="mb-4 font-head text-2xl font-bold text-white">Solicitudes de empresas</h2>
+        {leads.length === 0 ? (
+          <EmptyState
+            title="Sin solicitudes"
+            message="Cuando alguien pida una demostración desde /empresas, aparecerá aquí."
+          />
+        ) : (
+          <div className="space-y-3">
+            {leads.map((l) => (
+              <div key={l.id} className="card p-5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <span className="text-sm font-semibold text-white">{l.nombre}</span>
+                    {l.empresa ? <span className="ml-2 text-sm text-muted">· {l.empresa}</span> : null}
+                  </div>
+                  <span className="tag border-line text-muted">{nombreInteres(l.interes)}</span>
+                </div>
+                <a href={`mailto:${l.email}`} className="mt-1 inline-block text-sm text-primary hover:underline">
+                  {l.email}
+                </a>
+                {l.mensaje ? <p className="mt-2 text-sm text-muted">{l.mensaje}</p> : null}
+                <p className="mt-2 text-xs text-faint">{l.created_at} UTC</p>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Aplicaciones */}

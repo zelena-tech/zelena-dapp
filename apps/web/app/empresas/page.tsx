@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "Para empresas",
+  title: { absolute: "ZELENA · Software e incentivos para la logística de LATAM" },
   description:
     "Software e incentivos que hacen la logística de LATAM más rápida, inteligente y rentable. ZELENA ayuda a los operadores de almacenes a modernizar sus operaciones y recompensar el desempeño real.",
 };
@@ -51,9 +51,13 @@ export default function Empresas() {
     <div className="space-y-24 md:space-y-32">
       {/* ===== HERO ===== */}
       <section className="flex flex-col gap-8 pt-6 md:pt-14">
-        <span className="inline-flex w-fit items-center gap-2 rounded-full border border-line-strong bg-surface px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.1em] text-primary">
+        <span className="inline-flex w-fit max-w-full items-center gap-2 rounded-full border border-line-strong bg-surface px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.06em] text-primary sm:tracking-[0.1em]">
           <span className="h-1.5 w-1.5 animate-pulseline rounded-full bg-primary" />
-          Infraestructura de Nómina por Desempeño · Construido en Stellar
+          {/* En movil la version larga partia la pildora en varias lineas. */}
+          <span className="sm:hidden">Nómina por desempeño · Stellar</span>
+          <span className="hidden sm:inline">
+            Infraestructura de Nómina por Desempeño · Construido en Stellar
+          </span>
         </span>
 
         <h1 className="max-w-5xl font-serif text-4xl font-normal normal-case leading-[1.12] tracking-normal text-paper sm:text-5xl lg:text-[76px] lg:leading-[1.08]">
@@ -68,7 +72,7 @@ export default function Empresas() {
         </p>
 
         <div className="flex flex-wrap items-center gap-4 pt-2">
-          <Link href="/empresas/servicios" className="btn btn-primary normal-case tracking-normal">
+          <Link href="/empresas/contacto" className="btn btn-primary normal-case tracking-normal">
             Agenda una demostración
           </Link>
           <a href="#como-funciona" className="inline-flex min-h-[44px] items-center gap-2 text-sm text-muted transition-colors hover:text-primary">
@@ -131,7 +135,7 @@ export default function Empresas() {
             <span className="text-[11px] uppercase tracking-[0.18em] text-primary">
               El corazón de ZELENA
             </span>
-            <h3 className="text-4xl leading-none text-paper">Harmony</h3>
+            <h3 className="font-serif text-5xl font-normal normal-case leading-none tracking-normal text-paper">Harmony</h3>
             <p className="text-lg normal-case leading-snug text-paper">
               Incentivos reales <em className="font-normal italic text-primary">para tu equipo.</em>
             </p>
@@ -156,18 +160,20 @@ export default function Empresas() {
           </h2>
         </div>
 
-        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-5">
+        <ol className="flex flex-col">
           {PASOS.map((p, i) => (
-            <div
+            <li
               key={p.n}
-              className={`flex flex-col gap-3 pt-5 ${i === 0 ? "border-t border-primary" : "border-t border-line"}`}
+              className={`grid gap-2 py-6 md:grid-cols-[64px_minmax(0,1fr)_minmax(0,2fr)] md:items-baseline md:gap-10 ${
+                i === 0 ? "border-t border-primary" : "border-t border-line"
+              } ${i === PASOS.length - 1 ? "border-b border-line" : ""}`}
             >
               <span className="text-[13px] text-primary">{p.n}</span>
               <h3 className="text-lg normal-case leading-tight text-paper">{p.t}</h3>
-              <p className="text-sm leading-6 text-muted">{p.d}</p>
-            </div>
+              <p className="max-w-xl text-base leading-7 text-muted">{p.d}</p>
+            </li>
           ))}
-        </div>
+        </ol>
       </section>
 
       {/* ===== POR QUÉ STELLAR ===== */}
@@ -232,7 +238,7 @@ export default function Empresas() {
             </p>
           </div>
           <Link
-            href="/empresas/servicios"
+            href="/empresas/contacto"
             className="btn btn-primary shrink-0 whitespace-nowrap normal-case tracking-normal"
           >
             Agenda una demo <span aria-hidden>→</span>

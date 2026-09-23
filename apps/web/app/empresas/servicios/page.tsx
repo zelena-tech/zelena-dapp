@@ -1,75 +1,11 @@
 import Link from "next/link";
+import { SERVICIOS } from "@/lib/servicios";
 
 export const metadata = {
-  title: "Servicios",
+  title: { absolute: "Servicios · ZELENA" },
   description:
     "Seis líneas de servicio con entregas reales detrás: Gestión de Área TI, Odoo/ERP, WMS, Transformación Digital, Datos y Analítica, Cloud e Infraestructura.",
 };
-
-// Contenido en constantes: la capa de idiomas añadirá el lado en inglés sin
-// tocar la maqueta. Sin SLA a propósito — publicados se vuelven compromiso.
-const SERVICIOS = [
-  {
-    nombre: "Gestión de Área TI",
-    linea: "Dirigimos la tecnología de tu empresa como si fuera nuestra.",
-    incluye: [
-      "Dirección tecnológica y roadmap anual",
-      "Gestión de proveedores y licenciamiento",
-      "Diseño de área, roles y comité mensual",
-    ],
-    meta: "Arranque en 1 semana · Mensualidad",
-  },
-  {
-    nombre: "Odoo / ERP",
-    linea: "Implementación y migración, con acompañamiento después de salir a producción.",
-    incluye: [
-      "Levantamiento y parametrización",
-      "Migración de catálogo y maestros",
-      "Capacitación y acompañamiento post salida",
-    ],
-    meta: "Arranque en 2 semanas · Proyecto + soporte mensual",
-  },
-  {
-    nombre: "WMS ZELENA",
-    linea: "Nuestro sistema de bodega. En producción en Colombia y México.",
-    incluye: [
-      "Instancia dedicada y mapeo físico de bodega",
-      "Recepción, picking con ruta optimizada, packing",
-      "Averías, desempeño por operario, traslados",
-    ],
-    meta: "Arranque en 1 semana · Implementación + mensualidad",
-  },
-  {
-    nombre: "Transformación Digital",
-    linea: "Diagnóstico de la operación, procesos, estructura de área y manuales de funciones.",
-    incluye: [
-      "Diagnóstico y rediseño de procesos",
-      "Estructura de área y manuales de funciones",
-      "Plan de mejoramiento continuo",
-    ],
-    meta: "Arranque en 2 semanas · Proyecto por fases",
-  },
-  {
-    nombre: "Datos y Analítica",
-    linea: "Tableros, KPIs, limpieza de datos e integraciones entre sistemas.",
-    incluye: [
-      "Tableros Power BI y catálogo de KPIs",
-      "Migraciones y limpieza masiva de datos",
-      "Integraciones entre ERP, tienda y bodega",
-    ],
-    meta: "Arranque en 2 semanas · Proyecto de 4 a 6 semanas",
-  },
-  {
-    nombre: "Cloud e Infraestructura",
-    linea: "Azure, PostgreSQL, respaldos, monitoreo y soporte.",
-    incluye: [
-      "Despliegue dedicado en Azure",
-      "PostgreSQL, respaldos y monitoreo",
-      "Soporte y sostenimiento",
-    ],
-    meta: "Arranque inmediato · Mensualidad",
-  },
-];
 
 export default function Servicios() {
   return (
@@ -112,6 +48,16 @@ export default function Servicios() {
                   ))}
                 </ul>
                 <p className="text-xs uppercase tracking-[0.14em] text-primary">{s.meta}</p>
+                <Link
+                  href={`/empresas/contacto?interes=${s.slug}`}
+                  aria-label={`Solicitar propuesta de ${s.nombre}`}
+                  className="group inline-flex min-h-[44px] w-fit items-center gap-2 text-sm text-paper transition-colors hover:text-primary"
+                >
+                  Solicitar propuesta
+                  <span aria-hidden className="transition-transform duration-150 group-hover:translate-x-0.5">
+                    →
+                  </span>
+                </Link>
               </div>
             </div>
           ))}
@@ -128,7 +74,7 @@ export default function Servicios() {
               Cuéntanos cómo trabajas hoy y te decimos cuál de estas puertas abre más rápido.
             </p>
           </div>
-          <Link href="/empresas" className="btn btn-primary shrink-0 whitespace-nowrap normal-case tracking-normal">
+          <Link href="/empresas/contacto" className="btn btn-primary shrink-0 whitespace-nowrap normal-case tracking-normal">
             Hablemos <span aria-hidden>→</span>
           </Link>
         </div>

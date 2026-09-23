@@ -501,3 +501,20 @@ CREATE INDEX IF NOT EXISTS idx_assign_owner ON assignments(owner_wallet, status)
 CREATE INDEX IF NOT EXISTS idx_assign_client ON assignments(client_id);
 CREATE INDEX IF NOT EXISTS idx_assign_initiative ON assignments(initiative_id);
 CREATE INDEX IF NOT EXISTS idx_aevents_assignment ON assignment_events(assignment_id);
+
+-- Solicitudes comerciales desde /empresas/contacto. Sin relacion con users:
+-- quien escribe es un prospecto, no un miembro de la DAO, y no tiene wallet.
+-- Anadida como excepcion autorizada por John (2026-09-23): este archivo esta
+-- protegido como solo lectura y se ejecuta en cada arranque de produccion.
+CREATE TABLE IF NOT EXISTS leads (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  nombre     TEXT NOT NULL,
+  email      TEXT NOT NULL,
+  empresa    TEXT,
+  interes    TEXT NOT NULL,            -- slug de src/lib/servicios.ts
+  mensaje    TEXT,
+  estado     TEXT NOT NULL DEFAULT 'nuevo',
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_leads_creado ON leads(created_at);

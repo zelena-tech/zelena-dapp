@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SLUGS_INTERES } from "./servicios";
 
 // Stellar public key: 'G' + 55 base32 chars. Aceptamos también wallets demo del seed.
 const wallet = z
@@ -111,3 +112,18 @@ export const adminActionSchema = z.object({
 
 export type OnboardInput = z.infer<typeof onboardSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+
+/**
+ * Formulario comercial de /empresas/contacto. Es público (no hay sesión), así
+ * que la ruta limita por IP. `sitio` es un campo trampa oculto para personas:
+ * se acepta cualquier valor aquí y la ruta descarta en silencio lo que llegue
+ * con él lleno, para no darle al bot una señal de que lo detectamos.
+ */
+export const leadSchema = z.object({
+  nombre: z.string().trim().min(2, "Escribe tu nombre.").max(80),
+  email: z.string().trim().email("Revisa el correo.").max(120),
+  empresa: z.string().trim().max(120).optional().default(""),
+  interes: z.enum(SLUGS_INTERES, { errorMap: () => ({ message: "Elige qué te interesa." }) }),
+  mensaje: z.string().trim().max(2000).optional().default(""),
+  sitio: z.string().max(500).optional().default(""),
+});
