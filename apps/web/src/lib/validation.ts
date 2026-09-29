@@ -127,3 +127,15 @@ export const leadSchema = z.object({
   mensaje: z.string().trim().max(2000).optional().default(""),
   sitio: z.string().max(500).optional().default(""),
 });
+
+/**
+ * Aviso de /encuentros: quien quiere enterarse de la próxima fecha. Mismo
+ * patrón que leadSchema (público, límite por IP, campo trampa `sitio`); se
+ * guarda en `leads` con interes = "encuentros" y la ciudad en `mensaje`.
+ */
+export const avisoEncuentrosSchema = z.object({
+  nombre: z.string().trim().min(2, "Escribe tu nombre.").max(80),
+  email: z.string().trim().email("Revisa el correo.").max(120),
+  ciudad: z.string().trim().max(80).optional().default(""),
+  sitio: z.string().max(500).optional().default(""),
+});

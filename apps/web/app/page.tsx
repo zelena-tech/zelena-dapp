@@ -230,8 +230,11 @@ export default function Landing() {
             <Link href="/entrar" className="btn btn-primary">
               [ entrar_ahora ]
             </Link>
-            <Link href="/whitepaper" className="btn btn-ghost">
-              leer_el_whitepaper
+            <Link href="/encuentros" className="btn btn-ghost">
+              ven_a_un_encuentro
+            </Link>
+            <Link href="/manifiesto" className="btn btn-ghost">
+              leer_el_manifiesto
             </Link>
           </div>
         </div>

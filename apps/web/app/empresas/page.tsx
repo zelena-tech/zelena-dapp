@@ -60,7 +60,7 @@ export default function Empresas() {
           </span>
         </span>
 
-        <h1 className="max-w-5xl font-serif text-4xl font-normal normal-case leading-[1.12] tracking-normal text-paper sm:text-5xl lg:text-[76px] lg:leading-[1.08]">
+        <h1 className="max-w-5xl font-serif text-4xl font-normal normal-case leading-[1.12] tracking-normal text-paper sm:text-5xl sm:leading-[1.12] lg:text-[76px] lg:leading-[1.08]">
           Software e incentivos que hacen la logística de{" "}
           <em className="font-normal italic text-primary">LATAM</em> más rápida, inteligente y
           rentable.
@@ -104,7 +104,7 @@ export default function Empresas() {
       <section id="productos" className="space-y-12">
         <div className="space-y-5">
           <p className="label">Productos</p>
-          <h2 className="max-w-3xl font-serif text-3xl font-normal normal-case leading-[1.15] tracking-normal text-paper sm:text-4xl lg:text-[52px]">
+          <h2 className="max-w-3xl font-serif text-3xl font-normal normal-case leading-[1.15] tracking-normal text-paper sm:text-4xl sm:leading-[1.15] lg:text-[52px]">
             Una plataforma. <em className="font-normal italic text-primary">Dos fases.</em>
           </h2>
           <p className="max-w-xl text-base leading-7 text-muted">
@@ -155,7 +155,7 @@ export default function Empresas() {
       <section id="como-funciona" className="space-y-12">
         <div className="space-y-5">
           <p className="label">Cómo funciona</p>
-          <h2 className="max-w-3xl font-serif text-3xl font-normal normal-case leading-[1.15] tracking-normal text-paper sm:text-4xl lg:text-[52px]">
+          <h2 className="max-w-3xl font-serif text-3xl font-normal normal-case leading-[1.15] tracking-normal text-paper sm:text-4xl sm:leading-[1.15] lg:text-[52px]">
             De la operación <em className="font-normal italic text-primary">a tu billetera.</em>
           </h2>
         </div>
@@ -180,7 +180,7 @@ export default function Empresas() {
       <section className="space-y-12">
         <div className="space-y-5">
           <p className="label">Por qué Stellar</p>
-          <h2 className="max-w-4xl font-serif text-3xl font-normal normal-case leading-[1.15] tracking-normal text-paper sm:text-4xl lg:text-[52px]">
+          <h2 className="max-w-4xl font-serif text-3xl font-normal normal-case leading-[1.15] tracking-normal text-paper sm:text-4xl sm:leading-[1.15] lg:text-[52px]">
             Construimos sobre infraestructura de escala{" "}
             <em className="font-normal italic text-primary">global.</em>
           </h2>
@@ -211,13 +211,13 @@ export default function Empresas() {
           </span>
         </Link>
 
-        <Link href="/" className="group flex flex-col gap-4 border-t border-line pt-7">
+        <Link href="/manifiesto" className="group flex flex-col gap-4 border-t border-line pt-7">
           <span className="text-[13px] uppercase tracking-[0.18em] text-primary">Comunidad</span>
           <span className="text-2xl normal-case leading-snug text-paper">
             Rediseñamos la forma de colaborar.
           </span>
           <span className="text-sm text-primary">
-            Conoce la DAO{" "}
+            Lee el manifiesto{" "}
             <span aria-hidden className="inline-block transition-transform duration-150 group-hover:translate-x-0.5">
               →
             </span>
@@ -229,7 +229,7 @@ export default function Empresas() {
       <section>
         <div className="card flex flex-col items-start gap-8 border-primary/30 p-8 md:p-12 lg:flex-row lg:items-center lg:justify-between lg:gap-12">
           <div className="max-w-2xl space-y-4">
-            <h2 className="font-serif text-2xl font-normal normal-case leading-snug tracking-normal text-paper sm:text-3xl lg:text-[40px]">
+            <h2 className="font-serif text-2xl font-normal normal-case leading-snug tracking-normal text-paper sm:text-3xl sm:leading-snug lg:text-[40px]">
               ¿Listo para el futuro de{" "}
               <em className="font-normal italic text-primary">la colaboración?</em>
             </h2>

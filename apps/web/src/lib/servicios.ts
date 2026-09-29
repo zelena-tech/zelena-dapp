@@ -92,6 +92,11 @@ export const INTERESES: Array<{ slug: string; nombre: string }> = [
 
 export const SLUGS_INTERES = INTERESES.map((i) => i.slug) as [string, ...string[]];
 
+// Los avisos de /encuentros viven en la misma tabla, pero no son una opción
+// del formulario comercial.
+export const INTERES_ENCUENTROS = "encuentros";
+
 export function nombreInteres(slug: string): string {
+  if (slug === INTERES_ENCUENTROS) return "Aviso de encuentros";
   return INTERESES.find((i) => i.slug === slug)?.nombre ?? slug;
 }

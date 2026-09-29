@@ -14,7 +14,7 @@ export default function Servicios() {
         <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between lg:gap-16">
           <div className="space-y-5">
             <p className="label">Servicios</p>
-            <h1 className="font-serif text-4xl font-normal normal-case leading-[1.12] tracking-normal text-paper sm:text-5xl lg:text-[68px]">
+            <h1 className="font-serif text-4xl font-normal normal-case leading-[1.12] tracking-normal text-paper sm:text-5xl sm:leading-[1.12] lg:text-[68px]">
               Lo que ya <em className="font-normal italic text-primary">hacemos.</em>
             </h1>
           </div>
@@ -67,7 +67,7 @@ export default function Servicios() {
       <section>
         <div className="card flex flex-col items-start gap-8 border-primary/30 p-8 md:p-12 lg:flex-row lg:items-center lg:justify-between lg:gap-12">
           <div className="max-w-2xl space-y-4">
-            <h2 className="font-serif text-2xl font-normal normal-case leading-snug tracking-normal text-paper sm:text-3xl lg:text-[40px]">
+            <h2 className="font-serif text-2xl font-normal normal-case leading-snug tracking-normal text-paper sm:text-3xl sm:leading-snug lg:text-[40px]">
               ¿Por dónde empezamos?
             </h2>
             <p className="text-base leading-7 text-muted lg:text-lg">

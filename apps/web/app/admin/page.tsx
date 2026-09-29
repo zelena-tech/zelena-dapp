@@ -12,7 +12,7 @@ import { listLatentAudits } from "@/lib/audits";
 import AdminAction from "@/components/AdminAction";
 import GenomeMutationPanel from "@/components/GenomeMutationPanel";
 import LatentAuditForm from "@/components/LatentAuditForm";
-import { nombreInteres } from "@/lib/servicios";
+import { INTERES_ENCUENTROS, nombreInteres } from "@/lib/servicios";
 
 export const dynamic = "force-dynamic";
 
@@ -67,6 +67,9 @@ export default async function AdminPage() {
     mensaje: string | null;
     created_at: string;
   }>;
+  // La misma tabla guarda dos cosas distintas: pedidos de demo y avisos de /encuentros.
+  const avisos = leads.filter((l) => l.interes === INTERES_ENCUENTROS);
+  const solicitudes = leads.filter((l) => l.interes !== INTERES_ENCUENTROS);
 
   return (
     <div className="space-y-12">
@@ -213,14 +216,14 @@ export default async function AdminPage() {
       {/* Solicitudes comerciales desde /empresas/contacto */}
       <section>
         <h2 className="mb-4 font-head text-2xl font-bold text-white">Solicitudes de empresas</h2>
-        {leads.length === 0 ? (
+        {solicitudes.length === 0 ? (
           <EmptyState
             title="Sin solicitudes"
             message="Cuando alguien pida una demostración desde /empresas, aparecerá aquí."
           />
         ) : (
           <div className="space-y-3">
-            {leads.map((l) => (
+            {solicitudes.map((l) => (
               <div key={l.id} className="card p-5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
@@ -234,6 +237,30 @@ export default async function AdminPage() {
                 </a>
                 {l.mensaje ? <p className="mt-2 text-sm text-muted">{l.mensaje}</p> : null}
                 <p className="mt-2 text-xs text-faint">{l.created_at} UTC</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Avisos desde /encuentros */}
+      <section>
+        <h2 className="mb-4 font-head text-2xl font-bold text-white">Avisos de encuentros</h2>
+        {avisos.length === 0 ? (
+          <EmptyState
+            title="Sin avisos"
+            message="Cuando alguien deje su correo en /encuentros para enterarse de la próxima fecha, aparecerá aquí."
+          />
+        ) : (
+          <div className="card divide-y divide-line p-0">
+            {avisos.map((l) => (
+              <div key={l.id} className="flex flex-wrap items-baseline justify-between gap-2 px-5 py-3">
+                <div className="text-sm">
+                  <span className="text-white">{l.nombre}</span>{" "}
+                  <a href={`mailto:${l.email}`} className="text-primary hover:underline">{l.email}</a>
+                  {l.mensaje ? <span className="ml-2 text-muted">· {l.mensaje.replace(/^Ciudad: /, "")}</span> : null}
+                </div>
+                <span className="text-xs text-faint">{l.created_at} UTC</span>
               </div>
             ))}
           </div>

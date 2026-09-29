@@ -23,6 +23,8 @@ export default function Footer() {
           </div>
           <div className="space-y-0.5">
             <div className="label">Comunidad</div>
+            <Link href="/manifiesto" className="block py-1.5 text-muted hover:text-primary">Manifiesto</Link>
+            <Link href="/encuentros" className="block py-1.5 text-muted hover:text-primary">Encuentros</Link>
             <Link href="/academia" className="block py-1.5 text-muted hover:text-primary">Academia</Link>
             <Link href="/entrar" className="block py-1.5 text-muted hover:text-primary">Entrar</Link>
             <Link href="/perfil" className="block py-1.5 text-muted hover:text-primary">Mi perfil</Link>

@@ -20,7 +20,7 @@ export default function Contacto({ searchParams }: { searchParams: { interes?: s
     <div className="grid gap-14 pt-6 md:pt-14 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
       <section className="flex flex-col gap-8">
         <p className="label">Empresas</p>
-        <h1 className="font-serif text-4xl font-normal normal-case leading-[1.1] tracking-normal text-paper sm:text-5xl lg:text-[60px]">
+        <h1 className="font-serif text-4xl font-normal normal-case leading-[1.1] tracking-normal text-paper sm:text-5xl sm:leading-[1.1] lg:text-[60px]">
           Agenda una <em className="font-normal italic text-primary">demostración.</em>
         </h1>
         <p className="max-w-md text-base leading-7 text-muted">
