@@ -6,6 +6,9 @@ import { openDb, type DB } from "./db";
 import { performOnboard, OnboardError } from "./onboard";
 import { claCanonicalHash } from "./cla";
 import { claSigningPayload } from "./cla-signing";
+import { bootstrapInviteCode } from "./config";
+import { seedBootstrapInvite } from "./seed";
+import { onboardSchema } from "./validation";
 
 function freshDb(): DB {
   const db = openDb(":memory:");
@@ -187,6 +190,82 @@ describe("escotilla de arranque: el código de founder concede administración",
     seedInvite(db, BOOT, "ISSUER");
     performOnboard(db, { code: BOOT, wallet, name: "X", isDemo: true, claHash: hash, signature: goodSig });
     expect(rolDe(wallet).role).toBe("contributor");
+  });
+
+  // Hallazgo de verificación (2026-09-30): si la wallet de John ya estaba registrada
+  // (entró con la cohorte o con una invitación), la escotilla respondía 409
+  // `wallet_registrada` ANTES de mirar el código, así que no servía justo para el
+  // caso en que hace falta: una wallet real que nació contributor.
+  it("la escotilla también promueve una wallet YA registrada (entró antes con otro código)", () => {
+    seedInvite(db, "COHORTE-UNO", "ISSUER");
+    seedInvite(db, BOOT, "ISSUER");
+    performOnboard(db, { code: "COHORTE-UNO", wallet, name: "John", isDemo: false, claHash: hash, signature: goodSig });
+    expect(rolDe(wallet)).toEqual({ role: "contributor", is_supervisor: 0 });
+
+    const r = performOnboard(db, { code: BOOT, wallet, name: "Otro", isDemo: true, claHash: hash, signature: goodSig });
+    expect(r).toMatchObject({ wallet, name: "John", isDemo: false, role: "founder", isSupervisor: true });
+    expect(rolDe(wallet)).toEqual({ role: "founder", is_supervisor: 1 });
+    expect(inviteUsedBy(db, BOOT)).toBe(wallet);
+    // No reescribe la fila ni duplica la firma del CLA ni su anclaje.
+    const n = (sql: string) => (db.prepare(sql).get(wallet) as { n: number }).n;
+    expect(n(`SELECT COUNT(*) AS n FROM cla_signatures WHERE wallet = ?`)).toBe(1);
+    expect(n(`SELECT COUNT(*) AS n FROM anchor_queue WHERE ref = ?`)).toBe(1);
+    expect(db.prepare(`SELECT display_name, is_demo FROM users WHERE wallet = ?`).get(wallet)).toEqual({
+      display_name: "John",
+      is_demo: 0,
+    });
+  });
+
+  it("con una wallet ya registrada, cualquier OTRO código sigue dando 409 y no gasta el cupo", () => {
+    seedInvite(db, "UNO", "ISSUER");
+    seedInvite(db, "DOS", "ISSUER");
+    performOnboard(db, { code: "UNO", wallet, name: "Ada", isDemo: true, claHash: hash, signature: goodSig });
+    let err: unknown;
+    try {
+      performOnboard(db, { code: "DOS", wallet, name: "Ada", isDemo: true, claHash: hash, signature: goodSig });
+    } catch (e) {
+      err = e;
+    }
+    expect(err).toBeInstanceOf(OnboardError);
+    expect((err as OnboardError).status).toBe(409);
+    expect((err as OnboardError).reason).toBe("wallet_registrada");
+    expect(inviteUsedBy(db, "DOS")).toBeNull();
+    expect(rolDe(wallet).role).toBe("contributor");
+  });
+
+  it("una escotilla ya consumida no promueve a una wallet registrada", () => {
+    seedInvite(db, "UNO", "ISSUER");
+    seedInvite(db, BOOT, "ISSUER");
+    performOnboard(db, { code: "UNO", wallet, name: "Ada", isDemo: true, claHash: hash, signature: goodSig });
+    db.prepare(`UPDATE invites SET used_by = 'GOTRAPERSONA' WHERE code = ?`).run(BOOT);
+    expect(() =>
+      performOnboard(db, { code: BOOT, wallet, name: "Ada", isDemo: true, claHash: hash, signature: goodSig })
+    ).toThrow(OnboardError);
+    expect(rolDe(wallet).role).toBe("contributor");
+    expect(inviteUsedBy(db, BOOT)).toBe("GOTRAPERSONA");
+  });
+
+  // /entrar pasa el código a MAYÚSCULAS (input y ?code=) y la validación corta a 40
+  // caracteres. Un FOUNDER_BOOTSTRAP_CODE en minúsculas o más largo se sembraba tal
+  // cual y nunca coincidía: la escotilla quedaba inservible desde la web.
+  it("el código de arranque se compara en mayúsculas, como lo envía /entrar", () => {
+    process.env.FOUNDER_BOOTSTRAP_CODE = "zelena-arranque-2026-abc";
+    seedBootstrapInvite(db);
+    const enviado = "ZELENA-ARRANQUE-2026-ABC";
+    expect(db.prepare(`SELECT code FROM invites WHERE code = ?`).get(enviado)).toEqual({ code: enviado });
+    performOnboard(db, { code: enviado, wallet, name: "John", isDemo: true, claHash: hash, signature: goodSig });
+    expect(rolDe(wallet)).toEqual({ role: "founder", is_supervisor: 1 });
+  });
+
+  it("un código de arranque de más de 40 caracteres se ignora (la validación de /entrar no lo deja pasar)", () => {
+    const largo = "A".repeat(41);
+    expect(bootstrapInviteCode({ FOUNDER_BOOTSTRAP_CODE: largo } as unknown as NodeJS.ProcessEnv)).toBeNull();
+    expect(bootstrapInviteCode({ FOUNDER_BOOTSTRAP_CODE: "A".repeat(40) } as unknown as NodeJS.ProcessEnv)).toBe(
+      "A".repeat(40)
+    );
+    // El tope es el mismo que aplica la API: 40 entra, 41 no.
+    expect(onboardSchema.shape.code.safeParse("A".repeat(40)).success).toBe(true);
+    expect(onboardSchema.shape.code.safeParse(largo).success).toBe(false);
   });
 });
 

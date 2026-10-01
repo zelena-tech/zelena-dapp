@@ -17,8 +17,11 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { createHash } from "node:crypto";
-import { openDb, prepararSqlite, MigracionEquipoError, type DB } from "./db";
+import { Keypair } from "@stellar/stellar-sdk";
+import { backfillFounder, openDb, prepararSqlite, MigracionEquipoError, type DB } from "./db";
 import { claCanonicalHash, readClaText } from "./cla";
+import { adminActor } from "./authz";
+import { translate } from "./sql-dialect";
 
 const LIB = path.join(process.cwd(), "src", "lib");
 const FIXTURE = fs.readFileSync(path.join(LIB, "__fixtures__", "schema-58ee2fd.sql"), "utf8");
@@ -207,6 +210,8 @@ describe("migración de la base de producción (forma 58ee2fd → v1)", () => {
       copiado: null,
       correosCopiados: 0,
       founderPromovidos: 0,
+      // Las wallets del fixture no son llaves Stellar válidas: nadie entra por firma.
+      founder: { registrada: true, conFirma: 0 },
     });
     expect({ h: huella(db), eq: db.prepare(`SELECT * FROM assignments ORDER BY id`).all() }).toEqual(tras1);
     expect(fs.readdirSync(dir).filter((f) => f.includes(".pre-fusion-")).length).toBe(respaldos1);
@@ -336,6 +341,91 @@ describe("migración de la base de producción (forma 58ee2fd → v1)", () => {
     expect(columnas(db, "users")).not.toContain("users.role");
     expect(columnas(db, "assignments")).not.toContain("assignments.needs_founder");
     expect(huella(db)).toEqual(antes);
+  });
+});
+
+// Hallazgo de verificación (2026-09-30): el backfill corría UNA vez, en el arranque
+// que migra. Si en ese arranque FOUNDER_WALLET no tenía fila (se registra después,
+// con la cohorte o una invitación) o era la wallet demo inválida, nadie quedaba
+// founder y cambiar la variable ya no lo arreglaba. Antes de la fusión bastaba con
+// cambiarla. Ahora la promoción corre en CADA arranque (idempotente) y el informe
+// dice si algún founder puede entrar de verdad por firma.
+describe("founder en producción: FOUNDER_WALLET se aplica en cada arranque", () => {
+  let dir: string;
+  let file: string;
+  const AHORA = new Date("2026-09-30T23:00:00.000Z");
+  const rol = (db: DB, w: string) => db.prepare(`SELECT role, is_supervisor FROM users WHERE wallet = ?`).get(w);
+
+  beforeEach(() => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), "zelena-founder-"));
+    file = path.join(dir, "zelena.db");
+  });
+  afterEach(() => {
+    try {
+      fs.rmSync(dir, { recursive: true, force: true });
+    } catch {
+      /* tmp */
+    }
+  });
+
+  it("una wallet que se registra DESPUÉS del arranque que migró queda founder en el siguiente arranque", () => {
+    const db = baseDesplegada(file);
+    const john = Keypair.random().publicKey();
+
+    const inf1 = prepararSqlite(db, { archivo: file, founderWallet: john, ahora: AHORA });
+    expect(inf1.migro).toBe(true);
+    // Como en la copia de prod: el único founder es la wallet demo, que no es una
+    // llave Stellar válida, así que nadie puede entrar a /admin por firma.
+    expect(inf1.founder).toEqual({ registrada: false, conFirma: 0 });
+
+    // John entra después del despliegue con el código de cohorte: nace contributor.
+    db.prepare(`INSERT INTO users (wallet, display_name, cla_signed) VALUES (?, 'John', 1)`).run(john);
+    expect(rol(db, john)).toEqual({ role: "contributor", is_supervisor: 0 });
+    expect(adminActor({ wallet: john }, db)).toBeNull();
+
+    // Reiniciar la app lo arregla (antes: migro=false ⇒ 0 promovidos, fuera de /admin).
+    const inf2 = prepararSqlite(db, { archivo: file, founderWallet: john });
+    expect(inf2.migro).toBe(false);
+    expect(inf2.founderPromovidos).toBe(1);
+    expect(rol(db, john)).toEqual({ role: "founder", is_supervisor: 1 });
+    expect(adminActor({ wallet: john }, db)?.role).toBe("founder");
+    expect(inf2.founder).toEqual({ registrada: true, conFirma: 1 });
+  });
+
+  it("cambiar FOUNDER_WALLET después del primer arranque promueve la nueva y no degrada la anterior", () => {
+    const db = baseDesplegada(file);
+    prepararSqlite(db, { archivo: file, founderWallet: JOHN_REAL, ahora: AHORA });
+    expect(rol(db, CONTRIB)).toEqual({ role: "contributor", is_supervisor: 0 });
+
+    const inf2 = prepararSqlite(db, { archivo: file, founderWallet: CONTRIB });
+    expect(inf2.founderPromovidos).toBe(1);
+    expect(rol(db, CONTRIB)).toEqual({ role: "founder", is_supervisor: 1 });
+    // Retirar un founder es una decisión explícita (UPDATE documentado), nunca un efecto
+    // secundario de cambiar una variable.
+    expect(rol(db, JOHN_REAL)).toEqual({ role: "founder", is_supervisor: 1 });
+
+    // Idempotente: el tercer arranque no cambia nada.
+    expect(prepararSqlite(db, { archivo: file, founderWallet: CONTRIB }).founderPromovidos).toBe(0);
+  });
+
+  it("la promoción también se traduce a T-SQL (la ruta Azure SQL la corre en cada arranque)", () => {
+    const real = openDb(":memory:");
+    prepararSqlite(real, { archivo: null, sembrar: false });
+    const vistos: string[] = [];
+    const espia: DB = { ...real, prepare: (sql: string) => (vistos.push(sql), real.prepare(sql)) };
+    backfillFounder(espia, JOHN_REAL);
+    expect(vistos).toHaveLength(1);
+    expect(() => translate(vistos[0])).not.toThrow();
+  });
+
+  it("solo promueve la fila de FOUNDER_WALLET: el resto de la base no cambia de rol", () => {
+    const db = baseDesplegada(file);
+    prepararSqlite(db, { archivo: file, founderWallet: JOHN_REAL, ahora: AHORA });
+    const roles = () => db.prepare(`SELECT wallet, role, is_supervisor FROM users ORDER BY wallet`).all();
+    const antes = roles();
+    prepararSqlite(db, { archivo: file, founderWallet: JOHN_REAL });
+    prepararSqlite(db, { archivo: file, founderWallet: null });
+    expect(roles()).toEqual(antes);
   });
 });
 

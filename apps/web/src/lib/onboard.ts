@@ -43,11 +43,28 @@ export interface OnboardInput {
 export interface OnboardResult {
   wallet: string;
   name: string;
-  tier: "Bronze";
+  /** `Bronze` en un alta nueva; el de la fila si la escotilla promovió una wallet ya registrada. */
+  tier: string;
   isDemo: boolean;
   /** Rol con el que nació la fila (`contributor`, o `founder` por la escotilla). */
   role: Role;
   isSupervisor: boolean;
+}
+
+/** Consume el cupo traduciendo el fallo a un `OnboardError` con motivo para el wizard. */
+function consumirCupo(db: DB, code: string, wallet: string): string {
+  try {
+    return consumeInvite(db, code, wallet);
+  } catch (e) {
+    if (e instanceof InviteConsumeError) {
+      throw new OnboardError(
+        409,
+        e.reason === "used" ? "Este código ya no tiene cupos disponibles." : e.message,
+        e.reason === "used" ? "cupos_agotados" : e.reason === "expired" ? "codigo_expirado" : "codigo_invalido"
+      );
+    }
+    throw new OnboardError(400, "No se pudo usar la invitación.", "invitacion_invalida");
+  }
 }
 
 export function performOnboard(db: DB, input: OnboardInput): OnboardResult {
@@ -80,27 +97,36 @@ export function performOnboard(db: DB, input: OnboardInput): OnboardResult {
   // medio, el cupo quedaba quemado sin usuario y nadie podía recuperarlo. Con
   // node:sqlite la transacción anidada de consumeInvite se une a esta (ver
   // db.ts), y con better-sqlite3/libsql se resuelve con savepoints.
-  const tx = db.transaction((): string => {
+  const tx = db.transaction((): OnboardResult => {
     // Wallet ya registrada.
-    const existing = db.prepare(`SELECT wallet FROM users WHERE wallet = ?`).get(wallet);
-    if (existing) throw new OnboardError(409, "Esta wallet ya está registrada.", "wallet_registrada");
+    const existing = db
+      .prepare(`SELECT display_name, tier, is_demo, cla_signed FROM users WHERE wallet = ?`)
+      .get(wallet) as { display_name: string; tier: string; is_demo: number; cla_signed: number } | undefined;
+    if (existing) {
+      // La escotilla sobre una wallet YA registrada la PROMUEVE en vez de dar 409
+      // (hallazgo de verificación, 2026-09-30). Si John entró antes con la cohorte o
+      // con una invitación, su fila nació contributor y el 409 dejaba la escotilla
+      // inservible justo en el caso para el que existe. La firma ya probó que quien
+      // pide es el dueño de la wallet, y el código de arranque ya concede founder a
+      // una wallet nueva: sobre una existente no concede nada más. Se consume igual
+      // (un solo uso) y no se reescribe la fila ni se duplica la firma del CLA.
+      if (!esArranque || existing.cla_signed !== 1) {
+        throw new OnboardError(409, "Esta wallet ya está registrada.", "wallet_registrada");
+      }
+      consumirCupo(db, code, wallet);
+      db.prepare(`UPDATE users SET role = 'founder', is_supervisor = 1 WHERE wallet = ?`).run(wallet);
+      return {
+        wallet,
+        name: existing.display_name,
+        tier: existing.tier,
+        isDemo: existing.is_demo === 1,
+        role: "founder",
+        isSupervisor: true,
+      };
+    }
 
     // Consumo del cupo (solo tras firma válida).
-    let issuer: string;
-    try {
-      issuer = consumeInvite(db, code, wallet);
-    } catch (e) {
-      if (e instanceof InviteConsumeError) {
-        throw new OnboardError(
-          409,
-          e.reason === "used"
-            ? "Este código ya no tiene cupos disponibles."
-            : e.message,
-          e.reason === "used" ? "cupos_agotados" : e.reason === "expired" ? "codigo_expirado" : "codigo_invalido"
-        );
-      }
-      throw new OnboardError(400, "No se pudo usar la invitación.", "invitacion_invalida");
-    }
+    const issuer = consumirCupo(db, code, wallet);
 
     // 5. Alta: usuario + firma + cola de anclaje (misma transacción que el cupo).
     db.prepare(
@@ -113,11 +139,9 @@ export function performOnboard(db: DB, input: OnboardInput): OnboardResult {
     db.prepare(
       `INSERT INTO anchor_queue (kind, ref, data_key, payload_hash, status) VALUES ('cla', ?, ?, ?, 'pending')`
     ).run(wallet, `cla:v${CLA_VERSION}:${wallet.slice(0, 12)}`, claHash);
-    return issuer;
+    return { wallet, name, tier: "Bronze", isDemo, role, isSupervisor: esArranque };
   });
-  tx();
-
-  return { wallet, name, tier: "Bronze", isDemo, role, isSupervisor: esArranque };
+  return tx();
 }
 
 export interface LoginInput {

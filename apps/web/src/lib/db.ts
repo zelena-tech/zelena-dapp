@@ -25,6 +25,7 @@ import path from "node:path";
 import { createRequire } from "node:module";
 import { seedIfEmpty } from "./seed";
 import { FOUNDER_WALLET } from "./config";
+import { esWalletStellar } from "./crypto";
 import { azureSqlConfigFromEnv, describeAzureSql, openAzureSql, type EnvLike } from "./db-mssql";
 
 export interface Stmt {
@@ -195,6 +196,9 @@ function init(): DB {
     const remote = openAzureSql(config);
     remote.exec(schemaSql());
     seedIfEmpty(remote);
+    // Misma regla que la ruta SQLite: FOUNDER_WALLET se aplica en cada arranque.
+    const promovidos = backfillFounder(remote, FOUNDER_WALLET);
+    if (promovidos > 0) console.info(`[db] founder: ${promovidos} fila(s) promovidas por FOUNDER_WALLET.`);
     console.info(`[db] Azure SQL activo: ${describeAzureSql(config)}`);
     return remote;
   }
@@ -240,9 +244,10 @@ function init(): DB {
       `[db] migración aplicada · respaldo=${informe.respaldo ?? "(sin archivo)"} · ` +
         `columnas=${[...informe.preColumnas, ...informe.postColumnas].join(",") || "-"} · ` +
         `equipo apartado=${informe.apartado} copiado=${informe.copiado ? JSON.stringify(informe.copiado) : "-"} · ` +
-        `correos=${informe.correosCopiados} · founder promovidos=${informe.founderPromovidos}`
+        `correos=${informe.correosCopiados}`
     );
   }
+  registrarEstadoFounder(informe, FOUNDER_WALLET);
   return db;
 }
 
@@ -270,9 +275,11 @@ export function getDb(): DB {
 //   4. `schema.sql`;
 //   5. `applyMigrations` otra vez (tablas recién creadas);
 //   6. `copiarEquipoLegado` (mapeo de valores, conserva ids, todo o nada);
-//   7. seed + `backfillFounder` (el gate de antes, `wallet === FOUNDER_WALLET`,
-//      queda como DATO de la base, no como regla de código).
-// Es idempotente: el segundo arranque no hace nada.
+//   7. seed (que en producción también vence los GENESIS-000x demo sin usar) +
+//      `backfillFounder` (el gate de antes, `wallet === FOUNDER_WALLET`, queda como
+//      DATO de la base, no como regla de código). Este paso corre en CADA arranque:
+//      una wallet registrada tarde o una variable corregida se arreglan reiniciando.
+// Es idempotente: el segundo arranque no cambia nada.
 
 /**
  * Columnas nuevas sobre tablas preexistentes. `CREATE TABLE IF NOT EXISTS` no
@@ -554,9 +561,21 @@ export function copiarCorreosLegado(db: DB): number {
 }
 
 /**
- * Backfill del founder: reproduce el gate de antes (`wallet === FOUNDER_WALLET`)
- * como DATO de la base, una sola vez, en el arranque que migra. Después la
- * autoridad es `users.role` y el código no vuelve a mirar la variable.
+ * Promoción del founder: la fila con `wallet = FOUNDER_WALLET` (y la `is_founder = 1`
+ * del seed) queda `founder` + supervisor. Reproduce el gate de antes
+ * (`wallet === FOUNDER_WALLET`) como DATO de la base; los gates siguen leyendo
+ * `users.role` (`lib/authz.ts`), nunca la variable.
+ *
+ * Corre en CADA arranque, no solo en el que migra (hallazgo de verificación,
+ * 2026-09-30). Con una sola pasada, si en ese arranque la wallet todavía no tenía
+ * fila (John se registra después con la cohorte o con una invitación) o
+ * FOUNDER_WALLET era la wallet demo, nadie quedaba founder y cambiar la variable ya
+ * no lo arreglaba. Ahora basta con fijar la variable y reiniciar, igual que antes de
+ * la fusión (y lo mismo que hace `seedBootstrapInvite`).
+ *
+ * Solo PROMUEVE: nunca degrada. Cambiar FOUNDER_WALLET no le quita el rol a la wallet
+ * anterior; retirar un founder es una decisión explícita (UPDATE documentado en
+ * docs/DESPLIEGUE-V1.md) hasta que WP32 lo lleve a /admin. Idempotente.
  */
 export function backfillFounder(db: DB, founderWallet: string | null | undefined): number {
   const r = db
@@ -566,6 +585,27 @@ export function backfillFounder(db: DB, founderWallet: string | null | undefined
     )
     .run(founderWallet ?? "");
   return Number(r.changes);
+}
+
+export interface EstadoFounder {
+  /** ¿La wallet de FOUNDER_WALLET tiene fila en `users`? */
+  registrada: boolean;
+  /**
+   * Filas `founder` por las que alguien puede entrar HOY firmando con su wallet
+   * (`/api/login`): llave Stellar válida y CLA firmado. La wallet demo del seed no
+   * cuenta (no es una llave real) ni `pending:john` (solo entra por Entra).
+   */
+  conFirma: number;
+}
+
+/** Diagnóstico de acceso del founder, para el log de arranque y el ensayo previo al deploy. */
+export function estadoFounder(db: DB, founderWallet: string | null | undefined): EstadoFounder {
+  const registrada =
+    !!founderWallet && !!db.prepare(`SELECT wallet FROM users WHERE wallet = ?`).get(founderWallet);
+  const founders = db
+    .prepare(`SELECT wallet FROM users WHERE role = 'founder' AND cla_signed = 1`)
+    .all() as Array<{ wallet: string }>;
+  return { registrada, conFirma: founders.filter((f) => esWalletStellar(f.wallet)).length };
 }
 
 export interface OpcionesArranque {
@@ -588,7 +628,9 @@ export interface InformeArranque {
   postColumnas: string[];
   copiado: Record<string, number> | null;
   correosCopiados: number;
+  /** Filas promovidas a founder en ESTE arranque (0 si ya lo eran). */
   founderPromovidos: number;
+  founder: EstadoFounder;
 }
 
 /**
@@ -618,7 +660,50 @@ export function prepararSqlite(db: DB, opts: OpcionesArranque): InformeArranque 
   const copiado = copiarEquipoLegado(db);
 
   if (opts.sembrar !== false) seedIfEmpty(db);
-  const founderPromovidos = migro ? backfillFounder(db, opts.founderWallet) : 0;
+  // En CADA arranque (ver backfillFounder): una wallet registrada después del
+  // arranque que migró, o una FOUNDER_WALLET corregida, se promueve al reiniciar.
+  const founderPromovidos = backfillFounder(db, opts.founderWallet);
+  const founder = estadoFounder(db, opts.founderWallet);
 
-  return { migro, respaldo, preColumnas, apartado, postColumnas, copiado, correosCopiados, founderPromovidos };
+  return {
+    migro,
+    respaldo,
+    preColumnas,
+    apartado,
+    postColumnas,
+    copiado,
+    correosCopiados,
+    founderPromovidos,
+    founder,
+  };
+}
+
+/** `GABCD…WXYZ`: suficiente para reconocer la wallet en el log sin copiarla entera. */
+function abreviarWallet(w: string): string {
+  return w.length > 12 ? `${w.slice(0, 6)}…${w.slice(-4)}` : w;
+}
+
+/**
+ * Deja en el log de arranque si el founder puede entrar. En producción avisa en
+ * voz alta cuando NADIE puede entrar a /admin por firma: es exactamente el estado
+ * de la copia de prod (único founder = wallet demo inválida) y no da ningún error.
+ */
+function registrarEstadoFounder(informe: InformeArranque, founderWallet: string): void {
+  const w = abreviarWallet(founderWallet);
+  if (informe.founderPromovidos > 0) {
+    console.info(`[db] founder: ${informe.founderPromovidos} fila(s) promovidas (FOUNDER_WALLET=${w}).`);
+  }
+  if (process.env.NODE_ENV !== "production") return;
+  if (!informe.founder.registrada) {
+    console.warn(
+      `[db] founder: FOUNDER_WALLET=${w} no tiene fila en users. Entra con FOUNDER_BOOTSTRAP_CODE y esa ` +
+        `wallet, o regístrala y reinicia la app (ver docs/DESPLIEGUE-V1.md, "Acceso del founder").`
+    );
+  }
+  if (informe.founder.conFirma === 0) {
+    console.warn(
+      `[db] founder: ninguna fila founder tiene una llave Stellar válida con el CLA firmado: ` +
+        `nadie puede entrar a /admin por /api/login (ver docs/DESPLIEGUE-V1.md, "Acceso del founder").`
+    );
+  }
 }

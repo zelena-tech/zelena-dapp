@@ -6,7 +6,7 @@
  */
 import type { DB } from "./db"; // solo tipo: sin ciclo en runtime
 import { sha256Hex } from "./crypto";
-import { FOUNDER_WALLET, bootstrapInviteCode } from "./config";
+import { FOUNDER_WALLET, BOOTSTRAP_CODE_MAX, BOOTSTRAP_CODE_MIN, bootstrapInviteCode } from "./config";
 import { GENOME_V1, seedGenomeV1 } from "./genome";
 import { seedTeam } from "./team";
 import { createCohortInvite } from "./invites";
@@ -37,12 +37,48 @@ export function demoInvitesAllowed(env: NodeJS.ProcessEnv = process.env): boolea
 // rol de founder. Se re-exporta aquí para no romper importaciones existentes.
 export { bootstrapInviteCode };
 
-export function seedIfEmpty(db: DB): void {
+/** Las 6 invitaciones demo del seed. Exactas: /admin genera códigos reales con el MISMO prefijo. */
+export const DEMO_INVITE_CODES: readonly string[] = Array.from(
+  { length: 6 },
+  (_, i) => "GENESIS-" + String(i + 1).padStart(4, "0")
+);
+
+/**
+ * Vence las invitaciones demo `GENESIS-0001..0006` que sigan sin usar cuando el
+ * entorno no las permite (producción sin `SEED_DEMO=1`). Devuelve cuántas venció.
+ *
+ * `demoInvitesAllowed` solo evitaba SEMBRARLAS: una base que ya las tenía (la de
+ * producción las tiene, sembradas antes de esa guarda) las conservaba vivas, y los
+ * códigos están publicados. Se VENCEN (`expires_at = ahora`), no se borran: la
+ * fila queda como historia y se puede revisar. Solo esos seis códigos exactos: un
+ * `LIKE 'GENESIS-%'` vencería también las invitaciones reales emitidas desde
+ * /admin, que usan el mismo prefijo. Las ya usadas no se tocan (no sirven para
+ * entrar). Idempotente: corre en cada arranque desde `seedIfEmpty`.
+ */
+export function retirarInvitacionesDemo(db: DB, env: NodeJS.ProcessEnv = process.env): number {
+  if (demoInvitesAllowed(env)) return 0;
+  const marcas = DEMO_INVITE_CODES.map(() => "?").join(", ");
+  const r = db
+    .prepare(
+      `UPDATE invites SET expires_at = datetime('now')
+        WHERE code IN (${marcas}) AND used_by IS NULL AND max_uses IS NULL
+          AND expires_at > datetime('now')`
+    )
+    .run(...DEMO_INVITE_CODES);
+  const n = Number(r.changes);
+  if (n > 0) console.info(`[seed] ${n} invitación(es) demo GENESIS-000x vencidas: están publicadas.`);
+  return n;
+}
+
+export function seedIfEmpty(db: DB, env: NodeJS.ProcessEnv = process.env): void {
   const has = db.prepare(`SELECT COUNT(*) AS n FROM users`).get() as { n: number };
   if (has.n === 0) {
-    const tx = db.transaction(() => seed(db));
+    const tx = db.transaction(() => seed(db, env));
     tx();
   }
+  // Invitaciones demo publicadas: en producción, las que existan se vencen (no
+  // basta con no sembrarlas). Va fuera del `if` por la misma razón que la escotilla.
+  retirarInvitacionesDemo(db, env);
   // Roster real del equipo + iniciativas (WP14). A diferencia del seed de la cohorte
   // demo, esto SÍ corre en cada arranque porque es idempotente: los 6 del plano 07
   // deben existir con su principal `pending:<slug>` aunque la base ya tenga usuarios
@@ -53,14 +89,19 @@ export function seedIfEmpty(db: DB): void {
   // Escotilla de arranque. Va FUERA del `if (users vacía)` a propósito: así funciona
   // aunque configures la variable después del primer arranque. Es idempotente y no
   // resucita el código una vez consumido (la fila sigue ahí con `used_by`).
-  seedBootstrapInvite(db);
+  seedBootstrapInvite(db, env);
 
   // Código de cohorte: también en cada arranque (idempotente), pero SOLO con
   // `SEED_COHORT=1`. Va después de todo lo demás y fuera de `seed()`.
-  seedCohortInvite(db);
+  seedCohortInvite(db, env);
 }
 
-/** Siembra la invitación de arranque del founder si está configurada y no existe. */
+/**
+ * Siembra la invitación de arranque del founder si está configurada y no existe.
+ * El código se guarda normalizado (mayúsculas, ver `bootstrapInviteCode`) porque así
+ * lo envía /entrar. Vence a los 7 días de sembrarse y nunca se resucita: si venció o
+ * ya se usó, hace falta un valor NUEVO de FOUNDER_BOOTSTRAP_CODE y reiniciar.
+ */
 export function seedBootstrapInvite(db: DB, env: NodeJS.ProcessEnv = process.env): void {
   const raw = (env.FOUNDER_BOOTSTRAP_CODE ?? "").trim();
   if (!raw) return;
@@ -68,7 +109,8 @@ export function seedBootstrapInvite(db: DB, env: NodeJS.ProcessEnv = process.env
   if (!code) {
     // Ruidoso a propósito: una variable mal puesta no debe fallar en silencio.
     console.warn(
-      "[seed] FOUNDER_BOOTSTRAP_CODE ignorado: necesita al menos 16 caracteres para no ser adivinable."
+      `[seed] FOUNDER_BOOTSTRAP_CODE ignorado: necesita entre ${BOOTSTRAP_CODE_MIN} y ${BOOTSTRAP_CODE_MAX} ` +
+        `caracteres (menos es adivinable; más no cabe en el campo de /entrar).`
     );
     return;
   }
@@ -104,8 +146,11 @@ export function cohortSeedAllowed(env: NodeJS.ProcessEnv = process.env): boolean
 }
 
 /**
- * Idempotente (INSERT OR IGNORE, no reinicia `uses` ni la expiración). Corre en
- * cada arranque desde `seedIfEmpty`, detrás de `cohortSeedAllowed`.
+ * Idempotente (INSERT OR IGNORE, nunca reinicia `uses`). Corre en cada arranque
+ * desde `seedIfEmpty`, detrás de `cohortSeedAllowed`. Ojo: `createCohortInvite` solo
+ * puede AMPLIAR cupos y plazo, así que cada arranque con `SEED_COHORT=1` lleva el
+ * vencimiento a hoy + 45 días. Sin la variable no se toca: la fila que ya exista
+ * sigue valiendo hasta su `expires_at` (cerrarla es un UPDATE, ver DESPLIEGUE-V1).
  */
 export function seedCohortInvite(db: DB, env: NodeJS.ProcessEnv = process.env): boolean {
   if (!cohortSeedAllowed(env)) return false;
@@ -118,7 +163,7 @@ export function seedCohortInvite(db: DB, env: NodeJS.ProcessEnv = process.env): 
   return true;
 }
 
-function seed(db: DB): void {
+function seed(db: DB, env: NodeJS.ProcessEnv = process.env): void {
   // ---- Periodo Génesis (presupuestos = genoma v1) ----
   db.prepare(
     `INSERT INTO periods (id, name, epoch_budget, academia_budget, state) VALUES (1, 'Época Génesis', ?, ?, 'Open')`
@@ -139,13 +184,11 @@ function seed(db: DB): void {
   // ---- Invitaciones GENESIS (6, del founder, sin usar) ----
   // Códigos PREDECIBLES y publicados en los docs: nunca en producción (ver
   // `demoInvitesAllowed`). El founder genera invitaciones reales desde /admin.
-  if (demoInvitesAllowed()) {
+  if (demoInvitesAllowed(env)) {
     const insInvite = db.prepare(
       `INSERT INTO invites (code, issuer_wallet, expires_at) VALUES (?, ?, datetime('now','+30 days'))`
     );
-    for (let i = 1; i <= 6; i++) {
-      insInvite.run("GENESIS-" + String(i).padStart(4, "0"), FOUNDER_WALLET);
-    }
+    for (const code of DEMO_INVITE_CODES) insInvite.run(code, FOUNDER_WALLET);
   }
 
   // ---- CLA signatures ----

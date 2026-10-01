@@ -172,16 +172,25 @@ export const AXIS_LABEL: Record<Axis, string> = {
  * no ser adivinable. No reabre el agujero de los códigos GENESIS publicados porque
  * no está publicado en ninguna parte.
  *
- * Devuelve null si no está configurado o es demasiado corto.
+ * Se normaliza a MAYÚSCULAS y debe medir entre 16 y 40 caracteres: /entrar pasa el
+ * código a mayúsculas (input y `?code=`) y la validación de la API corta en 40. Antes
+ * se sembraba tal cual, así que un valor en minúsculas o más largo nunca coincidía y
+ * la escotilla quedaba inservible desde la web justo cuando hacía falta.
+ *
+ * Devuelve null si no está configurado o no cumple el largo.
  */
+export const BOOTSTRAP_CODE_MIN = 16;
+/** El mismo tope que `code` en `onboardSchema` / `inviteVerifySchema` (validation.ts). */
+export const BOOTSTRAP_CODE_MAX = 40;
+
 export function bootstrapInviteCode(env: NodeJS.ProcessEnv = process.env): string | null {
-  const raw = (env.FOUNDER_BOOTSTRAP_CODE ?? "").trim();
+  const raw = (env.FOUNDER_BOOTSTRAP_CODE ?? "").trim().toUpperCase();
   if (!raw) return null;
-  return raw.length >= 16 ? raw : null;
+  return raw.length >= BOOTSTRAP_CODE_MIN && raw.length <= BOOTSTRAP_CODE_MAX ? raw : null;
 }
 
 /** ¿Este código de invitación es la escotilla de arranque del founder? */
 export function isBootstrapCode(code: string, env: NodeJS.ProcessEnv = process.env): boolean {
   const boot = bootstrapInviteCode(env);
-  return !!boot && code.trim() === boot;
+  return !!boot && code.trim().toUpperCase() === boot;
 }

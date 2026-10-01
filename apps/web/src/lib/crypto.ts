@@ -34,6 +34,20 @@ export function verifyWalletSignature(pubkey: string, payload: string, signature
   return false;
 }
 
+/**
+ * ¿Es `w` una llave pública Stellar real (StrKey `G…` con checksum)? Las wallets
+ * demo del seed (`GA7ZELENAFOUNDERDEMOWALLET…`) NO lo son: nadie puede firmar con
+ * ellas, así que una fila founder con esa wallet no le da acceso a nadie.
+ */
+export function esWalletStellar(w: string): boolean {
+  try {
+    Keypair.fromPublicKey(w);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Prefijo de SEP-53 (Stellar: "Sign and Verify Messages"), que usan las wallets reales. */
 const SEP53_PREFIX = "Stellar Signed Message:" + String.fromCharCode(10);
 

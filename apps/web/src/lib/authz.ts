@@ -15,8 +15,10 @@
  * resuelve el rol contra la base y solo cae a los claims si la fila no existe. Así
  * una cookie vieja o manipulada que se declare `founder` no concede administración.
  *
- * `FOUNDER_WALLET` sigue existiendo, pero como lo que siempre debió ser: el dato
- * con el que el seed crea la fila del founder, no un mecanismo de autorización.
+ * `FOUNDER_WALLET` sigue existiendo, pero como lo que siempre debió ser: un DATO.
+ * El seed crea con ella la fila del founder y cada arranque promueve esa fila a
+ * `founder` (`backfillFounder` en db.ts, solo promueve). Ningún gate la compara:
+ * la decisión sale siempre de `users.role`.
  */
 import { getDb, type DB } from "./db";
 import { effectiveRole, esEquipoInterno, isRole, type Role, type RoleClaims, type TeamActor } from "./roles";
