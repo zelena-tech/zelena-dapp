@@ -76,8 +76,12 @@ export function menuPara(o: {
   ];
 }
 
-/** Licencia del repositorio (el archivo no se toca: se enlaza). */
-export const URL_LICENCIA = "https://github.com/zelena-tech/zelena-dapp/blob/main/LICENSE";
+/**
+ * Licencia del repositorio (el archivo no se toca: se enlaza). Va por `blob/HEAD/`,
+ * que GitHub resuelve a la rama por defecto: el repo no tiene rama `main` (la de
+ * por defecto es `develop`) y con `blob/main/` el enlace del pie daba 404.
+ */
+export const URL_LICENCIA = "https://github.com/zelena-tech/zelena-dapp/blob/HEAD/LICENSE";
 
 /** Grupos del pie. El de "Legal" es obligatorio en todas las páginas. */
 export const FOOTER_GRUPOS: ReadonlyArray<{ titulo: string; enlaces: readonly EnlaceMenu[] }> = [

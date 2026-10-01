@@ -86,9 +86,16 @@ describe("pie y aviso legal (E1-6)", () => {
     expect(hrefs).toContain("/acuerdo");
     expect(hrefs).toContain("/privacidad");
     expect(hrefs).toContain(URL_LICENCIA);
-    expect(URL_LICENCIA).toBe("https://github.com/zelena-tech/zelena-dapp/blob/main/LICENSE");
+    expect(URL_LICENCIA).toBe("https://github.com/zelena-tech/zelena-dapp/blob/HEAD/LICENSE");
     const legal = FOOTER_GRUPOS.find((g) => g.titulo === "Legal");
     expect(legal?.enlaces.map((e) => e.label)).toEqual(["Acuerdo de contribución", "Privacidad", "Licencia"]);
+  });
+
+  // El repo no tiene rama `main` (la de por defecto es `develop`): con `blob/main/` el
+  // enlace daba 404. `blob/HEAD/` lo resuelve GitHub a la rama por defecto, sea cual sea.
+  it("la licencia no depende del nombre de una rama", () => {
+    expect(URL_LICENCIA).toMatch(/^https:\/\/github\.com\/zelena-tech\/zelena-dapp\/blob\/HEAD\/LICENSE$/);
+    expect(URL_LICENCIA).not.toMatch(/\/blob\/(main|master|develop)\//);
   });
 
   it("incluye Ágora, Academia, Decisiones, Whitepaper, Servicios y Contacto", () => {
