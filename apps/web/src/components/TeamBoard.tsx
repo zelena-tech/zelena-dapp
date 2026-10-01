@@ -10,6 +10,7 @@
  * El responsable se muestra para repartir el trabajo, no para comparar a nadie.
  */
 import Link from "next/link";
+import type { ReactNode } from "react";
 import {
   HECHAS_DIAS_POR_DEFECTO,
   HORIZONS,
@@ -45,6 +46,10 @@ export interface TarjetaTablero {
   puedeContexto: boolean;
   /** Quien planifica el proyecto: el resto de campos. */
   puedePlanificar: boolean;
+  /** WP31-I2: semáforo de plazo de la pieza (`SlaBadge`), calculado en el servidor. */
+  semaforo?: ReactNode;
+  /** WP31-I2: acción extra al pie de la tarjeta (p. ej. "Publicar en el Ágora"). */
+  pie?: ReactNode;
 }
 
 function Tarjeta({ t, personas }: { t: TarjetaTablero; personas: OpcionResponsable[] }) {
@@ -62,6 +67,7 @@ function Tarjeta({ t, personas }: { t: TarjetaTablero; personas: OpcionResponsab
         {a.initiative_horizon && a.horizon !== a.initiative_horizon ? <TeamHorizonBadge horizon={a.horizon} /> : null}
         {a.needs_founder ? <span className="tag border-amber-700/50 text-amber-300">espera decisión</span> : null}
       </div>
+      {t.semaforo ? <div className="mt-2">{t.semaforo}</div> : null}
 
       {a.acceptance_criteria ? (
         <p className="mt-2 line-clamp-3 text-xs text-muted">
@@ -124,6 +130,7 @@ function Tarjeta({ t, personas }: { t: TarjetaTablero; personas: OpcionResponsab
           />
         </div>
       ) : null}
+      {t.pie ? <div className="mt-2">{t.pie}</div> : null}
     </li>
   );
 }

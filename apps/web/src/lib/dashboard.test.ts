@@ -24,8 +24,11 @@ import {
   founderInbox,
   initiativeBars,
   loadByPerson,
+  plazosDelEquipo,
   riteHealth,
 } from "./dashboard";
+import { instanteLocal } from "./zona-horaria";
+import { clearGenomeCache } from "./genome";
 
 const JOHN = pendingPrincipal("john");
 const VALE = pendingPrincipal("vale");
@@ -411,5 +414,88 @@ describe("cero métricas inventadas", () => {
     expect(d.epoch.closedThisEpoch).toBeNull();
     // Las iniciativas sembradas existen pero todas con total 0: la UI las oculta.
     expect(d.initiatives.every((b) => b.total === 0)).toBe(true);
+  });
+});
+
+describe("plazos del equipo (criterio I4 de WP31)", () => {
+  // Miércoles 2026-07-29 a las 15:00 de Bogotá (20:00 UTC): quedan 3 h hábiles del día.
+  const AHORA = instanteLocal("2026-07-29", "15:00", "America/Bogota");
+  let db: DB;
+  let wms: number;
+
+  /** Pieza con su reloj arrancado hace días (created_at explícito: el default sería el reloj real). */
+  function pieza(o: {
+    title: string;
+    owner?: string | null;
+    status?: "Backlog" | "Asignada" | "En curso" | "En revisión" | "Bloqueada" | "Hecha";
+    priority?: "Urgent" | "High" | "Normal" | "Low";
+    due?: string | null;
+  }): number {
+    const id = createAssignment(db, {
+      title: o.title,
+      initiativeId: wms,
+      ownerWallet: o.owner === undefined ? FAUSTO : o.owner,
+      status: o.status ?? "En curso",
+      priority: o.priority ?? "Normal",
+      dueDate: o.due ?? null,
+    });
+    db.prepare(`UPDATE assignments SET created_at = ? WHERE id = ?`).run("2026-07-20 13:00:00", id);
+    return id;
+  }
+
+  beforeEach(() => {
+    db = freshDb();
+    wms = upsertInitiative(db, "WMS", "Ahora");
+  });
+
+  it("separa lo vencido de lo que está por vencer, cada lista por su vencimiento", () => {
+    const vencidaAyer = pieza({ title: "Vencida ayer", priority: "High", due: "2026-07-28" });
+    const vencidaViernes = pieza({ title: "Vencida el viernes", owner: DAVID, due: "2026-07-24" });
+    const venceHoy = pieza({ title: "Vence hoy", due: "2026-07-29" });
+    const venceManana = pieza({ title: "Vence mañana temprano", owner: DAVID, due: "2026-07-30" });
+    pieza({ title: "A tiempo", due: "2026-08-14" });
+    pieza({ title: "Sin plazo", priority: "Low", due: null });
+    pieza({ title: "Bloqueada", status: "Bloqueada", due: "2026-07-01" });
+    pieza({ title: "Hecha", status: "Hecha", due: "2026-07-01" });
+
+    const p = plazosDelEquipo(db, ACTORS[JOHN], AHORA);
+    expect(p.ahora).toBe(AHORA);
+    expect(p.vencidas.map((x) => x.assignment.id)).toEqual([vencidaViernes, vencidaAyer]);
+    expect(p.vencidas.every((x) => x.sla.estado === "vencida")).toBe(true);
+    // Hoy a las 18:00 quedan 3 h hábiles; mañana, las 3 de hoy más la jornada hábil de mañana
+    // hasta las 18:00 = 13 h > tope de aviso (10 h): esa va a tiempo.
+    expect(p.porVencer.map((x) => x.assignment.id)).toEqual([venceHoy]);
+    expect(p.porVencer[0].sla.horasRestantes).toBe(3);
+    expect(p.aTiempo).toBe(2);
+    expect(p.sinPlazo).toBe(1);
+    // Lo bloqueado y lo hecho no entran (lo bloqueado tiene su sección arriba).
+    const todas = [...p.vencidas, ...p.porVencer].map((x) => x.assignment.title);
+    expect(todas).not.toContain("Bloqueada");
+    expect(todas).not.toContain("Hecha");
+    expect([...p.vencidas, ...p.porVencer].some((x) => x.assignment.id === venceManana)).toBe(false);
+  });
+
+  it("los plazos salen del genoma: con el tope de aviso más alto, mañana también está por vencer", () => {
+    const venceManana = pieza({ title: "Vence mañana", due: "2026-07-30" });
+    db.prepare(`INSERT INTO genome_versions (version, params, effective_from_epoch) VALUES (1, ?, 1)`).run(
+      JSON.stringify({ SLA_WARN_MAX_H: 20, SLA_WARN_PCT: 50 })
+    );
+    clearGenomeCache(db);
+    const p = plazosDelEquipo(db, ACTORS[JOHN], AHORA);
+    expect(p.porVencer.map((x) => x.assignment.id)).toEqual([venceManana]);
+  });
+
+  it("un core sin supervisión solo ve los plazos de lo suyo", () => {
+    pieza({ title: "De Fausto, vencida", due: "2026-07-28" });
+    pieza({ title: "De David, vencida", owner: DAVID, due: "2026-07-28" });
+    const p = plazosDelEquipo(db, ACTORS[DAVID], AHORA);
+    expect(p.vencidas.map((x) => x.assignment.title)).toEqual(["De David, vencida"]);
+  });
+
+  it("sin trabajo, listas vacías y ceros: no inventa plazos", () => {
+    const p = plazosDelEquipo(db, ACTORS[JOHN], AHORA);
+    expect(p.vencidas).toEqual([]);
+    expect(p.porVencer).toEqual([]);
+    expect(p.aTiempo + p.sinPlazo).toBe(0);
   });
 });

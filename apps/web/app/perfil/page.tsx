@@ -1,6 +1,19 @@
+/**
+ * `/perfil` — lo tuyo: puntos, reputación, acuerdo de contribución e invitaciones.
+ *
+ * WP31-I2:
+ *  - "Tu progreso" suma, además, los puntos y la reputación de la temporada por entregas
+ *    aprobadas (`progresoDeTareas`, todas tus identidades) y tus insignias (`Insignias`,
+ *    metas del genoma). La comparación es contigo; nada se pierde ni se compara con nadie.
+ *  - La firma del acuerdo solo enlaza al explorador una transacción verificable
+ *    (`txVerificable`: 64 hexadecimales); las semillas de prueba no se enlazan.
+ *  - Quien entra por la comunidad y aún no está en ningún proyecto (la puerta de
+ *    `/equipo` lo trae aquí) ve qué le falta para empezar, sin jerga.
+ */
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
+import { equipoActor } from "@/lib/authz";
 import {
   reputationByAxis,
   reputationByAxisInEpoch,
@@ -14,8 +27,23 @@ import {
 import { getDb } from "@/lib/db";
 import { REPUTATION_AXES, AXIS_LABEL } from "@/lib/config";
 import { getActiveGenome, currentEpoch } from "@/lib/genome";
+import { insignias, progresoDeTareas, senalesProgreso } from "@/lib/gamificacion";
+import { EXPLORADOR_TX, txVerificable } from "@/lib/pruebas-testnet";
 import { ProgressBar, shortWallet } from "@/components/ui";
 import InviteGenerator from "@/components/InviteGenerator";
+import Insignias from "@/components/Insignias";
+
+/** Qué fue cada evento de reputación, en palabras (el `ref` técnico queda en el title). */
+function etiquetaRef(ref: string): string {
+  const entrega = /^assignment:(\d+)$/.exec(ref);
+  if (entrega) return `Entrega aprobada #${entrega[1]}`;
+  const rito = /^rito:\d+:(asistencia|anfitrion|relator)$/.exec(ref);
+  if (rito) {
+    if (rito[1] === "asistencia") return "Asistencia a un rito";
+    return rito[1] === "anfitrion" ? "Anfitrión de un rito" : "Relator de un rito";
+  }
+  return ref;
+}
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +51,7 @@ export default async function PerfilPage() {
   const session = await getSession();
   if (!session) redirect("/entrar");
   const wallet = session.wallet;
+  const db = getDb();
   const user = getUser(wallet);
   const rep = reputationByAxis(wallet);
   const history = reputationHistory(wallet);
@@ -30,9 +59,9 @@ export default async function PerfilPage() {
   const points = totalPoints(wallet);
   const cla = claSignature(wallet);
   const tier = user?.tier ?? session.tier ?? "Bronze";
-  const cap = getActiveGenome(getDb()).TIER_INVITE_CAPS[tier] ?? 2;
+  const cap = getActiveGenome(db).TIER_INVITE_CAPS[tier] ?? 2;
 
-  const invites = getDb()
+  const invites = db
     .prepare(
       `SELECT code, used_by, expires_at FROM invites WHERE issuer_wallet = ? ORDER BY created_at DESC`
     )
@@ -42,8 +71,18 @@ export default async function PerfilPage() {
   const maxAxis = Math.max(10, ...REPUTATION_AXES.map((a) => rep[a]));
 
   // Progreso propio de la época (auto-comparación, regla de producto doc 16).
-  const epoch = currentEpoch(getDb());
+  const epoch = currentEpoch(db);
   const progress = epochProgress(wallet, epoch);
+  // Entregas aprobadas por otra persona: temporada e insignias (todas tus identidades).
+  const temporada = progresoDeTareas(db, wallet, epoch);
+  const senales = senalesProgreso(db, wallet);
+  const misInsignias = insignias(senales, getActiveGenome(db, epoch).BADGE_GOALS);
+
+  // ¿Entra a /equipo? La misma puerta que el trabajo (lee la base, nunca la cookie).
+  const trabajo = equipoActor(session, db);
+  const fila = db.prepare(`SELECT role FROM users WHERE wallet = ?`).get(wallet) as { role: string | null } | undefined;
+  const esComunidadSinProyecto = !trabajo && fila?.role === "contributor" && user?.status !== "alumni";
+  const firmoAcuerdo = user?.cla_signed === 1;
   // "Eje que más creció" = mayor reputación GANADA en esta época (delta), no total de por vida.
   const growth = reputationByAxisInEpoch(wallet, epoch);
   const topAxis = REPUTATION_AXES.reduce((best, a) => (growth[a] > growth[best] ? a : best), REPUTATION_AXES[0]);
@@ -80,6 +119,12 @@ export default async function PerfilPage() {
         <p className="mt-1 text-sm text-muted">
           Aquí la comparación es contigo: cuánto avanzaste respecto a tu época anterior. Nunca pierdes lo ganado.
         </p>
+        <p className="mt-3 text-sm text-white">
+          Esta temporada sumaste{" "}
+          <span className="font-bold text-primary">{temporada.puntos.toLocaleString("es")}</span> puntos y{" "}
+          <span className="font-bold text-primary">{temporada.reputacion.toLocaleString("es")}</span> de reputación
+          en ejecución por entregas aprobadas.
+        </p>
         <div className="mt-5 grid gap-5 sm:grid-cols-3">
           <div>
             <div className="font-head text-3xl font-bold text-primary glow-text">
@@ -107,7 +152,52 @@ export default async function PerfilPage() {
             </div>
           </div>
         </div>
+        <p className="mt-5 text-xs text-faint">
+          {senales.entregasAprobadas === 0
+            ? "Cuando otra persona apruebe tu primera entrega, empieza a contar aquí."
+            : `Desde que empezaste: ${senales.entregasAprobadas} ${
+                senales.entregasAprobadas === 1 ? "entrega aprobada" : "entregas aprobadas"
+              } por otra persona, ${senales.entregasATiempo} dentro de su plazo.`}
+        </p>
+        <div className="mt-5 border-t border-line/60 pt-5">
+          <Insignias insignias={misInsignias} />
+        </div>
       </section>
+
+      {/* Quien entra por la comunidad y aún no tiene proyecto: qué le falta para empezar */}
+      {esComunidadSinProyecto ? (
+        <section className="card p-6">
+          <h2 className="font-head text-2xl font-bold text-white">Tus proyectos</h2>
+          {firmoAcuerdo ? (
+            <>
+              <p className="mt-2 text-sm text-muted">
+                Todavía no estás en ningún proyecto. Cuando quien estructura un proyecto te sume, en el menú
+                aparecerá {"«Mi día»"}, con tus entregas y el tablero del proyecto.
+              </p>
+              <p className="mt-2 text-sm text-muted">
+                Mientras tanto, los proyectos abiertos del Ágora están a la vista de todos: aplica con tu enfoque.
+              </p>
+              <Link href="/agora" className="btn btn-primary mt-4">
+                Ver proyectos abiertos
+              </Link>
+            </>
+          ) : (
+            <>
+              <p className="mt-2 text-sm text-muted">
+                Antes del primer trabajo hay un paso: firmar el acuerdo de contribución. Tu autoría sigue siendo tuya.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Link href="/entrar" className="btn btn-primary">
+                  Firmar el acuerdo
+                </Link>
+                <Link href="/acuerdo" className="btn btn-ghost">
+                  Leer el acuerdo
+                </Link>
+              </div>
+            </>
+          )}
+        </section>
+      ) : null}
 
       {/* Ejes de reputación */}
       <section>
@@ -149,20 +239,25 @@ export default async function PerfilPage() {
                 )}
               </div>
               <p className="font-mono text-[11px] text-faint">hash: {cla.cla_hash.slice(0, 40)}…</p>
-              {cla.tx_id ? (
+              {/* Solo se enlaza una transacción verificable (64 hex); una semilla de prueba no. */}
+              {cla.tx_id && txVerificable(cla.tx_id) ? (
                 <p className="text-xs text-muted">
-                  txId:{" "}
+                  Transacción en la red de pruebas:{" "}
                   <a
-                    href={`https://stellar.expert/explorer/testnet/tx/${cla.tx_id}`}
+                    href={`${EXPLORADOR_TX}${cla.tx_id}`}
                     target="_blank"
-                    rel="noreferrer"
+                    rel="noreferrer noopener"
                     className="text-primary hover:underline break-all"
                   >
                     {cla.tx_id}
                   </a>
                 </p>
+              ) : cla.tx_id ? (
+                <p className="text-xs text-faint">
+                  Esta firma es de prueba: no tiene una transacción pública que se pueda abrir en el explorador.
+                </p>
               ) : (
-                <p className="text-xs text-faint">El worker de anclaje confirmará el txId en minutos.</p>
+                <p className="text-xs text-faint">El anclaje en la red de pruebas se confirma en unos minutos.</p>
               )}
             </div>
           ) : (
@@ -171,7 +266,7 @@ export default async function PerfilPage() {
         </section>
 
         {/* Invitaciones */}
-        <section className="card p-6">
+        <section id="invitar" className="card scroll-mt-24 p-6">
           <div className="flex items-center justify-between">
             <h2 className="font-head text-xl font-bold text-white">Invitaciones</h2>
             <span className="text-xs text-faint">{activeInvites} / {cap} activas</span>
@@ -204,14 +299,16 @@ export default async function PerfilPage() {
             Sin eventos todavía. Tu primer punto puede ser hoy: completa{" "}
             <Link href="/academia" className="text-primary hover:underline">un contenido de Academia</Link>{" "}
             (unos minutos) o{" "}
-            <Link href="/agora" className="text-primary hover:underline">toma un bounty del Ágora</Link>.
+            <Link href="/agora" className="text-primary hover:underline">toma un proyecto del Ágora</Link>.
           </p>
         ) : (
           <ol className="space-y-2">
             {history.map((h, i) => (
               <li key={i} className="flex items-center justify-between rounded-md border border-line/50 px-4 py-3 text-sm">
                 <div>
-                  <span className="text-white">{h.ref}</span>
+                  <span className="text-white" title={h.ref}>
+                    {etiquetaRef(h.ref)}
+                  </span>
                   <span className="ml-2 text-xs text-faint">{AXIS_LABEL[h.axis]}</span>
                 </div>
                 <div className="flex items-center gap-3">
