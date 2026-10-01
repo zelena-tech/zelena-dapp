@@ -7,7 +7,7 @@
 import type { DB } from "./db"; // solo tipo: sin ciclo en runtime
 import { sha256Hex } from "./crypto";
 import { FOUNDER_WALLET, BOOTSTRAP_CODE_MAX, BOOTSTRAP_CODE_MIN, bootstrapInviteCode } from "./config";
-import { GENOME_V1, seedGenomeV1 } from "./genome";
+import { GENOME_V1, seedGenomeV1, seedGenomeV2 } from "./genome";
 import { seedTeam } from "./team";
 import { createCohortInvite } from "./invites";
 
@@ -85,6 +85,7 @@ export function seedIfEmpty(db: DB, env: NodeJS.ProcessEnv = process.env): void 
   // (WP13 vinculará su identidad real). No escribe correos ni datos personales.
   const txTeam = db.transaction(() => seedTeam(db));
   txTeam();
+  try { seedGenomeV2(db); } catch (e) { console.error("[seed] genoma v2", e); }
 
   // Escotilla de arranque. Va FUERA del `if (users vacía)` a propósito: así funciona
   // aunque configures la variable después del primer arranque. Es idempotente y no

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { simulate, compareGenomes, genomePreset, SANE_EMISSION_CEILING, type SimConfig } from "./sim";
-import { GENOME_V1, type Genome } from "./genome";
+import { GENOME_V1, GENOME_DEFAULTS, type GenomeV1 } from "./genome";
 
 describe("simulador ABM (WP11)", () => {
   it("corre 1.000 épocas con 25 agentes en bastante menos de 1 min", () => {
@@ -26,7 +26,7 @@ describe("simulador ABM (WP11)", () => {
   });
 
   it("un genoma con presupuesto ~infinito dispara la alerta de emisión (sanity check)", () => {
-    const unbounded: Genome = { ...GENOME_V1, EPOCH_BUDGET: 100_000_000, ACADEMIA_BUDGET: 100_000_000 };
+    const unbounded: GenomeV1 = { ...GENOME_V1, EPOCH_BUDGET: 100_000_000, ACADEMIA_BUDGET: 100_000_000 };
     const r = simulate({ genome: unbounded, epochs: 20, population: 25 });
     expect(r.pointsPerEpoch).toBeGreaterThan(SANE_EMISSION_CEILING);
     expect(r.emissionAlert).toBe(true);
@@ -35,7 +35,7 @@ describe("simulador ABM (WP11)", () => {
   it("el reporte A/B muestra diferencias explicables entre dos genomas distintos", () => {
     const base: Omit<SimConfig, "genome"> = { epochs: 60, population: 25 };
     // B abre mucho más presupuesto de Academia → los farmers capturan más.
-    const genomeB: Genome = { ...GENOME_V1, ACADEMIA_BUDGET: 60_000 };
+    const genomeB: GenomeV1 = { ...GENOME_V1, ACADEMIA_BUDGET: 60_000 };
     const ab = compareGenomes(GENOME_V1, genomeB, base);
 
     expect(ab.b.farmerCapturePct).toBeGreaterThan(ab.a.farmerCapturePct);
@@ -47,5 +47,10 @@ describe("simulador ABM (WP11)", () => {
   it("genomePreset('v1') es el genoma canónico y rechaza nombres desconocidos", () => {
     expect(genomePreset("v1")).toEqual(GENOME_V1);
     expect(() => genomePreset("v99")).toThrow(/desconocido/i);
+  });
+
+  it("acepta el genoma completo (v1 + claves de WP31) con el mismo resultado: solo lee las claves v1", () => {
+    const base: Omit<SimConfig, "genome"> = { epochs: 30, population: 25 };
+    expect(simulate({ ...base, genome: GENOME_DEFAULTS })).toEqual(simulate({ ...base, genome: GENOME_V1 }));
   });
 });
