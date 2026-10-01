@@ -190,21 +190,33 @@ interface Enviado {
   [k: string]: unknown;
 }
 
-function transporte(o: { lentoMs?: number; fallos?: number } = {}): { t: TelegramTransport; enviados: Enviado[] } {
+/** Lo que la Bot API acepta en `sendMessage.text`: más largo, responde 400 y no envía nada. */
+const LIMITE_BOT_API = 4096;
+
+function transporte(o: { lentoMs?: number; fallos?: number } = {}): {
+  t: TelegramTransport;
+  enviados: Enviado[];
+  rechazados: number;
+} {
   const enviados: Enviado[] = [];
+  const out = { t: null as unknown as TelegramTransport, enviados, rechazados: 0 };
   let fallos = o.fallos ?? 0;
-  const t: TelegramTransport = {
+  out.t = {
     async call(method, payload) {
       if (o.lentoMs) await new Promise((r) => setTimeout(r, o.lentoMs));
       if (fallos > 0) {
         fallos--;
         throw new Error("Telegram no respondió");
       }
+      if (method === "sendMessage" && String((payload as Enviado).text ?? "").length > LIMITE_BOT_API) {
+        out.rechazados++;
+        throw new Error("Telegram rechazó sendMessage: Bad Request: message is too long");
+      }
       if (method === "sendMessage") enviados.push(payload as Enviado);
       return { ok: true };
     },
   };
-  return { t, enviados };
+  return out; // `rechazados` se lee del objeto (no desestructurado): cambia durante la corrida
 }
 
 function correr(db: DB, o: OpcionesCorrida = {}) {
@@ -376,6 +388,120 @@ describe("C1-3 · un mensaje por persona", () => {
     const r2 = await correr(db, { ahora: bog(LUN, "12:00"), cfg: tarde, transport: t });
     expect(r2).toMatchObject({ avisosCreados: 2, inmediatosEnviados: 1, digestEnviados: 1 });
     expect(r2.porTipo).toEqual({ p1_sin_respuesta: 1, vence_hoy: 1 });
+  });
+});
+
+describe("C1-3 · cada mensaje cabe en el límite de Telegram (4096)", () => {
+  /** Títulos largos (~115 caracteres), como los que deja un backlog importado. */
+  const largo = (i: number) =>
+    `Conciliar los movimientos del trimestre con el extracto del banco y documentar cada diferencia encontrada, lote ${i}`;
+  /** El «Y N más.» del final; 0 si el mensaje lo lista todo. */
+  const resto = (texto: string) => Number(/^Y (\d+) más\.$/m.exec(texto)?.[1] ?? 0);
+  /** Filas de reminders_sent (sin las marcas del resumen) de quien no es ninguna de `fuera`. */
+  const filasMenos = (...fuera: string[]) =>
+    contar(
+      db,
+      `SELECT COUNT(*) AS n FROM reminders_sent WHERE clave NOT LIKE 'digest:%' AND wallet NOT IN (${fuera.map(() => "?").join(", ")})`,
+      ...fuera
+    );
+
+  beforeEach(() => {
+    telegram(db, ANA, 1001);
+    telegram(db, SESION_FOUNDER, 1004); // el founder recibe los escalamientos
+  });
+
+  it("guarda de arranque: 35 vencidas importadas → 1 resumen al dueño que cabe, con «Y N más», y todo queda enviado", async () => {
+    for (let i = 1; i <= 35; i++) vencidaVieja(db, ANA, { priority: i % 2 ? "Normal" : "High", title: largo(i) });
+    expect(activadoDesde(db)).toBeNull();
+    const tr = transporte();
+    const sinGuardaFija: ConfigRecordatorios = { ...CFG, activadoDesde: null };
+    const r = await correr(db, { ahora: bog(LUN, "10:00"), cfg: sinGuardaFija, transport: tr.t });
+    expect(tr.rechazados).toBe(0);
+    expect(r).toMatchObject({ avisosCreados: 35, digestEnviados: 1, inmediatosEnviados: 0, errores: 0 });
+    expect(r.porTipo).toEqual({ vencida: 35 }); // nada escala: lo importado ya venía vencido
+    expect(tr.enviados).toHaveLength(1);
+    const { chat_id, text } = tr.enviados[0];
+    expect(chat_id).toBe(1001);
+    expect(text.length).toBeLessThanOrEqual(LIMITE_BOT_API);
+    expect(text.startsWith("Esto es lo de hoy en tus entregas:")).toBe(true);
+    expect(resto(text)).toBeGreaterThan(0);
+    expect(text.endsWith(`\nY ${resto(text)} más.\nVer en Zelena: ${APP}/equipo/hoy`)).toBe(true);
+    expect(lineas(text) + resto(text)).toBe(35); // nada se pierde: lo que no cabe se cuenta
+    expect(tr.enviados[0]).not.toHaveProperty("parse_mode");
+
+    // Todo lo del resumen quedó marcado como enviado, y el resumen del día también.
+    expect(contar(db, `SELECT COUNT(*) AS n FROM reminders_sent WHERE is_telegram = 0`)).toBe(0);
+    expect(contar(db, `SELECT COUNT(*) AS n FROM reminders_sent WHERE clave = ? AND is_telegram = 1`, `digest:${LUN}`)).toBe(1);
+
+    // La corrida siguiente no lo repite.
+    const r2 = await correr(db, { ahora: bog(LUN, "10:15"), cfg: sinGuardaFija, transport: tr.t });
+    expect(r2).toMatchObject({ avisosCreados: 0, digestEnviados: 0, errores: 0 });
+    expect(tr.enviados).toHaveLength(1);
+  });
+
+  it("escalamientos que se juntan → el resumen del dueño y el del founder caben; todo queda enviado", async () => {
+    for (let i = 1; i <= 30; i++) vencidaVieja(db, ANA, { priority: "Normal", title: largo(i) });
+    const tr = transporte();
+    const r = await correr(db, { ahora: bog(LUN, "10:00"), transport: tr.t });
+    expect(tr.rechazados).toBe(0);
+    expect(r).toMatchObject({ digestEnviados: 2, inmediatosEnviados: 0, errores: 0 });
+    // El dueño, sus 30 vencidas; el founder, por cada pieza, la de supervisor global y la suya.
+    const esperado = new Map([
+      [1001, filasMenos(SUPER, SESION_FOUNDER, JOHN)],
+      [1004, filasMenos(SUPER, ANA)],
+    ]);
+    expect([esperado.get(1001), esperado.get(1004)]).toEqual([30, 60]);
+    expect(tr.enviados.map((e) => e.chat_id).sort()).toEqual([1001, 1004]);
+    for (const e of tr.enviados) {
+      expect(e.text.length).toBeLessThanOrEqual(LIMITE_BOT_API);
+      expect(e.text.startsWith("Esto es lo de hoy en tus entregas:")).toBe(true);
+      expect(e.text.endsWith(`Ver en Zelena: ${APP}/equipo/hoy`)).toBe(true);
+      expect(resto(e.text)).toBeGreaterThan(0);
+      expect(lineas(e.text) + resto(e.text)).toBe(esperado.get(e.chat_id));
+    }
+    // De quienes tienen Telegram nada queda pendiente, y el resumen de cada uno queda marcado.
+    expect(contar(db, `SELECT COUNT(*) AS n FROM reminders_sent WHERE is_telegram = 0 AND wallet <> ?`, SUPER)).toBe(0);
+    expect(contar(db, `SELECT COUNT(*) AS n FROM reminders_sent WHERE clave = ? AND is_telegram = 1`, `digest:${LUN}`)).toBe(2);
+
+    const r2 = await correr(db, { ahora: bog(LUN, "10:15"), transport: tr.t });
+    expect(r2).toMatchObject({ digestEnviados: 0, errores: 0 });
+    expect(tr.enviados).toHaveLength(2);
+  });
+
+  it("muchos urgentes en una corrida (tope alto) → un mensaje que cabe y enlaza a la bandeja", async () => {
+    for (let i = 1; i <= 40; i++) p1(db, ANA, { title: largo(i) });
+    const tr = transporte();
+    const cfg: ConfigRecordatorios = { ...CFG, maxInmediatos: 40 };
+    const r = await correr(db, { ahora: bog(LUN, "09:30"), cfg, transport: tr.t });
+    expect(tr.rechazados).toBe(0);
+    expect(r).toMatchObject({ avisosCreados: 40, inmediatosEnviados: 1, digestEnviados: 0, errores: 0 });
+    expect(tr.enviados).toHaveLength(1);
+    const texto = tr.enviados[0].text;
+    expect(texto.length).toBeLessThanOrEqual(LIMITE_BOT_API);
+    expect(texto.startsWith("Lo urgente de ahora:")).toBe(true);
+    expect(texto.endsWith(`Ver en Zelena: ${APP}/equipo/avisos`)).toBe(true);
+    expect(resto(texto)).toBeGreaterThan(0);
+    expect(lineas(texto) + resto(texto)).toBe(40);
+    expect(contar(db, `SELECT COUNT(*) AS n FROM reminders_sent WHERE is_telegram = 0`)).toBe(0);
+  });
+
+  it("un proyecto con un nombre desmesurado → los escalamientos salen recortados y caben, sin dejar fuera a ninguno", async () => {
+    const P = proyecto(db, "proyecto-largo", "Proyecto de prueba con un nombre larguísimo ".repeat(120)); // ~5300 caracteres
+    vencidaVieja(db, ANA, { ini: P, priority: "Normal" });
+    vencidaVieja(db, ANA, { ini: P, priority: "Normal" });
+    const tr = transporte();
+    const r = await correr(db, { ahora: bog(LUN, "10:00"), transport: tr.t });
+    expect(tr.rechazados).toBe(0);
+    expect(r).toMatchObject({ digestEnviados: 2, errores: 0 });
+    const alFounder = tr.enviados.filter((e) => e.chat_id === 1004);
+    expect(alFounder).toHaveLength(1);
+    const texto = alFounder[0].text;
+    expect(texto.length).toBeLessThanOrEqual(LIMITE_BOT_API);
+    expect(lineas(texto)).toBe(4); // por pieza, la de supervisor global y la del founder
+    expect(resto(texto)).toBe(0);
+    expect(texto.match(/Proyecto de prueba[^·\n)]*…\)/g)).toHaveLength(4); // el nombre, recortado con «…»
+    expect(contar(db, `SELECT COUNT(*) AS n FROM avisos WHERE length(texto) > 600`)).toBe(0); // y en la bandeja también
+    expect(contar(db, `SELECT COUNT(*) AS n FROM reminders_sent WHERE is_telegram = 0 AND wallet <> ?`, SUPER)).toBe(0);
   });
 });
 

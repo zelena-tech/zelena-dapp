@@ -15,6 +15,8 @@
  *    el motor no escala, y su aviso al dueño va al resumen, no al momento.
  *  - Todos los números salen del genoma (`configRecordatoriosDesdeGenoma`); las fechas,
  *    de `zona-horaria.ts` (vía `sla.ts`) en la zona del genoma.
+ *  - Cada mensaje de Telegram cabe en el límite de la Bot API (`MAX_TEXTO_TELEGRAM`, un
+ *    tope del protocolo, no del negocio): lo que no cabe se cuenta con «Y N más.».
  *
  * Reglas de construcción: módulo puro (sin `node:`, `db.ts`, `crypto.ts` ni
  * `session.ts`), sintaxis borrable e imports de valor con sufijo `.ts`.
@@ -175,9 +177,10 @@ function motivoDe(p: PiezaRecordable): string | null {
   return m.length > 160 ? `${m.slice(0, 159)}…` : m;
 }
 
+/** Nombre del proyecto en una línea y con un largo razonable, como el título y el motivo. */
 function proyectoDe(p: PiezaRecordable): string {
   const n = String(p.initiative_name ?? "").replace(/\s+/g, " ").trim();
-  return n || "sin proyecto";
+  return n ? recortar(n, 80) : "sin proyecto";
 }
 
 /** Dónde se ve la pieza (y su responsable): el tablero del proyecto o el día. */
@@ -401,28 +404,86 @@ export function planificarRecordatorios(
 // Mensajes (Telegram, siempre sin parse_mode: los títulos los escribe la gente)
 // ---------------------------------------------------------------------------
 
+/**
+ * Largo máximo de un mensaje del motor. La Bot API rechaza un `sendMessage` de más de
+ * 4096 caracteres (y entonces no sale nada y se reintentaría para siempre); se deja
+ * margen. No es un parámetro del negocio sino del protocolo, por eso no vive en el
+ * genoma. `String.length` cuenta unidades UTF-16, igual o más que Telegram.
+ */
+export const MAX_TEXTO_TELEGRAM = 4000;
+
 function base(appUrl: string): string {
   return String(appUrl ?? "").trim().replace(/\/+$/, "");
 }
 
-/** Un recordatorio inmediato suelto, con su enlace. */
-export function renderInmediato(r: Recordatorio, appUrl: string): string {
-  return `${r.texto}\nVer en Zelena: ${base(appUrl)}${r.enlace}`;
+/** Corta `s` a `max` caracteres con «…», sin partir un par sustituto (emoji). */
+function recortar(s: string, max: number): string {
+  if (s.length <= max) return s;
+  if (max <= 1) return "…";
+  let corte = max - 1;
+  const c = s.charCodeAt(corte - 1);
+  if (c >= 0xd800 && c <= 0xdbff) corte--;
+  return `${s.slice(0, corte)}…`;
 }
 
-/** Los inmediatos de una persona en una corrida: uno suelto, o todos juntos en un mensaje. */
+/**
+ * Largo máximo de cada línea de un mensaje. El plan ya recorta título, motivo y proyecto,
+ * así que es una defensa: un texto desmesurado se corta con «…» y no deja fuera a los demás.
+ */
+export const MAX_LINEA_TELEGRAM = 600;
+
+/** Lo que se reserva para la línea «Y N más.» mientras se llena el mensaje. */
+const RESERVA_RESTO = 24;
+
+/**
+ * Un mensaje de Telegram que siempre cabe en `MAX_TEXTO_TELEGRAM`: cabecera, tantas
+ * líneas como quepan (en orden) y, si no caben todas, «Y N más.» antes del enlace; lo
+ * demás está en la bandeja de Zelena. Sigue siendo UN mensaje por persona: no se
+ * trocea, así no hay trozos que se repitan si uno falla ni se inunda a nadie.
+ */
+function mensajeConTope(cabecera: string | null, lineas: string[], pie: string): string {
+  const max = MAX_TEXTO_TELEGRAM;
+  const arriba = cabecera === null ? [] : [cabecera];
+  const items = lineas.map((l) => recortar(l, MAX_LINEA_TELEGRAM));
+  const entero = [...arriba, ...items, pie].join("\n");
+  if (entero.length <= max) return entero;
+  // No cabe todo: entran las primeras líneas (cada una con su salto) dejando sitio para «Y N más.».
+  let usado = (cabecera === null ? 0 : cabecera.length + 1) + RESERVA_RESTO + pie.length;
+  let n = 0;
+  while (n < items.length && usado + items[n].length + 1 <= max) {
+    usado += items[n].length + 1;
+    n++;
+  }
+  const partes = [...arriba, ...items.slice(0, n), `Y ${items.length - n} más.`, pie];
+  return recortar(partes.join("\n"), max); // última defensa (un enlace desmesurado): nunca pasa del límite
+}
+
+/** Un recordatorio inmediato suelto, con su enlace. */
+export function renderInmediato(r: Recordatorio, appUrl: string): string {
+  return mensajeConTope(null, [r.texto], `Ver en Zelena: ${base(appUrl)}${r.enlace}`);
+}
+
+/**
+ * Los inmediatos de una persona en una corrida: uno suelto, o todos juntos en un mensaje
+ * (con «Y N más.» si no caben en `MAX_TEXTO_TELEGRAM`).
+ */
 export function renderInmediatos(items: Recordatorio[], appUrl: string): string {
   if (items.length === 1) return renderInmediato(items[0], appUrl);
-  return ["Lo urgente de ahora:", ...items.map((r) => `· ${r.texto}`), `Ver en Zelena: ${base(appUrl)}/equipo/avisos`].join(
-    "\n"
+  return mensajeConTope(
+    "Lo urgente de ahora:",
+    items.map((r) => `· ${r.texto}`),
+    `Ver en Zelena: ${base(appUrl)}/equipo/avisos`
   );
 }
 
-/** El resumen del día de una persona: un mensaje con todo lo que no era urgente. */
+/**
+ * El resumen del día de una persona: un mensaje con todo lo que no era urgente (con
+ * «Y N más.» si no cabe en `MAX_TEXTO_TELEGRAM`; todo sigue en la bandeja).
+ */
 export function renderDigest(items: Recordatorio[], appUrl: string): string {
-  return [
+  return mensajeConTope(
     "Esto es lo de hoy en tus entregas:",
-    ...items.map((r) => `· ${r.texto}`),
-    `Ver en Zelena: ${base(appUrl)}/equipo/hoy`,
-  ].join("\n");
+    items.map((r) => `· ${r.texto}`),
+    `Ver en Zelena: ${base(appUrl)}/equipo/hoy`
+  );
 }

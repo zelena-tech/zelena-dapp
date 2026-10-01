@@ -11,6 +11,9 @@
  *  - Nunca `await` dentro de `db.transaction`: la reserva (aviso + fila) es síncrona y
  *    el envío por Telegram va después, fuera de toda transacción. Si Telegram falla, la
  *    fila sigue con `is_telegram = 0` y se reintenta en la corrida siguiente.
+ *  - Cada mensaje cabe en el límite de la Bot API (`MAX_TEXTO_TELEGRAM`): lo que no cabe
+ *    se cuenta con «Y N más.» y sigue en la bandeja. Sigue siendo UN mensaje por persona
+ *    (sin trozos que se repitan si uno falla), y al confirmarse marca todas sus filas.
  *  - Destinatario válido = activo, no demo y no un `pending:` sin vincular (salvo el
  *    principal del founder), deduplicado por `identidadesDe` y, en los escalamientos,
  *    nunca el dueño ni sus identidades. Quien no ve la pieza no recibe su aviso.
@@ -571,7 +574,7 @@ async function corrida(db: DB, opts: OpcionesCorrida, simular: boolean, enabled:
     if (chat === null) continue;
     const filas = (filasDe.all(w, diaAnterior) as FilaEnviado[]).filter((f) => enPlan.has(`${f.clave}|${w}`));
 
-    // Inmediatos de hoy: un solo mensaje con todos.
+    // Inmediatos de hoy: un solo mensaje con todos (los que no caben van como «Y N más.»).
     const inmediatas = filas.filter((f) => Number(f.is_inmediato) === 1 && f.dia === hoy);
     if (inmediatas.length > 0) {
       const items = inmediatas.map((f) => enPlan.get(`${f.clave}|${w}`) as Recordatorio);
@@ -584,7 +587,8 @@ async function corrida(db: DB, opts: OpcionesCorrida, simular: boolean, enabled:
       }
     }
 
-    // Resumen del día: uno por persona y día.
+    // Resumen del día: uno por persona y día, siempre dentro del límite de Telegram. Lo
+    // que el mensaje cuenta como «Y N más.» también queda enviado: está en la bandeja.
     if (horaLocal(ahora, cfg.tz) < cfg.digestHora) continue;
     const marca = digestEnviado.get(claveDigest, w) as { id: number; is_telegram: number } | undefined;
     if (marca && Number(marca.is_telegram) === 1) continue;

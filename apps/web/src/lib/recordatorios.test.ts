@@ -13,6 +13,8 @@ import { GENOME_DEFAULTS } from "./genome";
 import { instanteDb, instanteLocal } from "./zona-horaria";
 import type { EventoSla } from "./sla";
 import {
+  MAX_LINEA_TELEGRAM,
+  MAX_TEXTO_TELEGRAM,
   TIPOS_RECORDATORIO,
   VOCABULARIO_PROHIBIDO,
   configRecordatoriosDesdeGenoma,
@@ -483,5 +485,101 @@ describe("mensajes agrupados", () => {
         "\n"
       )
     );
+  });
+});
+
+describe("mensajes dentro del límite de Telegram (4096)", () => {
+  const APP = "https://www.zelena.tech";
+  /** Un recordatorio armado a mano, con el texto que haga falta. */
+  function rec(texto: string, i = 0): Recordatorio {
+    return {
+      tipo: "vencida",
+      assignmentId: 900 + i,
+      destino: { tipo: "persona", wallet: ANA },
+      clave: `vencida:${900 + i}:${LUN}`,
+      inmediato: false,
+      texto,
+      enlace: "/equipo/proyectos/proyecto-piloto",
+    };
+  }
+  const lineas = (m: string) => m.split("\n").filter((l) => l.startsWith("· "));
+  const resto = (m: string) => Number(/^Y (\d+) más\.$/m.exec(m)?.[1] ?? 0);
+  /** Un par sustituto partido (medio emoji) que Telegram no sabría mostrar. */
+  const SUSTITUTO_SUELTO = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
+
+  it("el límite deja margen bajo el de la Bot API", () => {
+    expect(MAX_TEXTO_TELEGRAM).toBeLessThanOrEqual(4096);
+    expect(MAX_LINEA_TELEGRAM).toBeLessThan(MAX_TEXTO_TELEGRAM);
+  });
+
+  it("100 items en el resumen → cabe, lista los primeros en orden y cuenta el resto antes del enlace", () => {
+    const items = Array.from({ length: 100 }, (_, i) => rec(`«Entrega número ${i + 1} con un título bastante largo para llenar el mensaje» (Normal) pasó su fecha de entrega.`, i));
+    const m = renderDigest(items, APP);
+    expect(m.length).toBeLessThanOrEqual(MAX_TEXTO_TELEGRAM);
+    expect(m.startsWith("Esto es lo de hoy en tus entregas:\n")).toBe(true);
+    const vistas = lineas(m);
+    expect(vistas.length).toBeGreaterThan(10);
+    expect(vistas).toEqual(items.slice(0, vistas.length).map((r) => `· ${r.texto}`)); // en orden, enteras
+    expect(resto(m)).toBe(100 - vistas.length);
+    expect(m.endsWith(`\nY ${resto(m)} más.\nVer en Zelena: ${APP}/equipo/hoy`)).toBe(true);
+  });
+
+  it("los urgentes agrupados también caben y enlazan a la bandeja", () => {
+    const items = Array.from({ length: 60 }, (_, i) => ({ ...rec(`«Urgente ${i + 1} con un título largo de verdad, como los del backlog» (P1) es urgente y te espera.`, i), inmediato: true }));
+    const m = renderInmediatos(items, APP);
+    expect(m.length).toBeLessThanOrEqual(MAX_TEXTO_TELEGRAM);
+    expect(m.startsWith("Lo urgente de ahora:\n")).toBe(true);
+    expect(lineas(m).length + resto(m)).toBe(60);
+    expect(m.endsWith(`\nY ${resto(m)} más.\nVer en Zelena: ${APP}/equipo/avisos`)).toBe(true);
+  });
+
+  it("lo que cabe justo sale entero; un carácter más y el último pasa a «Y 1 más»", () => {
+    const cabecera = "Esto es lo de hoy en tus entregas:";
+    const pie = `Ver en Zelena: ${APP}/equipo/hoy`;
+    // Líneas de 500 (con su «· » y su salto, 501) que llenan el mensaje hasta el último carácter.
+    let libre = MAX_TEXTO_TELEGRAM - (cabecera.length + 1) - pie.length;
+    const textos: string[] = [];
+    while (libre > 0) {
+      const largo = Math.min(500, libre - 1);
+      textos.push("a".repeat(largo - 2));
+      libre -= largo + 1;
+    }
+    const justo = renderDigest(textos.map((t, i) => rec(t, i)), APP);
+    expect(justo.length).toBe(MAX_TEXTO_TELEGRAM);
+    expect(lineas(justo)).toHaveLength(textos.length);
+    expect(resto(justo)).toBe(0);
+
+    const ultimo = textos.length - 1;
+    const pasado = renderDigest(textos.map((t, i) => rec(i === ultimo ? `${t}a` : t, i)), APP);
+    expect(pasado.length).toBeLessThanOrEqual(MAX_TEXTO_TELEGRAM);
+    expect(lineas(pasado)).toHaveLength(ultimo);
+    expect(resto(pasado)).toBe(1);
+  });
+
+  it("una línea desmesurada se recorta con «…» y no deja fuera a las demás", () => {
+    const enorme = rec(`«${"Título que no termina ".repeat(500)}» (Normal) vence mañana.`, 1);
+    const corta = rec("«Cerrar la conciliación» (Normal) vence mañana.", 2);
+    const m = renderDigest([enorme, corta], APP);
+    expect(m.length).toBeLessThanOrEqual(MAX_TEXTO_TELEGRAM);
+    const vistas = lineas(m);
+    expect(vistas).toHaveLength(2);
+    expect(vistas[0].length).toBe(MAX_LINEA_TELEGRAM);
+    expect(vistas[0].endsWith("…")).toBe(true);
+    expect(vistas[1]).toBe(`· ${corta.texto}`);
+    expect(resto(m)).toBe(0);
+  });
+
+  it("un inmediato suelto desmesurado sale recortado, con su enlace entero", () => {
+    const m = renderInmediato(rec(`«${"x".repeat(9000)}» (P1) es urgente y te espera.`), APP);
+    expect(m.length).toBeLessThanOrEqual(MAX_TEXTO_TELEGRAM);
+    expect(m.endsWith(`…\nVer en Zelena: ${APP}/equipo/proyectos/proyecto-piloto`)).toBe(true);
+  });
+
+  it("el recorte nunca parte un emoji", () => {
+    for (const relleno of ["😀".repeat(400), `a${"😀".repeat(400)}`]) {
+      const m = renderDigest([rec(relleno), rec(`b${relleno}`, 1)], APP);
+      expect(m.length).toBeLessThanOrEqual(MAX_TEXTO_TELEGRAM);
+      expect(SUSTITUTO_SUELTO.test(m)).toBe(false);
+    }
   });
 });
