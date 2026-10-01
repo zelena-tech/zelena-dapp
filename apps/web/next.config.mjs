@@ -75,6 +75,14 @@ const nextConfig = {
       },
     ];
   },
+  // Rutas que cambiaron de nombre (WP31). `permanent: true` = 308: los enlaces y
+  // QR viejos siguen funcionando y los buscadores aprenden la dirección nueva.
+  async redirects() {
+    return [
+      { source: "/ecosistema", destination: "/metodo", permanent: true },
+      { source: "/academia/por-que-sas-dao", destination: "/academia/construir-sin-riesgo", permanent: true },
+    ];
+  },
 };
 
 export default nextConfig;

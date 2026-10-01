@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 
 // Mismo patrón que ContactoForm: estados explícitos, el error de la API se
 // muestra tal cual y el éxito reemplaza al formulario.
@@ -105,6 +106,24 @@ export default function AvisoEncuentrosForm() {
           onChange={(e) => setSitio(e.target.value)}
         />
       </div>
+
+      {/* Autorización de tratamiento de datos (Ley 1581): obligatoria y NUNCA premarcada. */}
+      <label htmlFor="a-acepto" className="flex items-start gap-3 text-sm leading-6 text-muted">
+        <input
+          id="a-acepto"
+          name="acepto"
+          type="checkbox"
+          required
+          className="mt-1 h-4 w-4 shrink-0 accent-primary"
+        />
+        <span>
+          Acepto el tratamiento de mis datos según el{" "}
+          <Link href="/privacidad" className="text-primary underline decoration-primary/40 underline-offset-4 hover:decoration-primary">
+            aviso de privacidad
+          </Link>
+          .
+        </span>
+      </label>
 
       {estado === "error" && error ? (
         <p className="text-sm text-red-400" role="alert">

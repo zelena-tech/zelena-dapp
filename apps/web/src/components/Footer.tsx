@@ -1,38 +1,50 @@
 import Link from "next/link";
+import { AVISO_LEGAL, FOOTER_GRUPOS, esEnlaceExterno } from "@/lib/menu";
 import { Logo } from "./ui";
 
+// Pie de todas las páginas: lo que no cabe en el menú, lo legal (acuerdo,
+// privacidad y licencia) y el aviso de la red de pruebas. Los enlaces viven en
+// lib/menu.ts para que un test pueda comprobarlos sin pintar nada.
 export default function Footer() {
   return (
     <footer className="mt-24 border-t border-line/60">
-      <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-10 md:flex-row md:items-start md:justify-between">
-        <div className="max-w-xs space-y-2">
+      <div className="mx-auto flex max-w-6xl flex-col gap-10 px-4 py-12 md:flex-row md:items-start md:justify-between">
+        <div className="max-w-xs space-y-3">
           <Logo />
-          <p className="text-sm text-faint">Real Work, Real Rewards.</p>
+          <p className="font-serif text-lg normal-case leading-snug text-paper">
+            Lo que entregas decide <em className="italic text-primary">lo que recibes.</em>
+          </p>
         </div>
-        <div className="flex gap-12 text-sm">
-          <div className="space-y-0.5">
-            <div className="label">Recursos</div>
-            <Link href="/whitepaper" className="block py-1.5 text-muted hover:text-primary">Whitepaper</Link>
-            <Link href="/gobernanza" className="block py-1.5 text-muted hover:text-primary">Decision log</Link>
-            <Link href="/agora" className="block py-1.5 text-muted hover:text-primary">Ágora</Link>
-          </div>
-          <div className="space-y-0.5">
-            <div className="label">Empresas</div>
-            <Link href="/empresas" className="block py-1.5 text-muted hover:text-primary">Para empresas</Link>
-            <Link href="/empresas/servicios" className="block py-1.5 text-muted hover:text-primary">Servicios</Link>
-          </div>
-          <div className="space-y-0.5">
-            <div className="label">Comunidad</div>
-            <Link href="/manifiesto" className="block py-1.5 text-muted hover:text-primary">Manifiesto</Link>
-            <Link href="/encuentros" className="block py-1.5 text-muted hover:text-primary">Encuentros</Link>
-            <Link href="/academia" className="block py-1.5 text-muted hover:text-primary">Academia</Link>
-            <Link href="/entrar" className="block py-1.5 text-muted hover:text-primary">Entrar</Link>
-            <Link href="/perfil" className="block py-1.5 text-muted hover:text-primary">Mi perfil</Link>
-          </div>
+        <div className="grid grid-cols-2 gap-x-12 gap-y-8 text-sm sm:grid-cols-3">
+          {FOOTER_GRUPOS.map((g) => (
+            <div key={g.titulo} className="space-y-0.5">
+              <div className="label">{g.titulo}</div>
+              {g.enlaces.map((e) =>
+                esEnlaceExterno(e.href) ? (
+                  <a
+                    key={e.href}
+                    href={e.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block py-1.5 text-muted hover:text-primary"
+                  >
+                    {e.label} <span aria-hidden>↗</span>
+                  </a>
+                ) : (
+                  <Link key={e.href} href={e.href} className="block py-1.5 text-muted hover:text-primary">
+                    {e.label}
+                  </Link>
+                )
+              )}
+            </div>
+          ))}
         </div>
       </div>
-      <div className="border-t border-line/40 px-4 py-4 text-center text-xs text-faint">
-        © 2026 Zelena · Comunidad gobernada sobre Stellar
+      <div className="border-t border-line/40 px-4 py-5">
+        <div className="mx-auto flex max-w-6xl flex-col gap-2 text-xs leading-5 text-faint md:flex-row md:items-baseline md:justify-between md:gap-8">
+          <p className="max-w-3xl">{AVISO_LEGAL}</p>
+          <p className="shrink-0">© 2026 Zelena</p>
+        </div>
       </div>
     </footer>
   );
