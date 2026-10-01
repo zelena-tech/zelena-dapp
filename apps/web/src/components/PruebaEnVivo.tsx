@@ -1,88 +1,50 @@
-import Link from "next/link";
 import { getDb } from "@/lib/db";
+import { cifrasEnVivo, type CifrasEnVivo } from "@/lib/prueba-en-vivo";
 
 /**
- * Prueba en vivo: cifras leídas de la base en el momento de pintar la página, y
- * un enlace a la última firma anclada en el explorador de Stellar.
+ * Prueba en vivo: tres cifras leídas de la base en el momento de pintar la
+ * página (`cifrasEnVivo`). Solo cifras: el enlace al explorador vive en una
+ * sola tarjeta, "Compruébalo tú mismo" (PruebaTestnet).
  *
- * Por qué existe: la intro afirma que el trabajo se mide y que el registro es
- * verificable. Sin un dato real y sin un enlace comprobable, eso es solo una
- * promesa bien escrita. Esto lo convierte en algo que cualquiera puede auditar
- * con un clic.
- *
- * No muestra número de contribuidores a propósito: la cifra la mueven las
- * cuentas de prueba y no aporta nada a quien llega.
+ * Primero lo real: sin cuentas de prueba ni firmas sembradas. Con todo en cero
+ * se muestra el cero y se dice por qué.
  */
 
-const EXPLORADOR = "https://stellar.expert/explorer/testnet/tx/";
-
-function Dato({ valor, pie }: { valor: string; pie: string }) {
+function Dato({ valor, pie }: { valor: number; pie: string }) {
   return (
-    <div className="card p-5">
-      <div className="font-head text-3xl font-bold leading-none text-primary glow-text md:text-4xl">{valor}</div>
-      <p className="mt-2 text-xs uppercase tracking-wide text-muted">{pie}</p>
+    <div className="flex flex-col gap-2 border-t border-line pt-5">
+      <span className="font-serif text-5xl font-normal leading-none text-paper md:text-6xl">
+        {valor.toLocaleString("es-CO")}
+      </span>
+      <span className="text-sm text-muted">{pie}</span>
     </div>
   );
 }
 
-export default function PruebaEnVivo() {
-  const db = getDb();
-
-  const abiertos = (
-    db.prepare(`SELECT COUNT(*) AS n FROM projects WHERE state = 'Open'`).get() as { n: number }
-  ).n;
-  const enJuego = (
-    db
-      .prepare(
-        `SELECT COALESCE(SUM(m.amount_usd), 0) AS n
-           FROM milestones m JOIN projects p ON p.id = m.project_id
-          WHERE m.approved = 0`
-      )
-      .get() as { n: number }
-  ).n;
-  const ancladas = (
-    db.prepare(`SELECT COUNT(*) AS n FROM cla_signatures WHERE anchor_status = 'anchored'`).get() as { n: number }
-  ).n;
-  const ultima = db
-    .prepare(
-      `SELECT tx_id FROM cla_signatures
-        WHERE anchor_status = 'anchored' AND tx_id IS NOT NULL
-        ORDER BY id DESC LIMIT 1`
-    )
-    .get() as { tx_id: string } | undefined;
-
+export default function PruebaEnVivo({ cifras: dadas }: { cifras?: CifrasEnVivo }) {
+  // La landing las calcula una vez y las comparte con la tarjeta de pruebas.
+  const cifras = dadas ?? cifrasEnVivo(getDb());
+  const enCero = cifras.proyectosAbiertos === 0 && cifras.entregasAprobadas === 0 && cifras.firmasRegistradas === 0;
   return (
-    <section className="rule pt-8">
-      <div className="mb-6 flex items-baseline gap-3">
-        <span className="text-xs font-bold text-primary-dim">↳</span>
-        <h2 className="font-head text-xl font-bold uppercase tracking-wide text-paper md:text-2xl">
-          Esto no es una maqueta
+    <section className="space-y-10" aria-labelledby="prueba-en-vivo">
+      <div className="space-y-4">
+        <p className="label">En vivo</p>
+        <h2
+          id="prueba-en-vivo"
+          className="font-serif text-3xl font-normal normal-case leading-[1.15] tracking-normal text-paper sm:text-4xl lg:text-[52px]"
+        >
+          Esto no es <em className="font-normal italic text-primary">una maqueta.</em>
         </h2>
       </div>
-
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Dato valor={String(abiertos)} pie="proyectos abiertos ahora" />
-        <Dato valor={`USD ${enJuego.toLocaleString("es-CO")}`} pie="en hitos por entregar" />
-        <Dato valor={String(ancladas)} pie="firmas ancladas en Stellar" />
+      <div className="grid gap-8 sm:grid-cols-3">
+        <Dato valor={cifras.proyectosAbiertos} pie="proyectos abiertos" />
+        <Dato valor={cifras.entregasAprobadas} pie="entregas aprobadas" />
+        <Dato valor={cifras.firmasRegistradas} pie="firmas registradas" />
       </div>
-
-      {ultima?.tx_id ? (
-        <div className="mt-4 border-l-2 border-primary bg-glow p-5">
-          <span className="label">Compruébalo tú mismo</span>
-          <p className="mt-2 max-w-2xl text-sm leading-7 text-muted">
-            La última firma quedó escrita en la red pública de pruebas de Stellar. No hace falta creernos:{" "}
-            <Link
-              href={EXPLORADOR + ultima.tx_id}
-              target="_blank"
-              rel="noreferrer"
-              className="break-all font-mono text-primary underline decoration-primary/40 hover:decoration-primary"
-            >
-              ver la transacción
-            </Link>
-            .
-          </p>
-        </div>
-      ) : null}
+      <div className="max-w-xl space-y-1 text-sm leading-7 text-muted">
+        <p>Contamos solo lo real: sin cuentas de prueba.</p>
+        {enCero ? <p className="text-paper">Las primeras entregas se registran aquí, a la vista de todos.</p> : null}
+      </div>
     </section>
   );
 }

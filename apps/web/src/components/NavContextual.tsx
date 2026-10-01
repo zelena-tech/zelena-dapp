@@ -2,37 +2,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
+import { esRutaEmpresas, menuPara } from "@/lib/menu";
 
-// El menú cambia según a quién le habla la página. En /empresas el visitante es
-// un empresario: ver "Mi día" o "Gobernanza" no le dice nada, y el botón
-// principal tiene que ser la demo, no "Entrar". En el resto del sitio sigue el
-// menú de la DAO.
+// El menú cambia según a quién le habla la página (lib/menu.ts):
+//  - sin sesión, el sitio público: cuatro puertas y "Entrar";
+//  - en /empresas, a quien llega como empresa: su menú y "Agenda una demo";
+//  - con sesión, el trabajo (solo si tiene acceso) y la comunidad.
 //
-// Los enlaces del trabajo interno (Mi día, Proyectos, Clientes) NO son web
-// pública: solo se dibujan con sesión de equipo interno (`esEquipo`). El gate
-// real vive en el servidor (middleware + layouts con `equipoInternoActor`).
-
-const INTERNO = [
-  { href: "/equipo/hoy", label: "Mi día" },
-  { href: "/equipo/proyectos", label: "Proyectos" },
-  { href: "/clientes", label: "Clientes" },
-];
-
-const DAO = [
-  { href: "/ecosistema", label: "Ecosistema" },
-  { href: "/agora", label: "Ágora" },
-  { href: "/academia", label: "Academia" },
-  { href: "/gobernanza", label: "Gobernanza" },
-  { href: "/whitepaper", label: "Whitepaper" },
-  { href: "/empresas", label: "Empresas" },
-];
-
-const EMPRESAS = [
-  { href: "/empresas#productos", label: "Productos" },
-  { href: "/empresas#como-funciona", label: "Cómo funciona" },
-  { href: "/empresas/servicios", label: "Servicios" },
-  { href: "/", label: "La DAO" },
-];
+// Las herramientas internas NO son web pública: solo se dibujan con sesión. La
+// puerta real vive en el servidor (middleware y la autorización de cada página).
+// El botón de perfil (`accesoDao`) y "Admin" (solo founder, por rol) se conservan
+// aquí, fuera de `menuPara`.
 
 const ENLACE =
   "whitespace-nowrap rounded-md px-2.5 py-1.5 text-sm text-muted transition-colors duration-150 hover:bg-glow hover:text-primary";
@@ -41,26 +21,37 @@ const ENLACE_MOVIL =
 
 export default function NavContextual({
   isFounder,
-  esEquipo,
+  conSesion,
+  accesoEquipo,
+  esInterno,
+  puedeVerTodo,
   accesoDao,
   salir,
 }: {
+  /** Rol founder (claims): dibuja el enlace "Admin". */
   isFounder: boolean;
-  /** Sesión de equipo interno (founder, core o supervisor): ve los enlaces internos. */
-  esEquipo: boolean;
-  /** Botón de sesión de la DAO (Entrar o el perfil), renderizado en el servidor. */
+  conSesion: boolean;
+  /** Puede entrar al trabajo (Mi día, Proyectos). */
+  accesoEquipo: boolean;
+  /** Equipo interno (founder, core o supervisor): ve Clientes. */
+  esInterno: boolean;
+  /** Founder o supervisor: ve Talento. */
+  puedeVerTodo: boolean;
+  /** Botón de sesión (Entrar o el perfil), renderizado en el servidor. */
   accesoDao: ReactNode;
   /** Botón de salir, solo si hay sesión. */
   salir: ReactNode;
 }) {
   const ruta = usePathname() ?? "/";
-  const enEmpresas = ruta === "/empresas" || ruta.startsWith("/empresas/");
-  const enlaces = enEmpresas ? EMPRESAS : esEquipo ? [DAO[0], ...INTERNO, ...DAO.slice(1)] : DAO;
+  const enEmpresas = esRutaEmpresas(ruta);
+  const enlaces = menuPara({ ruta, conSesion, accesoEquipo, esInterno, puedeVerTodo });
+  const conAdmin = isFounder && !enEmpresas;
 
-  // Nueve enlaces de la DAO en Space Mono no caben antes de ~1280 px sin que
-  // "Mi día" se parta en dos líneas; los cuatro comerciales caben desde 1024.
-  const escritorio = enEmpresas ? "hidden items-center gap-1 lg:flex" : "hidden items-center gap-1 xl:flex";
-  const movil = enEmpresas ? "relative lg:hidden" : "relative xl:hidden";
+  // Cuatro enlaces caben desde 1024 px; con la sesión del equipo (hasta siete y
+  // "Admin") hace falta más ancho para que ninguno se parta en dos líneas.
+  const muchos = enlaces.length + (conAdmin ? 1 : 0) > 5;
+  const escritorio = muchos ? "hidden items-center gap-1 xl:flex" : "hidden items-center gap-1 lg:flex";
+  const movil = muchos ? "relative xl:hidden" : "relative lg:hidden";
 
   const cta = enEmpresas ? (
     <Link href="/empresas/contacto" className="btn btn-primary py-1.5 normal-case tracking-normal">
@@ -78,7 +69,7 @@ export default function NavContextual({
             {l.label}
           </Link>
         ))}
-        {isFounder && !enEmpresas ? (
+        {conAdmin ? (
           <Link
             href="/admin"
             className="whitespace-nowrap rounded-md px-2.5 py-1.5 text-sm text-amber-300 transition-colors hover:bg-amber-950/30"
@@ -105,7 +96,7 @@ export default function NavContextual({
                 {l.label}
               </Link>
             ))}
-            {isFounder && !enEmpresas ? (
+            {conAdmin ? (
               <Link href="/admin" className="block px-3 py-3 text-sm text-amber-300 hover:bg-amber-950/30">
                 Admin
               </Link>

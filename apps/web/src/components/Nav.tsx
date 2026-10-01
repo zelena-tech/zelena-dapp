@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { claimsPuedenAdministrar } from "@/lib/authz";
-import { esEquipoInterno } from "@/lib/roles";
+import { esEquipoInterno, puedeVerTodoElEquipo } from "@/lib/roles";
 import type { SessionData } from "@/lib/jwt";
 import { Logo, shortWallet } from "./ui";
 import SalirButton from "./SalirButton";
@@ -8,15 +8,16 @@ import NavContextual from "./NavContextual";
 
 // La sesión se resuelve aquí, en el servidor. Qué enlaces y qué botón se
 // muestran depende de la ruta, que solo se conoce en el cliente: eso lo decide
-// NavContextual.
+// NavContextual con `menuPara` (lib/menu.ts).
 export default function Nav({ session }: { session: SessionData | null }) {
   // Por ROL, no por la wallet de una persona. Aquí basta con los claims de la
-  // cookie: esto solo decide si se DIBUJA el enlace; el gate real vive en
-  // /admin, /equipo y /clientes, que resuelven el rol contra la base.
+  // cookie: esto solo decide si se DIBUJA un enlace; la puerta real vive en cada
+  // página de /admin, /equipo y /clientes, que resuelven el rol contra la base.
   const isFounder = claimsPuedenAdministrar(session ?? {});
-  // Los enlaces del trabajo interno (Mi día, Proyectos, Clientes) solo se dibujan
-  // con sesión de equipo interno: la web pública no los muestra.
-  const esEquipo = !!session && esEquipoInterno(session);
+  const esInterno = !!session && esEquipoInterno(session);
+  // Acceso al trabajo (Mi día, Proyectos). Hoy, el equipo interno.
+  const accesoEquipo = esInterno;
+  const puedeVerTodo = !!session && puedeVerTodoElEquipo(session);
 
   const accesoDao = session ? (
     <Link href="/perfil" className="btn btn-ghost py-1.5" title={session.wallet}>
@@ -37,7 +38,10 @@ export default function Nav({ session }: { session: SessionData | null }) {
         </Link>
         <NavContextual
           isFounder={isFounder}
-          esEquipo={esEquipo}
+          conSesion={!!session}
+          accesoEquipo={accesoEquipo}
+          esInterno={esInterno}
+          puedeVerTodo={puedeVerTodo}
           accesoDao={accesoDao}
           salir={session ? <SalirButton esDemo={session.isDemo} /> : null}
         />

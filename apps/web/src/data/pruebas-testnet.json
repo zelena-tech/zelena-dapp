@@ -1,0 +1,14 @@
+{
+  "actualizado": "2026-10-01",
+  "transacciones": [
+    { "etiqueta": "Fondeo de un período con una sola firma", "tipo": "contrato", "tx": "93f247ecdca40a2e9c361bb752158d70391b7e6ee588c20ae651c9eed8733440", "fecha": "2026-10-01" },
+    { "etiqueta": "Una persona reclama su recompensa del período (120 ZDT de prueba)", "tipo": "pago", "tx": "8e57380ae1fdf0b78f8254fd00a31a6e5f9b7e89c36ddb81892f9e93d4256381", "fecha": "2026-10-01" },
+    { "etiqueta": "El fondo envía su recompensa a quien entregó (100 ZDT de prueba)", "tipo": "pago", "tx": "98d8980fce1930da3fa1233859a3223b3d0319c71fd4b865223fd3fd7386de3c", "fecha": "2026-10-01" },
+    { "etiqueta": "Quien deja un proyecto cobra lo que ya ganó", "tipo": "pago", "tx": "7528bae6b5ac4d5fa1c195a51ffcac9a135435ac05a2583019ece666e59c0cc4", "fecha": "2026-10-01" }
+  ],
+  "contratos": [
+    { "etiqueta": "Fábrica de organizaciones", "id": "CCAUZ6XIMA5ZIAIMMS2DOOUB2CFDRHZXQYXEQSV7RQJCSOZ74YE6NYUX" },
+    { "etiqueta": "Organización de prueba", "id": "CBNTNHRTPP5LTLD2ZSSCEYUHVIM5MFVKUBHK55ROOQ3CKUX4PBTCBPA4" },
+    { "etiqueta": "Token de prueba ZDT", "id": "CDGNBZRZRKJWUNUHCXQPB42MK5GSFHHRY5VPNIZDMFESEHYXKQLYLQ55" }
+  ]
+}

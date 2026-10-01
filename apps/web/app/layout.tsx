@@ -14,24 +14,25 @@ import Footer from "@/components/Footer";
 import MutationBanner from "@/components/MutationBanner";
 import { getSession } from "@/lib/session";
 
-const SITIO = process.env.SITE_URL ?? "https://zelena-dao.azurewebsites.net";
+const SITIO = process.env.SITE_URL ?? "https://www.zelena.tech";
+const TITULO = "Zelena — Lo que entregas decide lo que recibes";
 const DESCRIPCION =
-  "Comunidad de contribuidores donde el valor que entregas determina lo que recibes: reglas públicas, pago por hitos y una reputación que te pertenece. Sobre Stellar, en testnet.";
+  "Una comunidad donde lo que entregas decide lo que recibes: reglas públicas, pago por hitos y un historial que es tuyo. En la red de pruebas de Stellar.";
 
 export const metadata: Metadata = {
   // Necesaria para que las imágenes de Open Graph se sirvan con URL absoluta.
   metadataBase: new URL(SITIO),
   title: {
-    default: "Zelena DAO — El valor que entregas decide lo que recibes",
-    template: "%s · Zelena DAO",
+    default: TITULO,
+    template: "%s · Zelena",
   },
   description: DESCRIPCION,
-  applicationName: "Zelena DAO",
+  applicationName: "Zelena",
   openGraph: {
     type: "website",
     locale: "es_CO",
-    siteName: "Zelena DAO",
-    title: "Zelena DAO — El valor que entregas decide lo que recibes",
+    siteName: "Zelena",
+    title: TITULO,
     description: DESCRIPCION,
     url: SITIO,
   },
