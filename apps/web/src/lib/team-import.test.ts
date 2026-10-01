@@ -515,7 +515,11 @@ describe("importTasks — sin estados fabricados ni reasignaciones en silencio (
     const id = byTitle(db, "Pieza tres")!.id;
     applyAssignmentAction(db, { assignmentId: id, action: "empezar", actor: JUAN_ACTOR, now: AHORA });
     applyAssignmentAction(db, { assignmentId: id, action: "enviar_a_revision", actor: JUAN_ACTOR, now: AHORA });
-    applyAssignmentAction(db, { assignmentId: id, action: "bloquear", reason: "falta acceso", actor: JUAN_ACTOR, now: AHORA });
+    // Hoy una revisión se devuelve y no se bloquea (WP31-A), así que este estado solo llega
+    // como dato anterior a esa regla: se arma directo en la base.
+    db.prepare(
+      `UPDATE assignments SET status = 'Bloqueada', status_before_block = 'En revisión', blocked_reason = 'falta acceso' WHERE id = ?`
+    ).run(id);
     expect(byTitle(db, "Pieza tres")).toMatchObject({ status: "Bloqueada", status_before_block: "En revisión" });
 
     importTasks(db, CABECERA + "Pieza tres,Huerto Demo,Asignada,David,Urgent,L,2026-12-31\n", FUNDADOR, AHORA);
