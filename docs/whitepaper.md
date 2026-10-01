@@ -2,7 +2,7 @@
 
 Versión 1 · Julio de 2026 · Documento público del repositorio open source
 
-> Este documento describe el diseño de la comunidad Zelena DAO y su relación con Zelena SAS. No es una oferta de valores, ni asesoría legal, financiera o de inversión. Todo lo aquí descrito corre hoy en **testnet**; el paso a mainnet está condicionado a auditoría, acuerdo de anchor y clasificación legal de los pagos. Muchas de las mecánicas están en fase de validación con una cohorte pequeña antes de codificarse en contratos.
+> Este documento describe cómo funciona la comunidad Zelena. No es una oferta de valores, ni asesoría legal, financiera o de inversión. Todo lo aquí descrito corre hoy en **testnet**; el paso a mainnet está condicionado a auditoría, acuerdo de anchor y clasificación legal de los pagos. Muchas de las mecánicas están en fase de validación con una cohorte pequeña antes de codificarse en contratos.
 
 ---
 
@@ -14,7 +14,7 @@ Zelena nace resolviendo un problema concreto —empresas de América Latina que 
 
 Este documento describe cómo funciona esa comunidad: cómo entra la gente, cómo se mide lo que aporta, cómo se reparte y cómo se decide. Distingue con cuidado entre lo que ya opera, lo que es hipótesis y lo que todavía no existe, porque una comunidad construida sobre expectativas infladas no dura. La capa de incentivos on-chain (**Harmony**) es una hipótesis en validación, no un producto con encaje de mercado confirmado. La misma disciplina aplica aquí: primero se valida la **cooperación** de una cohorte real; solo después se invierte en tokenomics líquida, mainnet o gobernanza compleja.
 
-Detrás hay una estructura sencilla y deliberada: una sociedad que asume la responsabilidad legal y la relación con los clientes, y una comunidad gobernada que coordina el trabajo y acumula reputación. Existe para que quien contribuye pueda construir sin cargar con obligaciones societarias (§4.2).
+Zelena se hace cargo de lo que exige una contraparte formal (contratos, clientes y responsabilidad por lo que se entrega) para que quien contribuye pueda construir sin cargar con ese peso (§4.2).
 
 El corazón económico del modelo es un **triángulo de tres activos**, cada uno con un rol único: **USDC** paga el trabajo, la **reputación** otorga voto y acceso, y **ZWORK** representa un derecho residual sobre el éxito del ecosistema. Ninguno sustituye a otro.
 
@@ -58,23 +58,22 @@ La misma infraestructura de desempeño verificado que paga a un operario de bode
 
 ---
 
-## 4. La DAO: tesis y arquitectura SAS + DAO
+## 4. La comunidad: tesis y reglas de juego
 
 ### 4.1 Tesis
 
 La descentralización total desde el día uno es una fantasía costosa. La DAO se construye por etapas: **la descentralización es la recompensa de la madurez, no el punto de partida.** El objetivo del diseño no es sólo repartir poder, sino diseñar la cooperación cotidiana: por qué alguien llega, por qué vuelve mañana, y por qué el sistema sigue siendo honesto cuando nadie mira.
 
-### 4.2 Por qué hay una empresa detrás de la comunidad
+### 4.2 Quién carga con qué
 
-La razón no es el control: es **protegerte**. Alguien tiene que firmar contratos, responder ante un cliente y asumir la responsabilidad legal de lo que se entrega; si eso recayera sobre cada contribuidor, entrar a construir tendría un coste que casi nadie querría pagar. Por eso la arquitectura separa la entidad que asume ese peso de la comunidad que coordina el trabajo, siguiendo un patrón inspirado en el modelo UNIfication.
+Alguien tiene que firmar contratos, responder ante un cliente y asumir lo que se entrega. Si eso recayera sobre cada persona, entrar a construir costaría demasiado. Zelena carga con ese peso para que la comunidad pueda concentrarse en el trabajo.
 
-| Entidad | Rol | Es dueña de |
+| Quién | Rol | Se encarga de |
 |---|---|---|
-| **Zelena SAS** | Empresa formal | Marca, propiedad intelectual comercial, ingresos, relación con clientes |
-| **Zelena DAO** | Comunidad gobernada | Coordinación del trabajo, reputación on-chain, token ZWORK, gobernanza |
-| **Acuerdo de servicios** | Conector | Une a ambas: la DAO presta servicios, la SAS remunera y comercializa |
+| **Zelena** | Contraparte formal | Contratos con clientes, marca y responsabilidad por lo entregado |
+| **La comunidad** | Red de contribuidores | Coordinar el trabajo, evaluar entregas, reputación y gobernanza |
 
-Esta separación protege a los contribuidores (la responsabilidad legal recae en la SAS), da a los clientes una contraparte con la que contratar, y permite que la comunidad crezca sin cargar con obligaciones societarias individuales. Firmar el CLA o recibir reputación o ZWORK **no crea relación laboral ni societaria**, y esos activos no constituyen salario.
+Así, quien contribuye no asume riesgos frente a clientes ni obligaciones de socio. Firmar el acuerdo de contribución o recibir reputación o ZWORK **no te convierte en empleado ni en socio**, y nada de eso es salario.
 
 ---
 
@@ -84,12 +83,12 @@ Todo proyecto —de un cliente externo o interno del ecosistema— recorre un fl
 
 | Paso | Nombre | Descripción |
 |---|---|---|
-| 01 | Intake | Llega la necesidad. El core team diagnostica, define alcance, entregables, presupuesto, plazo y criterios de evaluación en un PRD. Aquí se **etiqueta la PI como Cliente/SAS o Comunidad/DAO.** |
+| 01 | Intake | Llega la necesidad. El core team diagnostica, define alcance, entregables, presupuesto, plazo y criterios de evaluación en un PRD. Aquí se define si el proyecto es para un cliente o para la comunidad. |
 | 02 | Publicación | El PRD se publica al Ágora con habilidades requeridas, criterios de aceptación y cómo se medirá el valor. |
 | 03 | Aplicación | Contribuidores con las competencias adecuadas aplican, presentando su enfoque y su historial en Zelena (score, proyectos, especialidades). |
 | 04 | Asignación | Un supervisor arma el equipo y abre un periodo de trabajo (máquina de estados: Open → Assigned → Delivered → Scored → Distributed). |
 | 05 | Ejecución | El equipo ejecuta con entregas parciales y visibilidad en tiempo real. El motor de scoring mide calidad, cumplimiento de plazos, complejidad y colaboración. |
-| 06 | Evaluación | El supervisor cierra el periodo. Se genera un score compuesto por contribuidor: calculado, transparente, verificable, no subjetivo. |
+| 06 | Evaluación | El supervisor cierra el periodo. Se genera un score compuesto **por entrega**: calculado, transparente, verificable, no subjetivo. |
 | 07 | Distribución | El presupuesto se reparte proporcional al score. El backend publica un merkle root en Soroban, el contrato verifica on-chain y se distribuye. |
 | 08 | Reputación | Cada proyecto alimenta el perfil on-chain del contribuidor. Más historial habilita mejores proyectos. |
 
@@ -120,15 +119,15 @@ El error que este diseño evita explícitamente es un token que sea "ownership d
 
 | Activo | Rol único | Propiedades |
 |---|---|---|
-| **USDC** | Pago por el trabajo (proyectos cliente/SAS) | Líquido. Sale del 70% del split del proyecto. |
+| **USDC** | Pago por el trabajo (proyectos de clientes) | Líquido. Sale del 70% del split del proyecto. |
 | **Reputación** | Voto + acceso (proyectos grandes, guardianía) | No transferible. Con decaimiento para el peso de gobernanza. |
-| **ZWORK** | Ownership: derecho residual sobre el éxito del ecosistema | **Puntos NO transferibles en la fase actual.** Derecho a participar de la regalía de licencia dual que la SAS paga al treasury. |
+| **ZWORK** | Ownership: derecho residual sobre el éxito del ecosistema | **Puntos NO transferibles en la fase actual.** Derecho a participar de la regalía que recibe el fondo común cuando se comercializa código de la comunidad. |
 
 ### 7.1 ZWORK: qué es y qué no es hoy
 
 ZWORK es, **en la fase actual, un conjunto de puntos no transferibles.** No se puede vender, comprar ni intercambiar. La transferibilidad futura es posible **solo por decisión de gobernanza y previa revisión legal y tributaria** — nunca por defecto. Esta declaración explícita evita generar expectativa de inversión (con los riesgos regulatorios asociados), evita dinámicas de "farm-and-dump", y permite calibrar la emisión con datos reales antes de que exista precio.
 
-El derecho estructural que ZWORK representa es concreto: cuando la SAS comercializa código de repositorio público (DAO), paga una **regalía al treasury** bajo la licencia dual (ver sección 9). Esa regalía puede distribuirse pro-rata a los holders con vesting cumplido. Fuentes de demanda estructural, sin especulación: (a) participación en la regalía SAS→treasury; (b) recompras de ZWORK que la gobernanza decida hacer; (c) staking de ZWORK como fianza para publicar propuestas al Ágora, que se pierde si la propuesta es spam.
+Cuando Zelena comercializa código del repositorio de la comunidad, paga una **regalía al fondo común** bajo la licencia dual (ver sección 9). Esa regalía puede distribuirse pro-rata a quienes tengan vesting cumplido. Fuentes de demanda estructural, sin especulación: (a) participación en esa regalía; (b) lo que la gobernanza decida destinar del fondo común; (c) un umbral de **reputación** para publicar propuestas, en lugar de fianzas que se pierden.
 
 ### 7.2 Política de emisión por época
 
@@ -136,7 +135,7 @@ Cada score no puede emitir ZWORK sin límite: la dilución sin control destruir�
 
 ### 7.3 Vesting comunitario
 
-El ZWORK ganado **vestea en 6 a 12 meses de actividad continua.** Quien abandona a mitad de vesting deja valor en la mesa. Esto alinea horizontes, refuerza la salida ordenada y convierte la contribución en un juego repetido, no en un episodio único.
+El ZWORK ganado **vestea en 6 a 12 meses de actividad continua.** El vesting solo define **cuándo** se puede usar lo ganado, nunca si se conserva. Si te alejas, lo consolidado sigue siendo tuyo y el resto se retoma cuando vuelves. Esto alinea horizontes, refuerza la salida ordenada y convierte la contribución en un juego repetido, no en un episodio único.
 
 ### 7.4 Retroactividad génesis
 
@@ -174,34 +173,34 @@ Las operaciones sensibles pasan por **multisig + timelock**, dando tiempo de rea
 
 ### 8.5 Integridad del scoring
 
-Como el supervisor cobra un porcentaje del proyecto y a la vez emite scores, existe incentivo a inflar los de sus aliados. Tres candados lo contienen: **revisión cruzada aleatoria** (un porcentaje de los cierres se re-evalúa por otro guardián sorteado — 10% al inicio, escalable a 25% si suben las disputas); la regla de que **un supervisor no evalúa a su invitado directo**; y el ya citado **score de supervisión**. Quien infla, pierde lo que más le costó ganar.
+Como el supervisor cobra un porcentaje del proyecto y a la vez emite scores, existe incentivo a inflar los de sus aliados. Tres candados lo contienen: **revisión cruzada aleatoria** (un porcentaje de los cierres se re-evalúa por otro guardián sorteado — 10% al inicio, escalable a 25% si suben las disputas); la regla de que **un supervisor no evalúa a su invitado directo**; y el ya citado **score de supervisión**. Inflar no paga: la revisión cruzada corrige las evaluaciones infladas, y eso pesa en la próxima asignación de supervisión.
 
 ### 8.6 Otros mecanismos comunitarios
 
 - **Calendario ritual** desde el génesis: sync semanal (30 min), demo day quincenal, retro mensual pública. El proof-of-attendance por QR es el motor de asistencia de estos ritos.
 - **Estatus alumni**: quien se va no pierde su reputación; se congela y puede reactivarse al volver. La salida ordenada (traspaso de contexto) otorga un cierre positivo. Reduce el costo de irse bien y el incentivo de irse mal.
-- **Mantenimiento del bien público**: el repositorio DAO no paga regalías, así que su mantenimiento se financia con una **línea explícita del treasury** (rol rotativo de maintainer remunerado por época). El jardín común necesita jardinero asalariado, no voluntario heroico.
+- **Mantenimiento del bien público**: el repositorio de la comunidad no paga regalías, así que su mantenimiento se financia con una **línea explícita del fondo común** (rol rotativo de maintainer remunerado por época). El jardín común necesita jardinero asalariado, no voluntario heroico.
 
 ---
 
 ## 9. Lo que construyes: cómo se protege y cómo te devuelve valor
 
-Tres ideas antes del detalle. Tu **autoría nunca se cede**: los derechos morales son inalienables y el historial de lo que hiciste es tuyo y verificable por cualquiera. Lo que se construye para la comunidad **vive en un repositorio público**, donde se puede leer, auditar y aprender de él. Y si la empresa comercializa ese código, **paga una regalía al treasury de la comunidad**: eso es lo que le da sustancia a ZWORK en vez de dejarlo como un token vacío.
+Tres ideas antes del detalle. Tu **autoría nunca se cede**: los derechos morales son inalienables y el historial de lo que hiciste es tuyo y verificable por cualquiera. Lo que se construye para la comunidad **vive en un repositorio público**, donde se puede leer, auditar y aprender de él. Y si Zelena comercializa ese código, **paga una regalía al fondo común**: eso es lo que le da sustancia a ZWORK en vez de dejarlo como un token vacío.
 
 ### 9.1 Clasificación de la PI en el intake
 
 Cada proyecto se etiqueta desde el paso 01 (Intake) como uno de dos tipos:
 
-- **Cliente / SAS** → repositorio **privado**. PI comercial de la SAS.
-- **Comunidad / DAO** → repositorio **público open source**, custodiado por la SAS a nombre del DAO.
+- **Cliente** → repositorio **privado**, según lo acordado con cada cliente.
+- **Comunidad** → repositorio **público**, custodiado por Zelena en nombre de la comunidad.
 
-### 9.2 Licencia dual y regalía al treasury
+### 9.2 Licencia dual y regalía al fondo común
 
-El código Comunidad/DAO vive bajo una **licencia dual**: es open source para la comunidad, pero si la **SAS lo comercializa, paga una regalía al treasury** del DAO. Así se proyecta el ecosistema hacia el open source sin regalar la PI antes de tiempo, y se crea la fuente de flujo que da sustancia a ZWORK (sección 7.1). Hoy el repositorio arranca con una licencia *source-available* + CLA; abrir a una licencia más permisiva es una decisión de gobernanza posterior.
+El código de la comunidad vive bajo una **licencia dual**: es open source para la comunidad, pero si **Zelena lo comercializa, paga una regalía al fondo común**. Así se proyecta el ecosistema hacia el open source sin regalar la PI antes de tiempo, y se crea la fuente de flujo que da sustancia a ZWORK (sección 7.1). Hoy el repositorio arranca con una licencia *source-available* + CLA; abrir a una licencia más permisiva es una decisión de gobernanza posterior.
 
 ### 9.3 CLA obligatorio anclado on-chain
 
-El onboarding es **por invitación** (código de un solo uso, ligado a la wallet del invitador, con expiración y tope por tier). Toda contribución exige **firmar el CLA antes del primer aporte**: se ceden los derechos patrimoniales a Zelena SAS, se respetan los derechos morales (inalienables), y el contribuidor se identifica por su wallet pública de Stellar, pudiendo **anclar el hash de la firma on-chain**. Sin CLA firmado, los PRs no se fusionan. El consentimiento de tratamiento de datos (Habeas Data) se integra al flujo de firma.
+El onboarding es **por invitación** (código de un solo uso, ligado a la wallet del invitador, con expiración y tope por tier). Toda contribución exige **firmar el CLA antes del primer aporte**: se ceden a Zelena los derechos patrimoniales, se respetan los derechos morales (inalienables), y el contribuidor se identifica por su wallet pública de Stellar, pudiendo **anclar el hash de la firma on-chain**. Sin CLA firmado, los PRs no se fusionan. El consentimiento de tratamiento de datos (Habeas Data) se integra al flujo de firma.
 
 ---
 
@@ -209,7 +208,7 @@ El onboarding es **por invitación** (código de un solo uso, ligado a la wallet
 
 Zelena se construye sobre **Stellar / Soroban**, elegida por razones alineadas con su caso de uso: liquidación en moneda local vía red de anchors (SEP-24), wallets no custodiales con passkey y recuperación sin frase semilla (SEP-30), KYC reutilizable (SEP-12), autenticación por cuenta (SEP-10), comisiones sub-céntimo que hacen viable el micro-pago por operario, y desembolsos por lote mediante la Stellar Disbursement Platform.
 
-La Dapp es una aplicación de navegador (Next.js) donde las personas conectan su wallet (Freighter primero; passkey como spike en paralelo), ven proyectos, aplican, acumulan reputación y votan, **sin fricción cripto.** Los contratos Soroban (Rust/WASM) incluyen el token ZWORK y el treasury.
+La Dapp es una aplicación de navegador (Next.js) donde las personas conectan su wallet (Freighter primero; passkey como spike en paralelo), ven proyectos, aplican, acumulan reputación y votan, **sin fricción cripto.** Los contratos Soroban (Rust/WASM) incluyen el token ZWORK y el fondo común (el contrato `treasury`).
 
 **Privacidad de pagos:** los cierres de periodo publican un **merkle root** en Soroban, de modo que la distribución es auditable sin exponer montos individuales en claro. El diseño contempla **Stellar Private Payments** (tecnología tipo X-Ray, pruebas ZK Groth16) para preservar la privacidad de los pagos manteniendo la verificabilidad.
 
@@ -223,7 +222,7 @@ La Dapp es una aplicación de navegador (Next.js) donde las personas conectan su
 
 El primer milestone no es un producto: es la **primera vuelta completa del flywheel con humanos reales.** Se valida que una persona invitada pueda entrar por la puerta diseñada (invitación → wallet → CLA → primer bounty), ejecutar, ser medida, recibir reputación y puntos, y **volver la semana siguiente.** La retención de la cohorte es la métrica reina.
 
-Cuatro workstreams: **Dapp v0.1** en testnet (onboarding, Ágora, perfil, puntos ZWORK v0, decision log, repo público desde el día 1); **cohorte génesis** de 15–25 invitados curados con compromiso retroactivo anclado y biblioteca de bounties llena; **gobernanza mínima viable** (2–3 guardianes seed, primera votación real para ratificar el Reglamento v2, revisión cruzada activa); y **legal/IP en paralelo** (constitución de la SAS, marca, CLA publicado, cesiones de los devs actuales).
+Cuatro workstreams: **Dapp v0.1** en testnet (onboarding, Ágora, perfil, puntos ZWORK v0, decision log, repo público desde el día 1); **cohorte génesis** de 15–25 invitados curados con compromiso retroactivo anclado y biblioteca de bounties llena; **gobernanza mínima viable** (2–3 guardianes seed, primera votación real para ratificar el Reglamento v2, revisión cruzada activa); y **legal y PI en paralelo** (marca, acuerdo de contribución publicado, cesiones del equipo actual).
 
 Criterios de éxito clave: ≥15 contribuidores con CLA anclado, ≥10 bounties completados y distribuidos, **≥60% de retención a 8 semanas**, ≥3 periodos cerrados con merkle root, ≥3 PRs externos merged bajo CLA-check. La regla de decisión es explícita: si la retención cae por debajo del 30%, se **detiene la construcción** — el problema sería la propuesta de valor al contribuidor, no la Dapp.
 
@@ -249,4 +248,4 @@ Este diseño se presenta con sus debilidades a la vista.
 
 ## 13. Disclaimer
 
-Este whitepaper es un documento estratégico y descriptivo. **No es asesoría legal, financiera, tributaria ni de inversión, ni constituye una oferta o solicitud de valores.** ZWORK es, en la fase actual, un conjunto de puntos no transferibles sin valor de mercado ni derecho de flujo garantizado; cualquier transferibilidad futura requiere aprobación de gobernanza y revisión legal y tributaria previa. La reputación y el token que se reciban no constituyen salario ni crean relación laboral o societaria. Todas las mecánicas descritas corren en testnet y varias están en fase de validación; podrán cambiar. El paso a mainnet está condicionado a auditoría independiente, acuerdo de anchor y clasificación legal de los pagos. Consulte a un profesional antes de tomar cualquier decisión basada en este documento.
+Este whitepaper es un documento estratégico y descriptivo. **No es asesoría legal, financiera, tributaria ni de inversión, ni constituye una oferta o solicitud de valores.** ZWORK es, en la fase actual, un conjunto de puntos no transferibles sin valor de mercado ni derecho de flujo garantizado; cualquier transferibilidad futura requiere aprobación de gobernanza y revisión legal y tributaria previa. La reputación y el token que se reciban no constituyen salario ni te convierten en empleado ni en socio. Todas las mecánicas descritas corren en testnet y varias están en fase de validación; podrán cambiar. El paso a mainnet está condicionado a auditoría independiente, acuerdo de anchor y clasificación legal de los pagos. Consulte a un profesional antes de tomar cualquier decisión basada en este documento.

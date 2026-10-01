@@ -2,10 +2,10 @@
 
 CONTEXTO — Plan Maestro §3.3 y §6.2: la PI se blinda en la puerta del repo. Los archivos de gobernanza ya existen (CLA.md, CONTRIBUTING.md, LICENSE, CODEOWNERS, SECURITY.md). K6 de M1: ≥3 PRs externos merged bajo CLA-check.
 
-RESULTADO ESPERADO — Repo público en la org GitHub de la SAS donde ningún PR externo puede mergear sin CLA firmado, y las rutas críticas exigen revisión del owner.
+RESULTADO ESPERADO — Repo público en la org GitHub de Zelena donde ningún PR externo puede mergear sin CLA firmado, y las rutas críticas exigen revisión del owner.
 
 ALCANCE
-- Crear org GitHub (titularidad SAS) y publicar el repo (John).
+- Crear org GitHub (titularidad de Zelena) y publicar el repo (John).
 - CLA-bot (cla-assistant o GitHub Action equivalente) apuntando al CLA.md del repo; bloquea merge sin firma.
 - Branch protection en `main` y `develop`: PR + CI verde + review obligatorio.
 - CODEOWNERS: rutas críticas (`packages/contracts/`, `apps/web/src/lib/genome.ts`, `lib/fitness.ts`, `lib/crypto.ts`, `app/api/`) requieren aprobación del founder/Dev 1.

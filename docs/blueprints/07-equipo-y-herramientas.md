@@ -6,11 +6,11 @@ Pregunta de John: ¿Azure DevOps con cada proyecto? **Respuesta: no.** Tres casa
 
 | Capa | Herramienta | Por qué |
 |---|---|---|
-| Código, PRs, CI/CD | **GitHub** (org de la SAS) | Ya decidido en WP06 (CLA-bot, branch protection). Claude Code opera nativamente ahí. Actions = pipelines. |
+| Código, PRs, CI/CD | **GitHub** (org de Zelena) | Ya decidido en WP06 (CLA-bot, branch protection). Claude Code opera nativamente ahí. Actions = pipelines. |
 | Runtime e identidad | **Azure** (App Service, **Azure SQL**, Entra ID, Key Vault) | Tenant que ya pagas; Azure SQL es más económica y con managed identity elimina la contraseña de DB; WP13/WP16. |
 | Gestión del trabajo | **La dapp** (`/equipo`, `/clientes`, `/okr`) | Tickets, cargas, backlog por proyecto y por cliente. Alimenta reputación → DAO. WP14–WP18. |
 | Puente temporal | GitHub Projects (gratis) | Solo si hace falta tablero HOY mientras v1 aterriza. Se importa por CSV y se apaga. |
-| Repos por cliente | GitHub repos privados (patrón SAS, uno por cliente) | Mismo modelo que las instancias dedicadas del WMS. |
+| Repos por cliente | GitHub repos privados (patrón de proyectos de cliente: uno por cliente) | Mismo modelo que las instancias dedicadas del WMS. |
 | Facturación, cotizaciones, contabilidad | **Odoo** (fuera de la dapp) | Decisión de John: lo financiero sensible no se toca ni se replica. La dapp solo guarda presupuesto por proyecto y el registro de pagos (WP10). Además: Zelena implementa Odoo — usarlo internamente es conocer mejor lo que vende. |
 
 **Actualización (decisión de John):** el equipo trabaja en el tablero web con su login (@zelena.tech): asignaciones del día, check-in y proyectos. Telegram (WP19) es el asistente personal de John — captura de tareas y pendientes por cliente/proyecto desde reuniones, gestión conversacional de su backlog y sus 3 focos del día. Una sola fuente de verdad: lo que el bot crea aparece en la web al instante. Extender el bot al equipo (check-ins por Telegram) queda como v2 opcional, solo si el hábito web muestra fricción con datos de 2+ semanas.

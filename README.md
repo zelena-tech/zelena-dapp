@@ -6,11 +6,10 @@ acumulan reputación y participan en la gobernanza. Sin fricción cripto.
 
 ## Arquitectura (dos capas)
 
-- **Zelena SAS** (empresa): dueña de la marca, el código y los ingresos. Titular de la PI.
-- **Zelena DAO** (comunidad): reputación + token **ZWORK** (ownership, no da voto).
-- Conector: acuerdo de servicios SAS ↔ DAO.
+- **Zelena**: marca, clientes y responsabilidad frente a ellos.
+- **La comunidad**: reputación y ZWORK.
 
-Ver `docs/architecture.md`.
+Detalle en `docs/architecture.md`.
 
 ## Monorepo
 
@@ -39,17 +38,10 @@ cargo build --target wasm32-unknown-unknown --release
 stellar contract deploy --wasm target/wasm32-unknown-unknown/release/zwork_token.wasm --network testnet
 ```
 
-## Demo en vivo (Especialización, septiembre de 2026)
-
-- URL: https://zelena-dao.azurewebsites.net (Stellar **testnet**: sin dinero real, los puntos ZWORK no son transferibles).
-- La entrada usa un código de cohorte multiuso que se comparte en clase (150 usos, vence el 17 de septiembre de 2026); el enlace del QR lo trae prellenado en `/entrar?code=…`. Desde la fusión v1 (2026-09-30) ese código solo se siembra con `SEED_COHORT=1` en App Settings; una base que ya lo tiene lo conserva.
-- Hospedaje: Azure App Service (Linux, Node 22) con SQLite persistente en `/home`; el arranque está en `apps/web/start-azure.sh` y el paquete se construye desde `apps/web`.
-- El motor evolutivo que se explica en la clase (genoma versionado, fitness, mutación acotada, simulador ABM) vive en `apps/web/src/lib/` (`genome.ts`, `fitness.ts`, `mutation.ts`, `sim.ts`, `epochs.ts`).
-
 ## Propiedad intelectual (importante)
 
 Este repositorio es **propietario**. Toda contribución requiere **firmar el CLA**
-(`CLA.md`) **antes** del primer aporte: se ceden los derechos patrimoniales a Zelena SAS.
+**antes** del primer aporte: se ceden los derechos patrimoniales a Zelena (ver `CLA.md`).
 Ver `CONTRIBUTING.md`. Sin CLA firmado, los PRs no se fusionan.
 
 ## Estado
