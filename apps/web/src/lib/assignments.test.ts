@@ -27,6 +27,9 @@ import {
   loadByPerson,
   blockedAssignments,
   actorDesdeWallet,
+  seguimientoPorCliente,
+  resumenSeguimiento,
+  clasificarVencimiento,
   AssignmentError,
 } from "./assignments";
 import { createClient } from "./clients";
@@ -296,5 +299,56 @@ describe("autorización de acciones sobre asignaciones", () => {
     expect(() => assertPuedeActuar("asignar", A("W_DAVID"), null)).toThrow(/supervisión/i);
     expect(() => assertPuedeActuar("aprobar", SUP("W_DAVID"), "W_DAVID")).toThrow(/propio trabajo/i);
     expect(() => assertPuedeActuar("empezar", A("W_JOHN"), "W_DAVID")).toThrow(/responsable/i);
+  });
+});
+
+describe("seguimiento por cliente y proyecto (fechas límite)", () => {
+  function baseDb() {
+    const db = freshDb();
+    db.prepare(`INSERT INTO clients (id, slug, name, status) VALUES (1,'montoc','Montoc','activo')`).run();
+    db.prepare(`INSERT INTO clients (id, slug, name, status) VALUES (2,'luma','LUMA','activo')`).run();
+    db.prepare(`INSERT INTO initiatives (id, slug, name, horizon) VALUES (1,'inv','Inventario','ahora')`).run();
+    return db;
+  }
+
+  it("clasifica atrasada, hoy, próxima y sin fecha respecto al día dado", () => {
+    expect(clasificarVencimiento("2026-10-01", "2026-10-05").vencimiento).toBe("atrasada");
+    expect(clasificarVencimiento("2026-10-01", "2026-10-05").diasRestantes).toBe(-4);
+    expect(clasificarVencimiento("2026-10-05", "2026-10-05").vencimiento).toBe("hoy");
+    expect(clasificarVencimiento("2026-10-08", "2026-10-05").vencimiento).toBe("proxima");
+    expect(clasificarVencimiento("2026-11-30", "2026-10-05").vencimiento).toBe("a_tiempo");
+    expect(clasificarVencimiento(null, "2026-10-05").vencimiento).toBe("sin_fecha");
+  });
+
+  it("agrupa por cliente y proyecto, y pone primero al cliente con más atrasos", () => {
+    const db = baseDb();
+    // LUMA: una atrasada. Montoc: dos atrasadas → Montoc debe ir primero.
+    createAssignment(db, { title: "Tarea LUMA", clientId: 2, dueDate: "2026-09-20", ownerWallet: "W1" });
+    createAssignment(db, { title: "Montoc A", clientId: 1, initiativeId: 1, dueDate: "2026-09-10", ownerWallet: "W1" });
+    createAssignment(db, { title: "Montoc B", clientId: 1, initiativeId: 1, dueDate: "2026-09-11" });
+    createAssignment(db, { title: "Montoc al día", clientId: 1, initiativeId: 1, dueDate: "2026-10-30", ownerWallet: "W2" });
+    createAssignment(db, { title: "Interna sin fecha" });
+
+    const grupos = seguimientoPorCliente(db, "2026-10-01");
+    expect(grupos[0].clientName).toBe("Montoc");
+    expect(grupos[0].atrasadas).toBe(2);
+    expect(grupos[0].total).toBe(3);
+    expect(grupos[0].sinResponsable).toBe(1);
+    expect(grupos[0].proyectos[0].initiativeName).toBe("Inventario");
+
+    const interno = grupos.find((g) => g.clientName === "Trabajo interno");
+    expect(interno?.sinFecha).toBe(1);
+
+    const resumen = resumenSeguimiento(grupos);
+    expect(resumen.atrasadas).toBe(3);
+    expect(resumen.total).toBe(5);
+  });
+
+  it("no cuenta el trabajo ya hecho", () => {
+    const db = baseDb();
+    const id = createAssignment(db, { title: "Vieja", clientId: 1, dueDate: "2026-09-01", ownerWallet: "W1" });
+    db.prepare(`UPDATE assignments SET status = 'Hecha' WHERE id = ?`).run(id);
+    const grupos = seguimientoPorCliente(db, "2026-10-01");
+    expect(resumenSeguimiento(grupos).atrasadas).toBe(0);
   });
 });

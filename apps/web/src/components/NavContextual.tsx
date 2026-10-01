@@ -12,6 +12,7 @@ const DAO = [
   { href: "/ecosistema", label: "Ecosistema" },
   { href: "/equipo/hoy", label: "Mi día" },
   { href: "/equipo/proyectos", label: "Proyectos" },
+  { href: "/equipo/seguimiento", label: "Seguimiento" },
   { href: "/clientes", label: "Clientes" },
   { href: "/agora", label: "Ágora" },
   { href: "/academia", label: "Academia" },

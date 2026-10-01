@@ -363,3 +363,146 @@ export function actorDesdeWallet(db: DB, wallet: string, isFounder: boolean): Ac
     | undefined;
   return { wallet, isFounder, isSupervisor: (r?.is_supervisor ?? 0) === 1 };
 }
+
+// ─── Seguimiento por cliente y proyecto ──────────────────────────────────
+//
+// Lo que faltaba para responder la pregunta que de verdad importa en el día a
+// día: qué está atrasado y de quién es. El tablero por iniciativa no lo muestra
+// porque ordena por prioridad, no por fecha, y la pantalla personal solo ve lo
+// propio.
+
+/** Todo lo que sigue vivo: abierto más el backlog sin tomar. */
+export const ESTADOS_SEGUIMIENTO = ["Backlog", "Asignada", "En curso", "En revisión", "Bloqueada"] as const;
+
+export type EstadoVencimiento = "atrasada" | "hoy" | "proxima" | "a_tiempo" | "sin_fecha";
+
+export interface TareaSeguimiento extends AssignmentRow {
+  vencimiento: EstadoVencimiento;
+  /** Días hasta la fecha límite. Negativo si ya pasó. null si no tiene fecha. */
+  diasRestantes: number | null;
+}
+
+export interface GrupoProyecto {
+  initiativeId: number | null;
+  initiativeName: string;
+  tareas: TareaSeguimiento[];
+  atrasadas: number;
+}
+
+export interface GrupoCliente {
+  clientId: number | null;
+  clientName: string;
+  proyectos: GrupoProyecto[];
+  total: number;
+  atrasadas: number;
+  venceHoy: number;
+  sinFecha: number;
+  sinResponsable: number;
+}
+
+const DIA_MS = 86_400_000;
+
+/** Día de hoy en formato YYYY-MM-DD, el mismo que guarda la columna due_date. */
+export function hoyISO(ahora: Date = new Date()): string {
+  return ahora.toISOString().slice(0, 10);
+}
+
+export function clasificarVencimiento(
+  dueDate: string | null,
+  hoy: string
+): { vencimiento: EstadoVencimiento; diasRestantes: number | null } {
+  if (!dueDate) return { vencimiento: "sin_fecha", diasRestantes: null };
+  const dias = Math.round((Date.parse(dueDate + "T00:00:00Z") - Date.parse(hoy + "T00:00:00Z")) / DIA_MS);
+  if (Number.isNaN(dias)) return { vencimiento: "sin_fecha", diasRestantes: null };
+  if (dias < 0) return { vencimiento: "atrasada", diasRestantes: dias };
+  if (dias === 0) return { vencimiento: "hoy", diasRestantes: 0 };
+  if (dias <= 7) return { vencimiento: "proxima", diasRestantes: dias };
+  return { vencimiento: "a_tiempo", diasRestantes: dias };
+}
+
+/**
+ * Trabajo abierto agrupado por cliente y, dentro de cada cliente, por proyecto.
+ * El cliente con más tareas atrasadas aparece primero: la pantalla ordena por
+ * urgencia real, no alfabéticamente.
+ *
+ * `hoy` se inyecta para poder probarlo sin depender del reloj de la máquina.
+ */
+export function seguimientoPorCliente(db: DB, hoy: string = hoyISO()): GrupoCliente[] {
+  // Incluye Backlog a propósito: una tarea con fecha vencida que NADIE tomó es
+  // el peor retraso que puede haber, y `ESTADOS_ABIERTOS` lo deja fuera porque
+  // está pensado para la carga de cada persona, no para el seguimiento.
+  const estados = ESTADOS_SEGUIMIENTO;
+  const marks = estados.map(() => "?").join(",");
+  const rows = db
+    .prepare(
+      `${SELECT_BASE} WHERE a.status IN (${marks})
+        ORDER BY a.due_date IS NULL, a.due_date,
+                 CASE a.priority WHEN 'alta' THEN 0 WHEN 'media' THEN 1 ELSE 2 END, a.id`
+    )
+    .all(...estados) as Array<Record<string, unknown>>;
+
+  const porCliente = new Map<string, GrupoCliente>();
+
+  for (const r of rows) {
+    const base = mapAssignment(r);
+    const tarea: TareaSeguimiento = { ...base, ...clasificarVencimiento(base.dueDate, hoy) };
+
+    const claveCliente = String(base.clientId ?? "interno");
+    let cliente = porCliente.get(claveCliente);
+    if (!cliente) {
+      cliente = {
+        clientId: base.clientId,
+        clientName: base.clientName ?? "Trabajo interno",
+        proyectos: [],
+        total: 0,
+        atrasadas: 0,
+        venceHoy: 0,
+        sinFecha: 0,
+        sinResponsable: 0,
+      };
+      porCliente.set(claveCliente, cliente);
+    }
+
+    const claveProyecto = String(base.initiativeId ?? "sin-proyecto");
+    let proyecto = cliente.proyectos.find((p) => String(p.initiativeId ?? "sin-proyecto") === claveProyecto);
+    if (!proyecto) {
+      proyecto = {
+        initiativeId: base.initiativeId,
+        initiativeName: base.initiativeName ?? "Sin proyecto",
+        tareas: [],
+        atrasadas: 0,
+      };
+      cliente.proyectos.push(proyecto);
+    }
+
+    proyecto.tareas.push(tarea);
+    cliente.total++;
+    if (tarea.vencimiento === "atrasada") {
+      cliente.atrasadas++;
+      proyecto.atrasadas++;
+    }
+    if (tarea.vencimiento === "hoy") cliente.venceHoy++;
+    if (tarea.vencimiento === "sin_fecha") cliente.sinFecha++;
+    if (!tarea.ownerWallet) cliente.sinResponsable++;
+  }
+
+  const grupos = [...porCliente.values()];
+  for (const c of grupos) c.proyectos.sort((a, b) => b.atrasadas - a.atrasadas || a.initiativeName.localeCompare(b.initiativeName));
+  grupos.sort((a, b) => b.atrasadas - a.atrasadas || b.venceHoy - a.venceHoy || a.clientName.localeCompare(b.clientName));
+  return grupos;
+}
+
+/** Resumen de una línea para encabezar la pantalla. */
+export function resumenSeguimiento(grupos: GrupoCliente[]) {
+  return grupos.reduce(
+    (acc, g) => ({
+      clientes: acc.clientes + 1,
+      total: acc.total + g.total,
+      atrasadas: acc.atrasadas + g.atrasadas,
+      venceHoy: acc.venceHoy + g.venceHoy,
+      sinFecha: acc.sinFecha + g.sinFecha,
+      sinResponsable: acc.sinResponsable + g.sinResponsable,
+    }),
+    { clientes: 0, total: 0, atrasadas: 0, venceHoy: 0, sinFecha: 0, sinResponsable: 0 }
+  );
+}
