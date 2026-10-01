@@ -2,7 +2,8 @@
  * Acciones sobre una asignación (WP14 + WP31).
  *
  *  - POST: acciones de un click (tomar, empezar, a revisión, aprobar, pedir ajustes,
- *    bloquear con motivo OBLIGATORIO y desbloquear).
+ *    bloquear con motivo OBLIGATORIO y desbloquear). Aprobar emite puntos y reputación
+ *    en la misma transacción (WP31-I1) y la respuesta trae `emision` y `textoEmision`.
  *  - PATCH: editar o reasignar (`EditarAsignacionInput`): el dueño cambia el contexto;
  *    quien planifica el proyecto, el resto. Una entrega en revisión no se reasigna ni
  *    se replanifica (409).
@@ -17,7 +18,7 @@ import { getSession } from "@/lib/session";
 import { equipoActor } from "@/lib/authz";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 import {
-  applyAssignmentAction,
+  aplicarAccionAsignacion,
   assignmentActionSchema,
   editarAsignacion,
   editarAsignacionSchema,
@@ -51,13 +52,29 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: "Entrada inválida." }, { status: 400 });
 
   try {
-    const row = applyAssignmentAction(db, {
+    const { row, emision, textoEmision } = aplicarAccionAsignacion(db, {
       assignmentId: parsed.data.assignmentId,
       action: parsed.data.action,
       reason: parsed.data.reason ?? null,
       actor,
     });
-    return NextResponse.json({ ok: true, status: row.status, blockedReason: row.blocked_reason });
+    // Al aprobar, lo que emitió la entrega (WP31-I1) y, si hay algo que explicar (tope
+    // de la temporada o pieza del Ágora), el copy de §8.5. Nunca wallets ni nombres.
+    return NextResponse.json({
+      ok: true,
+      status: row.status,
+      blockedReason: row.blocked_reason,
+      emision: emision
+        ? {
+            emitido: emision.emitido,
+            motivo: emision.motivo ?? null,
+            puntos: emision.puntos,
+            reputacion: emision.reputacion,
+            bono: emision.bono,
+          }
+        : null,
+      textoEmision,
+    });
   } catch (e) {
     return errorDe(e, "No se pudo actualizar la asignación.");
   }

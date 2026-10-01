@@ -10,6 +10,11 @@
  * se aplica en el servidor y en la máquina de estados pura: la UI no es el guardián.
  *
  * Copys de ENTREGA (doc 16): hablan de la pieza de trabajo, nunca de la persona.
+ *
+ * Al aprobar, si la emisión tiene algo que explicar (el presupuesto de puntos de la
+ * temporada se completó, o la pieza se paga por sus hitos en el Ágora), la ruta lo
+ * devuelve en `textoEmision` (WP31-I1, copy de §8.5) y se muestra antes de refrescar:
+ * la tarjeta aprobada cambia de columna y la nota se perdería con ella.
  */
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -45,6 +50,7 @@ export default function TeamAssignmentActions({
   const [pidiendo, setPidiendo] = useState<TeamAction | null>(null);
   const [reason, setReason] = useState("");
   const [msg, setMsg] = useState("");
+  const [nota, setNota] = useState<string | null>(null);
 
   async function send(action: TeamAction, motivo?: string) {
     setLoading(action);
@@ -62,12 +68,35 @@ export default function TeamAssignmentActions({
       }
       setPidiendo(null);
       setReason("");
+      if (typeof data.textoEmision === "string" && data.textoEmision) {
+        setNota(data.textoEmision);
+        return;
+      }
       router.refresh();
     } catch {
       setMsg("Error de red.");
     } finally {
       setLoading(null);
     }
+  }
+
+  if (nota) {
+    return (
+      <div className="rounded-md border border-emerald-800/40 bg-emerald-950/10 p-3 text-sm text-emerald-200" role="status">
+        <p>Entrega aprobada.</p>
+        <p className="mt-1">{nota}</p>
+        <button
+          type="button"
+          onClick={() => {
+            setNota(null);
+            router.refresh();
+          }}
+          className="btn btn-ghost mt-2 py-1.5 text-sm"
+        >
+          Entendido
+        </button>
+      </div>
+    );
   }
 
   if (actions.length === 0) {
