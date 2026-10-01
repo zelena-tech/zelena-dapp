@@ -101,11 +101,13 @@ La app **sí migra** su base al arrancar (ruta SQLite de `lib/db.ts`), en este o
 3. Aparta las tablas legado del equipo (`_legado_*`), crea las de v1 con `schema.sql`, copia las
    filas con el mapeo de valores (prioridad, horizonte, acciones) conservando los ids y borra las
    `_legado_*`. Un valor desconocido **aborta** sin cambios.
-4. Siembra (roster, iniciativas, escotilla y, solo con `SEED_COHORT=1`, el código de cohorte) y
-   promueve a `founder` la fila `is_founder=1` o `wallet = FOUNDER_WALLET` (el gate de antes queda
-   como **dato** de la base, no como regla de código).
+4. Siembra (roster, iniciativas, escotilla y, solo con `SEED_COHORT=1`, el código de cohorte), vence
+   en producción las invitaciones demo `GENESIS-0001…0006` que sigan sin usar, y promueve a `founder`
+   la fila `is_founder=1` o `wallet = FOUNDER_WALLET` (el gate de antes queda como **dato** de la base,
+   no como regla de código). Este paso corre en **cada** arranque, no solo en el que migra: ver
+   "Acceso del founder".
 
-Es idempotente: el segundo arranque no hace nada. En **desarrollo local** la base
+Es idempotente: el segundo arranque no cambia nada. En **desarrollo local** la base
 (`apps/web/data/zelena.db`) sigue siendo desechable si quieres empezar de cero, pero ya no hace
 falta borrarla para arrancar tras una ola.
 
@@ -134,24 +136,120 @@ La ruta Azure SQL (`mssql`) **no migra** todavía: una base Azure SQL nueva se c
   (una base vacía) si ve `AZURE_SQL_SERVER` o `AZURE_SQL_CONNECTION_STRING`, y con eso la app
   "perdería" los datos cambiándose de base.
 - `DATABASE_FILE=/home/data/zelena.db`, `SESSION_SECRET` (≥32 caracteres), `FOUNDER_WALLET` (la wallet
-  real de John: la migración la promueve a `founder`). `SEED_COHORT=1` solo si se quiere mantener
-  vivo el código de cohorte `ESPECIALIZACION-2026`.
+  real de John **ya registrada**: cada arranque la promueve a `founder`; ver "Acceso del founder", que
+  se comprueba ANTES de desplegar). `SEED_COHORT=1` solo si se quiere sembrar o alargar el código de
+  cohorte `ESPECIALIZACION-2026` (ver "Invitaciones vivas en producción").
 - **Arranque probado hoy:** `apps/web/start-azure.sh` (`node node_modules/next/dist/bin/next start`
-  sobre `.next` + `node_modules`). Se conserva.
+  sobre `.next` + `node_modules`). Se conserva; ahora verifica el paquete antes de arrancar (ver
+  "Paquete del despliegue").
 - **Build standalone (siguiente paso):** se compila en **Linux** (GitHub Actions, `npm ci` real, sin
   symlinks) con `NEXT_STANDALONE=1 npm --workspace apps/web run build`. Solo con esa variable
   `next.config.mjs` activa `output: "standalone"`; `outputFileTracingIncludes` mete en el paquete
   `apps/web/src/lib/schema.sql`, los `.mjs` del worker de BD, `CLA.md` (raíz y `apps/web`) y
   `docs/whitepaper.md`. Copiar `apps/web/.next/static` a `.next/standalone/apps/web/.next/static`
-  y arrancar con `node apps/web/server.js` (`PORT`, `HOSTNAME=0.0.0.0`). Sin `CLA.md` en el paquete
-  la app firma el texto de reserva (pasó el 2026-09-04: dos firmas con `cla_hash = 54aecc56…`).
+  (y `apps/web/public` a `.next/standalone/apps/web/public`) y arrancar con `node apps/web/server.js`
+  (`PORT`, `HOSTNAME=0.0.0.0`). Sin `CLA.md` en el paquete la app firma el texto de reserva (pasó el
+  2026-09-04: dos firmas con `cla_hash = 54aecc56…`).
 - **Antes de cada despliegue que cambie el esquema:** por SSH de Kudu,
   `node -e "new (require('node:sqlite').DatabaseSync)('/home/data/zelena.db').exec(\"VACUUM INTO '/home/data/zelena-pre-fusion-AAAAMMDD.db'\")"`,
-  bajar esa copia y ensayar el arranque sobre ella.
-- **Después:** el log de arranque muestra las migraciones y la ruta del respaldo; `GET /api/cla`
-  devuelve el hash `03293c93…`; John entra a `/admin`.
+  bajar esa copia y ensayar el arranque sobre ella **con el mismo `FOUNDER_WALLET` de App Settings**.
+- **Después:** el log de arranque muestra las migraciones y la ruta del respaldo, `[db] founder: …`
+  **sin avisos** y, la primera vez, `[seed] 6 invitación(es) demo GENESIS-000x vencidas`; `GET /api/cla`
+  devuelve el hash `03293c93…`; John entra a `/admin` **firmando con su wallet** (`/entrar` → "Ya
+  estoy registrado"), no con una cookie de prueba.
 - **Rollback:** volver al paquete anterior **y** restaurar `/home/data/zelena-pre-fusion-*.db`. Sin
   restaurar la base, el código viejo arranca pero su módulo equipo no puede escribir.
+
+### Acceso del founder (comprobar ANTES del despliegue)
+
+En la línea desplegada bastaba `session.wallet === FOUNDER_WALLET` (o `is_supervisor=1`). En v1
+`/admin` lo decide `users.role` (`lib/authz.ts`): entra quien tiene una fila `founder`. En la copia
+de prod la única fila `founder` es la wallet demo `GA7ZELENA…AAA`, que **no es una llave Stellar
+válida** (nadie puede firmar con ella), y `pending:john` solo entra por Entra, que está apagado. Si
+nada más cambia, **nadie entra a `/admin`**. Dos caminos dejan `founder` a una wallet real:
+
+- **`FOUNDER_WALLET`, en cada arranque.** La fila con esa wallet pasa a `role='founder'`,
+  `is_supervisor=1`. Solo promueve, nunca degrada. Si la wallet se registra **después** del
+  despliegue (con la cohorte o una invitación nace `contributor`), basta con **reiniciar la app**.
+- **La escotilla `FOUNDER_BOOTSTRAP_CODE`** (App Setting secreto, 16–40 caracteres; se compara en
+  mayúsculas porque `/entrar` las fuerza). Entrar en `/entrar?code=<código>` con la wallet de John la
+  deja `founder`, **sea nueva o ya registrada**, por el camino del código y no por "Ya estoy
+  registrado". Un solo uso; vence a los 7 días de sembrarse. Si venció o ya se usó, poner un valor
+  nuevo y reiniciar.
+
+Pasos:
+
+1. Leer (sin cambiar nada) el valor de `FOUNDER_WALLET` en App Settings de `zelena-dao`.
+2. Sobre la copia fresca de Kudu (la del `VACUUM INTO` de arriba), en solo lectura. Antes de migrar
+   la tabla todavía no tiene `role`, así que no se pide:
+   ```bash
+   node -e "const{DatabaseSync}=require('node:sqlite');const db=new DatabaseSync(process.argv[1],{readOnly:true});console.log(db.prepare('SELECT wallet, display_name, is_founder, is_supervisor, cla_signed FROM users WHERE wallet = ?').get(process.argv[2]) ?? 'NO HAY FILA')" zelena-pre-fusion-AAAAMMDD.db '<FOUNDER_WALLET>'
+   node -e "console.log(require('@stellar/stellar-sdk').StrKey.isValidEd25519PublicKey(process.argv[1]))" '<FOUNDER_WALLET>'
+   ```
+   (el segundo, desde una carpeta con `node_modules`, p. ej. `apps/web` o `/home/site/wwwroot`).
+3. Decidir:
+   - **Hay fila, `cla_signed=1`, la llave es válida y es la wallet de John en Freighter:** el arranque
+     la promueve. Repetir el ensayo con ese valor y comprobar `/admin` con una **firma real** por
+     `/api/login`.
+   - **No hay fila, la llave no es válida o no es de John:** antes del primer arranque, o fijar
+     `FOUNDER_WALLET` a la wallet real de John ya registrada (en la copia del 2026-09-30 las únicas
+     filas con llave válida son `GCJGMS44…` "Zzz SEP53", `GCISTLUCM5…` "Prueba Cohorte" y
+     `GDXY2RLC…` "Zzz Gate"), o tener listo `FOUNDER_BOOTSTRAP_CODE` para que John entre con él y su
+     wallet. **Nunca** con el código de cohorte: da `contributor` y obliga a reiniciar.
+4. En el log del primer arranque, `[db] founder: …`. Sin avisos = al menos un founder puede firmar.
+   Con `no tiene fila en users` o `ninguna fila founder tiene una llave Stellar válida`, todavía nadie
+   entra a `/admin` por firma: volver al paso 3.
+5. Último recurso, por Kudu y **después** del respaldo:
+   `UPDATE users SET role = 'founder', is_supervisor = 1 WHERE wallet = '<wallet de John>'` (la app
+   lo lee en la siguiente petición, sin reiniciar).
+
+Cambiar `FOUNDER_WALLET` más adelante promueve la nueva y **no** le quita el rol a la anterior.
+Retirar un founder es una decisión explícita: `UPDATE users SET role = 'contributor', is_supervisor = 0
+WHERE wallet = '<wallet>'` por Kudu tras el respaldo, hasta que WP32 lo lleve a `/admin`. La línea
+desplegada también dejaba entrar a `/admin` a las filas con `is_supervisor=1`; v1 lo quita a
+propósito (los supervisores supervisan, no administran). En la copia de prod todas valen 0, así que
+nadie pierde un acceso que tuviera.
+
+### Invitaciones vivas en producción
+
+- **`GENESIS-0001…0006`** son predecibles y están publicadas (CLAUDE.md, `docs/deploy.md`). En la
+  copia de prod siguen **sin usar** y vencen el 2026-10-03: con el código fusionado cualquiera se
+  daba de alta con ellas. Ahora cada arranque con `NODE_ENV=production` (sin `SEED_DEMO=1`) las
+  **vence** (`expires_at` = ahora; no se borran). Solo esos seis códigos exactos: las invitaciones
+  reales de `/admin` usan el mismo prefijo `GENESIS-`, así que un `LIKE 'GENESIS-%'` las vencería
+  también. Equivalente manual por Kudu, tras el respaldo:
+  `UPDATE invites SET expires_at = datetime('now') WHERE code IN ('GENESIS-0001','GENESIS-0002','GENESIS-0003','GENESIS-0004','GENESIS-0005','GENESIS-0006') AND used_by IS NULL`.
+- **`ESPECIALIZACION-2026`** (cohorte; se conserva por decisión del líder) **sigue abierta**: 400
+  cupos, 7 usados, vence el 2026-11-10 en la copia del 2026-09-30. Sin `SEED_COHORT=1` no se siembra
+  ni se le alarga el plazo, pero la fila que ya existe sigue valiendo: quien tenga el código se da de
+  alta como `contributor`. Con `SEED_COHORT=1`, cada arranque lleva el vencimiento a hoy + 45 días.
+  Cerrarla es decisión de John: `UPDATE invites SET expires_at = datetime('now') WHERE code = 'ESPECIALIZACION-2026'`.
+
+### Paquete del despliegue
+
+- **No repetir el paquete de la última vez** (zip de `apps/web` sin `node_modules`, OneDeploy sin
+  limpiar, reutilizando el `node_modules` que Oryx construyó en prod con `next 14.2.15`). v1 pide
+  `next ^14.2.35` y añade `next-auth` (y los opcionales `mssql` y `@azure/identity`): la `.next` nueva
+  correría sobre otro Next y sin `next-auth`. Ese zip además tomaba `docs/whitepaper.md` de
+  `apps/web/docs/`, que está en `.gitignore` y no existe en un checkout limpio; la app lo busca en
+  `cwd/../../docs` o `cwd/docs`, es decir, en `/home/site/wwwroot/docs/whitepaper.md`.
+- **Opción A (la elegida):** build standalone en Linux (ver arriba). Lleva su propio `node_modules`
+  trazado. Copiar también `apps/web/scripts/verificar-paquete.mjs` a
+  `.next/standalone/apps/web/scripts/` para poder verificarlo.
+- **Opción B (el `next start` de hoy):** `node_modules` construido **en Linux** desde el
+  `package-lock.json` de la **raíz** (`npm ci`, p. ej. en GitHub Actions; nunca desde Windows, por los
+  binarios nativos), o forzar la build de Oryx con `SCM_DO_BUILD_DURING_DEPLOYMENT=true` (ojo: Oryx
+  instala desde `apps/web/package.json` sin el lockfile de la raíz, así que las versiones no quedan
+  fijadas). En `/home/site/wwwroot` deben quedar: `.next/` (sin `cache/`), `public/`, `package.json`,
+  `next.config.mjs`, `start-azure.sh`, `scripts/verificar-paquete.mjs`, `CLA.md` junto a
+  `package.json` (es `apps/web/CLA.md`), `docs/whitepaper.md` (copiado de `docs/whitepaper.md` de la
+  **raíz**), `src/lib/schema.sql`, `src/lib/*.mjs` y `node_modules/`.
+- **Comprobar en Kudu ANTES de arrancar:** `cd /home/site/wwwroot && node scripts/verificar-paquete.mjs`
+  (en standalone, `node apps/web/scripts/verificar-paquete.mjs apps/web`). Tiene que terminar en
+  `listo para arrancar.` Revisa que `node_modules/next` esté en esa carpeta y sea ≥ 14.2.35 (porque
+  `start-azure.sh` lo ejecuta desde ahí), `next-auth` y el resto de dependencias en su rango, el
+  sha256 del CLA, el whitepaper y `schema.sql`. `start-azure.sh` corre la misma verificación y **no
+  arranca** si falla; `ZELENA_OMITIR_VERIFICACION=1` la salta, solo para una emergencia consciente.
 
 **Definición de "v1 desplegada":** los 6 entran con su correo, ven sus asignaciones y hacen check-in; John captura tareas desde Telegram y recibe sus 3 focos del día; el dashboard responde sin preguntar.
 

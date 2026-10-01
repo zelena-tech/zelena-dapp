@@ -10,7 +10,7 @@ npm test                                     # suite completa — SIEMPRE verde 
 node packages/scripts/anchor-worker.mjs --watch  # worker de anclaje testnet (correr aparte)
 ```
 
-Login demo: código de invitación `GENESIS-0001` + wallet demo.
+Login demo (solo en desarrollo): código de invitación `GENESIS-0001` + wallet demo. Estos códigos están publicados: en producción no se siembran y cada arranque vence los que sigan sin usar.
 
 ## Fase actual: v1 "Organizar" — NÚCLEO CONGELADO (WP13, WP14, WP15, WP16, WP19 + WP17, WP20)
 
@@ -18,7 +18,7 @@ Orden estratégico: **organizar → automatizar → descentralizar.** v1 = login
 
 Nada de la fase "automatizar" entra en v1: sin Microsoft Graph, sin envío de correos/Teams, sin WhatsApp (WP35). **Única excepción, decisión registrada de John (2026-09-30): los recordatorios de SLA por Telegram entran en alcance.** Se redactan sobre la entrega, nunca sobre la persona, sin bombardear (idempotentes y con tope), y los parámetros (SLA, horas) van en el genoma. Cualquier otro aviso saliente sigue necesitando una decisión explícita de John. Lo financiero (facturación, cotizaciones, contabilidad) vive en Odoo, FUERA de esta app — nunca se replica aquí. El NO-alcance de cada spec es ley.
 
-**Producción real hoy (fusión 2026-09-30):** SQLite en `/home/data/zelena.db` con firmas y datos reales — **en producción NUNCA se borra la base**. Toda columna nueva sobre una tabla existente se añade a `COLUMNAS_NUEVAS` en `lib/db.ts`; los cambios de forma van como migración idempotente con respaldo `VACUUM INTO` previo (ver `prepararSqlite`). La autorización es por **rol leído de la base** (`lib/authz.ts`): nunca un gate `=== FOUNDER_WALLET` en `app/` ni en `src/components/` (lo fija un test estático). `CLA.md` y `apps/web/CLA.md` no se tocan: su sha256 (`03293c93…`) es lo que firman las altas.
+**Producción real hoy (fusión 2026-09-30):** SQLite en `/home/data/zelena.db` con firmas y datos reales — **en producción NUNCA se borra la base**. Toda columna nueva sobre una tabla existente se añade a `COLUMNAS_NUEVAS` en `lib/db.ts`; los cambios de forma van como migración idempotente con respaldo `VACUUM INTO` previo (ver `prepararSqlite`). La autorización es por **rol leído de la base** (`lib/authz.ts`): nunca un gate `=== FOUNDER_WALLET` en `app/` ni en `src/components/` (lo fija un test estático). `FOUNDER_WALLET` solo entra como **dato**: cada arranque promueve su fila a `founder` (nunca degrada). Antes de desplegar, comprobar que hay un founder que puede firmar (`docs/DESPLIEGUE-V1.md`, "Acceso del founder") y verificar el paquete (`apps/web/scripts/verificar-paquete.mjs`). `CLA.md` y `apps/web/CLA.md` no se tocan: su sha256 (`03293c93…`) es lo que firman las altas.
 
 ## Ejecución con subagentes
 

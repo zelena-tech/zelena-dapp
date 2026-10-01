@@ -14,7 +14,7 @@ Tres rutas, en orden de fricción. **La ruta A no necesita ninguna credencial y 
 
 ### A1. Base limpia
 
-El repo **no tiene sistema de migraciones**: `schema.sql` se aplica con `CREATE TABLE IF NOT EXISTS`, que **no añade columnas a una base que ya existe**. Las olas de v1 añadieron columnas a `users`, así que una base vieja falla al arrancar. Es desechable:
+Desde la fusión del 2026-09-30 la app **migra** su base SQLite al arrancar (respaldo `VACUUM INTO` + `COLUMNAS_NUEVAS` en `lib/db.ts`), así que una base vieja ya no falla. En tu máquina la base sigue siendo desechable si quieres empezar de cero (en producción **nunca** se borra):
 
 ```bash
 rm -f apps/web/data/zelena.db apps/web/data/zelena.db-shm apps/web/data/zelena.db-wal
@@ -67,8 +67,9 @@ Login corporativo (ruta C), bot (ruta C), y acceso para los otros 5 desde sus m�
 ### B0. Antes de exponer nada — no es opcional
 
 1. **Parchear Next.** `npm audit` reporta 21 vulnerabilidades (2 critical, 16 high) sobre `next@14.2.15`. Subir a la última 14.2.x parcheada y correr la suite. Es **WP33** y es lo primero.
-2. **Confirmar que el seed de demo no va a producción.** Ya está resuelto: `demoInvitesAllowed()` excluye los códigos `GENESIS-000x` cuando `NODE_ENV=production`. **No pongas `SEED_DEMO=1`** en el App Service — esos códigos están publicados en el README.
+2. **Confirmar que el seed de demo no abre producción.** `demoInvitesAllowed()` solo evita *sembrar* los `GENESIS-000x` con `NODE_ENV=production`; no anulaba los que ya existían, y la base de producción tiene los seis sin usar. Desde el 2026-09-30 cada arranque de producción **vence** los `GENESIS-0001…0006` que sigan sin usar (solo esos seis: las invitaciones reales de `/admin` usan el mismo prefijo). Compruébalo en el log del primer arranque (`[seed] … GENESIS-000x vencidas`). **No pongas `SEED_DEMO=1`** en el App Service: esos códigos están publicados. El código de cohorte `ESPECIALIZACION-2026` sigue vivo en prod (400 cupos, 7 usados, vence el 2026-11-10); cerrarlo es decisión tuya (ver `DESPLIEGUE-V1.md`, "Invitaciones vivas en producción").
 3. **Verificar el dialecto contra la instancia real.** Nadie ha ejecutado el T-SQL generado contra Azure SQL. Es **WP36**: hasta que exista ese comando, el despliegue es un primer contacto, no una verificación.
+4. **Acceso del founder y paquete.** Antes del primer arranque del código nuevo, haz las comprobaciones de `DESPLIEGUE-V1.md`, "Acceso del founder" (que `FOUNDER_WALLET` sea tu wallet real, registrada y con llave Stellar válida, o tener listo `FOUNDER_BOOTSTRAP_CODE`) y "Paquete del despliegue" (`node scripts/verificar-paquete.mjs` en Kudu). Sin lo primero nadie entra a `/admin`: en la base de producción el único founder es la wallet demo, con la que nadie puede firmar. Sin lo segundo la app arranca con otro Next, sin `next-auth` o sin el whitepaper.
 
 ### B1. Recursos (~30 min)
 
@@ -88,7 +89,8 @@ Todas las variables están documentadas en [`docs/deploy.md`](deploy.md) — nun
 | `AZURE_SQL_SERVER` | `zelena-sql.database.windows.net` |
 | `AZURE_SQL_DATABASE` | `zelena` |
 | `SESSION_SECRET` | 32+ bytes aleatorios (**la app no arranca sin él**) |
-| `FOUNDER_WALLET` | tu wallet (ya solo es dato de seed, no autorización) |
+| `FOUNDER_WALLET` | tu wallet real, ya registrada: **en cada arranque** su fila queda `founder` (los gates leen `users.role`, no la variable). Si te registras después, reinicia la app |
+| `FOUNDER_BOOTSTRAP_CODE` | opcional, secreto de 16–40 caracteres: entrar con él y tu wallet (nueva o ya registrada) te deja `founder`. Un solo uso, vence a los 7 días |
 | `STELLAR_NETWORK` | `testnet` — **nunca** mainnet en v1 |
 | `NODE_ENV` | `production` |
 

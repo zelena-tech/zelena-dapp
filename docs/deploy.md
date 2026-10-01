@@ -16,10 +16,13 @@ npm run dev                                     # http://localhost:3000
 ```
 
 La base SQLite se crea, migra y siembra sola en el primer arranque
-(`apps/web/data/zelena.db`, gitignored). Códigos de invitación seed: `GENESIS-0001` …
-`GENESIS-0006`. La wallet founder por defecto (acceso a `/admin`) está en `.env.example`;
-para entrar como founder, cambia `FOUNDER_WALLET` a la public key de tu wallet de prueba
-tras onboardearte, o usa el valor por defecto del seed.
+(`apps/web/data/zelena.db`, gitignored). Códigos de invitación seed, **solo fuera de
+producción**: `GENESIS-0001` … `GENESIS-0006` (en producción no se siembran y, si la base ya
+los tiene, cada arranque vence los que sigan sin usar). La wallet founder por defecto está en
+`.env.example`, pero es una wallet demo con la que nadie puede firmar. Para entrar como
+founder, cambia `FOUNDER_WALLET` a la public key de tu wallet de prueba tras onboardearte y
+**reinicia** la app: en cada arranque la fila de esa wallet queda `founder` (los gates leen
+`users.role`). O entra con `FOUNDER_BOOTSTRAP_CODE`.
 
 ## Build de producción
 
@@ -146,7 +149,11 @@ SQLite local en producción es el fallo exacto que esto existe para evitar.
 | `AZURE_SQL_ENCRYPT` | no | solo `false` para pruebas locales; Azure SQL exige TLS. |
 | `DATABASE_DRIVER` | no | forzar driver (`sqlite` para depurar en producción con archivo local). |
 | `SESSION_SECRET` | sí | firma de la cookie de sesión. La app no arranca sin él en producción. |
-| `FOUNDER_WALLET` | sí | acceso a `/admin`. |
+| `FOUNDER_WALLET` | sí | wallet real del founder, ya registrada. En cada arranque su fila pasa a `role='founder'` (solo promueve, nunca degrada); `/admin` lo decide `users.role`. Ver `DESPLIEGUE-V1.md`, "Acceso del founder". |
+| `FOUNDER_BOOTSTRAP_CODE` | no | escotilla de un solo uso (16–40 caracteres, se compara en mayúsculas): entrar con ella deja `founder` a la wallet, nueva o ya registrada. Vence a los 7 días de sembrarse. |
+| `SEED_DEMO` | no | `1` siembra y mantiene vivos los `GENESIS-000x` publicados. **Nunca** en el App Service interno. |
+| `SEED_COHORT` | no | `1` siembra el código de cohorte `ESPECIALIZACION-2026` y alarga su plazo en cada arranque. |
+| `ZELENA_OMITIR_VERIFICACION` | no | `1` hace que `start-azure.sh` arranque sin `scripts/verificar-paquete.mjs`. Solo para una emergencia consciente. |
 | `STELLAR_NETWORK` | sí | `testnet`. **Nunca** mainnet en v1. |
 | `SERVICE_ACCOUNT_SECRET` | worker | cuenta de **testnet** del anclaje. Vive SOLO donde corre el worker, jamás en el frontend. |
 | `ZELENA_DB_WORKER` | no | ruta alternativa al worker del puente (por defecto `src/lib/db-query.worker.mjs`). |
