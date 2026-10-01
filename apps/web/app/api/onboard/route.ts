@@ -22,7 +22,8 @@ export async function POST(req: NextRequest) {
     // Verifica firma ANTES de consumir la invitación (ver lib/onboard.ts).
     result = performOnboard(db, parsed.data);
   } catch (e) {
-    if (e instanceof OnboardError) return NextResponse.json({ error: e.message }, { status: e.status });
+    if (e instanceof OnboardError)
+      return NextResponse.json({ error: e.message, reason: e.reason }, { status: e.status });
     return NextResponse.json({ error: "No se pudo completar el registro." }, { status: 400 });
   }
 
@@ -30,7 +31,10 @@ export async function POST(req: NextRequest) {
     wallet: result.wallet,
     name: result.name,
     tier: result.tier,
-    isFounder: false,
+    // El rol lo decide performOnboard (contributor, o founder por la escotilla).
+    isFounder: result.role === "founder",
+    role: result.role,
+    isSupervisor: result.isSupervisor,
     claSigned: true,
     isDemo: result.isDemo,
   });

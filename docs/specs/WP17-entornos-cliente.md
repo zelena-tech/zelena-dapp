@@ -1,6 +1,12 @@
 # WP17 · Entornos por cliente (workspaces)
 
-CONTEXTO — Zelena opera ~10 clientes con instancias dedicadas del FMS más proyectos de Odoo y desarrollo a la medida. Hoy el contexto de cada cliente vive disperso: WhatsApp, correos, la cabeza de John. Decisión de alcance v1: **solo equipo interno accede** (el portal del cliente se evalúa después), y entran **backlog + marca**. Contratos y costos de nube quedan para v2.
+> **DESCONGELADO — decisión de John, 2026-08-16.** WP17 estaba marcado v1.1 a la
+> espera de los criterios de USO de v1. John decide adelantarlo porque el
+> conocimiento de cliente disperso es hoy el riesgo más caro de la operación.
+> Consecuencia aceptada: v1 crece y WP13/14/15/16/19 se retrasan en proporción.
+> El grafo de operación que lo acompaña es **WP20**.
+
+CONTEXTO — Zelena opera ~10 clientes con instancias dedicadas del WMS más proyectos de Odoo y desarrollo a la medida. Hoy el contexto de cada cliente vive disperso: WhatsApp, correos, la cabeza de John. Decisión de alcance v1: **solo equipo interno accede** (el portal del cliente se evalúa después), y entran **backlog + marca**. Contratos y costos de nube quedan para v2.
 
 PROBLEMA — Nadie puede responder rápido "qué hay pendiente con este cliente", "de qué color es su marca" o "quién tiene acceso a su servidor". El conocimiento del cliente no es un activo de la organización: es memoria individual.
 
@@ -32,6 +38,7 @@ RESULTADO ESPERADO — Cada cliente tiene un espacio donde el equipo asignado ve
 ### Integración con lo existente
 - `assignments.client_id` (nullable — el trabajo interno no tiene cliente).
 - Las iniciativas de WP14 (WMS, Odoo, DAO, Interno) se cruzan con clientes: un cliente puede tener trabajo de varias iniciativas.
+- `assignments.graph_node_id` (nullable) enlaza una asignación con un nodo del grafo de WP20. Por referencia, jamás por copia.
 
 ## NO-ALCANCE (explícito)
 
@@ -45,10 +52,11 @@ RESULTADO ESPERADO — Cada cliente tiene un espacio donde el equipo asignado ve
 
 - [ ] Un usuario que no es miembro de un cliente recibe 404 (no 403) al pedir su URL directa — el cliente no debe ni revelarse (test).
 - [ ] Nivel `lectura` no ve la pestaña de accesos ni sus datos vía API (test de API, no solo de UI).
-- [ ] `grep` del esquema y del código: cero campos que almacenen secretos o contraseñas (verificación explícita en el PR).
+- [x] Cero campos que almacenen secretos: verificado por `auditSchemaForSecretColumns()` en CI, con control negativo que comprueba que el auditor sí detecta una columna mala. Ya no depende de que alguien recuerde hacer grep.
+- [x] Intentar guardar un secreto en cualquier campo del inventario se rechaza (test con token de Shopify, URL con contraseña y token de GitHub).
 - [ ] Toda consulta al inventario queda en `credential_access_log`.
 - [ ] Las asignaciones de un cliente aparecen en su backlog y en `/equipo/hoy` de sus miembros.
 - [ ] Paleta de marca: click en un color lo copia al portapapeles.
 
-OWNER — Dev 2 · AGENTE: modelo + RBAC + vistas + tests de permisos · HUMANO (John): define los clientes iniciales y quién participa en cada uno; QA valida los tests de permisos (es la superficie crítica).
-TAMAÑO — L · Estimado: 2 días. Depende: WP13 (roles), WP14 (asignaciones).
+OWNER — Fausto (modelo/RBAC) + David (UI) · Juan dueño del inventario de credenciales · AGENTE: modelo + RBAC + vistas + tests de permisos · HUMANO (John): define los clientes iniciales y quién participa en cada uno; Vale valida los tests de permisos (es la superficie crítica).
+TAMAÑO — L · Estimado: 2 días. Depende: WP13 (roles), WP14 (asignaciones — la pestaña Backlog queda vacía hasta que exista).

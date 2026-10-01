@@ -8,11 +8,13 @@ Versión 1 · Julio de 2026 · Documento público del repositorio open source
 
 ## 1. Resumen
 
-Zelena es una firma de gestión de activos digitales que ayuda a pequeñas y medianas empresas (SMEs) de América Latina a atravesar la disrupción tecnológica. Opera como una comunidad de contribuidores —no de empleados— donde el valor entregado, y no el cargo ni la antigüedad, determina el reconocimiento y la recompensa.
+Estamos construyendo un ecosistema donde el aporte de cada persona se mide, se paga y **queda registrado a su nombre**. No el cargo, no la antigüedad, no las horas: lo que entregas.
 
-Este whitepaper describe la **Zelena DAO**: la capa comunitaria y de gobernanza del ecosistema. La DAO se articula sobre una arquitectura de dos entidades. Una sociedad (**Zelena SAS**) es titular de la propiedad intelectual y de los ingresos; una comunidad gobernada (**Zelena DAO**) coordina el trabajo, mide el valor y acumula reputación. Un acuerdo de servicios une a ambas.
+Zelena nace resolviendo un problema concreto —empresas de América Latina que operan a ciegas— con tecnología para el sector logístico que ya está en producción con clientes reales. La **Zelena DAO** es la comunidad que construye esos productos, organizada con las mismas reglas que aplicamos afuera: el valor entregado decide el reconocimiento.
 
-El documento distingue con cuidado entre lo que ya está validado, lo que es hipótesis y lo que aún no existe. El producto validado es la **Capa 1: FMS** (sistema de gestión de fulfillment), adoptado orgánicamente por unas diez empresas en Colombia. La capa de incentivos on-chain (**Harmony**) es una hipótesis en validación, no un producto con encaje de mercado confirmado. La misma disciplina aplica a la DAO: primero se valida la **cooperación** de una cohorte real; solo después se invierte en tokenomics líquida, mainnet o gobernanza compleja.
+Este documento describe cómo funciona esa comunidad: cómo entra la gente, cómo se mide lo que aporta, cómo se reparte y cómo se decide. Distingue con cuidado entre lo que ya opera, lo que es hipótesis y lo que todavía no existe, porque una comunidad construida sobre expectativas infladas no dura. La capa de incentivos on-chain (**Harmony**) es una hipótesis en validación, no un producto con encaje de mercado confirmado. La misma disciplina aplica aquí: primero se valida la **cooperación** de una cohorte real; solo después se invierte en tokenomics líquida, mainnet o gobernanza compleja.
+
+Detrás hay una estructura sencilla y deliberada: una sociedad que asume la responsabilidad legal y la relación con los clientes, y una comunidad gobernada que coordina el trabajo y acumula reputación. Existe para que quien contribuye pueda construir sin cargar con obligaciones societarias (§4.2).
 
 El corazón económico del modelo es un **triángulo de tres activos**, cada uno con un rol único: **USDC** paga el trabajo, la **reputación** otorga voto y acceso, y **ZWORK** representa un derecho residual sobre el éxito del ecosistema. Ninguno sustituye a otro.
 
@@ -30,13 +32,15 @@ Zelena parte de una creencia central: **el valor que entregas debería determina
 
 ---
 
-## 3. Zelena hoy: FMS validado y la hipótesis Harmony
+## 3. Zelena hoy: WMS validado y la hipótesis Harmony
 
-### 3.1 Capa 1 — FMS (validado)
+### 3.1 Capa 1 — WMS (validado)
 
-El **Fulfillment Management System** es un sistema de gestión logística de extremo a extremo que controla el ciclo completo de fulfillment desde una sola plataforma. Nació resolviendo un problema real de un cliente real. Hoy tiene alrededor de diez clientes en producción en Colombia, todos por recomendación boca a boca, con cero inversión en publicidad y sin capital externo.
+El **Fulfillment Management System** es un sistema de gestión logística de extremo a extremo que controla el ciclo completo de fulfillment desde una sola plataforma. Nació resolviendo un problema real de un cliente real, y hoy opera con **clientes reales en Colombia**, llegados por recomendación, sin inversión en publicidad y sin capital externo.
 
-El FMS cubre once módulos (autenticación con roles, productos, órdenes, picking optimizado por ruta, packing, ubicaciones, recepción, reportes de avería, métricas de desempeño, facturación y traslados). El módulo de **métricas de desempeño** es el activo estratégico más fuerte: Zelena ya es dueña de los datos donde se mide el desempeño, lo que crea el derecho natural a extenderse hacia la compensación.
+Cubre la operación completa: autenticación con roles, productos, órdenes, picking optimizado por ruta, packing, ubicaciones, recepción, reportes de avería, métricas de desempeño, facturación y traslados.
+
+La pieza estratégica es el módulo de **métricas de desempeño**, y conviene ser preciso sobre qué significa eso: **los datos son de cada empresa cliente**; Zelena no es su dueña. Lo que Zelena aporta —y lo que constituye su oficio— es **gobernar esa información**: ordenarla, protegerla y volverla confiable y utilizable en operaciones que no pueden fallar. Esa disciplina es la base técnica que permite extender la medición del trabajo hacia la compensación, con datos y no con opiniones.
 
 **Estatus:** problema real y validado. Demanda clara y confirmada.
 
@@ -44,7 +48,7 @@ El FMS cubre once módulos (autenticación con roles, productos, órdenes, picki
 
 **Harmony** es un sistema de recompensas on-chain que conecta el desempeño real del operario con pagos verificables, transparentes y automáticos en moneda local, construido sobre Stellar/Soroban. El operario nunca sabe que interactúa con una blockchain.
 
-Harmony **no es un producto con encaje de mercado confirmado.** Una auditoría externa estableció que la fricción del incentivo manual es observada pero **no está validada como un dolor prioritario que las empresas paguen por automatizar.** No se sabe aún si las empresas pagarían por un producto dedicado, si Harmony es un producto independiente o una función del FMS, ni si existe la confianza suficiente para delegar el cálculo de pagos. La solución puede estar más desarrollada que validado el problema.
+Harmony **no es un producto con encaje de mercado confirmado.** Una auditoría externa estableció que la fricción del incentivo manual es observada pero **no está validada como un dolor prioritario que las empresas paguen por automatizar.** No se sabe aún si las empresas pagarían por un producto dedicado, si Harmony es un producto independiente o una función del WMS, ni si existe la confianza suficiente para delegar el cálculo de pagos. La solución puede estar más desarrollada que validado el problema.
 
 Por eso la prioridad presente es **validación, no infraestructura.** Este whitepaper trata a Harmony como una hipótesis sólida, respaldada por un posicionamiento fuerte, nunca como un hecho de mercado.
 
@@ -60,9 +64,9 @@ La misma infraestructura de desempeño verificado que paga a un operario de bode
 
 La descentralización total desde el día uno es una fantasía costosa. La DAO se construye por etapas: **la descentralización es la recompensa de la madurez, no el punto de partida.** El objetivo del diseño no es sólo repartir poder, sino diseñar la cooperación cotidiana: por qué alguien llega, por qué vuelve mañana, y por qué el sistema sigue siendo honesto cuando nadie mira.
 
-### 4.2 Dos entidades, un acuerdo
+### 4.2 Por qué hay una empresa detrás de la comunidad
 
-La arquitectura sigue un patrón inspirado en el modelo UNIfication: separar la entidad que sostiene el valor legal de la comunidad que lo coordina.
+La razón no es el control: es **protegerte**. Alguien tiene que firmar contratos, responder ante un cliente y asumir la responsabilidad legal de lo que se entrega; si eso recayera sobre cada contribuidor, entrar a construir tendría un coste que casi nadie querría pagar. Por eso la arquitectura separa la entidad que asume ese peso de la comunidad que coordina el trabajo, siguiendo un patrón inspirado en el modelo UNIfication.
 
 | Entidad | Rol | Es dueña de |
 |---|---|---|
@@ -180,7 +184,9 @@ Como el supervisor cobra un porcentaje del proyecto y a la vez emite scores, exi
 
 ---
 
-## 9. Propiedad intelectual y open source
+## 9. Lo que construyes: cómo se protege y cómo te devuelve valor
+
+Tres ideas antes del detalle. Tu **autoría nunca se cede**: los derechos morales son inalienables y el historial de lo que hiciste es tuyo y verificable por cualquiera. Lo que se construye para la comunidad **vive en un repositorio público**, donde se puede leer, auditar y aprender de él. Y si la empresa comercializa ese código, **paga una regalía al treasury de la comunidad**: eso es lo que le da sustancia a ZWORK en vez de dejarlo como un token vacío.
 
 ### 9.1 Clasificación de la PI en el intake
 
@@ -221,7 +227,7 @@ Cuatro workstreams: **Dapp v0.1** en testnet (onboarding, Ágora, perfil, puntos
 
 Criterios de éxito clave: ≥15 contribuidores con CLA anclado, ≥10 bounties completados y distribuidos, **≥60% de retención a 8 semanas**, ≥3 periodos cerrados con merkle root, ≥3 PRs externos merged bajo CLA-check. La regla de decisión es explícita: si la retención cae por debajo del 30%, se **detiene la construcción** — el problema sería la propuesta de valor al contribuidor, no la Dapp.
 
-Lo que **NO** está en este milestone, a propósito: mainnet, dinero real, USDC, anchors, ZWORK transferible, auditoría de contratos, app móvil, puente FMS→Soroban y cualquier integración externa. Todo eso pertenece a fases posteriores y solo se justifica si la retención y la ejecución pasan.
+Lo que **NO** está en este milestone, a propósito: mainnet, dinero real, USDC, anchors, ZWORK transferible, auditoría de contratos, app móvil, puente WMS→Soroban y cualquier integración externa. Todo eso pertenece a fases posteriores y solo se justifica si la retención y la ejecución pasan.
 
 ### 11.2 Horizontes posteriores
 

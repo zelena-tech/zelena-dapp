@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SLUGS_INTERES } from "./servicios";
 
 // Stellar public key: 'G' + 55 base32 chars. Aceptamos también wallets demo del seed.
 const wallet = z
@@ -12,11 +13,37 @@ export const inviteVerifySchema = z.object({
   code: z.string().trim().min(3).max(40),
 });
 
+/**
+ * Nombres reservados: sin esto, cualquiera puede registrarse como
+ * "John (Founder)" y aparecer junto al fundador en las listas públicas.
+ */
+const RESERVADOS = ["founder", "fundador", "zelena", "admin", "guardian", "guardián", "soporte", "oficial"];
+
+const nombreVisible = z
+  .string()
+  .trim()
+  .min(2)
+  .max(40)
+  .refine((n) => !RESERVADOS.some((r) => n.toLowerCase().includes(r)), {
+    message: "Ese nombre está reservado. Usa tu nombre o tu alias.",
+  });
+
 export const onboardSchema = z.object({
   code: z.string().trim().min(3).max(40),
   wallet,
-  name: z.string().trim().min(2).max(40),
+  name: nombreVisible,
   isDemo: z.boolean(),
+  claHash: z.string().trim().length(64),
+  signature: z.string().trim().min(4).max(400),
+});
+
+/**
+ * Reingreso de una wallet YA registrada: no consume invitación, no crea usuario.
+ * La autenticación es la firma ed25519 sobre el payload del CLA (solo el titular
+ * de la llave puede producirla), así que no hay código de invitación involucrado.
+ */
+export const loginSchema = z.object({
+  wallet,
   claHash: z.string().trim().length(64),
   signature: z.string().trim().min(4).max(400),
 });
@@ -84,3 +111,31 @@ export const adminActionSchema = z.object({
 });
 
 export type OnboardInput = z.infer<typeof onboardSchema>;
+export type LoginInput = z.infer<typeof loginSchema>;
+
+/**
+ * Formulario comercial de /empresas/contacto. Es público (no hay sesión), así
+ * que la ruta limita por IP. `sitio` es un campo trampa oculto para personas:
+ * se acepta cualquier valor aquí y la ruta descarta en silencio lo que llegue
+ * con él lleno, para no darle al bot una señal de que lo detectamos.
+ */
+export const leadSchema = z.object({
+  nombre: z.string().trim().min(2, "Escribe tu nombre.").max(80),
+  email: z.string().trim().email("Revisa el correo.").max(120),
+  empresa: z.string().trim().max(120).optional().default(""),
+  interes: z.enum(SLUGS_INTERES, { errorMap: () => ({ message: "Elige qué te interesa." }) }),
+  mensaje: z.string().trim().max(2000).optional().default(""),
+  sitio: z.string().max(500).optional().default(""),
+});
+
+/**
+ * Aviso de /encuentros: quien quiere enterarse de la próxima fecha. Mismo
+ * patrón que leadSchema (público, límite por IP, campo trampa `sitio`); se
+ * guarda en `leads` con interes = "encuentros" y la ciudad en `mensaje`.
+ */
+export const avisoEncuentrosSchema = z.object({
+  nombre: z.string().trim().min(2, "Escribe tu nombre.").max(80),
+  email: z.string().trim().email("Revisa el correo.").max(120),
+  ciudad: z.string().trim().max(80).optional().default(""),
+  sitio: z.string().max(500).optional().default(""),
+});

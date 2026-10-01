@@ -15,6 +15,7 @@ import { BlockReasonRequiredError, InvalidTeamTransitionError } from "./team-sta
 import {
   applyAssignmentAction,
   assignmentEventsOfDay,
+  assignmentsForClient,
   assignmentsByInitiative,
   assignmentsForOwner,
   actorFromSession,
@@ -37,6 +38,7 @@ import {
   TeamError,
   type AssignmentRow,
 } from "./team";
+import { createClient } from "./clients";
 
 const FAUSTO = pendingPrincipal("fausto");
 const DAVID = pendingPrincipal("david");
@@ -692,5 +694,58 @@ describe("createAssignmentAs — quién puede ponerle trabajo a quién", () => {
       actor: actorDe(JOHN, "founder", true),
     });
     expect(row.status).toBe("En curso");
+  });
+});
+
+describe("WP17 · trabajo por cliente (fusión: listado que antes vivía en assignments.ts)", () => {
+  it("una asignación referencia cliente y nodo del grafo, y aparece en el backlog de ESE cliente", () => {
+    const db = freshDb();
+    const montoc = createClient(db, { name: "Montoc" });
+    const otro = createClient(db, { name: "Otro" });
+    const id = createAssignment(db, {
+      title: "Verificar la variante de retención contra el sistema",
+      clientId: montoc,
+      graphNodeId: "montoc.variante.facturacion-retencion",
+      acceptanceCriteria: "El nodo queda verificado con evidencia de la BD",
+      priority: "High",
+    });
+    createAssignment(db, { title: "Trabajo interno, sin cliente" });
+    createAssignment(db, { title: "De otro cliente", clientId: otro });
+
+    const row = getAssignment(db, id)!;
+    expect(row.client_id).toBe(montoc);
+    expect(row.graph_node_id).toBe("montoc.variante.facturacion-retencion");
+
+    const backlog = assignmentsForClient(db, montoc);
+    expect(backlog.map((a) => a.id)).toEqual([id]);
+    expect(backlog[0].priority).toBe("High");
+  });
+
+  it("lo cerrado no aparece en el backlog del cliente; lo bloqueado sí", () => {
+    const db = freshDb();
+    const c = createClient(db, { name: "Cliente" });
+    const abierta = createAssignment(db, { title: "Abierta", clientId: c, ownerWallet: DAVID, status: "Asignada" });
+    createAssignment(db, { title: "Cerrada", clientId: c, ownerWallet: DAVID, status: "Hecha" });
+    const bloqueada = createAssignment(db, { title: "Bloqueada", clientId: c, ownerWallet: DAVID, status: "Asignada" });
+    applyAssignmentAction(db, {
+      assignmentId: bloqueada,
+      action: "bloquear",
+      reason: "Falta el acceso del cliente",
+      actor: actor(DAVID),
+    });
+    expect(assignmentsForClient(db, c).map((a) => a.id).sort()).toEqual([abierta, bloqueada].sort());
+  });
+
+  it("sin cliente, nada cambia: client_id y graph_node_id quedan en NULL", () => {
+    const db = freshDb();
+    const id = createAssignment(db, { title: "Interna" });
+    const row = getAssignment(db, id)!;
+    expect(row.client_id).toBeNull();
+    expect(row.graph_node_id).toBeNull();
+  });
+
+  it("createAssignmentAs rechaza un cliente que no existe", () => {
+    const db = freshDb();
+    expect(() => createAssignmentAs(db, actor(JOHN), { title: "X", clientId: 999 })).toThrow(TeamError);
   });
 });

@@ -15,6 +15,7 @@ import AdminAction from "@/components/AdminAction";
 import BotLinkPanel from "@/components/BotLinkPanel";
 import GenomeMutationPanel from "@/components/GenomeMutationPanel";
 import LatentAuditForm from "@/components/LatentAuditForm";
+import { INTERES_ENCUENTROS, nombreInteres } from "@/lib/servicios";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,7 @@ export default async function AdminPage() {
   // Gate por ROL contra la base (no por la wallet de una persona): así el founder
   // que entra por la puerta corporativa (principal `pending:*`) conserva su panel.
   if (!adminActor(session, db)) redirect("/perfil");
+
   const applications = db
     .prepare(
       `SELECT a.*, p.title AS project_title FROM applications a
@@ -54,6 +56,20 @@ export default async function AdminPage() {
   const botActions = listBotActions(db, 50);
   const botLink = linkForWallet(db, founderTeamWallet(db, session.wallet));
   const botStatus = telegramStatus();
+  const leads = db
+    .prepare(`SELECT * FROM leads ORDER BY id DESC LIMIT 100`)
+    .all() as Array<{
+    id: number;
+    nombre: string;
+    email: string;
+    empresa: string | null;
+    interes: string;
+    mensaje: string | null;
+    created_at: string;
+  }>;
+  // La misma tabla guarda dos cosas distintas: pedidos de demo y avisos de /encuentros.
+  const avisos = leads.filter((l) => l.interes === INTERES_ENCUENTROS);
+  const solicitudes = leads.filter((l) => l.interes !== INTERES_ENCUENTROS);
 
   return (
     <div className="space-y-12">
@@ -256,6 +272,60 @@ export default async function AdminPage() {
             )}
           </div>
         </div>
+      </section>
+
+      {/* Solicitudes comerciales desde /empresas/contacto */}
+      <section>
+        <h2 className="mb-4 font-head text-2xl font-bold text-white">Solicitudes de empresas</h2>
+        {solicitudes.length === 0 ? (
+          <EmptyState
+            title="Sin solicitudes"
+            message="Cuando alguien pida una demostración desde /empresas, aparecerá aquí."
+          />
+        ) : (
+          <div className="space-y-3">
+            {solicitudes.map((l) => (
+              <div key={l.id} className="card p-5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <span className="text-sm font-semibold text-white">{l.nombre}</span>
+                    {l.empresa ? <span className="ml-2 text-sm text-muted">· {l.empresa}</span> : null}
+                  </div>
+                  <span className="tag border-line text-muted">{nombreInteres(l.interes)}</span>
+                </div>
+                <a href={`mailto:${l.email}`} className="mt-1 inline-block text-sm text-primary hover:underline">
+                  {l.email}
+                </a>
+                {l.mensaje ? <p className="mt-2 text-sm text-muted">{l.mensaje}</p> : null}
+                <p className="mt-2 text-xs text-faint">{l.created_at} UTC</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Avisos desde /encuentros */}
+      <section>
+        <h2 className="mb-4 font-head text-2xl font-bold text-white">Avisos de encuentros</h2>
+        {avisos.length === 0 ? (
+          <EmptyState
+            title="Sin avisos"
+            message="Cuando alguien deje su correo en /encuentros para enterarse de la próxima fecha, aparecerá aquí."
+          />
+        ) : (
+          <div className="card divide-y divide-line p-0">
+            {avisos.map((l) => (
+              <div key={l.id} className="flex flex-wrap items-baseline justify-between gap-2 px-5 py-3">
+                <div className="text-sm">
+                  <span className="text-white">{l.nombre}</span>{" "}
+                  <a href={`mailto:${l.email}`} className="text-primary hover:underline">{l.email}</a>
+                  {l.mensaje ? <span className="ml-2 text-muted">· {l.mensaje.replace(/^Ciudad: /, "")}</span> : null}
+                </div>
+                <span className="text-xs text-faint">{l.created_at} UTC</span>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Aplicaciones */}

@@ -3,13 +3,17 @@ import Link from "next/link";
 
 export function Logo({ className = "" }: { className?: string }) {
   return (
-    <span className={`inline-flex items-center gap-2 ${className}`}>
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path d="M4 6 L20 6 L4 18 L20 18" stroke="#3CE109" strokeWidth="2.2" strokeLinecap="square" fill="none" />
-      </svg>
-      <span className="font-mono text-lg font-bold uppercase tracking-tight text-white">
-        ZELENA<span className="text-primary">.</span>
-      </span>
+    <span className={`inline-flex items-center ${className}`}>
+      {/* Marca oficial de Zelena: el wordmark, sin glifo ni punto. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/logo-zelena.png"
+        alt="ZELENA"
+        width={1145}
+        height={215}
+        className="h-5 w-auto select-none"
+        draggable={false}
+      />
     </span>
   );
 }

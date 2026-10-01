@@ -39,6 +39,13 @@ cargo build --target wasm32-unknown-unknown --release
 stellar contract deploy --wasm target/wasm32-unknown-unknown/release/zwork_token.wasm --network testnet
 ```
 
+## Demo en vivo (Especialización, septiembre de 2026)
+
+- URL: https://zelena-dao.azurewebsites.net (Stellar **testnet**: sin dinero real, los puntos ZWORK no son transferibles).
+- La entrada usa un código de cohorte multiuso que se comparte en clase (150 usos, vence el 17 de septiembre de 2026); el enlace del QR lo trae prellenado en `/entrar?code=…`.
+- Hospedaje: Azure App Service (Linux, Node 22) con SQLite persistente en `/home`; el arranque está en `apps/web/start-azure.sh` y el paquete se construye desde `apps/web`.
+- El motor evolutivo que se explica en la clase (genoma versionado, fitness, mutación acotada, simulador ABM) vive en `apps/web/src/lib/` (`genome.ts`, `fitness.ts`, `mutation.ts`, `sim.ts`, `epochs.ts`).
+
 ## Propiedad intelectual (importante)
 
 Este repositorio es **propietario**. Toda contribución requiere **firmar el CLA**

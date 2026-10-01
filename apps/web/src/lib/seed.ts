@@ -9,6 +9,7 @@ import { sha256Hex } from "./crypto";
 import { FOUNDER_WALLET, bootstrapInviteCode } from "./config";
 import { GENOME_V1, seedGenomeV1 } from "./genome";
 import { seedTeam } from "./team";
+import { createCohortInvite } from "./invites";
 
 const DELINA = "GDELINACONTRIBUTORDEMOAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 const MARCOS = "GMARCOSDEVDEMOBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB";
@@ -53,6 +54,10 @@ export function seedIfEmpty(db: DB): void {
   // aunque configures la variable después del primer arranque. Es idempotente y no
   // resucita el código una vez consumido (la fila sigue ahí con `used_by`).
   seedBootstrapInvite(db);
+
+  // Código de cohorte: también en cada arranque (idempotente), pero SOLO con
+  // `SEED_COHORT=1`. Va después de todo lo demás y fuera de `seed()`.
+  seedCohortInvite(db);
 }
 
 /** Siembra la invitación de arranque del founder si está configurada y no existe. */
@@ -72,6 +77,45 @@ export function seedBootstrapInvite(db: DB, env: NodeJS.ProcessEnv = process.env
   db.prepare(
     `INSERT INTO invites (code, issuer_wallet, expires_at) VALUES (?, ?, datetime('now','+7 days'))`
   ).run(code, FOUNDER_WALLET);
+}
+
+/**
+ * Código de cohorte de la especialización: un solo código para decenas de
+ * personas (QR proyectado en clase → /entrar?code=ESPECIALIZACION-2026).
+ *
+ * Es PREDECIBLE y admite cientos de cupos: la misma objeción que GENESIS. Por
+ * eso se conserva el código, pero SOLO se siembra si se pide explícitamente con
+ * `SEED_COHORT=1` en App Settings (decisión del líder, fusión v1). Sin la
+ * variable, una base nueva no tiene puerta de cohorte; una base que ya la tenga
+ * la conserva tal cual (no se borra ni se reinician sus `uses`).
+ */
+export const COHORT_CODE = "ESPECIALIZACION-2026";
+/**
+ * Cupos con holgura deliberada: una cohorte de ~150 personas consume MÁS de un
+ * cupo por persona (pestaña privada, cambio de teléfono, almacenamiento borrado,
+ * reintentos). Igualar cupos y asistentes deja a los últimos fuera.
+ */
+const COHORT_MAX_USES_DEFAULT = 400;
+const COHORT_EXPIRES_DAYS_DEFAULT = 45;
+
+/** ¿Se siembra el código de cohorte? Solo con `SEED_COHORT=1`. */
+export function cohortSeedAllowed(env: NodeJS.ProcessEnv = process.env): boolean {
+  return env.SEED_COHORT === "1";
+}
+
+/**
+ * Idempotente (INSERT OR IGNORE, no reinicia `uses` ni la expiración). Corre en
+ * cada arranque desde `seedIfEmpty`, detrás de `cohortSeedAllowed`.
+ */
+export function seedCohortInvite(db: DB, env: NodeJS.ProcessEnv = process.env): boolean {
+  if (!cohortSeedAllowed(env)) return false;
+  createCohortInvite(db, {
+    code: COHORT_CODE,
+    issuerWallet: FOUNDER_WALLET,
+    maxUses: Number(env.COHORT_MAX_USES ?? COHORT_MAX_USES_DEFAULT),
+    expiresDays: Number(env.COHORT_EXPIRES_DAYS ?? COHORT_EXPIRES_DAYS_DEFAULT),
+  });
+  return true;
 }
 
 function seed(db: DB): void {

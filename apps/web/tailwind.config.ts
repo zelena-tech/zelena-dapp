@@ -1,5 +1,6 @@
 import type { Config } from "tailwindcss";
 
+const SERIF = ['"Playfair Display"', "Georgia", "Times New Roman", "serif"];
 const MONO = ['"Space Mono"', "ui-monospace", '"Cascadia Mono"', "Consolas", '"Courier New"', "monospace"];
 
 const config: Config = {
@@ -23,6 +24,8 @@ const config: Config = {
         head: MONO,
         body: MONO,
         mono: MONO,
+        // Titulares de /empresas: registro editorial frente al de terminal de la DAO.
+        serif: SERIF,
       },
       boxShadow: {
         glow: "0 0 0 1px rgba(60,225,9,0.25), 0 0 24px -6px rgba(60,225,9,0.35)",

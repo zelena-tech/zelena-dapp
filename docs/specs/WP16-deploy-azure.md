@@ -1,6 +1,6 @@
 # WP16 · Despliegue en Azure (reemplaza a WP05 para v1)
 
-CONTEXTO — Decisión de John: Azure, coherente con el tenant de Microsoft (Entra ID) y con el FMS que ya corre ahí. El equipo ya tiene el know-how.
+CONTEXTO — Decisión de John: Azure, coherente con el tenant de Microsoft (Entra ID) y con el WMS que ya corre ahí. El equipo ya tiene el know-how.
 
 RESULTADO ESPERADO — v1 en una URL interna estable, con **Azure SQL Database** gestionada (driver `mssql`), secretos fuera del repo y el worker de anclaje corriendo.
 

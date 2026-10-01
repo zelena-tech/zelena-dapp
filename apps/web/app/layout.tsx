@@ -1,17 +1,49 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "@fontsource/space-mono/400.css";
 import "@fontsource/space-mono/700.css";
 import "@fontsource/space-mono/400-italic.css";
+// Serif editorial para los titulares comerciales. Auto-hospedada: la CSP
+// de esta app es font-src 'self' data:, que bloquea Google Fonts.
+import "@fontsource/playfair-display/400.css";
+import "@fontsource/playfair-display/700.css";
+import "@fontsource/playfair-display/400-italic.css";
+import "@fontsource/playfair-display/700-italic.css";
 import "./globals.css";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import MutationBanner from "@/components/MutationBanner";
 import { getSession } from "@/lib/session";
 
+const SITIO = process.env.SITE_URL ?? "https://zelena-dao.azurewebsites.net";
+const DESCRIPCION =
+  "Comunidad de contribuidores donde el valor que entregas determina lo que recibes: reglas públicas, pago por hitos y una reputación que te pertenece. Sobre Stellar, en testnet.";
+
 export const metadata: Metadata = {
-  title: "Zelena DAO — Real work, Real rewards",
-  description:
-    "Comunidad de contribuidores donde el valor que entregas determina lo que recibes. Del piso a la wallet. Sobre Stellar / Soroban, en testnet.",
+  // Necesaria para que las imágenes de Open Graph se sirvan con URL absoluta.
+  metadataBase: new URL(SITIO),
+  title: {
+    default: "Zelena DAO — El valor que entregas decide lo que recibes",
+    template: "%s · Zelena DAO",
+  },
+  description: DESCRIPCION,
+  applicationName: "Zelena DAO",
+  openGraph: {
+    type: "website",
+    locale: "es_CO",
+    siteName: "Zelena DAO",
+    title: "Zelena DAO — El valor que entregas decide lo que recibes",
+    description: DESCRIPCION,
+    url: SITIO,
+  },
+  twitter: { card: "summary_large_image" },
+  robots: { index: true, follow: true },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#080808",
+  colorScheme: "dark",
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

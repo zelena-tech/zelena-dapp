@@ -24,6 +24,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { seedIfEmpty } from "./seed";
+import { FOUNDER_WALLET } from "./config";
 import { azureSqlConfigFromEnv, describeAzureSql, openAzureSql, type EnvLike } from "./db-mssql";
 
 export interface Stmt {
@@ -200,12 +201,15 @@ function init(): DB {
 
   const url = driver === "libsql" ? libsqlUrl() : null;
   let db: DB;
+  // Archivo local de la base, para el respaldo previo a una migración (null = remota).
+  let archivo: string | null = null;
   if (url) {
     // Driver libSQL/Turso seleccionado por env var (deploy serverless o archivo local).
     const authToken = process.env.TURSO_AUTH_TOKEN ?? process.env.DATABASE_AUTH_TOKEN ?? undefined;
     const localFile = localFileFromUrl(url);
     // Para un archivo local, crea el directorio antes de abrir (primer arranque).
     if (localFile) fs.mkdirSync(path.dirname(localFile), { recursive: true });
+    archivo = localFile;
     const libsql = tryLibsql(url, authToken);
     if (libsql) {
       db = libsql;
@@ -225,16 +229,396 @@ function init(): DB {
   } else {
     const file = dbFilePath();
     fs.mkdirSync(path.dirname(file), { recursive: true });
+    archivo = file;
     db = openDb(file);
   }
-  db.pragma("journal_mode = WAL");
-  db.pragma("foreign_keys = ON");
-  db.exec(schemaSql());
-  seedIfEmpty(db);
+  // busy_timeout (antes que nada: con la base en almacenamiento de red los bloqueos
+  // tardan más), WAL, foreign_keys, respaldo + migraciones, schema y seed.
+  const informe = prepararSqlite(db, { archivo, founderWallet: FOUNDER_WALLET });
+  if (informe.migro) {
+    console.info(
+      `[db] migración aplicada · respaldo=${informe.respaldo ?? "(sin archivo)"} · ` +
+        `columnas=${[...informe.preColumnas, ...informe.postColumnas].join(",") || "-"} · ` +
+        `equipo apartado=${informe.apartado} copiado=${informe.copiado ? JSON.stringify(informe.copiado) : "-"} · ` +
+        `correos=${informe.correosCopiados} · founder promovidos=${informe.founderPromovidos}`
+    );
+  }
   return db;
 }
 
 export function getDb(): DB {
   if (!g.__zelenaDb) g.__zelenaDb = init();
   return g.__zelenaDb;
+}
+
+// ===========================================================================
+// Migraciones de la ruta SQLite (fusión v1 ← línea desplegada, 2026-09-30)
+// ===========================================================================
+//
+// `schema.sql` es solo `CREATE ... IF NOT EXISTS`: no toca una tabla que ya
+// existe. La base de PRODUCCIÓN (`/home/data/zelena.db`) nació con el esquema de
+// la línea desplegada (58ee2fd): `users` sin role/entra_oid/auth_provider y las
+// cuatro tablas del módulo equipo con OTRA forma (prioridad alta|media|baja,
+// horizonte en minúscula, eventos sin `day`…). Esta sección la lleva a la forma
+// v1 SIN tocar los datos reales (cla_signatures, anchor_queue, reputation_events,
+// points_ledger, projects, milestones, invites, genoma, votos, periods…).
+//
+// Secuencia (`prepararSqlite`, la misma que corre `init()` y los tests):
+//   1. respaldo `VACUUM INTO` si hay algo que migrar (si falla, NO se migra);
+//   2. `applyMigrations` (columnas que faltan);
+//   3. `apartarEquipoLegado` (renombra las 4 tablas legado a `_legado_*`);
+//   4. `schema.sql`;
+//   5. `applyMigrations` otra vez (tablas recién creadas);
+//   6. `copiarEquipoLegado` (mapeo de valores, conserva ids, todo o nada);
+//   7. seed + `backfillFounder` (el gate de antes, `wallet === FOUNDER_WALLET`,
+//      queda como DATO de la base, no como regla de código).
+// Es idempotente: el segundo arranque no hace nada.
+
+/**
+ * Columnas nuevas sobre tablas preexistentes. `CREATE TABLE IF NOT EXISTS` no
+ * toca una tabla que ya existe, y `ALTER TABLE ADD COLUMN` falla si la columna ya
+ * está. Añadir una entrada aquí es el procedimiento para toda columna nueva sobre
+ * una tabla preexistente.
+ *
+ * `users.email` y `users.recovery_email` (línea desplegada) salieron de la lista:
+ * los correos viven en `user_emails` (WP13). En producción quedan como columnas
+ * legado toleradas; si alguna tuviera valor, `copiarCorreosLegado` lo pasa a
+ * `user_emails`.
+ */
+export const COLUMNAS_NUEVAS: ReadonlyArray<{ tabla: string; columna: string; ddl: string }> = [
+  { tabla: "users", columna: "role", ddl: "TEXT NOT NULL DEFAULT 'contributor'" },
+  { tabla: "users", columna: "is_supervisor", ddl: "INTEGER NOT NULL DEFAULT 0" },
+  { tabla: "users", columna: "entra_oid", ddl: "TEXT" },
+  { tabla: "users", columna: "auth_provider", ddl: "TEXT NOT NULL DEFAULT 'invite'" },
+  // Codigo de cohorte multiuso: NULL en max_uses = un solo uso (semantica original).
+  { tabla: "invites", columna: "max_uses", ddl: "INTEGER" },
+  { tabla: "invites", columna: "uses", ddl: "INTEGER NOT NULL DEFAULT 0" },
+];
+
+/** Columnas de una tabla (vacío si no existe). */
+function columnasDe(db: DB, tabla: string): string[] {
+  try {
+    return (db.prepare(`PRAGMA table_info(${tabla})`).all() as Array<{ name: string }>).map((c) => c.name);
+  } catch {
+    return [];
+  }
+}
+
+/** Columnas de `COLUMNAS_NUEVAS` que faltan en tablas que YA existen. */
+export function columnasFaltantes(db: DB): string[] {
+  const faltan: string[] = [];
+  for (const { tabla, columna } of COLUMNAS_NUEVAS) {
+    const cols = columnasDe(db, tabla);
+    if (cols.length > 0 && !cols.includes(columna)) faltan.push(`${tabla}.${columna}`);
+  }
+  return faltan;
+}
+
+export function applyMigrations(db: DB): string[] {
+  const aplicadas: string[] = [];
+  for (const { tabla, columna, ddl } of COLUMNAS_NUEVAS) {
+    const cols = columnasDe(db, tabla);
+    if (cols.length === 0) continue; // la tabla no existe todavia: la crea schema.sql
+    if (cols.includes(columna)) continue;
+    db.exec(`ALTER TABLE ${tabla} ADD COLUMN ${columna} ${ddl}`);
+    aplicadas.push(`${tabla}.${columna}`);
+  }
+  return aplicadas;
+}
+
+/** Tablas del módulo equipo, hijos primero (orden de renombrado y de borrado). */
+const EQUIPO = ["assignment_events", "checkins", "assignments", "initiatives"] as const;
+/**
+ * Índices de la forma legado. Hay que soltarlos ANTES de renombrar: un índice
+ * viaja con su tabla, y v1 reusa `idx_assign_owner` con OTRAS columnas, así que un
+ * `CREATE INDEX IF NOT EXISTS` lo saltaría y dejaría el índice viejo colgado de
+ * `_legado_assignments`.
+ */
+const IDX_LEGADO = ["idx_assign_owner", "idx_assign_client", "idx_assign_initiative", "idx_aevents_assignment"];
+
+/** ¿El módulo equipo tiene la forma de la línea desplegada (sin `needs_founder`)? */
+export function esEquipoLegado(db: DB): boolean {
+  const cols = columnasDe(db, "assignments");
+  return cols.length > 0 && !cols.includes("needs_founder");
+}
+
+/** ¿Quedó un apartado a medias (tablas `_legado_*` sin copiar)? */
+function hayLegadoApartado(db: DB): boolean {
+  return columnasDe(db, "_legado_assignments").length > 0;
+}
+
+/**
+ * Fila con `is_founder=1` cuyo `role` no es founder: el estado exacto que deja un
+ * `ALTER TABLE ADD COLUMN role DEFAULT 'contributor'` si el arranque murió antes
+ * del backfill. Solo mira datos de la base.
+ */
+function founderInconsistente(db: DB): boolean {
+  if (!columnasDe(db, "users").includes("role")) return false;
+  const r = db.prepare(`SELECT COUNT(*) AS n FROM users WHERE is_founder = 1 AND role <> 'founder'`).get() as {
+    n: number;
+  };
+  return r.n > 0;
+}
+
+export interface DiagnosticoMigracion {
+  columnasFaltantes: string[];
+  equipoLegado: boolean;
+  legadoApartado: boolean;
+  founderInconsistente: boolean;
+}
+
+/** Qué hay que migrar en esta base. Todo falso = no se toca nada. */
+export function diagnosticarMigracion(db: DB): DiagnosticoMigracion {
+  return {
+    columnasFaltantes: columnasFaltantes(db),
+    equipoLegado: esEquipoLegado(db),
+    legadoApartado: hayLegadoApartado(db),
+    founderInconsistente: founderInconsistente(db),
+  };
+}
+
+export function hayQueMigrar(d: DiagnosticoMigracion): boolean {
+  return d.columnasFaltantes.length > 0 || d.equipoLegado || d.legadoApartado || d.founderInconsistente;
+}
+
+/**
+ * Respaldo consistente con `VACUUM INTO` (sirve aunque la base esté en WAL y con
+ * lectores). Nombre: `<archivo>.pre-fusion-<fechaISO>.db` junto a la base. Si el
+ * respaldo falla se LANZA: sin respaldo no se migra.
+ */
+export function respaldarAntesDeMigrar(db: DB, archivo: string, ahora: Date = new Date()): string {
+  const sello = ahora.toISOString().replace(/[:.]/g, "-");
+  let destino = `${archivo}.pre-fusion-${sello}.db`;
+  for (let i = 1; fs.existsSync(destino); i++) destino = `${archivo}.pre-fusion-${sello}-${i}.db`;
+  try {
+    db.exec(`VACUUM INTO '${destino.replace(/'/g, "''")}'`);
+  } catch (e) {
+    throw new Error(
+      `[db] No se pudo respaldar la base antes de migrar (${destino}): ${(e as Error).message}. ` +
+        `No se migra nada. Revisa espacio y permisos del directorio de la base.`
+    );
+  }
+  if (!fs.existsSync(destino)) {
+    throw new Error(`[db] VACUUM INTO no dejó el respaldo en ${destino}. No se migra nada.`);
+  }
+  return destino;
+}
+
+/**
+ * PRE-schema: renombra las 4 tablas legado a `_legado_*` y suelta sus índices,
+ * en UNA transacción. Solo si detecta la forma legado; si no, no hace nada.
+ */
+export function apartarEquipoLegado(db: DB): boolean {
+  if (!esEquipoLegado(db)) return false;
+  db.transaction(() => {
+    for (const i of IDX_LEGADO) db.exec(`DROP INDEX IF EXISTS ${i}`);
+    for (const t of EQUIPO) {
+      if (columnasDe(db, t).length > 0) db.exec(`ALTER TABLE ${t} RENAME TO _legado_${t}`);
+    }
+  })();
+  return true;
+}
+
+const PRIO = (c: string) =>
+  `CASE lower(${c}) WHEN 'alta' THEN 'High' WHEN 'media' THEN 'Normal' WHEN 'baja' THEN 'Low' END`;
+const HOR = (c: string) =>
+  `CASE lower(${c}) WHEN 'ahora' THEN 'Ahora' WHEN 'siguiente' THEN 'Siguiente' WHEN 'parqueado' THEN 'Parqueado' END`;
+const ACC = `CASE action WHEN 'a_revision' THEN 'enviar_a_revision' ELSE action END`;
+const ESTADOS_V1 = `('Backlog','Asignada','En curso','En revisión','Hecha','Bloqueada')`;
+const ACCIONES_V1 = `('crear','asignar','empezar','enviar_a_revision','aprobar','devolver','bloquear','desbloquear')`;
+
+export class MigracionEquipoError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "MigracionEquipoError";
+  }
+}
+
+/**
+ * POST-schema: copia las filas de `_legado_*` a las tablas v1 con el mapeo de
+ * valores, conservando los ids, compara conteos y borra las `_legado_*`. TODO O
+ * NADA: un valor desconocido (prioridad, horizonte, estado, tamaño o acción que no
+ * sabemos traducir) aborta con ROLLBACK. No se adivina.
+ *
+ * Devuelve el conteo por tabla, o `null` si no había nada apartado.
+ */
+export function copiarEquipoLegado(db: DB): Record<string, number> | null {
+  if (!hayLegadoApartado(db)) return null;
+  const cuenta = (t: string) => (db.prepare(`SELECT COUNT(*) AS n FROM ${t}`).get() as { n: number }).n;
+  const origen: Record<string, number> = {};
+  for (const t of EQUIPO) origen[t] = columnasDe(db, `_legado_${t}`).length > 0 ? cuenta(`_legado_${t}`) : 0;
+  const existe = (t: string) => columnasDe(db, `_legado_${t}`).length > 0;
+
+  db.transaction(() => {
+    const malos: string[] = [];
+    const contar = (sql: string, que: string) => {
+      const n = (db.prepare(sql).get() as { n: number }).n;
+      if (n > 0) malos.push(`${n} ${que}`);
+    };
+    if (existe("initiatives")) {
+      contar(`SELECT COUNT(*) AS n FROM _legado_initiatives WHERE ${HOR("horizon")} IS NULL`, "iniciativas con horizonte desconocido");
+    }
+    contar(`SELECT COUNT(*) AS n FROM _legado_assignments WHERE ${PRIO("priority")} IS NULL`, "asignaciones con prioridad desconocida");
+    contar(`SELECT COUNT(*) AS n FROM _legado_assignments WHERE status NOT IN ${ESTADOS_V1}`, "asignaciones con estado desconocido");
+    contar(
+      `SELECT COUNT(*) AS n FROM _legado_assignments WHERE size IS NOT NULL AND size NOT IN ('S','M','L')`,
+      "asignaciones con tamaño desconocido"
+    );
+    // La forma legado no tenía FK de owner_wallet → users; la de v1 sí. Un dueño que
+    // no está en users haría fallar el INSERT con un error opaco: se nombra aquí.
+    contar(
+      `SELECT COUNT(*) AS n FROM _legado_assignments
+       WHERE owner_wallet IS NOT NULL AND owner_wallet NOT IN (SELECT wallet FROM users)`,
+      "asignaciones con un dueño que no está en users"
+    );
+    if (existe("assignment_events")) {
+      contar(
+        `SELECT COUNT(*) AS n FROM _legado_assignment_events
+         WHERE ${ACC} NOT IN ${ACCIONES_V1} OR to_status NOT IN ${ESTADOS_V1}
+            OR (from_status IS NOT NULL AND from_status NOT IN ${ESTADOS_V1})`,
+        "eventos con acción o estado desconocidos"
+      );
+    }
+    if (malos.length > 0) {
+      throw new MigracionEquipoError(
+        `[db] Migración del módulo equipo abortada (${malos.join("; ")}). No se adivina: ` +
+          `corrige esas filas en las tablas _legado_* o restaura el respaldo pre-fusion.`
+      );
+    }
+
+    if (existe("initiatives")) {
+      db.exec(`INSERT INTO initiatives (id, slug, name, horizon, client_id, notes, created_at)
+        SELECT id, slug, name, ${HOR("horizon")}, client_id, notes, created_at FROM _legado_initiatives`);
+    }
+    const joinIni = existe("initiatives") ? `LEFT JOIN _legado_initiatives i ON i.id = a.initiative_id` : "";
+    const horIni = existe("initiatives") ? `COALESCE(${HOR("i.horizon")}, 'Ahora')` : `'Ahora'`;
+    const previoBloqueo = existe("assignment_events")
+      ? `CASE WHEN a.status = 'Bloqueada' THEN (SELECT e.from_status FROM _legado_assignment_events e
+           WHERE e.assignment_id = a.id AND e.to_status = 'Bloqueada' ORDER BY e.id DESC LIMIT 1) END`
+      : `NULL`;
+    db.exec(`INSERT INTO assignments (id, title, description, initiative_id, client_id, owner_wallet, status,
+        status_before_block, priority, size, horizon, due_date, acceptance_criteria, spec_url, graph_node_id,
+        blocked_reason, blocked_at, needs_founder, published_as_project_id, created_by, import_key,
+        created_at, updated_at, closed_at)
+      SELECT a.id, a.title, COALESCE(a.description, ''), a.initiative_id, a.client_id, a.owner_wallet, a.status,
+        ${previoBloqueo},
+        ${PRIO("a.priority")}, a.size, ${horIni}, a.due_date,
+        COALESCE(a.acceptance_criteria, ''), a.spec_url, a.graph_node_id, a.blocked_reason,
+        CASE WHEN a.status = 'Bloqueada' THEN a.updated_at END, 0, a.published_as_project_id, a.created_by, NULL,
+        a.created_at, a.updated_at, CASE WHEN a.status = 'Hecha' THEN a.updated_at END
+      FROM _legado_assignments a ${joinIni}`);
+    if (existe("assignment_events")) {
+      db.exec(`INSERT INTO assignment_events (id, assignment_id, action, from_status, to_status, reason, actor_wallet, day, created_at)
+        SELECT id, assignment_id, ${ACC}, COALESCE(from_status, 'Backlog'), to_status, reason, actor_wallet,
+               substr(created_at, 1, 10), created_at FROM _legado_assignment_events`);
+    }
+    if (existe("checkins")) {
+      db.exec(`INSERT INTO checkins (id, wallet, day, done, doing, blocked, created_at, updated_at)
+        SELECT id, wallet, day, done, doing, COALESCE(blocked, ''), updated_at, updated_at FROM _legado_checkins`);
+    }
+    for (const t of EQUIPO) {
+      const n = cuenta(t);
+      if (n !== origen[t]) {
+        throw new MigracionEquipoError(`[db] Migración del módulo equipo: ${t} tiene ${n} filas y el origen ${origen[t]}.`);
+      }
+    }
+    for (const t of EQUIPO) if (existe(t)) db.exec(`DROP TABLE _legado_${t}`);
+  })();
+  return origen;
+}
+
+/**
+ * Guarda de las columnas legado `users.email` / `users.recovery_email` (línea
+ * desplegada). En producción están todas a NULL; si alguna tuviera valor, se copia
+ * a `user_emails` (sin verificar, no corporativo) antes de olvidarlas. Idempotente.
+ */
+export function copiarCorreosLegado(db: DB): number {
+  const cols = columnasDe(db, "users");
+  let copiados = 0;
+  for (const [col, kind] of [
+    ["email", "primary"],
+    ["recovery_email", "recovery"],
+  ] as const) {
+    if (!cols.includes(col)) continue;
+    const r = db
+      .prepare(
+        `INSERT OR IGNORE INTO user_emails (wallet, email, kind, is_corporate, is_verified)
+         SELECT wallet, lower(trim(${col})), ?, 0, 0 FROM users
+         WHERE ${col} IS NOT NULL AND trim(${col}) <> ''
+           AND lower(trim(${col})) NOT IN (SELECT email FROM user_emails)`
+      )
+      .run(kind);
+    copiados += Number(r.changes);
+  }
+  return copiados;
+}
+
+/**
+ * Backfill del founder: reproduce el gate de antes (`wallet === FOUNDER_WALLET`)
+ * como DATO de la base, una sola vez, en el arranque que migra. Después la
+ * autoridad es `users.role` y el código no vuelve a mirar la variable.
+ */
+export function backfillFounder(db: DB, founderWallet: string | null | undefined): number {
+  const r = db
+    .prepare(
+      `UPDATE users SET role = 'founder', is_supervisor = 1
+       WHERE (is_founder = 1 OR wallet = ?) AND (role <> 'founder' OR is_supervisor <> 1)`
+    )
+    .run(founderWallet ?? "");
+  return Number(r.changes);
+}
+
+export interface OpcionesArranque {
+  /** Archivo de la base (para el respaldo). `null` = memoria/remota: sin respaldo. */
+  archivo: string | null;
+  /** Wallet que hoy pasa el gate de /admin (`FOUNDER_WALLET`). */
+  founderWallet?: string | null;
+  /** Texto de `schema.sql` (por defecto, el del repo). */
+  schema?: string;
+  /** Sembrar (seedIfEmpty). Los tests de migración lo apagan para aislar. */
+  sembrar?: boolean;
+  ahora?: Date;
+}
+
+export interface InformeArranque {
+  migro: boolean;
+  respaldo: string | null;
+  preColumnas: string[];
+  apartado: boolean;
+  postColumnas: string[];
+  copiado: Record<string, number> | null;
+  correosCopiados: number;
+  founderPromovidos: number;
+}
+
+/**
+ * Secuencia completa de arranque de la ruta SQLite (ver cabecera de la sección).
+ * `init()` la llama con el archivo real y `FOUNDER_WALLET`; los tests, con copias.
+ */
+export function prepararSqlite(db: DB, opts: OpcionesArranque): InformeArranque {
+  db.pragma("busy_timeout = 5000");
+  db.pragma("journal_mode = WAL");
+  db.pragma("foreign_keys = ON");
+
+  const diag = diagnosticarMigracion(db);
+  const migro = hayQueMigrar(diag);
+  let respaldo: string | null = null;
+  if (migro && opts.archivo) respaldo = respaldarAntesDeMigrar(db, opts.archivo, opts.ahora);
+
+  // ANTES del schema: sobre una base preexistente, schema.sql declara indices que
+  // usan columnas nuevas (p. ej. idx_users_entra_oid sobre users.entra_oid). Como
+  // CREATE TABLE IF NOT EXISTS no toca la tabla vieja, el indice reventaria antes
+  // de llegar a la migracion. En una base nueva no hace nada (la tabla no existe).
+  const preColumnas = applyMigrations(db);
+  const apartado = apartarEquipoLegado(db);
+  db.exec(opts.schema ?? schemaSql());
+  // DESPUES del schema: columnas nuevas sobre tablas que acaba de crear schema.sql.
+  const postColumnas = applyMigrations(db);
+  const correosCopiados = copiarCorreosLegado(db);
+  const copiado = copiarEquipoLegado(db);
+
+  if (opts.sembrar !== false) seedIfEmpty(db);
+  const founderPromovidos = migro ? backfillFounder(db, opts.founderWallet) : 0;
+
+  return { migro, respaldo, preColumnas, apartado, postColumnas, copiado, correosCopiados, founderPromovidos };
 }

@@ -1,0 +1,5 @@
+# El texto del CLA se firma por su sha256 (03293c93...). Ninguna conversion de fin
+# de linea puede tocarlo: un CRLF cambiaria el hash y todas las firmas nuevas
+# dejarian de coincidir con las anteriores. -text no cambia el blob.
+CLA.md -text
+apps/web/CLA.md -text

@@ -120,6 +120,8 @@ export interface AssignmentRow {
   title: string;
   description: string;
   initiative_id: number | null;
+  /** WP17: cliente al que pertenece el trabajo (NULL = interno). */
+  client_id: number | null;
   owner_wallet: string | null;
   status: TeamStatus;
   status_before_block: TeamStatus | null;
@@ -129,6 +131,8 @@ export interface AssignmentRow {
   due_date: string | null;
   acceptance_criteria: string;
   spec_url: string | null;
+  /** WP20: nodo del grafo de operación, por referencia (nunca por copia). */
+  graph_node_id: string | null;
   blocked_reason: string | null;
   blocked_at: string | null;
   needs_founder: number;
@@ -274,6 +278,10 @@ export interface CreateAssignmentInput {
   title: string;
   description?: string;
   initiativeId?: number | null;
+  /** WP17: cliente (opcional; sin él, trabajo interno). */
+  clientId?: number | null;
+  /** WP20: nodo del grafo (opcional, por referencia). */
+  graphNodeId?: string | null;
   ownerWallet?: string | null;
   status?: TeamStatus;
   priority?: Priority;
@@ -295,15 +303,16 @@ export function createAssignment(db: DB, input: CreateAssignmentInput): number {
   const info = db
     .prepare(
       `INSERT INTO assignments
-         (title, description, initiative_id, owner_wallet, status, priority, size, horizon,
-          due_date, acceptance_criteria, spec_url, needs_founder, published_as_project_id,
+         (title, description, initiative_id, client_id, owner_wallet, status, priority, size, horizon,
+          due_date, acceptance_criteria, spec_url, graph_node_id, needs_founder, published_as_project_id,
           created_by, import_key, closed_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       title,
       input.description?.trim() ?? "",
       input.initiativeId ?? null,
+      input.clientId ?? null,
       input.ownerWallet ?? null,
       status,
       input.priority ?? "Normal",
@@ -312,6 +321,7 @@ export function createAssignment(db: DB, input: CreateAssignmentInput): number {
       input.dueDate ?? null,
       input.acceptanceCriteria?.trim() ?? "",
       input.specUrl ?? null,
+      input.graphNodeId ?? null,
       input.needsFounder ? 1 : 0,
       input.publishedAsProjectId ?? null,
       input.createdBy ?? null,
@@ -345,6 +355,10 @@ export function createAssignmentAs(
   if (destino) {
     const existe = db.prepare(`SELECT wallet FROM users WHERE wallet = ?`).get(destino);
     if (!existe) throw new TeamError(400, "Esa persona no está en el registro.");
+  }
+  if (input.clientId != null) {
+    const cliente = db.prepare(`SELECT id FROM clients WHERE id = ?`).get(input.clientId);
+    if (!cliente) throw new TeamError(400, "Ese cliente no existe.");
   }
   // Con dueño, la pieza nace 'Asignada'; sin dueño, al Backlog. Así el estado no
   // miente: nada aparece como asignado a nadie.
@@ -394,6 +408,19 @@ export function assignmentsForOwner(db: DB, wallet: string): AssignmentView[] {
       `${VIEW_SELECT} WHERE a.owner_wallet = ? AND a.status IN (${OPEN_LIST},'Bloqueada') ${TODAY_ORDER}`
     )
     .all(wallet) as AssignmentView[];
+}
+
+/**
+ * WP17 · Trabajo abierto o bloqueado de UN cliente (pestaña Backlog de
+ * `/clientes/[slug]`). Mismo SELECT y orden de "hoy" que el resto del módulo. La
+ * autorización (equipo interno + `client_members`) la aplica la página antes.
+ */
+export function assignmentsForClient(db: DB, clientId: number): AssignmentView[] {
+  return db
+    .prepare(
+      `${VIEW_SELECT} WHERE a.client_id = ? AND a.status IN (${OPEN_LIST},'Bloqueada') ${TODAY_ORDER}`
+    )
+    .all(clientId) as AssignmentView[];
 }
 
 /** Todo el trabajo abierto o bloqueado del equipo (founder y supervisores). */
@@ -804,6 +831,8 @@ export const createAssignmentSchema = z.object({
   title: z.string().trim().min(1, "La asignación necesita un título.").max(200),
   description: z.string().max(4000).optional(),
   initiativeId: z.coerce.number().int().positive().nullable().optional(),
+  clientId: z.coerce.number().int().positive().nullable().optional(),
+  graphNodeId: z.string().trim().max(200).nullable().optional(),
   ownerWallet: z.string().trim().max(120).nullable().optional(),
   priority: z.enum(PRIORITIES).optional(),
   size: z.enum(SIZES).nullable().optional(),

@@ -189,3 +189,90 @@ describe("escotilla de arranque: el código de founder concede administración",
     expect(rolDe(wallet).role).toBe("contributor");
   });
 });
+
+describe("performOnboard — atomicidad del cupo (caso borde de la cohorte)", () => {
+  it("si el alta falla DESPUÉS de consumir, el cupo se devuelve", async () => {
+    const { openDb, applyMigrations } = await import("./db");
+    const { createCohortInvite } = await import("./invites");
+    const { Keypair } = await import("@stellar/stellar-sdk");
+    const { claCanonicalHash } = await import("./cla");
+    const { claSigningPayload } = await import("./cla-signing");
+    const { CLA_VERSION } = await import("./config");
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    const os = await import("node:os");
+
+    const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "zln-")), "t.db");
+    const db = openDb(file);
+    db.exec(fs.readFileSync(path.join(process.cwd(), "src", "lib", "schema.sql"), "utf8"));
+    applyMigrations(db);
+
+    createCohortInvite(db, { code: "COHORTE-X", issuerWallet: "GISSUER", maxUses: 5, expiresDays: 10 });
+    const usos = () => (db.prepare(`SELECT uses FROM invites WHERE code = 'COHORTE-X'`).get() as { uses: number }).uses;
+
+    const kp = Keypair.random();
+    const claHash = claCanonicalHash();
+    const firma = kp.sign(Buffer.from(claSigningPayload(claHash), "utf8")).toString("base64");
+
+    // Sembramos SOLO la firma: el usuario no existe, así que el alta pasa la
+    // comprobación inicial, consume el cupo, inserta el usuario, y revienta al
+    // insertar la firma por UNIQUE(wallet, cla_version). Es exactamente el punto
+    // en que antes el cupo quedaba quemado sin usuario.
+    db.prepare(
+      `INSERT INTO cla_signatures (wallet, cla_version, cla_hash, signature) VALUES (?, ?, ?, 'previa')`
+    ).run(kp.publicKey(), CLA_VERSION, claHash);
+
+    expect(() =>
+      performOnboard(db, {
+        code: "COHORTE-X",
+        wallet: kp.publicKey(),
+        name: "Alguien",
+        isDemo: true,
+        claHash,
+        signature: firma,
+      })
+    ).toThrow();
+
+    // El cupo volvió a su sitio y no quedó usuario a medias.
+    expect(usos()).toBe(0);
+    const u = db.prepare(`SELECT COUNT(*) AS n FROM users WHERE wallet = ?`).get(kp.publicKey()) as { n: number };
+    expect(u.n).toBe(0);
+  });
+});
+
+// Reingreso (performLogin): la cookie se firma con el rol LEÍDO DE LA BASE, no
+// comparando la wallet con FOUNDER_WALLET. Así un founder real conserva /admin y
+// un contribuidor no se vuelve founder por coincidir con una variable de entorno.
+describe("performLogin — devuelve rol y supervisión de la fila", () => {
+  it("contributor por invitación y founder por dato de la base", async () => {
+    const { performLogin } = await import("./onboard");
+    const db = freshDb();
+    const hash = claCanonicalHash();
+    const kp = Keypair.random();
+    const wallet = kp.publicKey();
+    const sig = b64(kp.sign(Buffer.from(claSigningPayload(hash), "utf8")));
+    const code = seedInvite(db);
+    performOnboard(db, { code, wallet, name: "Ada", isDemo: true, claHash: hash, signature: sig });
+
+    const r1 = performLogin(db, { wallet, claHash: hash, signature: sig });
+    expect(r1.role).toBe("contributor");
+    expect(r1.isSupervisor).toBe(false);
+
+    db.prepare(`UPDATE users SET role = 'founder', is_supervisor = 1 WHERE wallet = ?`).run(wallet);
+    const r2 = performLogin(db, { wallet, claHash: hash, signature: sig });
+    expect(r2.role).toBe("founder");
+    expect(r2.isSupervisor).toBe(true);
+  });
+
+  it("un valor de rol corrupto cae a is_founder, nunca a la cookie", async () => {
+    const { performLogin } = await import("./onboard");
+    const db = freshDb();
+    const hash = claCanonicalHash();
+    const kp = Keypair.random();
+    const wallet = kp.publicKey();
+    const sig = b64(kp.sign(Buffer.from(claSigningPayload(hash), "utf8")));
+    performOnboard(db, { code: seedInvite(db), wallet, name: "Ada", isDemo: true, claHash: hash, signature: sig });
+    db.prepare(`UPDATE users SET role = 'admin-de-mentira' WHERE wallet = ?`).run(wallet);
+    expect(performLogin(db, { wallet, claHash: hash, signature: sig }).role).toBe("contributor");
+  });
+});

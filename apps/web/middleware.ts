@@ -22,7 +22,9 @@ import { SESSION_COOKIE, verifySession } from "@/lib/jwt";
  * sería un bucle.
  */
 const PROTECTED_CLA = ["/perfil", "/admin"];
-const PROTECTED_SESSION = ["/equipo"];
+// `/clientes` (WP17/WP20) también: la puerta real es su layout (equipo interno +
+// `client_members`); esto es la segunda capa.
+const PROTECTED_SESSION = ["/equipo", "/clientes"];
 
 function matches(path: string, prefixes: string[]): boolean {
   return prefixes.some((p) => path === p || path.startsWith(p + "/"));
@@ -46,5 +48,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/perfil/:path*", "/admin/:path*", "/equipo/:path*"],
+  matcher: ["/perfil/:path*", "/admin/:path*", "/equipo/:path*", "/clientes/:path*"],
 };

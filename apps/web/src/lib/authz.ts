@@ -89,3 +89,24 @@ export function equipoInternoActor(session: AdminSession | null, db: DB = getDb(
   const actor = actorEstricto(session, db);
   return actor && esEquipoInterno({ role: actor.role, isSupervisor: actor.isSupervisor }) ? actor : null;
 }
+
+/**
+ * Actor de los entornos por cliente (WP17/WP20), con la forma que esperan
+ * `lib/clients.ts` y `lib/client-graph.ts` (`{ wallet, isFounder }`).
+ *
+ * Doble puerta, por dato de la base y nunca por la wallet de una persona:
+ *  1. hay que ser del EQUIPO INTERNO (WP17: "solo equipo interno accede");
+ *  2. `isFounder` sale del rol (`rolPuedeAdministrar`), y es lo único que deja
+ *     ver un cliente sin ser miembro. Para el resto manda `client_members`, que
+ *     aplica `lib/clients.ts` (404 si no participa).
+ *
+ * Devuelve `null` si la sesión no es del equipo interno.
+ */
+export function clientActor(
+  session: AdminSession | null,
+  db: DB = getDb()
+): { wallet: string; isFounder: boolean } | null {
+  const actor = equipoInternoActor(session, db);
+  if (!actor) return null;
+  return { wallet: actor.wallet, isFounder: rolPuedeAdministrar(actor.role) };
+}

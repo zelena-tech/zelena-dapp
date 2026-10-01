@@ -24,3 +24,14 @@ packages/scripts/.service-account.secret
 
 # Salida de graphify (grafo de conocimiento, artefactos generados)
 graphify-out/
+
+# Datos de clientes reales, worktrees de agentes y copia de docs para deploy: nunca publicos
+apps/web/src/lib/__fixtures__/*grafo*.json
+# .claude/ se versiona (workflows); solo se ignoran los worktrees y la config local
+.claude/worktrees/
+.claude/settings.local.json
+apps/web/docs/
+_to_delete/
+
+# artefacto de tsc incremental (nunca se versiona)
+apps/web/tsconfig.tsbuildinfo

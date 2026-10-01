@@ -46,8 +46,8 @@ export default function Landing() {
         <Type
           lines={[
             "> conectando a zelena…",
-            "> red: testnet — sin humo, sin dinero real todavía.",
-            "> acceso: SOLO POR INVITACIÓN.",
+            "> no preguntamos qué estudiaste.",
+            "> preguntamos qué vas a construir.",
           ]}
         />
         <h1 className="mt-8 max-w-4xl text-4xl leading-[1.02] text-paper sm:text-6xl md:text-7xl">
@@ -63,11 +63,14 @@ export default function Landing() {
           <span className="text-paper">tuya, portátil, imposible de borrar</span>.
         </p>
         <p className="mt-3 text-xs uppercase tracking-widest text-faint">
-          Real work, Real rewards. Del piso a la wallet.
+          Real Work, Real Rewards.
         </p>
         <div className="mt-10 flex flex-wrap items-center gap-3">
           <Link href="/entrar" className="btn btn-primary">
             [ tengo_invitación ]
+          </Link>
+          <Link href="/ecosistema" className="btn btn-ghost">
+            Qué estamos construyendo
           </Link>
           <Link href="/agora" className="btn btn-ghost">
             ver_bounties →
@@ -227,8 +230,11 @@ export default function Landing() {
             <Link href="/entrar" className="btn btn-primary">
               [ entrar_ahora ]
             </Link>
-            <Link href="/whitepaper" className="btn btn-ghost">
-              leer_el_whitepaper
+            <Link href="/encuentros" className="btn btn-ghost">
+              ven_a_un_encuentro
+            </Link>
+            <Link href="/manifiesto" className="btn btn-ghost">
+              leer_el_manifiesto
             </Link>
           </div>
         </div>

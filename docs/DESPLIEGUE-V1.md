@@ -1,6 +1,6 @@
 # Despliegue v1 "Organizar" — checklist
 
-Release v1 (núcleo congelado) = WP13 (login Entra) + WP14 (módulo equipo) + WP15 (dashboard) + WP16 (Azure) + WP19 (asistente Telegram de John). WP17/WP18 = v1.1, tras los criterios de uso de QUEUE.md.
+Release v1 = WP13 (login Entra) + WP14 (módulo equipo) + WP15 (dashboard) + WP16 (Azure) + WP19 (asistente Telegram de John) + WP17 (entornos por cliente) + WP20 (grafo de operación). WP17 y WP20 los descongeló John el 2026-08-16; WP18 sigue en v1.1, tras los criterios de uso de QUEUE.md.
 Objetivo: el equipo abre la app con su correo @zelena.tech y ve sus asignaciones del día; John captura y prioriza desde Telegram; el dashboard responde sin preguntar.
 
 ---
@@ -85,17 +85,31 @@ claude
 
 ### Comandos reales del paso 7 (importar el CSV)
 
-⚠️ **Antes de arrancar por primera vez tras el loop: borra la base local.** El repo no
-tiene sistema de migraciones — `schema.sql` se aplica con `CREATE TABLE IF NOT EXISTS`,
-que **no** añade columnas a una base que ya existe. Las olas de v1 añadieron columnas a
-`users` (`role`, `is_supervisor`, `entra_oid`, `auth_provider`), así que una base vieja
-falla al arrancar. Es desechable y se resiembra sola:
+> ⚠️ **En producción NUNCA se borra la base.** `/home/data/zelena.db` tiene firmas reales del
+> CLA ancladas en testnet, invitaciones consumidas, reputación y puntos: borrarla es perder
+> historia que no se puede reconstruir. Una base que no arranca se **restaura** desde su
+> respaldo (ver "Producción real hoy"), nunca se recrea.
 
-```bash
-rm -f apps/web/data/zelena.db apps/web/data/zelena.db-shm apps/web/data/zelena.db-wal
-```
+La app **sí migra** su base al arrancar (ruta SQLite de `lib/db.ts`), en este orden:
 
-Luego arranca la app una vez (`npm run dev`) para que cree y siembre la base, y importa:
+1. Si hay algo que migrar (falta una columna de `COLUMNAS_NUEVAS` o el módulo equipo tiene la
+   forma legado de la línea desplegada), hace un **respaldo automático**
+   `VACUUM INTO '<base>.pre-fusion-<fechaISO>.db'` junto a la base. Si el respaldo falla,
+   **no migra** y el arranque falla con un mensaje claro.
+2. `applyMigrations`: `ALTER TABLE ADD COLUMN` para `users.role/is_supervisor/entra_oid/auth_provider`
+   e `invites.max_uses/uses`, solo si faltan.
+3. Aparta las tablas legado del equipo (`_legado_*`), crea las de v1 con `schema.sql`, copia las
+   filas con el mapeo de valores (prioridad, horizonte, acciones) conservando los ids y borra las
+   `_legado_*`. Un valor desconocido **aborta** sin cambios.
+4. Siembra (roster, iniciativas, escotilla y, solo con `SEED_COHORT=1`, el código de cohorte) y
+   promueve a `founder` la fila `is_founder=1` o `wallet = FOUNDER_WALLET` (el gate de antes queda
+   como **dato** de la base, no como regla de código).
+
+Es idempotente: el segundo arranque no hace nada. En **desarrollo local** la base
+(`apps/web/data/zelena.db`) sigue siendo desechable si quieres empezar de cero, pero ya no hace
+falta borrarla para arrancar tras una ola.
+
+Con la app arrancada una vez (`npm run dev`) para que cree y siembre la base, importa:
 
 ```bash
 node packages/scripts/import-tareas.mjs --dry-run "C:/Users/Omnia/Desktop/DAO/Zelena_Tareas_Import.csv"
@@ -108,9 +122,36 @@ de adivinar). Cuando el reporte esté limpio, corre el mismo comando sin `--dry-
 el equipo ya movió en la app — solo actualiza título, descripción, prioridad, criterio y
 responsable.
 
-En Azure (paso 6) las columnas nuevas del esquema requieren un `ALTER TABLE` explícito
-si la base ya existía; en una base nueva no hay nada que hacer.
+La ruta Azure SQL (`mssql`) **no migra** todavía: una base Azure SQL nueva se crea completa con
+`schema.sql` traducido; una ya existente requeriría `ALTER TABLE` explícito. Hoy no aplica (ver abajo).
 
+### Producción real hoy: SQLite en `/home/data/zelena.db` (Azure SQL todavía no)
+
+- App Service Linux (`zelena-dao`, Node 22) con **SQLite** (`node:sqlite`) en `/home/data/zelena.db`,
+  fuera de `wwwroot`, para que un despliegue no la pise. Azure SQL (`mssql`) está implementado pero
+  **no** es la base de producción.
+- Fijar **`DATABASE_DRIVER=sqlite`** en App Settings antes de desplegar: v1 cambia sola a Azure SQL
+  (una base vacía) si ve `AZURE_SQL_SERVER` o `AZURE_SQL_CONNECTION_STRING`, y con eso la app
+  "perdería" los datos cambiándose de base.
+- `DATABASE_FILE=/home/data/zelena.db`, `SESSION_SECRET` (≥32 caracteres), `FOUNDER_WALLET` (la wallet
+  real de John: la migración la promueve a `founder`). `SEED_COHORT=1` solo si se quiere mantener
+  vivo el código de cohorte `ESPECIALIZACION-2026`.
+- **Arranque probado hoy:** `apps/web/start-azure.sh` (`node node_modules/next/dist/bin/next start`
+  sobre `.next` + `node_modules`). Se conserva.
+- **Build standalone (siguiente paso):** se compila en **Linux** (GitHub Actions, `npm ci` real, sin
+  symlinks) con `NEXT_STANDALONE=1 npm --workspace apps/web run build`. Solo con esa variable
+  `next.config.mjs` activa `output: "standalone"`; `outputFileTracingIncludes` mete en el paquete
+  `apps/web/src/lib/schema.sql`, los `.mjs` del worker de BD, `CLA.md` (raíz y `apps/web`) y
+  `docs/whitepaper.md`. Copiar `apps/web/.next/static` a `.next/standalone/apps/web/.next/static`
+  y arrancar con `node apps/web/server.js` (`PORT`, `HOSTNAME=0.0.0.0`). Sin `CLA.md` en el paquete
+  la app firma el texto de reserva (pasó el 2026-09-04: dos firmas con `cla_hash = 54aecc56…`).
+- **Antes de cada despliegue que cambie el esquema:** por SSH de Kudu,
+  `node -e "new (require('node:sqlite').DatabaseSync)('/home/data/zelena.db').exec(\"VACUUM INTO '/home/data/zelena-pre-fusion-AAAAMMDD.db'\")"`,
+  bajar esa copia y ensayar el arranque sobre ella.
+- **Después:** el log de arranque muestra las migraciones y la ruta del respaldo; `GET /api/cla`
+  devuelve el hash `03293c93…`; John entra a `/admin`.
+- **Rollback:** volver al paquete anterior **y** restaurar `/home/data/zelena-pre-fusion-*.db`. Sin
+  restaurar la base, el código viejo arranca pero su módulo equipo no puede escribir.
 **Definición de "v1 desplegada":** los 6 entran con su correo, ven sus asignaciones y hacen check-in; John captura tareas desde Telegram y recibe sus 3 focos del día; el dashboard responde sin preguntar.
 
 **Definición de "v1 exitosa" (descongelar v1.1 — se mide con ~2 semanas de USO, no de código):** los 4 criterios de QUEUE.md — 100% de tareas nuevas de John por el sistema, ≥10 asignaciones cerradas contra criterios, ≥2 reuniones de estado reemplazadas, los 5 con asignaciones reales.
@@ -138,7 +179,7 @@ Cifras de referencia para presupuestar; confirmar en la calculadora de Azure con
 | Riesgo | Respuesta |
 |---|---|
 | Consentimiento de admin en Entra se traba | John es admin del tenant; `User.Read` no requiere permisos elevados. Si se traba: flag apagado y v1 arranca con la puerta de invitación mientras se resuelve. |
-| Migración SQLite→Azure SQL rompe algo | La capa `lib/db.ts` aísla y el traductor de dialecto tiene 38 tests. **Ojo (hallazgo D3-03): correr la suite completa contra Azure SQL NO es posible hoy** — los tests abren SQLite `:memory:` hardcodeado. Escribir ese harness es **WP24** y es prerequisito de confiar en la instancia. Foco en las diferencias ya listadas en WP16 (fechas, JSON, paginación) y en el test de carrera del consumo de invitaciones. Nada de datos reales que perder aún. |
+| Migración SQLite→Azure SQL rompe algo | La capa `lib/db.ts` aísla y el traductor de dialecto tiene 38 tests. **Ojo (hallazgo D3-03): correr la suite completa contra Azure SQL NO es posible hoy** — los tests abren SQLite `:memory:` hardcodeado. Escribir ese harness es **WP36** y es prerequisito de confiar en la instancia. Foco en las diferencias ya listadas en WP16 (fechas, JSON, paginación) y en el test de carrera del consumo de invitaciones. Azure SQL aún no tiene datos reales; la SQLite de producción sí (ver "Producción real hoy"). |
 | El equipo no adopta la herramienta | Riesgo #1 y es social, no técnico. Mitigación: importar el trabajo REAL (no ejemplos), check-in de 30 segundos, y John lo usa primero. Si en 2 semanas los check-ins bajan del 50%, el problema es el diseño, no la gente. |
 | Rate limit con múltiples instancias | v1 corre en una instancia. Documentado en WP16; si se escala, mover a Redis. |
-| Se cuela alcance de "automatizar" | Graph, notificaciones y correos NO están en v1. El NO-alcance de cada spec es ley. |
+| Se cuela alcance de "automatizar" | Graph y correos NO están en v1. La única notificación en alcance son los **recordatorios de SLA por Telegram** (pedido de John, 2026-09-30, decisión registrada en CLAUDE.md). El NO-alcance de cada spec es ley. |

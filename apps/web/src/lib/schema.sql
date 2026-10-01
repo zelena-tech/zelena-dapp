@@ -76,6 +76,11 @@ CREATE TABLE IF NOT EXISTS invites (
   issuer_wallet TEXT NOT NULL,
   used_by      TEXT,                 -- wallet que lo consumio (NULL = disponible)
   expires_at   TEXT NOT NULL,
+  -- Codigo de cohorte multiuso: NULL = semantica original de UN SOLO USO
+  -- (used_by manda). Si max_uses NO es NULL, el codigo vale mientras
+  -- uses < max_uses y no haya expirado; used_by se ignora.
+  max_uses     INTEGER,
+  uses         INTEGER NOT NULL DEFAULT 0,
   created_at   TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -322,6 +327,146 @@ CREATE TABLE IF NOT EXISTS academia_awards (
   UNIQUE (wallet, content_id)
 );
 
+-- =====================================================================
+-- WP17 · Entornos por cliente
+-- =====================================================================
+-- REGLA TRANSVERSAL INVIOLABLE: ninguna tabla de este bloque almacena
+-- secretos, contraseñas ni tokens. El inventario guarda DONDE vive la
+-- credencial y QUIEN responde por ella, jamas su valor. Verificado por
+-- auditSchemaForSecretColumns() en clients.test.ts (no por inspeccion manual).
+
+CREATE TABLE IF NOT EXISTS clients (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  slug        TEXT NOT NULL UNIQUE,
+  name        TEXT NOT NULL,
+  status      TEXT NOT NULL DEFAULT 'prospecto', -- activo | pausado | prospecto
+  industry    TEXT,
+  notes       TEXT,
+  created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- La participacion define el permiso. Quien no es miembro no ve el cliente
+-- (ni en listados ni por URL directa: la vista responde 404, no 403).
+CREATE TABLE IF NOT EXISTS client_members (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  client_id    INTEGER NOT NULL,
+  wallet       TEXT NOT NULL,
+  access_level TEXT NOT NULL,          -- lead | colaborador | lectura
+  created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (client_id, wallet),
+  FOREIGN KEY (client_id) REFERENCES clients(id),
+  FOREIGN KEY (wallet) REFERENCES users(wallet)
+);
+
+CREATE TABLE IF NOT EXISTS brand_assets (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  client_id  INTEGER NOT NULL,
+  kind       TEXT NOT NULL,            -- logo | color | tipografia | guia
+  label      TEXT NOT NULL,
+  value      TEXT,                     -- hex, nombre de fuente o texto
+  file_url   TEXT,
+  notes      TEXT,
+  ord        INTEGER NOT NULL DEFAULT 0,
+  FOREIGN KEY (client_id) REFERENCES clients(id)
+);
+
+-- SIN columna de secreto. `location` es una REFERENCIA legible por humanos
+-- ("Key Vault kv-zelena / secret azure-wms-prod"), nunca el valor.
+CREATE TABLE IF NOT EXISTS credential_inventory (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  client_id    INTEGER NOT NULL,
+  name         TEXT NOT NULL,
+  type         TEXT NOT NULL,          -- nube | servidor | api | db | otro
+  location     TEXT NOT NULL,          -- DONDE vive el secreto (referencia)
+  owner_wallet TEXT,                   -- quien responde por el
+  scope        TEXT,                   -- alcance/permisos concedidos
+  rotated_at   TEXT,
+  expires_at   TEXT,
+  notes        TEXT,
+  created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (client_id) REFERENCES clients(id)
+);
+
+-- Saber DONDE esta una credencial ya es informacion sensible: toda consulta
+-- al inventario queda registrada. Append-only.
+CREATE TABLE IF NOT EXISTS credential_access_log (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  client_id     INTEGER NOT NULL,
+  credential_id INTEGER,               -- NULL = listado completo del inventario
+  wallet        TEXT NOT NULL,
+  action        TEXT NOT NULL,         -- list | view
+  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (client_id) REFERENCES clients(id)
+);
+
+-- =====================================================================
+-- WP20 · Grafo de operacion del cliente (READ MODEL)
+-- =====================================================================
+-- La fuente de verdad de este grafo es el repositorio zelena-ops (markdown
+-- versionado en git, revisado por PR). Estas tablas son una PROYECCION de
+-- solo lectura, reconstruida de forma idempotente por importGraph().
+-- La dapp NUNCA escribe de vuelta al grafo. Editar = PR en zelena-ops.
+
+CREATE TABLE IF NOT EXISTS graph_nodes (
+  id             INTEGER PRIMARY KEY AUTOINCREMENT,
+  client_id      INTEGER NOT NULL,
+  node_id        TEXT NOT NULL,        -- montoc.variante.facturacion-credito
+  kind           TEXT NOT NULL,        -- proceso | variante | sistema | modulo | ...
+  name           TEXT NOT NULL,
+  state          TEXT NOT NULL,        -- activo | propuesto | deprecado | roto
+  confidence     TEXT NOT NULL,        -- verificado | declarado | inferido | sospechoso
+  criticality    TEXT,
+  bus_factor     INTEGER,
+  owner_zelena   TEXT,
+  owner_client   TEXT,
+  source         TEXT,                 -- procedencia del conocimiento
+  verified_at    TEXT,
+  tags           TEXT,                 -- JSON array
+  source_path    TEXT,                 -- ruta del nodo en zelena-ops
+  -- Los tres niveles de explicacion (capa de ensenanza):
+  what_is        TEXT,
+  how_it_works   TEXT,
+  tech_detail    TEXT,
+  business_rules TEXT,
+  open_questions TEXT,
+  open_count     INTEGER NOT NULL DEFAULT 0,
+  imported_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (client_id, node_id),
+  FOREIGN KEY (client_id) REFERENCES clients(id)
+);
+
+CREATE TABLE IF NOT EXISTS graph_edges (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  client_id  INTEGER NOT NULL,
+  from_node  TEXT NOT NULL,
+  to_node    TEXT NOT NULL,
+  kind       TEXT NOT NULL,            -- pertenece_a | varia_de | depende_de | ...
+  UNIQUE (client_id, from_node, to_node, kind),
+  FOREIGN KEY (client_id) REFERENCES clients(id)
+);
+
+-- Historial de importaciones: permite ver como evoluciona la cobertura del
+-- conocimiento en el tiempo (metrica vendible: "pasamos de 3% a 68% verificado").
+CREATE TABLE IF NOT EXISTS graph_imports (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  client_id     INTEGER NOT NULL,
+  generated_at  TEXT NOT NULL,         -- fecha que reporta el grafo.json
+  nodes         INTEGER NOT NULL,
+  edges         INTEGER NOT NULL,
+  pct_verified  REAL NOT NULL,
+  open_questions INTEGER NOT NULL,
+  bus_factor_critical INTEGER NOT NULL,
+  imported_by   TEXT,
+  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (client_id) REFERENCES clients(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_cmembers_wallet ON client_members(wallet);
+CREATE INDEX IF NOT EXISTS idx_cred_client ON credential_inventory(client_id);
+CREATE INDEX IF NOT EXISTS idx_gnodes_client ON graph_nodes(client_id, kind);
+CREATE INDEX IF NOT EXISTS idx_gedges_from ON graph_edges(client_id, from_node);
+CREATE INDEX IF NOT EXISTS idx_gedges_to ON graph_edges(client_id, to_node);
+
 -- ============================================================================
 -- MÓDULO EQUIPO (WP14) — el trabajo real del equipo interno.
 -- Dos vistas de la misma pieza de trabajo: `assignments` es la vista interna;
@@ -337,7 +482,10 @@ CREATE TABLE IF NOT EXISTS initiatives (
   slug       TEXT NOT NULL UNIQUE,
   name       TEXT NOT NULL,
   horizon    TEXT NOT NULL DEFAULT 'Ahora',   -- Ahora | Siguiente | Parqueado
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  client_id  INTEGER,                         -- WP17: NULL = iniciativa interna
+  notes      TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (client_id) REFERENCES clients(id)
 );
 
 -- Máquina de estados en lib/team-state-machine.ts (función PURA, igual que la del
@@ -353,6 +501,7 @@ CREATE TABLE IF NOT EXISTS assignments (
   title                   TEXT NOT NULL,
   description             TEXT NOT NULL DEFAULT '',
   initiative_id           INTEGER,
+  client_id               INTEGER,                         -- WP17: NULL = trabajo interno
   owner_wallet            TEXT,
   status                  TEXT NOT NULL DEFAULT 'Backlog',
   status_before_block     TEXT,
@@ -362,6 +511,7 @@ CREATE TABLE IF NOT EXISTS assignments (
   due_date                TEXT,                            -- YYYY-MM-DD
   acceptance_criteria     TEXT NOT NULL DEFAULT '',
   spec_url                TEXT,
+  graph_node_id           TEXT,                            -- WP20: nodo del grafo, por referencia
   blocked_reason          TEXT,
   blocked_at              TEXT,
   needs_founder           INTEGER NOT NULL DEFAULT 0,
@@ -372,6 +522,7 @@ CREATE TABLE IF NOT EXISTS assignments (
   updated_at              TEXT NOT NULL DEFAULT (datetime('now')),
   closed_at               TEXT,                            -- cuándo pasó a Hecha
   FOREIGN KEY (initiative_id) REFERENCES initiatives(id),
+  FOREIGN KEY (client_id) REFERENCES clients(id),
   FOREIGN KEY (owner_wallet) REFERENCES users(wallet),
   FOREIGN KEY (published_as_project_id) REFERENCES projects(id)
 );
@@ -409,6 +560,7 @@ CREATE TABLE IF NOT EXISTS checkins (
 
 CREATE INDEX IF NOT EXISTS idx_assign_owner ON assignments(owner_wallet);
 CREATE INDEX IF NOT EXISTS idx_assign_initiative ON assignments(initiative_id);
+CREATE INDEX IF NOT EXISTS idx_assign_client ON assignments(client_id);
 CREATE INDEX IF NOT EXISTS idx_assign_status ON assignments(status);
 CREATE INDEX IF NOT EXISTS idx_assign_events ON assignment_events(assignment_id);
 CREATE INDEX IF NOT EXISTS idx_assign_events_day ON assignment_events(day);
@@ -513,3 +665,20 @@ CREATE TABLE IF NOT EXISTS bot_actions (
 CREATE INDEX IF NOT EXISTS idx_bot_actions_wallet ON bot_actions(wallet);
 CREATE INDEX IF NOT EXISTS idx_bot_drafts_wallet ON bot_drafts(wallet);
 CREATE INDEX IF NOT EXISTS idx_notes_author ON notes(author);
+
+-- Solicitudes comerciales desde /empresas/contacto y avisos de /encuentros
+-- (interes = INTERES_ENCUENTROS). Sin relacion con users: quien escribe es un
+-- prospecto, no un miembro de la DAO, y no tiene wallet. Anadida como excepcion
+-- autorizada por John (2026-09-23); este archivo se ejecuta en cada arranque.
+CREATE TABLE IF NOT EXISTS leads (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  nombre     TEXT NOT NULL,
+  email      TEXT NOT NULL,
+  empresa    TEXT,
+  interes    TEXT NOT NULL,            -- slug de src/lib/servicios.ts
+  mensaje    TEXT,
+  estado     TEXT NOT NULL DEFAULT 'nuevo',
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_leads_creado ON leads(created_at);

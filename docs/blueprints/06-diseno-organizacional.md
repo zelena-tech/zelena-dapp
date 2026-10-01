@@ -41,7 +41,7 @@ Ya implementado y por implementar:
 
 Los ejemplos de DevOps (frecuencia de despliegue, MTTR, trabajo no planeado) se traducen a las dos realidades de Zelena:
 
-**Candidatos para el WMS/FMS** (lo que paga las cuentas):
+**Candidatos para el WMS** (lo que paga las cuentas):
 - Reducir el tiempo de despliegue de un cliente nuevo de 1 semana a 3 días
 - Reducir el trabajo no planeado (soporte reactivo) del X% actual al 30% del tiempo del equipo
 - Cero parches manuales en producción de clientes
