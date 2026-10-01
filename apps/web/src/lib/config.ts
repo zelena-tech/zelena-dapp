@@ -194,3 +194,40 @@ export function isBootstrapCode(code: string, env: NodeJS.ProcessEnv = process.e
   const boot = bootstrapInviteCode(env);
   return !!boot && code.trim().toUpperCase() === boot;
 }
+
+// ---------------------------------------------------------------------------
+// Recordatorios de SLA y su cron (WP31-C1)
+// ---------------------------------------------------------------------------
+// Mismo patrón que Entra y Telegram: `process.env` se lee EN CADA LLAMADA (se prueba
+// la flag encendida y apagada sin recargar módulos, y el build no congela un valor).
+// Ningún secreto se registra ni se escribe en disco o en la base.
+
+/**
+ * Flag del motor de recordatorios. Gobierna TODO el motor: apagada no escribe ni
+ * envía nada. APAGADA por defecto en código; en producción se enciende (`=1`) tras
+ * una corrida de simulación (`POST /api/cron/recordatorios?simular=1`).
+ */
+export function isSlaRemindersEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
+  const v = (env.SLA_REMINDERS_ENABLED ?? "").trim().toLowerCase();
+  return v === "1" || v === "true" || v === "yes";
+}
+
+/** Largo mínimo del secreto del cron: con menos, la ruta responde 503 (`sin_configurar`). */
+export const CRON_SECRET_MIN = 32;
+
+/**
+ * Secreto que el workflow programado manda en `x-cron-secret`. `null` si falta o tiene
+ * menos de `CRON_SECRET_MIN` caracteres. Nunca se registra en logs ni se devuelve.
+ */
+export function cronSecret(env: NodeJS.ProcessEnv = process.env): string | null {
+  const v = (env.CRON_SECRET ?? "").trim();
+  return v.length >= CRON_SECRET_MIN ? v : null;
+}
+
+/** Host canónico de los enlaces de los mensajes (`ZELENA_APP_URL`), sin barra final. */
+export const APP_URL_DEFAULT = "https://www.zelena.tech";
+
+export function appBaseUrl(env: NodeJS.ProcessEnv = process.env): string {
+  const v = (env.ZELENA_APP_URL ?? "").trim().replace(/\/+$/, "");
+  return /^https?:\/\/[^\s/]+$/i.test(v) ? v : APP_URL_DEFAULT;
+}
