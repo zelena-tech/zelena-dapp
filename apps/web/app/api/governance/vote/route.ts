@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
+import { currentEpoch } from "@/lib/genome";
 import { getSession } from "@/lib/session";
 import { voteSchema } from "@/lib/validation";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
@@ -35,9 +36,10 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: "Ya votaste en esta propuesta." }, { status: 409 });
   }
-  // Registro de reputación en gobernanza por participar.
+  // Registro de reputación en gobernanza por participar. `period_id` explícito (WP31):
+  // sin él la fila caería en la época 1 por el DEFAULT y cambiaría una raíz ya cerrada.
   db.prepare(
-    `INSERT INTO reputation_events (wallet, axis, delta, ref) VALUES (?, 'gobernanza', 2, 'Voto en propuesta')`
-  ).run(session.wallet);
+    `INSERT INTO reputation_events (wallet, axis, delta, ref, period_id) VALUES (?, 'gobernanza', 2, 'Voto en propuesta', ?)`
+  ).run(session.wallet, currentEpoch(db));
   return NextResponse.json({ ok: true });
 }
