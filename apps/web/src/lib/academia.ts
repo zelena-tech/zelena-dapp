@@ -11,6 +11,7 @@
 import type { DB } from "./db";
 import { randomToken } from "./crypto";
 import { getActiveGenome, currentEpoch } from "./genome";
+import { puntosDeEpoca } from "./gamificacion";
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
@@ -137,12 +138,10 @@ export function gradeQuiz(
   const multiplier = genome.ACADEMIA_DIMINISHING[usedToday] ?? 0.5;
   let points = Math.round(content.points * multiplier);
 
-  // Presupuesto de época de Academia (separado).
-  const academiaSpent = (
-    db.prepare(`SELECT COALESCE(SUM(points),0) AS n FROM points_ledger WHERE bucket = 'academia'`).get() as {
-      n: number;
-    }
-  ).n;
+  // Presupuesto de Academia de la época ACTUAL (separado del de ejecución). WP31: antes
+  // se sumaba la Academia de todas las épocas contra el presupuesto de una sola.
+  const periodId = currentEpoch(db);
+  const academiaSpent = puntosDeEpoca(db, periodId, "academia");
   if (academiaSpent + points > genome.ACADEMIA_BUDGET) {
     points = Math.max(0, genome.ACADEMIA_BUDGET - academiaSpent);
   }
@@ -152,7 +151,6 @@ export function gradeQuiz(
     throw err;
   }
 
-  const periodId = currentEpoch(db);
   const tx = db.transaction(() => {
     db.prepare(
       `INSERT INTO academia_awards (wallet, content_id, day, ord_of_day, points) VALUES (?, ?, ?, ?, ?)`

@@ -86,3 +86,51 @@ describe("Academia anti-bot", () => {
     expect(r.activeSeconds).toBeGreaterThanOrEqual(15);
   });
 });
+
+describe("tope de Academia por época y bucket (WP31, criterio B5)", () => {
+  let db: ReturnType<typeof freshDb>["db"];
+  let cid: number;
+
+  function aprobarQuiz(): { passed: boolean; points: number } {
+    const { token } = startReading(db, W, cid);
+    db.prepare(`UPDATE reading_sessions SET active_seconds = 65, started_at = ? WHERE token = ?`).run(Date.now() - 70_000, token);
+    const ids = getQuiz(db, W, token).map((q) => q.id);
+    return gradeQuiz(db, W, token, ids, [1, 1, 1]);
+  }
+
+  function sumar(points: number, periodId: number, bucket: string): void {
+    db.prepare(`INSERT INTO points_ledger (wallet, points, period_id, bucket, ref) VALUES ('GOTRA', ?, ?, ?, 'Previo')`).run(
+      points,
+      periodId,
+      bucket
+    );
+  }
+
+  beforeEach(() => {
+    const f = freshDb();
+    db = f.db;
+    cid = f.cid;
+    db.prepare(`UPDATE periods SET state = 'Closed' WHERE id = 1`).run();
+    db.prepare(`INSERT INTO periods (id, name, epoch_budget, academia_budget, state) VALUES (2, 'E2', 100000, 5000, 'Open')`).run();
+  });
+
+  it("la Academia de otra época y los puntos de ejecución no cuentan; la fila va a la época actual", () => {
+    sumar(5_000, 1, "academia"); // la época anterior agotó su Academia
+    sumar(100_000, 2, "ejecucion");
+    const r = aprobarQuiz();
+    expect(r.points).toBe(150);
+    const fila = db.prepare(`SELECT period_id, bucket FROM points_ledger WHERE wallet = ?`).get(W);
+    expect(fila).toEqual({ period_id: 2, bucket: "academia" });
+  });
+
+  it("la Academia de la época actual sí cuenta: recorta al remanente", () => {
+    sumar(4_950, 2, "academia");
+    expect(aprobarQuiz().points).toBe(50);
+  });
+
+  it("agotada en la época actual, no otorga", () => {
+    sumar(5_000, 2, "academia");
+    expect(() => aprobarQuiz()).toThrow(/agotado/);
+    expect(db.prepare(`SELECT 1 AS x FROM points_ledger WHERE wallet = ?`).get(W)).toBeUndefined();
+  });
+});
