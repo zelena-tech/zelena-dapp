@@ -509,36 +509,46 @@ export default function Entrar() {
             </p>
           </div>
 
-          <div className="rounded-md border border-line-strong bg-surface-2 p-4">
-            <p className="label">Crea tu cuenta</p>
-            <p className="mt-1 text-xs text-muted">
-              Se genera en tu navegador en un segundo, sin instalar nada.
-            </p>
-            <button
-              className="btn btn-primary mt-3 w-full"
-              onClick={() => void elegirWalletDemo()}
-              disabled={ocupado !== ""}
-            >
-              {ocupado === "demo" ? "Creando…" : "Crear wallet de prueba"}
-            </button>
+          {/* El camino principal es la wallet propia: la de prueba se registra como
+              cuenta de prueba (is_demo = 1), que no cuenta en las cifras públicas ni en
+              el equipo, y su clave vive solo en este navegador. Por eso va segunda y lo
+              dice. El nombre de la extensión queda tras "Ver detalle". */}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-md border border-line-strong bg-surface-2 p-4">
+              <p className="label">Tu propia wallet</p>
+              <p className="mt-1 text-xs text-muted">
+                La que ya usas en este navegador. Tu cuenta queda ligada a ella, no a este navegador.
+              </p>
+              <button
+                className="btn btn-primary mt-3 w-full"
+                onClick={connectFreighter}
+                disabled={ocupado !== ""}
+              >
+                {ocupado === "freighter" ? "Conectando…" : "Conectar mi wallet"}
+              </button>
+              <details className="mt-3 text-xs text-faint">
+                <summary className="cursor-pointer text-muted hover:text-primary">Ver detalle</summary>
+                <p className="mt-2 leading-6">
+                  Funciona con Freighter, la extensión de Stellar para el navegador (freighter.app). Es la opción para
+                  entrar como fundador o con tu wallet de siempre.
+                </p>
+              </details>
+            </div>
+            <div className="rounded-md border border-line bg-surface-2 p-4">
+              <p className="label">Wallet de prueba</p>
+              <p className="mt-1 text-xs text-muted">
+                Para mirar por dentro sin instalar nada. Es una cuenta de prueba: vive solo en este navegador y no
+                cuenta en las cifras públicas.
+              </p>
+              <button
+                className="btn btn-ghost mt-3 w-full"
+                onClick={() => void elegirWalletDemo()}
+                disabled={ocupado !== ""}
+              >
+                {ocupado === "demo" ? "Creando…" : "Crear wallet de prueba"}
+              </button>
+            </div>
           </div>
-
-          {/* Freighter, solo tras "ver detalle" (abierto de entrada para quien vuelve con su wallet). */}
-          <details className="rounded-md border border-line bg-surface-2 p-4" open={returning}>
-            <summary className="cursor-pointer text-sm text-muted hover:text-primary">
-              ¿Ya tienes tu propia wallet? Ver detalle
-            </summary>
-            <p className="mt-3 text-xs text-muted">
-              Freighter (extensión de navegador). Es la opción para entrar como fundador o con tu wallet de siempre.
-            </p>
-            <button
-              className="btn btn-ghost mt-3 w-full"
-              onClick={connectFreighter}
-              disabled={ocupado !== ""}
-            >
-              {ocupado === "freighter" ? "Conectando…" : "Conectar Freighter"}
-            </button>
-          </details>
 
           {walletGuardada ? (
             <div className="border border-primary/40 bg-glow p-4">
@@ -576,7 +586,9 @@ export default function Entrar() {
           {walletMsg ? <p className="text-sm text-muted">{walletMsg}</p> : null}
           {wallet ? (
             <div className="rounded-md border border-primary/40 bg-glow p-3">
-              <p className="text-xs text-faint">Wallet {isDemo ? "de prueba (demo)" : "conectada (Freighter)"}</p>
+              <p className="text-xs text-faint">
+                {isDemo ? "Wallet de prueba, solo en este navegador" : "Tu wallet, conectada"}
+              </p>
               <p className="break-all font-mono text-sm text-white">{wallet}</p>
             </div>
           ) : null}

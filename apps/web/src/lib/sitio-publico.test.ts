@@ -316,6 +316,56 @@ describe("lenguaje editorial en lo público", () => {
 });
 
 /**
+ * La wallet de prueba se registra con `is_demo = 1`: no cuenta en las cifras de la
+ * landing ("sin cuentas de prueba"), ni en el equipo ni en el dashboard, y su clave
+ * vive solo en el navegador. Si fuera el botón principal, los invitados reales
+ * quedarían como cuentas de prueba sin saberlo. El camino principal es la wallet
+ * propia; la de prueba es la opción secundaria y lo dice.
+ */
+describe("/entrar · el camino principal es una cuenta real, no una de prueba", () => {
+  const src = leer("app/entrar/page.tsx");
+
+  /** Etiqueta de apertura del botón que dispara `accion` (desde `<button` hasta el onClick). */
+  function boton(accion: string): string {
+    const i = src.indexOf(accion);
+    expect(i, accion).toBeGreaterThan(0);
+    expect(src.indexOf(accion, i + 1), `${accion} aparece una sola vez`).toBe(-1);
+    return src.slice(src.lastIndexOf("<button", i), i);
+  }
+
+  /** ¿Está `accion` dentro de un `<details>` (escondida tras "Ver detalle")? */
+  function trasVerDetalle(accion: string): boolean {
+    const antes = src.slice(0, src.indexOf(accion));
+    return (antes.match(/<details\b/g) ?? []).length > (antes.match(/<\/details>/g) ?? []).length;
+  }
+
+  const CONECTAR = "onClick={connectFreighter}";
+  const PRUEBA = "onClick={() => void elegirWalletDemo()}";
+
+  it("conectar tu propia wallet es el botón principal y está a la vista", () => {
+    expect(boton(CONECTAR)).toContain("btn-primary");
+    expect(trasVerDetalle(CONECTAR)).toBe(false);
+  });
+
+  it("la wallet de prueba es la opción secundaria y avisa de lo que implica", () => {
+    expect(boton(PRUEBA)).not.toContain("btn-primary");
+    expect(src.indexOf(CONECTAR)).toBeLessThan(src.indexOf(PRUEBA));
+    expect(src.replace(/\s+/g, " ")).toContain(
+      "Es una cuenta de prueba: vive solo en este navegador y no cuenta en las cifras públicas."
+    );
+  });
+
+  it("solo la wallet de prueba se registra como cuenta de prueba", () => {
+    expect(src.match(/setIsDemo\(true\)/g) ?? []).toHaveLength(2); // crear una nueva o usar la guardada
+    expect(src).toMatch(/async function connectFreighter\(\)[\s\S]*?setIsDemo\(false\)/);
+  });
+
+  it("no le pone la etiqueta '(demo)' a nadie", () => {
+    expect(src).not.toMatch(/\(demo\)/i);
+  });
+});
+
+/**
  * Nombres de clientes y proyectos privados: la lista NO se versiona (el repo es
  * público). Este test guarda solo sus HUELLAS (sha256 del nombre normalizado: sin
  * tildes, en minúscula, con las palabras separadas por un espacio y también
