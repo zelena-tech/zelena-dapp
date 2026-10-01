@@ -238,6 +238,7 @@ export default async function AdminPage() {
             linkedAt={botLink?.linked_at ?? null}
             enabled={botStatus.enabled}
             missing={botStatus.missing}
+            optional={botStatus.optional}
           />
 
           <div>

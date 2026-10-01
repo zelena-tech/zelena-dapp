@@ -42,9 +42,9 @@ export const MENU_EMPRESAS: readonly EnlaceMenu[] = [
  * aquí su bandera (una línea) y el test lo confirma.
  */
 export const RUTA_AVISOS = "/equipo/avisos";
-export const AVISOS_EN_MENU: boolean = false;
+export const AVISOS_EN_MENU: boolean = true;
 export const RUTA_PUBLICAR = "/equipo/publicar";
-export const PUBLICAR_DISPONIBLE: boolean = false;
+export const PUBLICAR_DISPONIBLE: boolean = true;
 
 /** Enlace a la página de publicar una pieza en el Ágora (`/equipo/publicar/<id>`). */
 export function rutaPublicar(assignmentId: number): string {

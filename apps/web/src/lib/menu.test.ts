@@ -51,7 +51,7 @@ describe("menuPara (E1-2)", () => {
   });
 
   it("con sesión de founder o supervisor: además Talento", () => {
-    const m = menuPara({ ruta: "/", conSesion: true, accesoEquipo: true, esInterno: true, puedeVerTodo: true });
+    const m = menuPara({ ruta: "/", conSesion: true, accesoEquipo: true, esInterno: true, puedeVerTodo: true, conAvisos: false });
     expect(m.map((e) => e.label)).toEqual(["Mi día", "Proyectos", "Talento", "Clientes", "Ágora", "Academia", "Comunidad"]);
     expect(m.find((e) => e.label === "Talento")?.href).toBe("/equipo/talento");
   });
