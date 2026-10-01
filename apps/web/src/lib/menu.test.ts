@@ -5,15 +5,20 @@ import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import {
+  AVISOS_EN_MENU,
   AVISO_LEGAL,
   FOOTER_GRUPOS,
   MENU_EMPRESAS,
   MENU_PUBLICO,
+  PUBLICAR_DISPONIBLE,
+  RUTA_AVISOS,
   RUTA_COMUNIDAD,
+  RUTA_PUBLICAR,
   URL_LICENCIA,
   esEnlaceExterno,
   esRutaEmpresas,
   menuPara,
+  rutaPublicar,
 } from "./menu";
 
 const SIN_SESION = { conSesion: false, accesoEquipo: false, esInterno: false, puedeVerTodo: false };
@@ -76,6 +81,72 @@ describe("menuPara (E1-2)", () => {
 
   it("RUTA_COMUNIDAD apunta a /comunidad", () => {
     expect(RUTA_COMUNIDAD).toBe("/comunidad");
+  });
+});
+
+describe("menú con acceso real al trabajo (criterio I6 de WP31)", () => {
+  // Nav resuelve `accesoEquipo` contra la base (lib/authz.ts): un contributor con el
+  // acuerdo firmado y una membresía tiene acceso aunque no sea del equipo interno.
+  const CONTRIBUTOR_MIEMBRO = { conSesion: true, accesoEquipo: true, esInterno: false, puedeVerTodo: false };
+
+  it("un contributor miembro ve Mi día y Proyectos, pero no Talento ni Clientes", () => {
+    const m = menuPara({ ruta: "/", ...CONTRIBUTOR_MIEMBRO });
+    const labels = m.map((e) => e.label);
+    expect(labels.slice(0, 2)).toEqual(["Mi día", "Proyectos"]);
+    expect(labels).not.toContain("Talento");
+    expect(labels).not.toContain("Clientes");
+    expect(labels.slice(-3)).toEqual(["Ágora", "Academia", "Comunidad"]);
+  });
+
+  it("un contributor sin membresía (sin acceso) no ve el trabajo", () => {
+    const m = menuPara({ ruta: "/", ...CONTRIBUTOR_MIEMBRO, accesoEquipo: false });
+    expect(m.map((e) => e.label)).not.toContain("Mi día");
+    expect(m.filter((e) => INTERNO_PRIVADO.test(e.href))).toEqual([]);
+  });
+
+  it("Avisos va después de Proyectos, solo con acceso al trabajo y solo si su página existe", () => {
+    const con = menuPara({ ruta: "/", ...CONTRIBUTOR_MIEMBRO, conAvisos: true });
+    expect(con.map((e) => e.label).slice(0, 3)).toEqual(["Mi día", "Proyectos", "Avisos"]);
+    expect(con.find((e) => e.label === "Avisos")?.href).toBe(RUTA_AVISOS);
+    expect(RUTA_AVISOS).toBe("/equipo/avisos");
+    const sinAcceso = menuPara({ ruta: "/", ...CONTRIBUTOR_MIEMBRO, accesoEquipo: false, conAvisos: true });
+    expect(sinAcceso.map((e) => e.label)).not.toContain("Avisos");
+    const sinPagina = menuPara({ ruta: "/", ...CONTRIBUTOR_MIEMBRO, conAvisos: false });
+    expect(sinPagina.map((e) => e.label)).not.toContain("Avisos");
+    expect(menuPara({ ruta: "/", ...SIN_SESION, conAvisos: true })).toEqual([...MENU_PUBLICO]);
+  });
+
+  // Un enlace a una ruta que no existe es un 404 a la vista de todos; y una ruta que ya
+  // existe sin su enlace no la encuentra nadie. Quien fusione la página enciende la bandera.
+  it("AVISOS_EN_MENU coincide con la existencia de app/equipo/avisos/page.tsx", () => {
+    const existe = fs.existsSync(path.join(process.cwd(), "app", "equipo", "avisos", "page.tsx"));
+    expect(
+      AVISOS_EN_MENU,
+      existe
+        ? "Ya existe /equipo/avisos: pon AVISOS_EN_MENU = true en src/lib/menu.ts"
+        : "No existe /equipo/avisos: AVISOS_EN_MENU tiene que quedar en false"
+    ).toBe(existe);
+    expect(menuPara({ ruta: "/", ...CONTRIBUTOR_MIEMBRO }).some((e) => e.href === RUTA_AVISOS)).toBe(existe);
+  });
+
+  it("PUBLICAR_DISPONIBLE coincide con la existencia de app/equipo/publicar/[id]/page.tsx", () => {
+    const existe = fs.existsSync(path.join(process.cwd(), "app", "equipo", "publicar", "[id]", "page.tsx"));
+    expect(
+      PUBLICAR_DISPONIBLE,
+      existe
+        ? "Ya existe /equipo/publicar/[id]: pon PUBLICAR_DISPONIBLE = true en src/lib/menu.ts"
+        : "No existe /equipo/publicar/[id]: PUBLICAR_DISPONIBLE tiene que quedar en false"
+    ).toBe(existe);
+    expect(RUTA_PUBLICAR).toBe("/equipo/publicar");
+    expect(rutaPublicar(42)).toBe("/equipo/publicar/42");
+  });
+
+  it("Nav resuelve el acceso al trabajo contra la base, no con los claims de la cookie", () => {
+    const src = fs.readFileSync(path.join(process.cwd(), "src", "components", "Nav.tsx"), "utf8");
+    expect(src).toMatch(/accesoEquipo as tieneAccesoEquipo/);
+    expect(src).toMatch(/tieneAccesoEquipo\(session, getDb\(\)\)/);
+    expect(src).not.toMatch(/const accesoEquipo = esInterno;/);
+    expect(src).not.toMatch(/actorFromSession\(/);
   });
 });
 

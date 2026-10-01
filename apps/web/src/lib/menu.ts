@@ -34,10 +34,28 @@ export const MENU_EMPRESAS: readonly EnlaceMenu[] = [
   { href: "/", label: "Zelena" },
 ];
 
+/**
+ * Rutas del equipo que llegan con otros paquetes (WP31-C1 trae `/equipo/avisos`;
+ * WP31-C2, `/equipo/publicar/[id]`). Se enlazan SOLO si la página ya existe: un enlace a
+ * una ruta que no está es un 404 a la vista de todos. El test de menu.test.ts compara
+ * cada bandera con el archivo de la página, así que quien fusione esa ruta enciende
+ * aquí su bandera (una línea) y el test lo confirma.
+ */
+export const RUTA_AVISOS = "/equipo/avisos";
+export const AVISOS_EN_MENU: boolean = false;
+export const RUTA_PUBLICAR = "/equipo/publicar";
+export const PUBLICAR_DISPONIBLE: boolean = false;
+
+/** Enlace a la página de publicar una pieza en el Ágora (`/equipo/publicar/<id>`). */
+export function rutaPublicar(assignmentId: number): string {
+  return `${RUTA_PUBLICAR}/${encodeURIComponent(String(assignmentId))}`;
+}
+
 const MENU_TRABAJO: readonly EnlaceMenu[] = [
   { href: "/equipo/hoy", label: "Mi día" },
   { href: "/equipo/proyectos", label: "Proyectos" },
 ];
+const ENLACE_AVISOS: EnlaceMenu = { href: RUTA_AVISOS, label: "Avisos" };
 const ENLACE_TALENTO: EnlaceMenu = { href: "/equipo/talento", label: "Talento" };
 const ENLACE_CLIENTES: EnlaceMenu = { href: "/clientes", label: "Clientes" };
 const MENU_COMUNIDAD: readonly EnlaceMenu[] = [
@@ -55,8 +73,12 @@ export function esRutaEmpresas(ruta: string): boolean {
  * Enlaces del menú para una ruta y una sesión.
  *  - /empresas* → MENU_EMPRESAS (con o sin sesión).
  *  - sin sesión → MENU_PUBLICO.
- *  - con sesión → [Mi día, Proyectos] si tiene acceso al trabajo · [Talento] si ve
- *    todo el equipo · [Clientes] si es del equipo interno · [Ágora, Academia, Comunidad].
+ *  - con sesión → [Mi día, Proyectos (, Avisos)] si tiene acceso al trabajo · [Talento]
+ *    si ve todo el equipo · [Clientes] si es del equipo interno · [Ágora, Academia, Comunidad].
+ * "Acceso al trabajo" es `accesoEquipo` de lib/authz.ts (lo resuelve Nav en el servidor,
+ * contra la base): el equipo interno y quien trabaja por proyecto (contributor con el
+ * acuerdo firmado y al menos una membresía). "Avisos" sale solo si su página existe
+ * (`conAvisos`, por defecto `AVISOS_EN_MENU`).
  * No incluye el botón de perfil ni "Admin": esos los conserva NavContextual por rol.
  */
 export function menuPara(o: {
@@ -65,11 +87,14 @@ export function menuPara(o: {
   accesoEquipo: boolean;
   esInterno: boolean;
   puedeVerTodo: boolean;
+  conAvisos?: boolean;
 }): EnlaceMenu[] {
   if (esRutaEmpresas(o.ruta)) return [...MENU_EMPRESAS];
   if (!o.conSesion) return [...MENU_PUBLICO];
+  const conAvisos = o.conAvisos ?? AVISOS_EN_MENU;
   return [
     ...(o.accesoEquipo ? MENU_TRABAJO : []),
+    ...(o.accesoEquipo && conAvisos ? [ENLACE_AVISOS] : []),
     ...(o.puedeVerTodo ? [ENLACE_TALENTO] : []),
     ...(o.esInterno ? [ENLACE_CLIENTES] : []),
     ...MENU_COMUNIDAD,

@@ -3,6 +3,8 @@
  *
  * Tiene que responder tres preguntas en 30 segundos, en este orden vertical:
  *   1. ¿Qué está bloqueado?   → arriba, porque es lo único que exige acción.
+ *      Justo debajo, los PLAZOS (WP31-I2): lo que pasó su plazo y lo que está por
+ *      vencer, con su semáforo (`SlaBadge`) en horas hábiles del genoma.
  *   2. ¿Qué me necesita a mí? → bandeja de gates `needs_founder`.
  *   3. ¿Qué avanza?           → por iniciativa, y cómo está repartida la carga.
  * Luego: salud del rito de check-in y métricas de la época (WP07, solo lectura).
@@ -20,18 +22,20 @@
  *    parecido. El rito se mide por check-ins escritos, y eso es todo.
  */
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { equipoActor } from "@/lib/authz";
 import { ROLE_LABEL, puedeVerTodoElEquipo } from "@/lib/roles";
 import { today, TeamError, type AssignmentView } from "@/lib/team";
-import { buildDashboard, type BlockedItem } from "@/lib/dashboard";
+import { buildDashboard, plazosDelEquipo, type BlockedItem, type PlazoItem } from "@/lib/dashboard";
 import { buildDailyDigest, renderDigestText } from "@/lib/digest";
 import DashboardStatusBar from "@/components/DashboardStatusBar";
 import DigestPanel from "@/components/DigestPanel";
 import { TeamHorizonBadge, TeamPriorityBadge, TeamStatusBadge } from "@/components/TeamStatusBadge";
 import { StatCard } from "@/components/ui";
+import SlaBadge from "@/components/SlaBadge";
 
 export const dynamic = "force-dynamic";
 
@@ -65,7 +69,7 @@ function AccessDenied() {
 }
 
 /** Una fila de "esperando a John" o de un listado compacto de asignaciones. */
-function AssignmentRow({ a, href }: { a: AssignmentView; href?: string }) {
+function AssignmentRow({ a, href, semaforo }: { a: AssignmentView; href?: string; semaforo?: ReactNode }) {
   return (
     <li className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-line/60 px-3 py-2">
       <div className="min-w-0">
@@ -75,7 +79,8 @@ function AssignmentRow({ a, href }: { a: AssignmentView; href?: string }) {
           {a.due_date ? ` · vence ${a.due_date}` : ""}
         </span>
       </div>
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="flex shrink-0 flex-wrap items-center gap-2">
+        {semaforo}
         <TeamPriorityBadge priority={a.priority} />
         <TeamStatusBadge status={a.status} />
         {href ? (
@@ -107,6 +112,16 @@ export default async function EquipoDashboardPage() {
     if (e instanceof TeamError && e.status === 403) return <AccessDenied />;
     throw e;
   }
+
+  // Semáforo de plazos (WP31-I2): lo vencido y lo por vencer de lo que esta persona ve.
+  const plazos = plazosDelEquipo(db, actor);
+  const filaPlazo = (p: PlazoItem) => (
+    <AssignmentRow
+      key={p.assignment.id}
+      a={p.assignment}
+      semaforo={<SlaBadge sla={p.sla} ahora={plazos.ahora} config={plazos.config} />}
+    />
+  );
 
   const day = today();
   // Como el resto del dashboard: solo lo que esta persona ve (§4.A.12).
@@ -210,6 +225,45 @@ export default async function EquipoDashboardPage() {
               </li>
             ))}
           </ul>
+        )}
+      </section>
+
+      {/* 1b · PLAZOS — semáforo de las entregas (WP31-I2) */}
+      <section>
+        <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
+          <h2 className="font-head text-2xl font-bold text-white">Plazos</h2>
+          <span className="text-xs text-faint">
+            {plazos.vencidas.length} pasaron su plazo · {plazos.porVencer.length} por vencer · {plazos.aTiempo} a
+            tiempo
+          </span>
+        </div>
+        <p className="mb-4 text-sm text-muted">
+          Contado en horas hábiles, con los plazos del genoma. Habla de la entrega, no de quién la tiene: sirve
+          para destrabarla o acordar una nueva fecha. Lo bloqueado está arriba, con su motivo.
+        </p>
+        {plazos.vencidas.length + plazos.porVencer.length === 0 ? (
+          <div className="card p-6">
+            <p className="text-sm text-muted">Nada pasó su plazo ni está por vencer ahora mismo.</p>
+          </div>
+        ) : (
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div>
+              <h3 className="mb-2 text-sm font-semibold text-white">Pasaron su plazo</h3>
+              {plazos.vencidas.length === 0 ? (
+                <p className="text-sm text-faint">Ninguna.</p>
+              ) : (
+                <ul className="space-y-2">{plazos.vencidas.map(filaPlazo)}</ul>
+              )}
+            </div>
+            <div>
+              <h3 className="mb-2 text-sm font-semibold text-white">Por vencer</h3>
+              {plazos.porVencer.length === 0 ? (
+                <p className="text-sm text-faint">Ninguna.</p>
+              ) : (
+                <ul className="space-y-2">{plazos.porVencer.map(filaPlazo)}</ul>
+              )}
+            </div>
+          </div>
         )}
       </section>
 

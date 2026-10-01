@@ -12,6 +12,10 @@
  *
  * Doc 16: los bloqueos se cuentan porque piden acción; la carga se ve para repartirla,
  * nunca para comparar a nadie.
+ *
+ * WP31-I2: cada tarjeta cuenta lo que pasó su plazo y lo que está por vencer (semáforo
+ * en horas hábiles del genoma, `slaDeAsignaciones`), y el trabajo sin proyecto lleva su
+ * `SlaBadge`. Son plazos de entregas, no de personas.
  */
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -20,6 +24,7 @@ import { getSession } from "@/lib/session";
 import { equipoActor } from "@/lib/authz";
 import { listClientsFor } from "@/lib/clients";
 import { ROL_PROYECTO_LABEL, esGlobalProyecto } from "@/lib/roles";
+import { slaConfig, slaDeAsignaciones } from "@/lib/sla-db";
 import {
   assignmentsByInitiative,
   HORIZONS,
@@ -34,6 +39,7 @@ import {
 import TeamProjectForm from "@/components/TeamProjectForm";
 import { TeamHorizonBadge, TeamPriorityBadge, TeamStatusBadge } from "@/components/TeamStatusBadge";
 import { EmptyState } from "@/components/ui";
+import SlaBadge from "@/components/SlaBadge";
 
 export const dynamic = "force-dynamic";
 
@@ -64,11 +70,26 @@ export default async function EquipoProyectosPage({
   const sinProyecto = veSinProyecto ? (porIniciativa.find((s) => s.initiative === null) ?? null) : null;
   const week = weekStart();
 
+  // Semáforo de plazos de lo abierto (lo bloqueado ya se cuenta aparte): un solo instante.
+  const ahora = new Date();
+  const cfgSla = slaConfig(db);
+  const slas = slaDeAsignaciones(
+    db,
+    porIniciativa.flatMap((s) => s.open.map((a) => a.id)),
+    ahora,
+    cfgSla
+  );
+  const contarSla = (ids: number[], estado: "vencida" | "por_vencer") =>
+    ids.filter((id) => slas.get(id)?.estado === estado).length;
+
   const tarjetas = visibles
     .map((p) => {
       const s = resumenes.get(p.id);
+      const abiertasIds = (s?.open ?? []).map((a) => a.id);
       return {
         p,
+        vencidas: contarSla(abiertasIds, "vencida"),
+        porVencer: contarSla(abiertasIds, "por_vencer"),
         abiertas: s?.open.length ?? 0,
         bloqueadas: s?.blocked.length ?? 0,
         cerradas: s?.closedThisWeek.length ?? 0,
@@ -166,6 +187,17 @@ export default async function EquipoProyectosPage({
                 <span className={t.bloqueadas > 0 ? "text-red-300" : ""}>{t.bloqueadas} bloqueadas</span> ·{" "}
                 {t.cerradas} cerradas esta semana · {t.libres} sin responsable para tomar
               </p>
+              {t.vencidas + t.porVencer > 0 ? (
+                <p className="mt-1 text-xs">
+                  {t.vencidas > 0 ? (
+                    <span className="text-red-300">
+                      {t.vencidas} {t.vencidas === 1 ? "pasó su plazo" : "pasaron su plazo"}
+                    </span>
+                  ) : null}
+                  {t.vencidas > 0 && t.porVencer > 0 ? <span className="text-faint"> · </span> : null}
+                  {t.porVencer > 0 ? <span className="text-amber-300">{t.porVencer} por vencer</span> : null}
+                </p>
+              ) : null}
               <Link
                 href={`/equipo/proyectos/${encodeURIComponent(t.p.slug)}`}
                 className="mt-4 inline-block text-sm text-primary hover:underline"
@@ -201,6 +233,9 @@ export default async function EquipoProyectosPage({
                   ) : null}
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
+                  {a.status === "Bloqueada" ? null : (
+                    <SlaBadge sla={slas.get(a.id)} ahora={ahora} config={cfgSla} />
+                  )}
                   <TeamPriorityBadge priority={a.priority} />
                   <TeamStatusBadge status={a.status} />
                 </div>

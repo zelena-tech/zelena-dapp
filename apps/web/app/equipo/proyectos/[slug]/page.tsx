@@ -11,6 +11,11 @@
  *
  * Doc 16: el tablero describe ENTREGAS. El responsable se muestra para repartir el
  * trabajo; nada aquí compara ni puntúa personas.
+ *
+ * WP31-I2: cada tarjeta abierta lleva su semáforo de plazo (`SlaBadge`: A tiempo · Por
+ * vencer · Vencida · Sin plazo, en horas hábiles del genoma). Founder y supervisión ven
+ * "Publicar en el Ágora" en lo que está en Backlog sin responsable ni publicar, solo si
+ * esa página ya existe (`PUBLICAR_DISPONIBLE` en lib/menu.ts).
  */
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -19,6 +24,8 @@ import { getSession } from "@/lib/session";
 import { equipoActor } from "@/lib/authz";
 import { listClientsFor } from "@/lib/clients";
 import { mismaPersona } from "@/lib/identidades";
+import { PUBLICAR_DISPONIBLE, rutaPublicar } from "@/lib/menu";
+import { slaConfig, slaDeAsignaciones } from "@/lib/sla-db";
 import {
   ROL_PROYECTO_LABEL,
   esGlobalProyecto,
@@ -44,6 +51,7 @@ import TeamMembersPanel, { type MiembroPanel } from "@/components/TeamMembersPan
 import TeamNewAssignment from "@/components/TeamNewAssignment";
 import TeamProjectForm from "@/components/TeamProjectForm";
 import { TeamHorizonBadge } from "@/components/TeamStatusBadge";
+import SlaBadge from "@/components/SlaBadge";
 
 export const dynamic = "force-dynamic";
 
@@ -87,6 +95,15 @@ export default async function TableroProyectoPage({
     ? candidatos.map((c) => ({ wallet: c.wallet, nombre: c.nombre }))
     : [{ wallet: actor.wallet, nombre: actor.name }];
 
+  // Semáforo de plazos: un solo instante y la configuración del genoma para todo el tablero.
+  const cfgSla = slaConfig(db);
+  const abiertas = COLUMNAS_TABLERO.filter((estado) => estado !== "Hecha").flatMap((estado) =>
+    tablero.columnas[estado].map((a) => a.id)
+  );
+  const slas = slaDeAsignaciones(db, abiertas, now, cfgSla);
+  const sePuedePublicar = (a: AssignmentView) =>
+    PUBLICAR_DISPONIBLE && esGlobal && a.status === "Backlog" && !a.owner_wallet && !a.published_as_project_id;
+
   const tarjeta = (a: AssignmentView): TarjetaTablero => {
     const esDueno = !!a.owner_wallet && mismaPersona(db, a.owner_wallet, actor.wallet);
     return {
@@ -94,6 +111,13 @@ export default async function TableroProyectoPage({
       acciones: accionesPermitidas(db, actor, a),
       puedeContexto: esDueno || permisos.planificar,
       puedePlanificar: permisos.planificar,
+      // Lo hecho ya no corre ningún plazo: sin semáforo.
+      semaforo: a.status === "Hecha" ? undefined : <SlaBadge sla={slas.get(a.id)} ahora={now} config={cfgSla} />,
+      pie: sePuedePublicar(a) ? (
+        <Link href={rutaPublicar(a.id)} className="text-xs text-primary hover:underline">
+          Publicar en el Ágora
+        </Link>
+      ) : undefined,
     };
   };
   const columnas = Object.fromEntries(

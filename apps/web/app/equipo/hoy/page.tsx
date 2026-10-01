@@ -5,6 +5,10 @@
  *    de un click (empezar / a revisión / bloquear con motivo obligatorio).
  *  - Bloque "Tu progreso": la comparación es CONTIGO (regla WP09 / doc 16).
  *  - Formulario de check-in diario.
+ *  - WP31-I2: cada tarjeta lleva su semáforo de plazo (`SlaBadge`, horas hábiles del
+ *    genoma) y "Tu progreso" suma los puntos y la reputación de la temporada por
+ *    entregas aprobadas, con las insignias (`Insignias`). Califica la entrega, nunca a
+ *    la persona: sin comparaciones con nadie y lo ganado no se quita.
  *
  * Visibilidad: un `core` ve SOLO lo suyo; founder y supervisores ven todo el equipo
  * (regla única en `puedeVerTodoElEquipo` de lib/roles.ts).
@@ -15,6 +19,7 @@
  * del equipo completo.
  */
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/session";
@@ -36,15 +41,31 @@ import {
   visibleAssignments,
   type AssignmentView,
 } from "@/lib/team";
+import { currentEpoch, getActiveGenome } from "@/lib/genome";
+import { insignias, progresoDeTareas, senalesProgreso } from "@/lib/gamificacion";
+import { slaConfig, slaDeAsignaciones } from "@/lib/sla-db";
 import TeamAssignmentActions from "@/components/TeamAssignmentActions";
 import TeamNewAssignment from "@/components/TeamNewAssignment";
 import TeamCheckinForm from "@/components/TeamCheckinForm";
 import { TeamHorizonBadge, TeamPriorityBadge, TeamStatusBadge } from "@/components/TeamStatusBadge";
 import { EmptyState } from "@/components/ui";
+import SlaBadge from "@/components/SlaBadge";
+import Insignias from "@/components/Insignias";
 
 export const dynamic = "force-dynamic";
 
-function AssignmentCard({ a, showOwner, actions }: { a: AssignmentView; showOwner: boolean; actions: TeamAction[] }) {
+function AssignmentCard({
+  a,
+  showOwner,
+  actions,
+  semaforo,
+}: {
+  a: AssignmentView;
+  showOwner: boolean;
+  actions: TeamAction[];
+  /** Semáforo de plazo de la pieza (`SlaBadge`), ya calculado en el servidor. */
+  semaforo: ReactNode;
+}) {
   return (
     <li className="card p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -60,6 +81,7 @@ function AssignmentCard({ a, showOwner, actions }: { a: AssignmentView; showOwne
           </div>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {semaforo}
           <TeamPriorityBadge priority={a.priority} />
           <TeamStatusBadge status={a.status} />
           {a.needs_founder ? <span className="tag border-amber-700/50 text-amber-300">espera decisión</span> : null}
@@ -153,6 +175,23 @@ export default async function EquipoHoyPage() {
   const all = seesAll ? visibleAssignments(db, actor) : mine;
   const others = seesAll ? all.filter((a) => a.owner_wallet !== actor.wallet) : [];
 
+  // Semáforo de plazos: un solo instante y la configuración del genoma para todas las tarjetas.
+  const ahora = new Date();
+  const cfgSla = slaConfig(db);
+  const slas = slaDeAsignaciones(
+    db,
+    [...mine, ...others].map((a) => a.id),
+    ahora,
+    cfgSla
+  );
+  const semaforo = (a: AssignmentView) => <SlaBadge sla={slas.get(a.id)} ahora={ahora} config={cfgSla} />;
+
+  // Tu progreso de la temporada (todas tus identidades) y tus insignias, con metas del genoma.
+  const epoca = currentEpoch(db);
+  const temporada = progresoDeTareas(db, actor.wallet, epoca);
+  const senales = senalesProgreso(db, actor.wallet);
+  const misInsignias = insignias(senales, getActiveGenome(db, epoca).BADGE_GOALS);
+
   const progress = ownProgress(db, actor.wallet);
   const checkin = esEquipo ? getCheckin(db, actor.wallet, day) : undefined;
   const member = rosterByPrincipal(actor.wallet);
@@ -238,6 +277,12 @@ export default async function EquipoHoyPage() {
           Aquí la comparación es contigo: cuántas entregas cerraste contra su criterio de aceptación esta semana
           frente a la anterior. No se compara a personas entre sí y nada de lo logrado se descuenta nunca.
         </p>
+        <p className="mt-3 text-sm text-white">
+          Esta temporada sumaste{" "}
+          <span className="font-bold text-primary">{temporada.puntos.toLocaleString("es")}</span> puntos y{" "}
+          <span className="font-bold text-primary">{temporada.reputacion.toLocaleString("es")}</span> de reputación
+          en ejecución por entregas aprobadas.
+        </p>
         <div className={`mt-5 grid gap-5 ${esEquipo ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
           <div>
             <div className="font-head text-3xl font-bold text-primary glow-text">{progress.closedThisWeek}</div>
@@ -265,6 +310,16 @@ export default async function EquipoHoyPage() {
             </div>
           ) : null}
         </div>
+        <p className="mt-5 text-xs text-faint">
+          {senales.entregasAprobadas === 0
+            ? "Cuando otra persona apruebe tu primera entrega, empieza a contar aquí."
+            : `Desde que empezaste: ${senales.entregasAprobadas} ${
+                senales.entregasAprobadas === 1 ? "entrega aprobada" : "entregas aprobadas"
+              } por otra persona, ${senales.entregasATiempo} dentro de su plazo.`}
+        </p>
+        <div className="mt-5 border-t border-line/60 pt-5">
+          <Insignias insignias={misInsignias} />
+        </div>
       </section>
 
       {/* Tus asignaciones de hoy */}
@@ -282,7 +337,7 @@ export default async function EquipoHoyPage() {
         ) : (
           <ul className="space-y-4">
             {mine.map((a) => (
-              <AssignmentCard key={a.id} a={a} showOwner={false} actions={acciones(a)} />
+              <AssignmentCard key={a.id} a={a} showOwner={false} actions={acciones(a)} semaforo={semaforo(a)} />
             ))}
           </ul>
         )}
@@ -317,7 +372,7 @@ export default async function EquipoHoyPage() {
           ) : (
             <ul className="space-y-4">
               {others.map((a) => (
-                <AssignmentCard key={a.id} a={a} showOwner actions={acciones(a)} />
+                <AssignmentCard key={a.id} a={a} showOwner actions={acciones(a)} semaforo={semaforo(a)} />
               ))}
             </ul>
           )}

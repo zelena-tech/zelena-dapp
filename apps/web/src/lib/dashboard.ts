@@ -35,11 +35,14 @@ import {
   listTeamMembers,
   piezasVisiblesPara,
   today,
+  visibleAssignments,
   weekStart,
   TeamError,
   type AssignmentView,
   type InitiativeRow,
 } from "./team.ts";
+import { slaConfig, slaDeAsignaciones } from "./sla-db.ts";
+import type { SlaConfig, SlaResultado } from "./sla.ts";
 
 // ---------------------------------------------------------------------------
 // Fechas
@@ -126,6 +129,73 @@ export function blockedWithAge(db: DB, now: Date = new Date(), actor?: TeamActor
     if (y.daysBlocked !== x.daysBlocked) return y.daysBlocked - x.daysBlocked;
     return x.assignment.id - y.assignment.id;
   });
+}
+
+// ---------------------------------------------------------------------------
+// 1b. Plazos — semáforo de SLA en horas hábiles (WP31-I2, criterio I4)
+// ---------------------------------------------------------------------------
+
+export interface PlazoItem {
+  assignment: AssignmentView;
+  /** `evaluarSla` de la pieza en `ahora` (fase, vencimiento, estado). */
+  sla: SlaResultado;
+}
+
+export interface PlazosDelEquipo {
+  /** El instante con el que se evaluó todo (el mismo para pintar "vence hoy 14:00"). */
+  ahora: Date;
+  /** Configuración de SLA del genoma con la que se evaluó. */
+  config: SlaConfig;
+  /** Pasaron su plazo: del vencimiento más viejo al más reciente. */
+  vencidas: PlazoItem[];
+  /** Les queda poco: de la que vence antes a la que vence después. */
+  porVencer: PlazoItem[];
+  /** Cuántas van a tiempo y cuántas no tienen plazo (solo conteos). */
+  aTiempo: number;
+  sinPlazo: number;
+}
+
+function porVencimiento(x: PlazoItem, y: PlazoItem): number {
+  const a = x.sla.vence ? x.sla.vence.getTime() : Number.POSITIVE_INFINITY;
+  const b = y.sla.vence ? y.sla.vence.getTime() : Number.POSITIVE_INFINITY;
+  return a !== b ? a - b : x.assignment.id - y.assignment.id;
+}
+
+/**
+ * Semáforo de plazos de lo que el actor ve (`visibleAssignments`: founder y supervisión,
+ * el equipo sin proyectos de cliente ajenos; cualquier otra persona, solo lo suyo).
+ * Separa lo VENCIDO de lo que está POR VENCER (criterio I4), con el SLA del genoma en
+ * horas hábiles (`slaDeAsignaciones`).
+ *
+ * Lo bloqueado no entra: tiene su propia sección arriba, con su motivo y su antigüedad.
+ * Lo hecho tampoco: ya no corre ningún plazo.
+ *
+ * Doc 16: se ordenan PIEZAS por su vencimiento, nunca personas. Un plazo vencido dice
+ * que hay que destrabar o acordar nueva fecha, no quién va tarde.
+ */
+export function plazosDelEquipo(db: DB, actor: TeamActor, now: Date = new Date(), c?: SlaConfig): PlazosDelEquipo {
+  const config = c ?? slaConfig(db);
+  const piezas = visibleAssignments(db, actor).filter((a) => a.status !== "Bloqueada" && a.status !== "Hecha");
+  const slas = slaDeAsignaciones(
+    db,
+    piezas.map((a) => a.id),
+    now,
+    config
+  );
+  const vencidas: PlazoItem[] = [];
+  const porVencer: PlazoItem[] = [];
+  let aTiempo = 0;
+  let sinPlazo = 0;
+  for (const a of piezas) {
+    const sla = slas.get(a.id);
+    if (!sla || sla.estado === "sin_plazo") sinPlazo++;
+    else if (sla.estado === "vencida") vencidas.push({ assignment: a, sla });
+    else if (sla.estado === "por_vencer") porVencer.push({ assignment: a, sla });
+    else aTiempo++;
+  }
+  vencidas.sort(porVencimiento);
+  porVencer.sort(porVencimiento);
+  return { ahora: now, config, vencidas, porVencer, aTiempo, sinPlazo };
 }
 
 // ---------------------------------------------------------------------------
