@@ -7,7 +7,8 @@
  * ruta, y aquí `rolPuedeAdministrar` para no pintarlas a quien no puede usarlas).
  *
  * Puerta propia (el layout no es la puerta, spec §5.A.2): equipo interno resuelto
- * contra la base y, además, `puedeVerTodoElEquipo`.
+ * contra la base, con la cuenta activa (`cuentaActiva`: `equipoInternoActor` no mira
+ * el estado) y, además, `puedeVerTodoElEquipo`.
  *
  * Doc 16: la carga abierta sirve para repartir trabajo, no para evaluar. El orden es
  * alfabético; no hay posiciones, puntos ni comparaciones entre personas.
@@ -19,7 +20,7 @@ import { getSession } from "@/lib/session";
 import { equipoInternoActor, rolPuedeAdministrar } from "@/lib/authz";
 import { PENDING_PREFIX, ROLE_LABEL, puedeVerTodoElEquipo } from "@/lib/roles";
 import { mismaPersona } from "@/lib/identidades";
-import { candidatosAVincular, directorioTalento } from "@/lib/talento";
+import { candidatosAVincular, cuentaActiva, directorioTalento } from "@/lib/talento";
 import TeamTalentRow, { type PersonaTalento } from "@/components/TeamTalentRow";
 import TeamImportCsv from "@/components/TeamImportCsv";
 import { EmptyState } from "@/components/ui";
@@ -54,7 +55,8 @@ export default async function EquipoTalentoPage({ searchParams }: { searchParams
   if (!session) redirect("/entrar");
   const db = getDb();
   const actor = equipoInternoActor(session, db);
-  if (!actor) redirect("/perfil");
+  // Una cuenta dada de baja no ve el directorio aunque conserve su rol (la puerta mira el estado).
+  if (!actor || !cuentaActiva(db, actor.wallet)) redirect("/perfil");
   if (!puedeVerTodoElEquipo({ role: actor.role, isSupervisor: actor.isSupervisor })) return <SinAcceso />;
 
   const filtro = searchParams.vinculo === "interno" || searchParams.vinculo === "externo" ? searchParams.vinculo : null;
@@ -79,7 +81,7 @@ export default async function EquipoTalentoPage({ searchParams }: { searchParams
     };
     const editable = esFounder && p.role !== "founder" && !mismaPersona(db, actor.wallet, p.wallet);
     const vinculable = esFounder && slug !== null;
-    return { persona, editable, vinculable, candidatos: vinculable && slug ? candidatosAVincular(db, slug) : [] };
+    return { persona, editable, vinculable, candidatos: vinculable && slug ? candidatosAVincular(db, slug, actor.wallet) : [] };
   });
 
   return (

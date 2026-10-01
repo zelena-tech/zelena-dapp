@@ -25,6 +25,7 @@ import {
   cambiarRol,
   cambiarSupervisor,
   candidatosAVincular,
+  cuentaActiva,
   describirVinculo,
   directorioTalento,
   rosterMemberFor,
@@ -32,6 +33,7 @@ import {
   vincularPrincipal,
   walletDeRoster,
 } from "./talento";
+import { identidadesDe, mismaPersona } from "./identidades";
 
 const SCHEMA = fs.readFileSync(path.join(process.cwd(), "src", "lib", "schema.sql"), "utf8");
 
@@ -538,6 +540,205 @@ describe("vincularPrincipal (A2-2)", () => {
       expect(r.movidas["points_ledger.wallet"]).toBe(2);
       expect(n(db, `SELECT COUNT(*) AS n FROM points_ledger WHERE wallet = ? AND period_id = ?`, JUAN_REAL, abierto)).toBe(3);
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Revisión A2 · nadie se queda con lo de otra persona al vincular
+// ---------------------------------------------------------------------------
+
+describe("vincularPrincipal · el destino es la persona de esa fila (revisión A2)", () => {
+  it("el founder no vincula la fila de OTRA persona con su propia cuenta: sus puntos no pasan al founder", () => {
+    const { db } = escenario();
+    const antes = huella(db);
+    esperaError(() => vincularPrincipal(db, FOUNDER, { slug: "juan", wallet: SESION }), 400, /founder/);
+    esperaError(() => vincularPrincipal(db, FOUNDER, { slug: "juan", wallet: SESION, simular: true }), 400);
+    expect(huella(db)).toBe(antes);
+    expect(n(db, `SELECT COALESCE(SUM(points), 0) AS n FROM points_ledger WHERE wallet = ?`, SESION)).toBe(0);
+    expect(db.prepare(`SELECT slug FROM roster_links WHERE slug = 'juan'`).get()).toBeUndefined();
+  });
+
+  it("ni con otra cuenta de founder (aunque sea otra fila con ese rol)", () => {
+    const { db } = escenario();
+    usuario(db, VIEJO_FOUNDER, { role: "founder" });
+    esperaError(() => vincularPrincipal(db, FOUNDER, { slug: "juan", wallet: VIEJO_FOUNDER }), 400, /founder/);
+    expect(rol(db, JUAN)).toBeDefined();
+  });
+
+  it("el slug del founder solo se vincula con una cuenta que ya es founder: no promueve a nadie", () => {
+    const { db } = escenario();
+    usuario(db, LUIS, { nombre: "Luis", role: "contributor" });
+    esperaError(() => vincularPrincipal(db, FOUNDER, { slug: "john", wallet: LUIS }), 400, /founder/);
+    esperaError(() => vincularPrincipal(db, FOUNDER, { slug: "john", wallet: JUAN_REAL, simular: true }), 400);
+    expect(rol(db, LUIS)?.role).toBe("contributor");
+    expect(rol(db, JOHN)?.role).toBe("founder");
+    // Con su propia cuenta de founder, sí (el primer paso de John).
+    vincularPrincipal(db, FOUNDER, { slug: "john", wallet: SESION });
+    expect(db.prepare(`SELECT wallet FROM roster_links WHERE slug = 'john'`).get()).toEqual({ wallet: SESION });
+  });
+
+  it("la regla del rol máximo nunca deja a alguien como founder", () => {
+    const { db } = escenario();
+    db.prepare(`UPDATE users SET role = 'founder' WHERE wallet = ?`).run(JUAN); // dato raro en la fila del roster
+    esperaError(() => vincularPrincipal(db, FOUNDER, { slug: "juan", wallet: JUAN_REAL }), 409, /founder/);
+    expect(rol(db, JUAN_REAL)?.role).toBe("contributor");
+  });
+
+  it("el destino tiene que estar activo", () => {
+    const { db } = escenario();
+    db.prepare(`UPDATE users SET status = 'alumni' WHERE wallet = ?`).run(JUAN_REAL);
+    esperaError(() => vincularPrincipal(db, FOUNDER, { slug: "juan", wallet: JUAN_REAL }), 409, /activa/);
+    expect(rol(db, JUAN)).toBeDefined();
+  });
+
+  it("candidatosAVincular: para otra persona, sin el founder ni cuentas inactivas; para el founder, solo founders", () => {
+    const { db } = escenario();
+    usuario(db, LUIS, { nombre: "Luis", status: "alumni" });
+    usuario(db, DEMO, { nombre: "John demo", role: "founder", isDemo: 1 });
+    const paraJuan = candidatosAVincular(db, "juan", SESION).map((c) => c.wallet);
+    expect(paraJuan).toContain(JUAN_REAL);
+    expect(paraJuan).toContain(ANA);
+    expect(paraJuan).not.toContain(SESION);
+    expect(paraJuan).not.toContain(DEMO);
+    expect(paraJuan).not.toContain(LUIS);
+    const paraJohn = candidatosAVincular(db, "john", SESION).map((c) => c.wallet).sort();
+    expect(paraJohn).toEqual([DEMO, SESION].sort());
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Revisión A2 · una cuenta dada de baja no gestiona talento
+// ---------------------------------------------------------------------------
+
+describe("cuentas inactivas (revisión A2)", () => {
+  it("cuentaActiva: solo filas con status 'active'", () => {
+    const db = freshDb();
+    expect(cuentaActiva(db, VALE)).toBe(true);
+    db.prepare(`UPDATE users SET status = 'alumni' WHERE wallet = ?`).run(VALE);
+    expect(cuentaActiva(db, VALE)).toBe(false);
+    expect(cuentaActiva(db, "GNADIE")).toBe(false);
+  });
+
+  it("la página de talento y las rutas de talento e importar exigen una cuenta activa (el layout no es la puerta)", () => {
+    const raiz = process.cwd();
+    for (const archivo of [
+      ["app", "equipo", "talento", "page.tsx"],
+      ["app", "api", "equipo", "importar", "route.ts"],
+      ["app", "api", "equipo", "talento", "route.ts"],
+    ]) {
+      const fuente = fs.readFileSync(path.join(raiz, ...archivo), "utf8");
+      expect(fuente, archivo.join("/")).toContain("cuentaActiva(");
+    }
+  });
+
+  it("no se da supervisión ni se pasa a core a una cuenta dada de baja (quitar sí se puede)", () => {
+    const db = freshDb();
+    usuario(db, SESION, { nombre: "John", role: "founder" });
+    db.prepare(`UPDATE users SET status = 'alumni' WHERE wallet IN (?, ?)`).run(FAUSTO, VALE);
+    esperaError(() => cambiarSupervisor(db, FOUNDER, { wallet: FAUSTO, isSupervisor: true }), 409, /activa/);
+    usuario(db, LUIS, { status: "alumni" });
+    esperaError(() => cambiarRol(db, FOUNDER, { wallet: LUIS, role: "core" }), 409, /activa/);
+    cambiarSupervisor(db, FOUNDER, { wallet: VALE, isSupervisor: false });
+    expect(rol(db, VALE)?.is_supervisor).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Revisión A2 · historia sellada: vincular sin mover lo ya cerrado
+// ---------------------------------------------------------------------------
+
+describe("vincularPrincipal · conservarSellado (revisión A2)", () => {
+  function conSellado() {
+    const e = escenario();
+    const cerrada = periodo(e.db, "Closed", "Vieja");
+    e.db
+      .prepare(`INSERT INTO points_ledger (wallet, points, period_id, bucket, ref) VALUES (?, 5, ?, 'ejecucion', 'assignment:50')`)
+      .run(JUAN, cerrada);
+    e.db
+      .prepare(`INSERT INTO reputation_events (wallet, axis, delta, ref, period_id) VALUES (?, 'ejecucion', 1, 'assignment:50', ?)`)
+      .run(JUAN, cerrada);
+    const rito = Number(
+      e.db
+        .prepare(
+          `INSERT INTO rite_sessions (kind, scheduled_for, duration_min, state, host_wallet) VALUES ('demo', '2026-09-25T21:00:00.000Z', 60, 'Closed', ?)`
+        )
+        .run(JUAN).lastInsertRowid
+    );
+    // Los dos asistieron al mismo rito cerrado: la fila sellada del pending NO se descarta.
+    e.db.prepare(`INSERT INTO rite_attendance (session_id, wallet, layer) VALUES (?, ?, 1), (?, ?, 1)`).run(rito, JUAN, rito, JUAN_REAL);
+    return { ...e, cerrada, rito };
+  }
+
+  function sellado(db: DB, cerrada: number, rito: number) {
+    return JSON.stringify([
+      db.prepare(`SELECT * FROM points_ledger WHERE period_id = ? ORDER BY id`).all(cerrada),
+      db.prepare(`SELECT * FROM reputation_events WHERE period_id = ? ORDER BY id`).all(cerrada),
+      db.prepare(`SELECT * FROM rite_attendance WHERE session_id = ? ORDER BY id`).all(rito),
+      db.prepare(`SELECT * FROM rite_sessions WHERE id = ?`).all(rito),
+    ]);
+  }
+
+  it("sin pedirlo sigue siendo 409 (la huella no se reescribe)", () => {
+    const { db } = conSellado();
+    esperaError(() => vincularPrincipal(db, FOUNDER, { slug: "juan", wallet: JUAN_REAL }), 409, HISTORIA_SELLADA);
+  });
+
+  it("con conservarSellado vincula: mueve lo abierto, deja lo sellado en la fila del equipo y las une", () => {
+    const { db, cerrada, rito } = conSellado();
+    const huellaSellada = sellado(db, cerrada, rito);
+    const antes = sumas(db, [JUAN, JUAN_REAL]);
+
+    const r = vincularPrincipal(db, FOUNDER, { slug: "juan", wallet: JUAN_REAL, conservarSellado: true });
+
+    // Lo sellado no cambia ni un byte (la raíz anclada sigue siendo reproducible).
+    expect(sellado(db, cerrada, rito)).toBe(huellaSellada);
+    expect(r.conservadas).toEqual({
+      "points_ledger.wallet": 1,
+      "reputation_events.wallet": 1,
+      "rite_sessions.host_wallet": 1,
+      "rite_attendance.wallet": 1,
+    });
+    // Lo de la época abierta y el trabajo sí pasan a la cuenta real.
+    expect(r.movidas["points_ledger.wallet"]).toBe(2);
+    expect(r.movidas["assignments.owner_wallet"]).toBe(2);
+    expect(n(db, `SELECT COUNT(*) AS n FROM assignments WHERE owner_wallet = ?`, JUAN)).toBe(0);
+    // Nada se pierde: las sumas de las dos identidades son las mismas.
+    expect(sumas(db, [JUAN, JUAN_REAL])).toEqual(antes);
+    // Quedan unidas: misma persona para los cuatro ojos, el progreso y los avisos.
+    expect(db.prepare(`SELECT wallet FROM roster_links WHERE slug = 'juan'`).get()).toEqual({ wallet: JUAN_REAL });
+    expect(identidadesDe(db, JUAN_REAL)).toContain(JUAN);
+    expect(mismaPersona(db, JUAN, JUAN_REAL)).toBe(true);
+    // La fila del equipo se conserva solo como alias: sin rol que dé acceso.
+    expect(
+      db.prepare(`SELECT role, is_supervisor, status FROM users WHERE wallet = ?`).get(JUAN)
+    ).toEqual({ role: "contributor", is_supervisor: 0, status: "alumni" });
+    expect(directorioTalento(db).some((p) => p.wallet === JUAN)).toBe(false);
+    expect(walletDeRoster(db, "juan")).toBe(JUAN_REAL);
+    // El arranque no la toca ni la recrea.
+    seedTeam(db);
+    expect(db.prepare(`SELECT role, status FROM users WHERE wallet = ?`).get(JUAN)).toEqual({
+      role: "contributor",
+      status: "alumni",
+    });
+    const ev = db.prepare(`SELECT detail FROM talent_events WHERE action = 'vincular'`).get() as { detail: string };
+    expect(JSON.parse(ev.detail)).toMatchObject({ slug: "juan", conservadas: r.conservadas });
+  });
+
+  it("la simulación con conservarSellado no deja huella y cuenta lo mismo", () => {
+    const { db } = conSellado();
+    const antes = huella(db);
+    const sim = vincularPrincipal(db, FOUNDER, { slug: "juan", wallet: JUAN_REAL, conservarSellado: true, simular: true });
+    expect(huella(db)).toBe(antes);
+    const real = vincularPrincipal(db, FOUNDER, { slug: "juan", wallet: JUAN_REAL, conservarSellado: true });
+    expect(real.movidas).toEqual(sim.movidas);
+    expect(real.conservadas).toEqual(sim.conservadas);
+  });
+
+  it("sin historia sellada, conservarSellado no cambia nada: el pending se borra como siempre", () => {
+    const { db } = escenario();
+    const r = vincularPrincipal(db, FOUNDER, { slug: "juan", wallet: JUAN_REAL, conservarSellado: true });
+    expect(r.conservadas ?? {}).toEqual({});
+    expect(rol(db, JUAN)).toBeUndefined();
   });
 });
 

@@ -91,6 +91,18 @@ function exigirFounder(actor: TeamActor, que: string): void {
   if (actor.role !== "founder") throw new TeamError(403, `Solo el founder ${que}.`);
 }
 
+/**
+ * ¿La cuenta existe y está activa (`status='active'`)? Una persona dada de baja
+ * (`alumni`) no gestiona talento ni importa trabajo aunque conserve su rol en la
+ * base: las puertas de `/equipo/talento` y de sus rutas lo exigen además del actor
+ * (`equipoInternoActor`/`adminActor` no miran el estado). Tampoco recibe supervisión,
+ * el rol core ni una fila del roster.
+ */
+export function cuentaActiva(db: DB, wallet: string): boolean {
+  const r = db.prepare(`SELECT status FROM users WHERE wallet = ?`).get(wallet) as { status: string } | undefined;
+  return r?.status === "active";
+}
+
 function slugsFounder(): string[] {
   return TEAM_ROSTER.filter((m) => m.role === "founder").map((m) => m.slug);
 }
@@ -227,7 +239,11 @@ export function directorioTalento(db: DB, filtro?: { vinculo?: "interno" | "exte
     mem.vinculos.add(m.vinculo === "externo" ? "externo" : "interno");
   }
 
-  const personas: PersonaDirectorio[] = filas.map((u) => {
+  // Una fila del roster ya vinculada que sigue existiendo es solo un alias que guarda
+  // historia sellada (`conservarSellado`): la persona aparece con su cuenta real.
+  const esAlias = (w: string) => isPendingPrincipal(w) && vinculados.has(w.slice(PENDING_PREFIX.length));
+
+  const personas: PersonaDirectorio[] = filas.filter((u) => !esAlias(u.wallet)).map((u) => {
     const mems = [...(membresiasPor.get(u.wallet)?.values() ?? [])];
     const vinculos = new Set<string>();
     for (const m of mems) for (const v of m.vinculos) vinculos.add(v);
@@ -267,23 +283,36 @@ export function directorioTalento(db: DB, filtro?: { vinculo?: "interno" | "exte
 }
 
 /**
- * Cuentas reales con las que se puede vincular una fila del roster: no `pending:`,
- * con acuerdo firmado y sin `roster_links`. Sin cuentas demo, salvo la excepción del
- * founder (§5.A.7): una demo con `role='founder'`. Con `slug`, esa excepción solo
- * aplica si el slug es el del founder en el roster.
+ * Cuentas reales con las que se puede vincular una fila del roster: activas, no
+ * `pending:`, con acuerdo firmado y sin `roster_links`. Las mismas reglas que
+ * `vincularPrincipal`, para que un mal clic no pueda pasar el trabajo de alguien a
+ * otra persona:
+ *  - Fila de otra persona: nunca una cuenta con rol founder ni una identidad de
+ *    `actorWallet` (el founder no se queda con lo de nadie). Sin cuentas demo.
+ *  - Fila del founder (`slug` del founder en el roster): solo cuentas que YA tienen
+ *    `role='founder'` (vincular no promueve a nadie); una demo vale (excepción §5.A.7).
+ * Sin `slug`, la unión de los dos casos (toda cuenta vinculable con alguna fila).
  */
-export function candidatosAVincular(db: DB, slug?: string): Array<{ wallet: string; nombre: string }> {
-  const excepcionPosible = slug === undefined || slugsFounder().includes(slug);
+export function candidatosAVincular(
+  db: DB,
+  slug?: string,
+  actorWallet?: string
+): Array<{ wallet: string; nombre: string }> {
+  const delFounder = slug !== undefined && slugsFounder().includes(slug);
   const filas = db
     .prepare(
-      `SELECT u.wallet, u.display_name, u.is_demo, u.role FROM users u
-        WHERE u.cla_signed = 1
+      `SELECT u.wallet, u.display_name, u.is_demo, u.is_founder, u.role FROM users u
+        WHERE u.cla_signed = 1 AND u.status = 'active'
           AND NOT EXISTS (SELECT 1 FROM roster_links r WHERE r.wallet = u.wallet)`
     )
-    .all() as Array<{ wallet: string; display_name: string; is_demo: number; role: string }>;
+    .all() as Array<{ wallet: string; display_name: string; is_demo: number; is_founder: number; role: string }>;
   return filas
     .filter((u) => !isPendingPrincipal(u.wallet))
-    .filter((u) => !u.is_demo || (excepcionPosible && u.role === "founder"))
+    .filter((u) => {
+      if (rolDe(u) === "founder") return slug === undefined || delFounder;
+      if (delFounder || u.is_demo) return false;
+      return !actorWallet || !mismaPersona(db, actorWallet, u.wallet);
+    })
     .map((u) => ({ wallet: u.wallet, nombre: u.display_name }))
     .sort((a, b) => a.nombre.localeCompare(b.nombre, "es", { sensitivity: "base" }) || a.wallet.localeCompare(b.wallet));
 }
@@ -291,6 +320,8 @@ export function candidatosAVincular(db: DB, slug?: string): Array<{ wallet: stri
 // ---------------------------------------------------------------------------
 // Rol y supervisión (solo founder)
 // ---------------------------------------------------------------------------
+
+const CUENTA_INACTIVA = "Esa cuenta no está activa: no recibe supervisión, rol ni una fila del equipo.";
 
 /** Persona sobre la que el founder puede actuar: existe, no es demo, no es él mismo ni un founder. */
 function personaEditable(db: DB, actor: TeamActor, wallet: string): FilaUsuario {
@@ -340,6 +371,7 @@ export function cambiarRol(db: DB, actor: TeamActor, input: { wallet: string; ro
   const u = personaEditable(db, actor, input.wallet);
   const antes = rolDe(u);
   if (antes === input.role) return;
+  if (input.role === "core" && u.status !== "active") throw new TeamError(409, CUENTA_INACTIVA);
   if (input.role === "contributor") {
     if (abiertasFueraDeSusProyectos(db, u.wallet) > 0) {
       throw new TeamError(409, "Primero reasigna sus entregas abiertas o súmale a esos proyectos.");
@@ -361,6 +393,8 @@ export function cambiarSupervisor(db: DB, actor: TeamActor, input: { wallet: str
   const u = personaEditable(db, actor, input.wallet);
   const antes = !!u.is_supervisor;
   if (antes === input.isSupervisor) return;
+  // Quitar siempre se puede; dar supervisión a una cuenta dada de baja, no.
+  if (input.isSupervisor && u.status !== "active") throw new TeamError(409, CUENTA_INACTIVA);
   const tx = db.transaction(() => {
     db.prepare(`UPDATE users SET is_supervisor = ? WHERE wallet = ?`).run(input.isSupervisor ? 1 : 0, u.wallet);
     registrarEvento(db, {
@@ -440,61 +474,42 @@ function contar(db: DB, sql: string, ...params: unknown[]): number {
 }
 
 /**
- * ¿Tiene la fila historia que ya entró en una raíz anclada o en el hash de un rito
- * cerrado? Puntos o reputación en épocas que no están `Open`, o asistencia,
- * anfitrionía o relatoría en ritos `Closed`. Una fila de ledger cuya época no
- * existe no está sellada (no hay raíz que la contenga).
+ * Historia SELLADA, por referencia de `REFERENCIAS_WALLET`: la condición (sobre la
+ * fila de esa tabla) de lo que ya entró en una raíz anclada o en el hash de un rito
+ * cerrado. Puntos o reputación en épocas que no están `Open`; asistencia,
+ * anfitrionía o relatoría en ritos `Closed`. Una fila de ledger cuya época no existe
+ * no está sellada (no hay raíz que la contenga).
  */
-function tieneHistoriaSellada(db: DB, wallet: string): boolean {
-  if (
-    contar(
-      db,
-      `SELECT COUNT(*) AS n FROM points_ledger l JOIN periods p ON p.id = l.period_id
-        WHERE l.wallet = ? AND p.state <> 'Open'`,
-      wallet
-    ) > 0
-  ) {
-    return true;
+const SELLADO: Readonly<Record<string, string>> = {
+  "points_ledger.wallet": `EXISTS (SELECT 1 FROM periods p WHERE p.id = points_ledger.period_id AND p.state <> 'Open')`,
+  "reputation_events.wallet": `EXISTS (SELECT 1 FROM periods p WHERE p.id = reputation_events.period_id AND p.state <> 'Open')`,
+  "rite_attendance.wallet": `EXISTS (SELECT 1 FROM rite_sessions s WHERE s.id = rite_attendance.session_id AND s.state = 'Closed')`,
+  "rite_sessions.host_wallet": `rite_sessions.state = 'Closed'`,
+  "rite_sessions.recorder_wallet": `rite_sessions.state = 'Closed'`,
+};
+
+/** Filas selladas de la wallet, por referencia (solo las que tienen alguna). */
+function historiaSellada(db: DB, wallet: string): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const ref of REFERENCIAS_WALLET) {
+    const clave = `${ref.tabla}.${ref.columna}`;
+    const cond = SELLADO[clave];
+    if (!cond || !columnaExiste(db, ref.tabla, ref.columna)) continue;
+    const n = contar(db, `SELECT COUNT(*) AS n FROM ${ref.tabla} WHERE ${ref.columna} = ? AND ${cond}`, wallet);
+    if (n > 0) out[clave] = n;
   }
-  if (
-    contar(
-      db,
-      `SELECT COUNT(*) AS n FROM reputation_events r JOIN periods p ON p.id = r.period_id
-        WHERE r.wallet = ? AND p.state <> 'Open'`,
-      wallet
-    ) > 0
-  ) {
-    return true;
-  }
-  if (
-    columnaExiste(db, "rite_attendance", "wallet") &&
-    contar(
-      db,
-      `SELECT COUNT(*) AS n FROM rite_attendance a JOIN rite_sessions s ON s.id = a.session_id
-        WHERE a.wallet = ? AND s.state = 'Closed'`,
-      wallet
-    ) > 0
-  ) {
-    return true;
-  }
-  if (
-    columnaExiste(db, "rite_sessions", "host_wallet") &&
-    contar(
-      db,
-      `SELECT COUNT(*) AS n FROM rite_sessions
-        WHERE state = 'Closed' AND (host_wallet = ? OR recorder_wallet = ?)`,
-      wallet,
-      wallet
-    ) > 0
-  ) {
-    return true;
-  }
-  return false;
+  return out;
 }
 
 export interface ResultadoVinculo {
   movidas: Record<string, number>;
   descartadas: Record<string, number>;
+  /**
+   * Con `conservarSellado`: filas de historia sellada que se quedan, intactas, en la
+   * fila del equipo (que pasa a ser un alias unido a la cuenta por `roster_links`).
+   * Vacío si no había nada sellado.
+   */
+  conservadas: Record<string, number>;
   simulado: boolean;
 }
 
@@ -503,16 +518,29 @@ export interface ResultadoVinculo {
  * persona ya entró: su trabajo, sus puntos y su historial pasan a esa cuenta.
  *
  * Solo founder. Precondiciones: el pending existe y no tiene firmas del acuerdo; la
- * cuenta existe, no es `pending:`, no está vinculada, firmó el acuerdo y no es demo
- * (salvo la excepción del founder: slug del founder en el roster + destino con
- * `role='founder'`, que queda con `is_demo=0`). Sin historia sellada (409).
+ * cuenta existe, está activa, no es `pending:`, no está vinculada, firmó el acuerdo y
+ * no es demo (salvo la excepción del founder: slug del founder en el roster + destino
+ * con `role='founder'`, que queda con `is_demo=0`).
+ *
+ * Nadie se queda con lo de otra persona y vincular no promueve a nadie:
+ *  - La fila de otra persona nunca va a una cuenta con rol founder ni a una identidad
+ *    del founder que vincula (sus puntos y su trabajo pasarían al founder).
+ *  - La fila del founder solo va a una cuenta que YA es founder.
+ *  - Una fila con rol founder que no es la del founder no se vincula (daría ese rol).
+ *
+ * Historia sellada: sin `conservarSellado`, 409 (la huella no se reescribe). Con
+ * `conservarSellado`, lo sellado se queda intacto a nombre de la fila del equipo, que
+ * NO se borra: queda como alias de la cuenta (`roster_links` las une para
+ * `identidadesDe`, así que cuentan como una persona en los cuatro ojos y en su
+ * progreso), sin rol que dé acceso (`contributor`, sin supervisión, `alumni`). Todo
+ * lo demás (lo de épocas abiertas, el trabajo, las membresías…) pasa a la cuenta.
  *
  * En UNA transacción: por cada `(tabla, columna)` de `REFERENCIAS_WALLET` que exista,
  * descarta los choques de `unicaCon` (gana el destino) y mueve el resto; luego
  * `users(wallet)` toma el rol más alto y la supervisión de los dos (conserva su
- * nombre), se borra `users(pending)`, se inserta `roster_links` y se escribe
- * `talent_events` con los conteos exactos. `simular: true` hace todo lo anterior y
- * revierte: devuelve los mismos conteos sin dejar huella.
+ * nombre), se borra `users(pending)` (o queda como alias), se inserta `roster_links`
+ * y se escribe `talent_events` con los conteos exactos. `simular: true` hace todo lo
+ * anterior y revierte: devuelve los mismos conteos sin dejar huella.
  *
  * No llamar dentro de otra transacción: con `node:sqlite` una transacción anidada se
  * une a la externa y la simulación no podría revertirse sola.
@@ -520,7 +548,7 @@ export interface ResultadoVinculo {
 export function vincularPrincipal(
   db: DB,
   actor: TeamActor,
-  input: { slug: string; wallet: string; simular?: boolean }
+  input: { slug: string; wallet: string; simular?: boolean; conservarSellado?: boolean }
 ): ResultadoVinculo {
   exigirFounder(actor, "vincula filas del equipo");
   const slug = (input.slug ?? "").trim();
@@ -541,41 +569,67 @@ export function vincularPrincipal(
   if (db.prepare(`SELECT slug FROM roster_links WHERE wallet = ?`).get(wallet)) {
     throw new TeamError(409, "Esa cuenta ya está vinculada a otra fila del equipo.");
   }
-  // Excepción del founder: por rol en la base y por el roster, nunca por FOUNDER_WALLET.
-  const excepcionFounder = slugsFounder().includes(slug) && rolDe(d) === "founder";
+  if (d.status !== "active") throw new TeamError(409, CUENTA_INACTIVA);
+
+  // El founder se reconoce por rol en la base y por el roster, nunca por FOUNDER_WALLET.
+  const delFounder = slugsFounder().includes(slug);
+  const rolD = rolDe(d);
+  if (delFounder) {
+    if (rolD !== "founder") {
+      throw new TeamError(400, "La fila del founder solo se vincula con una cuenta que ya es founder: vincular no da ese rol.");
+    }
+  } else {
+    if (rolD === "founder" || mismaPersona(db, actor.wallet, wallet)) {
+      throw new TeamError(
+        400,
+        "Esa cuenta es del founder: la fila de otra persona no se vincula con ella (su trabajo y sus puntos son de esa persona)."
+      );
+    }
+    if (rolDe(p) === "founder") {
+      throw new TeamError(409, "Esta fila del equipo tiene rol de founder: vincularla daría ese rol a otra cuenta.");
+    }
+  }
+  // Excepción del founder (§5.A.7): con las reglas de arriba, solo llega aquí un destino founder.
+  const excepcionFounder = delFounder && rolD === "founder";
   if (d.is_demo && !excepcionFounder) throw new TeamError(400, "Las cuentas de demostración no se vinculan.");
   if (!d.cla_signed) throw new TeamError(409, "Primero tiene que firmar el acuerdo de contribución.");
   if (contar(db, `SELECT COUNT(*) AS n FROM cla_signatures WHERE wallet = ?`, pending) > 0) {
     throw new TeamError(409, "Esta fila del equipo ya tiene un acuerdo firmado: no se puede fusionar con otra cuenta.");
   }
-  if (tieneHistoriaSellada(db, pending)) throw new TeamError(409, HISTORIA_SELLADA);
+  const sellada = historiaSellada(db, pending);
+  const conservar = Object.keys(sellada).length > 0;
+  if (conservar && !input.conservarSellado) throw new TeamError(409, HISTORIA_SELLADA);
 
   const movidas: Record<string, number> = {};
   const descartadas: Record<string, number> = {};
+  const conservadas: Record<string, number> = conservar ? { ...sellada } : {};
   const simular = !!input.simular;
 
   const tx = db.transaction(() => {
     for (const ref of REFERENCIAS_WALLET) {
       if (!columnaExiste(db, ref.tabla, ref.columna)) continue;
       const clave = `${ref.tabla}.${ref.columna}`;
+      // Con historia sellada que conservar, esas filas no se mueven ni se descartan.
+      const abierto = conservar && SELLADO[clave] ? ` AND NOT (${SELLADO[clave]})` : "";
       if (ref.unicaCon) {
         const choque = ref.unicaCon.map((c) => ` AND d.${c} = ${ref.tabla}.${c}`).join("");
         const r = db
           .prepare(
-            `DELETE FROM ${ref.tabla} WHERE ${ref.columna} = ?
+            `DELETE FROM ${ref.tabla} WHERE ${ref.columna} = ?${abierto}
                AND EXISTS (SELECT 1 FROM ${ref.tabla} d WHERE d.${ref.columna} = ?${choque})`
           )
           .run(pending, wallet);
         const n = Number(r.changes);
         if (n > 0) descartadas[clave] = n;
       }
-      const r = db.prepare(`UPDATE ${ref.tabla} SET ${ref.columna} = ? WHERE ${ref.columna} = ?`).run(wallet, pending);
+      const r = db
+        .prepare(`UPDATE ${ref.tabla} SET ${ref.columna} = ? WHERE ${ref.columna} = ?${abierto}`)
+        .run(wallet, pending);
       const n = Number(r.changes);
       if (n > 0) movidas[clave] = n;
     }
 
     const rolP = rolDe(p);
-    const rolD = rolDe(d);
     const rol = RANGO_ROL[rolP] > RANGO_ROL[rolD] ? rolP : rolD;
     const supervisor = p.is_supervisor || d.is_supervisor ? 1 : 0;
     db.prepare(`UPDATE users SET role = ?, is_supervisor = ?, is_demo = ? WHERE wallet = ?`).run(
@@ -584,13 +638,23 @@ export function vincularPrincipal(
       excepcionFounder ? 0 : d.is_demo,
       wallet
     );
-    db.prepare(`DELETE FROM users WHERE wallet = ?`).run(pending);
+    if (conservar) {
+      // Alias: guarda lo sellado (las FK siguen válidas) sin dar acceso ni identidad
+      // propia. `is_founder = 0` para que el arranque no lo vuelva a promover, y sin
+      // `entra_oid` para que la puerta corporativa no entre por esta fila.
+      const entra = columnaExiste(db, "users", "entra_oid") ? ", entra_oid = NULL" : "";
+      db.prepare(
+        `UPDATE users SET role = 'contributor', is_supervisor = 0, is_founder = 0, status = 'alumni'${entra} WHERE wallet = ?`
+      ).run(pending);
+    } else {
+      db.prepare(`DELETE FROM users WHERE wallet = ?`).run(pending);
+    }
     db.prepare(`INSERT INTO roster_links (slug, wallet, linked_by) VALUES (?, ?, ?)`).run(slug, wallet, actor.wallet);
     registrarEvento(db, {
       actor: actor.wallet,
       target: wallet,
       action: "vincular",
-      detail: { slug, movidas, descartadas },
+      detail: conservar ? { slug, movidas, descartadas, conservadas } : { slug, movidas, descartadas },
     });
     if (simular) throw new SimulacionVinculo();
   });
@@ -600,7 +664,7 @@ export function vincularPrincipal(
   } catch (e) {
     if (!(e instanceof SimulacionVinculo)) throw e;
   }
-  return { movidas, descartadas, simulado: simular };
+  return { movidas, descartadas, conservadas, simulado: simular };
 }
 
 /** Nombre legible de cada referencia, para la confirmación de la UI (sin datos personales). */
@@ -643,18 +707,28 @@ const ETIQUETA_REFERENCIA: Record<string, string> = {
  * Resumen de una vinculación (real o simulada) para la confirmación: total movido y
  * el detalle por tipo de registro ("3 entregas a su nombre, 12 movimientos…").
  */
-export function describirVinculo(r: Pick<ResultadoVinculo, "movidas" | "descartadas">): {
+export function describirVinculo(
+  r: Pick<ResultadoVinculo, "movidas" | "descartadas"> & { conservadas?: Record<string, number> }
+): {
   total: number;
   detalle: string;
   descartadas: number;
+  /** Registros sellados que se quedan en la fila del equipo (con `conservarSellado`). */
+  conservadas: number;
+  detalleConservadas: string;
 } {
-  const partes = Object.entries(r.movidas)
-    .filter(([, n]) => n > 0)
-    .map(([k, n]) => `${n} ${ETIQUETA_REFERENCIA[k] ?? k}`);
+  const describir = (m: Record<string, number>) =>
+    Object.entries(m)
+      .filter(([, n]) => n > 0)
+      .map(([k, n]) => `${n} ${ETIQUETA_REFERENCIA[k] ?? k}`)
+      .join(", ");
+  const conservadas = r.conservadas ?? {};
   return {
     total: Object.values(r.movidas).reduce((s, n) => s + n, 0),
-    detalle: partes.join(", ") || "ningún registro",
+    detalle: describir(r.movidas) || "ningún registro",
     descartadas: Object.values(r.descartadas).reduce((s, n) => s + n, 0),
+    conservadas: Object.values(conservadas).reduce((s, n) => s + n, 0),
+    detalleConservadas: describir(conservadas),
   };
 }
 
@@ -672,6 +746,7 @@ export const talentoAccionSchema = z.discriminatedUnion("action", [
     slug: z.string().trim().min(1).max(60),
     wallet: walletCampo,
     simular: z.boolean().optional(),
+    conservarSellado: z.boolean().optional(),
   }),
 ]);
 export type TalentoAccion = z.infer<typeof talentoAccionSchema>;

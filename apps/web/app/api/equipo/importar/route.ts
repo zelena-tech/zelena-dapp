@@ -3,7 +3,8 @@
  * pegando o subiendo el CSV desde `/equipo/talento#importar`.
  *
  * Cuerpo `{ csv }` (≤ 500 KB) → `ImportSummary`. Founder o supervisor: puerta
- * propia con `equipoInternoActor` (rol leído de la base) + `puedeVerTodoElEquipo`.
+ * propia con `equipoInternoActor` (rol leído de la base), cuenta activa
+ * (`cuentaActiva`) y `puedeVerTodoElEquipo`.
  * `importTasks` resuelve cada Assignee por datos y NO emite puntos ni reputación.
  * El backlog real entra por aquí, nunca por archivos versionados (repo público).
  */
@@ -16,6 +17,7 @@ import { puedeVerTodoElEquipo } from "@/lib/roles";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { TeamError } from "@/lib/team";
 import { importTasks } from "@/lib/team-import";
+import { cuentaActiva } from "@/lib/talento";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +33,12 @@ export async function POST(req: NextRequest) {
 
   const db = getDb();
   const actor = equipoInternoActor(session, db);
-  if (!actor || !puedeVerTodoElEquipo({ role: actor.role, isSupervisor: actor.isSupervisor })) {
+  // Una cuenta dada de baja no importa trabajo aunque conserve su rol en la base.
+  if (
+    !actor ||
+    !cuentaActiva(db, actor.wallet) ||
+    !puedeVerTodoElEquipo({ role: actor.role, isSupervisor: actor.isSupervisor })
+  ) {
     return NextResponse.json({ error: "Importar es del founder y los supervisores." }, { status: 403 });
   }
   if (!rateLimit(`equipo:importar:${actor.wallet}:${clientIp(req.headers)}`, 10, 60_000)) {
