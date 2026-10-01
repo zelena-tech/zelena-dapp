@@ -66,6 +66,9 @@ jobs:
           echo "Enlaces simbólicos en el bundle:"; find "$S" -type l -print
           find "$S" -type l -delete
           node "$S/apps/web/scripts/verificar-paquete.mjs" "$S/apps/web"
+          # El repo es público y el paquete no debe llevar entornos, bases ni llaves.
+          prohibidos=$(find "$S" \( -name '.env*' -o -name '*.db' -o -name '*.db-*' -o -name '*.secret' \) -print)
+          if [ -n "$prohibidos" ]; then echo "Archivos que no pueden ir en el paquete:"; echo "$prohibidos"; exit 1; fi
           (cd "$S" && zip -qr "$GITHUB_WORKSPACE/paquete-azure.zip" .)
           ls -la paquete-azure.zip
           echo "BUILD_ID: $(cat apps/web/.next/BUILD_ID)"

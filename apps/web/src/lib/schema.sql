@@ -111,9 +111,9 @@ CREATE TABLE IF NOT EXISTS anchor_queue (
 
 CREATE TABLE IF NOT EXISTS projects (
   id            INTEGER PRIMARY KEY AUTOINCREMENT,
-  campaign      TEXT NOT NULL,        -- LUMA | CREDIFONO
+  campaign      TEXT NOT NULL,        -- campaña del proyecto de cliente
   title         TEXT NOT NULL,
-  type          TEXT NOT NULL,        -- SAS | DAO  (inmutable tras intake)
+  type          TEXT NOT NULL,        -- cliente | comunidad (valores y etiquetas en agora-labels.ts; inmutable tras intake)
   budget_usd    INTEGER NOT NULL,
   weeks         INTEGER NOT NULL,
   state         TEXT NOT NULL DEFAULT 'Open', -- Open|Assigned|Delivered|Scored|Distributed
@@ -566,6 +566,54 @@ CREATE INDEX IF NOT EXISTS idx_assign_events ON assignment_events(assignment_id)
 CREATE INDEX IF NOT EXISTS idx_assign_events_day ON assignment_events(day);
 CREATE INDEX IF NOT EXISTS idx_checkins_day ON checkins(day);
 
+-- ============================================================================
+-- WP31-A · PROYECTOS Y TALENTO — iniciativa = proyecto.
+-- La membresía define qué ve y qué puede hacer cada persona en un proyecto.
+-- Roles, no personas: se edita desde /equipo/talento y desde el tablero.
+-- ============================================================================
+
+-- Una fila por (proyecto, persona, rol). Una persona puede tener varios roles en
+-- el mismo proyecto (en uno pequeño, quien estructura también revisa).
+CREATE TABLE IF NOT EXISTS project_members (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  initiative_id INTEGER NOT NULL,
+  wallet        TEXT NOT NULL,
+  rol_proyecto  TEXT NOT NULL,                    -- estructura | ejecuta | revisa | vende
+  vinculo       TEXT NOT NULL DEFAULT 'interno',  -- interno | externo
+  added_by      TEXT,
+  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (initiative_id, wallet, rol_proyecto),
+  FOREIGN KEY (initiative_id) REFERENCES initiatives(id),
+  FOREIGN KEY (wallet) REFERENCES users(wallet)
+);
+
+-- Vínculo de una fila del roster (`pending:<slug>`) con la cuenta real que la
+-- absorbió. Existe para que el arranque no vuelva a crear la fila pendiente.
+CREATE TABLE IF NOT EXISTS roster_links (
+  slug       TEXT PRIMARY KEY,
+  wallet     TEXT NOT NULL UNIQUE,
+  linked_by  TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (wallet) REFERENCES users(wallet)
+);
+
+-- Append-only. Cambios de talento: roles, supervisión, membresías, vinculación,
+-- proyectos e importaciones. Describe el cambio; nunca juzga a la persona.
+-- Sin FK a users a propósito: la historia sobrevive a una vinculación.
+CREATE TABLE IF NOT EXISTS talent_events (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  actor_wallet  TEXT NOT NULL,
+  target_wallet TEXT,
+  initiative_id INTEGER,
+  action        TEXT NOT NULL,  -- rol | supervisor | miembro_alta | miembro_baja | vincular | proyecto_crear | proyecto_editar | importar
+  detail        TEXT,
+  created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_pmembers_wallet ON project_members(wallet);
+CREATE INDEX IF NOT EXISTS idx_pmembers_initiative ON project_members(initiative_id);
+CREATE INDEX IF NOT EXISTS idx_talent_events_target ON talent_events(target_wallet);
+
 -- WP13: indice PARCIAL unico. entra_oid es nullable (la mayoria de filas lo tienen a
 -- NULL) y un UNIQUE normal pasaria en SQLite pero rompe en SQL Server, que trata los
 -- NULL como iguales entre si y solo admitiria UNA fila sin vincular. El filtro
@@ -682,3 +730,90 @@ CREATE TABLE IF NOT EXISTS leads (
 );
 
 CREATE INDEX IF NOT EXISTS idx_leads_creado ON leads(created_at);
+
+-- ============================================================================
+-- WP31 · RITOS — la cadencia vive en el genoma (RITES_CADENCE); aquí, lo que pasó.
+-- ============================================================================
+
+-- Una ocurrencia real de un rito. Se crea al prepararla; las futuras se calculan
+-- desde el genoma y no se guardan.
+CREATE TABLE IF NOT EXISTS rite_sessions (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  kind            TEXT NOT NULL,                   -- sync | demo | retro
+  scheduled_for   TEXT NOT NULL,                   -- inicio programado, ISO UTC con Z
+  duration_min    INTEGER NOT NULL,
+  state           TEXT NOT NULL DEFAULT 'Planned', -- Planned | Open | Closed
+  host_wallet     TEXT,
+  recorder_wallet TEXT,
+  lugar           TEXT,                            -- dónde ocurre (texto público), opcional
+  join_url        TEXT,                            -- enlace de conexión; solo se muestra con sesión
+  summary         TEXT,                            -- resumen público, opcional
+  notes_url       TEXT,                            -- enlace al acta, opcional
+  opened_at       TEXT,
+  closed_at       TEXT,
+  hash            TEXT,                            -- sha256 del cierre; se ancla en testnet
+  decision_log_id INTEGER,
+  created_by      TEXT,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (kind, scheduled_for),
+  FOREIGN KEY (host_wallet) REFERENCES users(wallet),
+  FOREIGN KEY (recorder_wallet) REFERENCES users(wallet),
+  FOREIGN KEY (decision_log_id) REFERENCES decision_log(id)
+);
+
+-- Asistencia. Capa 1 = código rotativo. Estar es lo normal: faltar no resta nada.
+CREATE TABLE IF NOT EXISTS rite_attendance (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  session_id INTEGER NOT NULL,
+  wallet     TEXT NOT NULL,
+  layer      INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (session_id, wallet, layer),
+  FOREIGN KEY (session_id) REFERENCES rite_sessions(id),
+  FOREIGN KEY (wallet) REFERENCES users(wallet)
+);
+
+-- ============================================================================
+-- WP31 · AVISOS Y RECORDATORIOS DE SLA
+-- Sin horas, sin "última conexión", sin fecha de lectura: solo la entrega.
+-- ============================================================================
+
+-- Bandeja in-app. is_leido lo marca la persona; no existe "cuándo leyó".
+CREATE TABLE IF NOT EXISTS avisos (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  wallet        TEXT NOT NULL,
+  clave         TEXT NOT NULL,       -- idempotencia: <tipo>:<asignación>:<hito>
+  tipo          TEXT NOT NULL,
+  assignment_id INTEGER,
+  texto         TEXT NOT NULL,
+  is_leido      INTEGER NOT NULL DEFAULT 0,
+  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (wallet, clave),
+  FOREIGN KEY (wallet) REFERENCES users(wallet),
+  FOREIGN KEY (assignment_id) REFERENCES assignments(id)
+);
+
+-- Lo ya procesado por el motor de recordatorios: una fila por (clave, persona),
+-- así nunca se crea dos veces el mismo aviso. Solo cambia is_telegram (0 → 1) cuando
+-- Telegram confirma el envío; lo que sigue en 0 se reintenta en la corrida siguiente.
+-- La clave 'digest:AAAA-MM-DD' marca el resumen diario ya enviado a esa persona.
+CREATE TABLE IF NOT EXISTS reminders_sent (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  clave        TEXT NOT NULL,
+  wallet       TEXT NOT NULL,
+  dia          TEXT NOT NULL,                -- AAAA-MM-DD en la zona horaria del genoma
+  is_inmediato INTEGER NOT NULL DEFAULT 0,   -- 1 = sale en la corrida (P1); 0 = va al resumen del día
+  is_telegram  INTEGER NOT NULL DEFAULT 0,   -- 1 = Telegram confirmó el envío
+  created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (clave, wallet),
+  FOREIGN KEY (wallet) REFERENCES users(wallet)
+);
+
+CREATE INDEX IF NOT EXISTS idx_rite_sessions_state ON rite_sessions(state);
+CREATE INDEX IF NOT EXISTS idx_rite_attendance_wallet ON rite_attendance(wallet);
+CREATE INDEX IF NOT EXISTS idx_avisos_wallet ON avisos(wallet);
+CREATE INDEX IF NOT EXISTS idx_reminders_wallet ON reminders_sent(wallet, dia);
+
+-- Idempotencia de emisión por ref (§3.4): índices sobre tablas existentes, sin columnas nuevas.
+CREATE INDEX IF NOT EXISTS idx_rep_ref ON reputation_events(ref);
+CREATE INDEX IF NOT EXISTS idx_points_ref ON points_ledger(ref);
