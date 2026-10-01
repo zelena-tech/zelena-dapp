@@ -11,8 +11,10 @@ import { describe, it, expect, beforeEach } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import { openDb, type DB } from "./db";
-import { pendingPrincipal } from "./roles";
-import { seedTeam } from "./team";
+import { pendingPrincipal, type TeamActor } from "./roles";
+import { agregarMiembro, crearProyecto, seedTeam } from "./team";
+import { equipoActor } from "./authz";
+import { principalFounder } from "./identidades";
 import {
   BotStoreError,
   LINK_CODE_PREFIX,
@@ -34,6 +36,7 @@ import {
   resolveDraft,
   saveNote,
   unlinkTelegram,
+  walletParaVinculo,
 } from "./bot-store";
 
 const JOHN = pendingPrincipal("john");
@@ -175,6 +178,120 @@ describe("el bot se cuelga de la identidad de equipo del founder", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// WP31-C2 · Telegram para todo el equipo
+// ---------------------------------------------------------------------------
+
+// Personas ficticias (wallets de prueba): nada de este bloque nombra a un cliente real.
+const SESION_FOUNDER = "GFOUNDERSESIONAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+const CUENTA_JOHN = "GJOHNREALAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+const ANA = "GANAEJECUTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+const BETO = "GBETOSINPROYECTOAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+const ACTOR_JOHN: TeamActor = { wallet: JOHN, name: "John", role: "founder", isSupervisor: true };
+
+function usuario(db: DB, wallet: string, role: string, cla = 1): void {
+  db.prepare(
+    `INSERT INTO users (wallet, display_name, role, status, is_demo, cla_signed) VALUES (?, ?, ?, 'active', 0, ?)`
+  ).run(wallet, wallet.slice(1, 6), role, cla);
+}
+
+describe("C2-2 · founderTeamWallet = principalFounder (respeta roster_links)", () => {
+  it("sin vincular, es la fila del roster del founder", () => {
+    const db = freshDb();
+    expect(founderTeamWallet(db, SESION_FOUNDER)).toBe(JOHN);
+    expect(founderTeamWallet(db, SESION_FOUNDER)).toBe(principalFounder(db));
+  });
+
+  it("con la fila vinculada a la cuenta real, el bot va a esa cuenta (adonde se movió su trabajo)", () => {
+    const db = freshDb();
+    usuario(db, CUENTA_JOHN, "founder");
+    db.prepare(`INSERT INTO roster_links (slug, wallet, linked_by) VALUES ('john', ?, ?)`).run(CUENTA_JOHN, JOHN);
+    expect(principalFounder(db)).toBe(CUENTA_JOHN);
+    expect(founderTeamWallet(db, SESION_FOUNDER)).toBe(CUENTA_JOHN);
+    expect(founderTeamWallet(db, JOHN)).toBe(CUENTA_JOHN);
+  });
+});
+
+describe("C2-1 · cualquier equipoActor emite SU código; solo el founder escribe", () => {
+  let db: DB;
+  beforeEach(() => {
+    db = freshDb();
+    usuario(db, SESION_FOUNDER, "founder");
+    usuario(db, ANA, "contributor");
+    usuario(db, BETO, "contributor");
+    const p = crearProyecto(db, ACTOR_JOHN, { name: "Proyecto Abierto Demo" });
+    agregarMiembro(db, ACTOR_JOHN, { initiativeId: p.id, wallet: ANA, rol: "ejecuta" });
+  });
+
+  it("walletParaVinculo: el founder (cualquiera de sus identidades) va a su fila de equipo; el resto, a la suya", () => {
+    expect(walletParaVinculo(db, SESION_FOUNDER)).toBe(JOHN);
+    expect(walletParaVinculo(db, JOHN)).toBe(JOHN);
+    expect(walletParaVinculo(db, VALE)).toBe(VALE);
+    expect(walletParaVinculo(db, DAVID)).toBe(DAVID);
+    expect(walletParaVinculo(db, ANA)).toBe(ANA);
+  });
+
+  it("un contributor miembro, un core y una supervisora emiten su código y quedan en lectura", () => {
+    for (const [wallet, tg] of [
+      [ANA, "201"],
+      [DAVID, "202"],
+      [VALE, "203"],
+    ] as const) {
+      expect(equipoActor({ wallet }, db)).not.toBeNull(); // la puerta de la ruta
+      const emitido = issueLinkCode(db, walletParaVinculo(db, wallet), AHORA);
+      expect(emitido.willAuthorizeWrite, wallet).toBe(false);
+      expect(consumeLinkCode(db, emitido.code, tg, AHORA).ok).toBe(true);
+      expect(linkForTelegramUser(db, tg)!.wallet).toBe(wallet);
+      expect(linkForTelegramUser(db, tg)!.is_authorized).toBe(0);
+    }
+  });
+
+  it("el founder, desde su sesión, vincula su fila de equipo y es el único con escritura", () => {
+    consumeLinkCode(db, issueLinkCode(db, ANA, AHORA).code, "301", AHORA);
+    const emitido = issueLinkCode(db, walletParaVinculo(db, SESION_FOUNDER), AHORA);
+    expect(emitido.willAuthorizeWrite).toBe(true);
+    consumeLinkCode(db, emitido.code, "302", AHORA);
+    expect(linkForTelegramUser(db, "302")).toMatchObject({ wallet: JOHN, is_authorized: 1 });
+    expect(authorizedLinkCount(db)).toBe(1);
+  });
+
+  it("quien no entra a /equipo (contributor sin proyectos) no pasa la puerta de la ruta", () => {
+    expect(equipoActor({ wallet: BETO }, db)).toBeNull();
+    // Con acuerdo pero sin firmarlo tampoco: la puerta exige CLA.
+    usuario(db, "GSINCLAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "contributor", 0);
+    expect(equipoActor({ wallet: "GSINCLAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" }, db)).toBeNull();
+  });
+});
+
+describe("estático: las rutas de Telegram usan la puerta del equipo y el webhook no exige Anthropic", () => {
+  const leer = (...p: string[]) => fs.readFileSync(path.join(process.cwd(), ...p), "utf8");
+
+  it("/api/telegram/vincular autoriza con equipoActor y vincula con walletParaVinculo", () => {
+    const ruta = leer("app", "api", "telegram", "vincular", "route.ts");
+    expect(ruta).toContain("equipoActor(session, db)");
+    expect(ruta).toContain("walletParaVinculo(");
+    expect(ruta).not.toMatch(/\badminActor\(|\bactorFromSession\(/);
+    // La escritura sigue siendo del founder: la decide canAuthorizeWrite dentro de issueLinkCode.
+    expect(ruta).not.toMatch(/UPDATE telegram_links|INSERT INTO telegram_links/);
+  });
+
+  it("el webhook exige flag, secret y token, pero no ANTHROPIC_API_KEY", () => {
+    const ruta = leer("app", "api", "telegram", "webhook", "route.ts");
+    expect(ruta).toContain("isTelegramEnabled()");
+    expect(ruta).toContain("verifyWebhookSecret(");
+    expect(ruta).toMatch(/if \(!token\)/);
+    expect(ruta).not.toMatch(/!token \|\| !apiKey/);
+    expect(ruta).toContain("apiKey ? createClaudeClient({ apiKey }) : null");
+  });
+
+  it("/equipo/telegram tiene su propia puerta y enlaza el aviso de privacidad", () => {
+    const pagina = leer("app", "equipo", "telegram", "page.tsx");
+    expect(pagina).toContain("equipoActor(session, db)");
+    expect(pagina).toContain('href="/privacidad"');
+    expect(pagina).toContain("Por Telegram solo guardamos tu id de chat.");
+  });
+});
+
 describe("borradores: el candado del «nada sin confirmación»", () => {
   let db: DB;
   beforeEach(() => {
@@ -212,9 +329,9 @@ describe("notas y log", () => {
   });
 
   it("guarda la nota resultante con su referencia de reunión", () => {
-    const nota = saveNote(db, { author: JOHN, text: "Acordamos revisar la propuesta", meetingRef: "Hogar Center" });
+    const nota = saveNote(db, { author: JOHN, text: "Acordamos revisar la propuesta", meetingRef: "Cliente Demo" });
     expect(nota.id).toBeGreaterThan(0);
-    expect(nota.meeting_ref).toBe("Hogar Center");
+    expect(nota.meeting_ref).toBe("Cliente Demo");
     expect(listNotes(db, JOHN)).toHaveLength(1);
     expect(() => saveNote(db, { author: JOHN, text: "   " })).toThrow(BotStoreError);
   });

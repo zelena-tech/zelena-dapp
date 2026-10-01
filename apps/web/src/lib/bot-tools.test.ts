@@ -18,9 +18,11 @@ import path from "node:path";
 import { openDb, type DB } from "./db";
 import { pendingPrincipal, type TeamActor } from "./roles";
 import {
+  agregarMiembro,
   applyAssignmentAction,
   assignmentsForOwner,
   createAssignment,
+  crearProyecto,
   getAssignment,
   getCheckin,
   seedTeam,
@@ -29,6 +31,9 @@ import {
 import { blockedWithAge, founderInbox } from "./dashboard";
 import { BOT_COPY } from "./telegram";
 import { createDraft, getDraft, listNotes, pendingDrafts } from "./bot-store";
+import { equipoActor } from "./authz";
+import { createClient } from "./clients";
+import { vincularPrincipal, walletDeRoster } from "./talento";
 import {
   BOT_DISPATCH,
   BOT_MIN_CONFIDENCE,
@@ -49,7 +54,9 @@ import {
   renderFocos,
   renderPendientes,
   reordenarFocos,
+  resolveOwnerAndInitiative,
   runBotTool,
+  soloLoPropio,
   subirPrioridadPieza,
   type BotContext,
 } from "./bot-tools";
@@ -560,5 +567,126 @@ describe("criterio 6 — copys auditados", () => {
     for (const p of ["pagar", "nómina", "nomina", "genoma", "credencial", "contraseña", "transferir", "cerrar la época"]) {
       expect(contrato, `el contrato del modelo menciona '${p}'`).not.toContain(p);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// WP31-C2 · el roster como dato y Telegram sin fugas
+// ---------------------------------------------------------------------------
+
+// Personas ficticias (wallets de prueba): nada de este bloque nombra a un cliente real.
+const ANA = "GANAEJECUTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+const CUENTA_DAVID = "GDAVIDREALAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+const ACTOR_VALE: TeamActor = { wallet: VALE, name: "Vale", role: "core", isSupervisor: true };
+const ACTOR_ANA: TeamActor = { wallet: ANA, name: "Ana", role: "contributor", isSupervisor: false };
+
+function usuario(db: DB, wallet: string, role: string, cla = 1): void {
+  db.prepare(
+    `INSERT INTO users (wallet, display_name, role, status, is_demo, cla_signed) VALUES (?, ?, ?, 'active', 0, ?)`
+  ).run(wallet, wallet.slice(1, 6), role, cla);
+}
+
+describe("C2-2 · resolveOwnerAndInitiative resuelve el roster con walletDeRoster", () => {
+  it("sin vincular, el responsable es la fila del roster", () => {
+    const db = freshDb();
+    expect(resolveOwnerAndInitiative(db, { titulo: "Algo", responsable: "David" }).ownerWallet).toBe(DAVID);
+  });
+
+  it("vinculada la fila con la cuenta real, el trabajo va a esa cuenta (también al confirmar)", () => {
+    const db = freshDb();
+    usuario(db, CUENTA_DAVID, "core");
+    vincularPrincipal(db, ACTOR_JOHN, { slug: "david", wallet: CUENTA_DAVID });
+    expect(walletDeRoster(db, "david")).toBe(CUENTA_DAVID);
+    expect(resolveOwnerAndInitiative(db, { titulo: "Algo", responsable: "David" }).ownerWallet).toBe(CUENTA_DAVID);
+
+    const draftId = createDraft(db, JOHN, "crear_asignacion", { titulo: "Pieza para David", responsable: "David" });
+    expect(confirmDraft(db, ctxJohn(), draftId).outcome).toBe("ok");
+    expect(assignmentsForOwner(db, CUENTA_DAVID).map((a) => a.title)).toEqual(["Pieza para David"]);
+  });
+});
+
+describe("C2-5 · por Telegram, quien no ve todo el equipo recibe solo lo suyo", () => {
+  let db: DB;
+  let ctxAna: BotContext;
+  let ctxDavid: BotContext;
+  const AJENOS = ["Bloqueada ajena", "Gate del founder", "Gate de otra persona", "Trabajo abierto por persona"];
+
+  beforeEach(() => {
+    db = freshDb();
+    usuario(db, ANA, "contributor");
+    const p = crearProyecto(db, ACTOR_JOHN, { name: "Proyecto Abierto Demo" });
+    agregarMiembro(db, ACTOR_JOHN, { initiativeId: p.id, wallet: ANA, rol: "ejecuta" });
+    createAssignment(db, { title: "Lo de Ana", initiativeId: p.id, ownerWallet: ANA, status: "Asignada" });
+    createAssignment(db, { title: "Lo de David", ownerWallet: DAVID, status: "Asignada" });
+    const bloq = createAssignment(db, { title: "Bloqueada ajena", ownerWallet: VALE, status: "Asignada" });
+    applyAssignmentAction(db, { assignmentId: bloq, action: "bloquear", reason: "falta el acceso", actor: ACTOR_JOHN, now: JUEVES });
+    createAssignment(db, { title: "Gate del founder", ownerWallet: JOHN, status: "En curso", needsFounder: true });
+    createAssignment(db, { title: "Gate de otra persona", ownerWallet: VALE, status: "En curso", needsFounder: true });
+    ctxAna = { actor: ACTOR_ANA, canWrite: false, now: JUEVES, equipo: equipoActor({ wallet: ANA }, db) };
+    ctxDavid = { actor: ACTOR_DAVID, canWrite: false, now: JUEVES, equipo: equipoActor({ wallet: DAVID }, db) };
+  });
+
+  it("soloLoPropio: contributor y core sin supervisión sí; founder y supervisión no; sin puerta de /equipo, sí", () => {
+    expect(ctxAna.equipo?.alcance).toBe("proyectos");
+    expect(soloLoPropio(ctxAna)).toBe(true);
+    expect(soloLoPropio(ctxDavid)).toBe(true);
+    expect(soloLoPropio(ctxJohn())).toBe(false);
+    expect(soloLoPropio({ actor: ACTOR_VALE, canWrite: false, now: JUEVES, equipo: equipoActor({ wallet: VALE }, db) })).toBe(false);
+    expect(soloLoPropio({ actor: ACTOR_VALE, canWrite: false, now: JUEVES, equipo: null })).toBe(true);
+  });
+
+  it("por alcance carga, bloqueos, esperando_a_mi, iniciativas, epoca, ritos o digest responde sus pendientes", () => {
+    for (const [ctx, propio] of [
+      [ctxAna, "Lo de Ana"],
+      [ctxDavid, "Lo de David"],
+    ] as const) {
+      for (const alcance of ["carga", "bloqueos", "esperando_a_mi", "iniciativas", "epoca", "ritos", "digest"]) {
+        const out = runBotTool(db, ctx, "consultar_estado", { alcance });
+        expect(out.outcome, alcance).toBe("ok");
+        expect(out.reply.text, alcance).toBe(renderPendientes(db, ctx));
+        expect(out.reply.text, alcance).toContain(propio);
+        for (const ajeno of AJENOS) expect(out.reply.text, `${alcance}: ${ajeno}`).not.toContain(ajeno);
+      }
+    }
+  });
+
+  it("«equipo» le muestra lo suyo (visibleAssignments) y «todo» sigue en la puerta del dashboard", () => {
+    const equipo = runBotTool(db, ctxDavid, "consultar_estado", { alcance: "equipo" }).reply.text;
+    expect(equipo).toContain("Lo de David");
+    for (const ajeno of AJENOS) expect(equipo).not.toContain(ajeno);
+    expect(runBotTool(db, ctxAna, "consultar_estado", { alcance: "equipo" }).reply.text).not.toContain("Lo de David");
+    expect(() => runBotTool(db, ctxDavid, "consultar_estado", { alcance: "todo" })).toThrow(TeamError);
+  });
+
+  it("/focos usa solo su trabajo abierto: nunca la bandeja del founder", () => {
+    expect(focosDelDia(db, ctxDavid).map((a) => a.title)).toEqual(["Lo de David"]);
+    expect(focosDelDia(db, ctxAna).map((a) => a.title)).toEqual(["Lo de Ana"]);
+    // El founder sí recibe lo que espera una decisión suya.
+    expect(focosDelDia(db, ctxJohn()).map((a) => a.title)).toContain("Gate de otra persona");
+  });
+
+  it("sin puerta de /equipo (alumni) ni «equipo» ni «todo» le abren nada, aunque su rol diga supervisión", () => {
+    const sinPuerta: BotContext = { actor: ACTOR_VALE, canWrite: false, now: JUEVES, equipo: null };
+    for (const alcance of ["equipo", "todo", "carga", "bloqueos"]) {
+      const out = runBotTool(db, sinPuerta, "consultar_estado", { alcance });
+      expect(out.reply.text, alcance).toBe(renderPendientes(db, sinPuerta));
+      expect(out.reply.text, alcance).not.toContain("Lo de David");
+    }
+    expect(focosDelDia(db, sinPuerta).map((a) => a.title)).not.toContain("Gate del founder");
+  });
+});
+
+describe("supervisión: los agregados del bot no cuentan proyectos de cliente donde no participa", () => {
+  it("bloqueos y carga sin la pieza de un cliente ajeno; el founder sí la ve", () => {
+    const db = freshDb();
+    const cliente = createClient(db, { name: "Cliente Demo" });
+    const p = crearProyecto(db, ACTOR_JOHN, { name: "Proyecto Cliente Demo", clientId: cliente });
+    const id = createAssignment(db, { title: "Pieza del cliente", initiativeId: p.id, ownerWallet: DAVID, status: "Asignada" });
+    applyAssignmentAction(db, { assignmentId: id, action: "bloquear", reason: "espera una respuesta", actor: ACTOR_JOHN, now: JUEVES });
+    const ctxVale: BotContext = { actor: ACTOR_VALE, canWrite: false, now: JUEVES, equipo: equipoActor({ wallet: VALE }, db) };
+
+    expect(runBotTool(db, ctxVale, "consultar_estado", { alcance: "bloqueos" }).reply.text).not.toContain("Pieza del cliente");
+    expect(runBotTool(db, ctxVale, "consultar_estado", { alcance: "carga" }).reply.text).toContain("David: 0 abiertas · 0 bloqueadas");
+    expect(runBotTool(db, ctxJohn(), "consultar_estado", { alcance: "bloqueos" }).reply.text).toContain("Pieza del cliente");
   });
 });

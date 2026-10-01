@@ -8,7 +8,10 @@
  *    texto plano una vez; la base solo conserva con qué comparar. Cero secretos.
  *  - v1 = SOLO JOHN escribe. La autorización de escritura es una sola fila
  *    (`is_authorized = 1`) y se concede únicamente al founder; cualquier otra
- *    persona vinculada queda en solo lectura. `authorizeWrite` es el punto único.
+ *    persona vinculada queda en solo lectura. `canAuthorizeWrite` es el punto único.
+ *  - WP31-C2: cualquiera que entra a `/equipo` puede vincular SU Telegram (para el
+ *    resumen de sus entregas y lo urgente). El founder se vincula con su identidad
+ *    de equipo (`founderTeamWallet` = `principalFounder`); el resto, con la suya.
  *  - NADA SE CREA SIN CONFIRMACIÓN. La pieza propuesta vive en `bot_drafts` hasta
  *    que John confirma; este módulo no escribe en `assignments` ni en `checkins`.
  *  - Minimización: los borradores guardan la pieza YA ESTRUCTURADA y el log guarda
@@ -19,7 +22,7 @@
 import { randomBytes } from "node:crypto";
 import type { DB } from "./db";
 import { sha256Hex } from "./crypto.ts";
-import { TEAM_ROSTER, pendingPrincipal } from "./roles.ts";
+import { identidadesDe, principalFounder } from "./identidades.ts";
 
 // ---------------------------------------------------------------------------
 // Filas
@@ -116,9 +119,11 @@ function isoPlusMinutes(now: Date, minutes: number): string {
  * ¿Esta wallet puede tener permiso de ESCRITURA por Telegram en v1?
  *
  * Solo el founder, y solo si no hay ya otra vinculación autorizada. Es
- * deliberadamente más estrecho que `puedeVerTodoElEquipo`: Vale es supervisora y
- * ve todo el tablero en la web, pero el bot de v1 es el asistente personal de John
- * (que el equipo cree tareas por bot es fase v2 y NO-alcance aquí).
+ * deliberadamente más estrecho que `puedeVerTodoElEquipo`: una persona con
+ * supervisión ve todo el tablero en la web, pero el bot de v1 es el asistente personal
+ * de John (que el equipo cree tareas por bot es fase v2 y NO-alcance aquí). Desde
+ * WP31-C2 todo el equipo puede vincularse, y esta regla no cambia: se vinculan en
+ * lectura.
  */
 export function canAuthorizeWrite(db: DB, wallet: string): boolean {
   const user = db.prepare(`SELECT role, is_founder FROM users WHERE wallet = ?`).get(wallet) as
@@ -142,17 +147,27 @@ export function canAuthorizeWrite(db: DB, wallet: string): boolean {
  * invitación, en cambio, trae la wallet demo del founder. Si el bot se colgara de
  * esa, `/pendientes` saldría vacío aunque el tablero esté lleno.
  *
- * El founder sale del roster (lib/roles.ts), no de un literal. Si esa fila no
- * existiera, se cae a la wallet de la sesión: nunca se inventa una identidad.
+ * WP31-C2: es `principalFounder` (lib/identidades.ts), que respeta la vinculación del
+ * roster (`roster_links`): si John ya vinculó su fila con su cuenta real, el bot va a
+ * esa cuenta, que es adonde se movió su trabajo. El founder sale del roster y de la
+ * base, nunca de un literal. Si no hay principal, se cae a la wallet de la sesión:
+ * nunca se inventa una identidad.
  */
 export function founderTeamWallet(db: DB, sessionWallet: string): string {
-  const founder = TEAM_ROSTER.find((m) => m.role === "founder");
-  if (!founder) return sessionWallet;
-  const principal = pendingPrincipal(founder.slug);
-  const row = db.prepare(`SELECT wallet FROM users WHERE wallet = ?`).get(principal) as
-    | { wallet: string }
-    | undefined;
-  return row ? row.wallet : sessionWallet;
+  return principalFounder(db) ?? sessionWallet;
+}
+
+/**
+ * Wallet a la que se cuelga el Telegram de quien abre la sesión (WP31-C2):
+ *  - el founder (cualquiera de sus identidades) → su identidad de equipo
+ *    (`founderTeamWallet`), donde vive su trabajo;
+ *  - cualquier otra persona → su propia wallet de sesión.
+ * Quién puede pedirlo lo decide la ruta con `equipoActor`, no esta función.
+ */
+export function walletParaVinculo(db: DB, sessionWallet: string): string {
+  const principal = principalFounder(db);
+  if (principal && identidadesDe(db, sessionWallet).includes(principal)) return founderTeamWallet(db, sessionWallet);
+  return sessionWallet;
 }
 
 export function authorizedLinkCount(db: DB): number {

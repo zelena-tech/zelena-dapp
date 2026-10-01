@@ -7,7 +7,13 @@
  * El handler solo hace de puerta:
  *   1. flag apagado → 404 (el bot no existe hacia fuera);
  *   2. valida el SECRET TOKEN en CADA petición y rechaza sin él;
- *   3. delega en lib/bot-agent.ts, donde vive toda la lógica.
+ *   3. sin `TELEGRAM_BOT_TOKEN` → 503 (no hay con qué responder);
+ *   4. delega en lib/bot-agent.ts, donde vive toda la lógica.
+ *
+ * `ANTHROPIC_API_KEY` es OPCIONAL (WP31-C2): sin ella `claude = null` y el bot
+ * atiende `/start`, los comandos y el resto de lo determinista; el texto libre
+ * responde que por ahora atiende comandos. Así todo el equipo puede vincularse y
+ * recibir sus recordatorios aunque no haya modelo configurado.
  *
  * Siempre responde 200 tras la validación: Telegram reintenta cualquier otra cosa
  * y un reintento infinito de un update que no sabemos atender no ayuda a nadie.
@@ -38,11 +44,11 @@ export async function POST(req: NextRequest) {
   }
 
   const token = telegramBotToken();
-  const apiKey = anthropicApiKey();
-  if (!token || !apiKey) {
-    // El flag está encendido pero falta configuración: se dice, no se adivina.
+  if (!token) {
+    // El flag está encendido pero falta el token: se dice, no se adivina.
     return NextResponse.json({ error: "El bot no está configurado." }, { status: 503 });
   }
+  const apiKey = anthropicApiKey();
 
   const raw = await req.json().catch(() => null);
   if (!raw) return NextResponse.json({ ok: true, skipped: "cuerpo_invalido" });
@@ -52,7 +58,8 @@ export async function POST(req: NextRequest) {
       {
         db: getDb(),
         transport: createTelegramTransport(token),
-        claude: createClaudeClient({ apiKey }),
+        // Sin clave, sin modelo: comandos sí, texto libre no (WP31-C2).
+        claude: apiKey ? createClaudeClient({ apiKey }) : null,
         // Sin proveedor de transcripción todavía (decisión pendiente de John):
         // el flujo de audio responde con honestidad en vez de fingir.
         transcriber: null,

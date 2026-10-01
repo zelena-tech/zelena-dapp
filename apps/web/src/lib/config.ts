@@ -104,7 +104,10 @@ export function telegramWebhookSecret(): string | null {
   return process.env.TELEGRAM_WEBHOOK_SECRET ?? null;
 }
 
-/** API key de Anthropic para clasificar los mensajes. */
+/**
+ * API key de Anthropic para clasificar los mensajes de texto libre. OPCIONAL desde
+ * WP31-C2: sin ella el bot atiende `/start`, los comandos y los recordatorios.
+ */
 export function anthropicApiKey(): string | null {
   return process.env.ANTHROPIC_API_KEY ?? null;
 }
@@ -120,14 +123,35 @@ export function botModel(): string {
   return (process.env.ANTHROPIC_BOT_MODEL ?? BOT_MODEL_DEFAULT).trim();
 }
 
-/** Variables que faltan para encender el flag (diagnóstico, sin valores). */
+/**
+ * Variables OBLIGATORIAS que faltan para encender el flag (diagnóstico, sin valores).
+ *
+ * WP31-C2: la clave de Anthropic ya no está aquí. Sin ella el bot funciona igual
+ * para lo que importa al equipo (vincularse con `/start`, los comandos y los
+ * recordatorios); solo el texto libre queda fuera. Ver `telegramOptionalMissing`.
+ */
 export function telegramMissingVars(opts: { webhook?: boolean } = {}): string[] {
   const missing: string[] = [];
   if (!process.env.TELEGRAM_BOT_TOKEN) missing.push("TELEGRAM_BOT_TOKEN");
-  if (!process.env.ANTHROPIC_API_KEY) missing.push("ANTHROPIC_API_KEY");
   // El secret del webhook solo es obligatorio en el despliegue (modo webhook).
   if (opts.webhook && !process.env.TELEGRAM_WEBHOOK_SECRET) missing.push("TELEGRAM_WEBHOOK_SECRET");
   return missing;
+}
+
+/** Variables OPCIONALES que faltan: sin ellas el bot atiende comandos, no texto libre. */
+export function telegramOptionalMissing(): string[] {
+  const missing: string[] = [];
+  if (!process.env.ANTHROPIC_API_KEY) missing.push("ANTHROPIC_API_KEY");
+  return missing;
+}
+
+/**
+ * Usuario público del bot (`TELEGRAM_BOT_USERNAME`), solo para el copy de
+ * `/equipo/telegram`. No es un secreto. Se devuelve con `@` y sin espacios, o `null`.
+ */
+export function telegramBotUsername(): string | null {
+  const raw = (process.env.TELEGRAM_BOT_USERNAME ?? "").trim().replace(/^@+/, "");
+  return /^[A-Za-z0-9_]{3,64}$/.test(raw) ? `@${raw}` : null;
 }
 
 /** Estado del bot para la UI y el diagnóstico. Sin secretos. */
@@ -136,9 +160,23 @@ export function telegramStatus(opts: { webhook?: boolean } = {}): {
   configured: boolean;
   missing: string[];
   model: string;
+  /** Lo que falta pero no impide encender el bot (hoy: la clave de Anthropic). */
+  optional: string[];
+  /** ¿Entiende texto libre? Solo con la clave de Anthropic. */
+  textoLibre: boolean;
+  botUsername: string | null;
 } {
   const missing = telegramMissingVars(opts);
-  return { enabled: isTelegramEnabled(), configured: missing.length === 0, missing, model: botModel() };
+  const optional = telegramOptionalMissing();
+  return {
+    enabled: isTelegramEnabled(),
+    configured: missing.length === 0,
+    missing,
+    model: botModel(),
+    optional,
+    textoLibre: !optional.includes("ANTHROPIC_API_KEY"),
+    botUsername: telegramBotUsername(),
+  };
 }
 
 export const REPUTATION_AXES = [
