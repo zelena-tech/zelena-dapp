@@ -7,7 +7,7 @@ import { listAcademia } from "@/lib/repo";
 import { fechaLarga, proximosEncuentros } from "@/lib/encuentros";
 import { huellaCorta } from "@/lib/agora-labels";
 import { EXPLORADOR_TX } from "@/lib/pruebas-testnet";
-import { asistenciaPropia, decisionesPublicas, detalleRito, ritosPublicos, zonaRitos } from "@/lib/ritos";
+import { actorDeRitos, asistenciaPropia, decisionesPublicas, detalleRito, ritosPublicos, zonaRitos } from "@/lib/ritos";
 import {
   AUDIENCIA_LABEL,
   ESTADO_RITO_LABEL,
@@ -50,15 +50,16 @@ function veces(n: number, una: string, varias: string): string {
 export default async function ComunidadPage() {
   const db = getDb();
   const session = await getSession();
-  const conSesion = !!session;
+  // El enlace de conexión, solo a una cuenta ACTIVA (la fila manda, no basta la cookie).
+  const actor = session ? actorDeRitos(db, session.wallet) : null;
   const genoma = getActiveGenome(db);
   const tz = zonaRitos(db);
   const { proximos, pasados } = ritosPublicos(db);
   const enlaces = new Map<number, string>();
-  if (conSesion) {
+  if (session && actor) {
     for (const p of proximos) {
       if (p.sessionId && p.conEnlace) {
-        const url = detalleRito(db, p.sessionId, true)?.join_url;
+        const url = detalleRito(db, p.sessionId, true, session.wallet)?.join_url;
         if (url) enlaces.set(p.sessionId, url);
       }
     }

@@ -51,7 +51,10 @@ export default async function RitoPage({ params }: { params: { id: string } }) {
 
   const db = getDb();
   const session = await getSession();
-  const rito = detalleRito(db, id, !!session);
+  // La fila manda, no la cookie: una cuenta inactiva con el JWT vigente no ve el
+  // enlace, y el del sync solo lo recibe quien pasa la puerta de su asistencia.
+  const actor = session ? actorDeRitos(db, session.wallet) : null;
+  const rito = session ? detalleRito(db, id, !!actor, session.wallet) : detalleRito(db, id, false);
   if (!rito) notFound();
 
   const tz = zonaRitos(db);
@@ -60,7 +63,6 @@ export default async function RitoPage({ params }: { params: { id: string } }) {
   const inicio = new Date(rito.scheduled_for);
   const enVentana = dentroDeVentana(ahora, ventanaRito(inicio, rito.duration_min, margen));
   const abierto = rito.state === "Open" && enVentana;
-  const actor = session ? actorDeRitos(db, session.wallet) : null;
   const presenta = actor ? puedePresentarRito(db, actor, id) : false;
   const asistencia = session && abierto ? estadoAsistencia(db, session.wallet, id, ahora) : null;
   const label = RITE_LABEL[rito.kind];
@@ -93,11 +95,11 @@ export default async function RitoPage({ params }: { params: { id: string } }) {
             <a href={rito.join_url} target="_blank" rel="noopener noreferrer" className={`${ENLACE} text-base`}>
               Enlace para conectarte
             </a>
-          ) : (
+          ) : !actor ? (
             <Link href="/entrar" className={`${ENLACE} text-base`}>
               Entra para ver el enlace.
             </Link>
-          )
+          ) : null
         ) : null}
       </header>
 

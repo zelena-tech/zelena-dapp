@@ -13,13 +13,18 @@
  * (≥ 32, que producción ya exige). Nunca vive en el repo: en producción, sin ninguno
  * de los dos, `ritesSecret` lanza (igual que `jwt.ts`); fuera de producción cae a
  * uno de desarrollo, que no sirve para nada real.
+ *
+ * La huella del cierre también lleva el secreto (`hashCierre`, más abajo): sin él,
+ * cualquiera que conozca las wallets candidatas podría sacar la lista nominal.
  */
 import { timingSafeEqual } from "node:crypto";
-import { hmacHex, sha256Hex } from "./crypto";
+import { hmacHex } from "./crypto";
 import type { RiteKind } from "./genome";
 
 /** Etiqueta de derivación: el secreto de ritos nunca es el de sesión tal cual. */
 const DERIVACION = "zelena-ritos-v1";
+/** Etiqueta de la clave de la huella: distinta de la del código (separación de dominios). */
+const DERIVACION_HUELLA = "zelena-ritos-huella-v1";
 /** Solo desarrollo y tests (NODE_ENV ≠ production). No protege nada real. */
 const SOLO_DESARROLLO = "dev-only-insecure-rites-secret-change-me";
 
@@ -84,18 +89,35 @@ export function verificarCodigo(
 }
 
 /**
- * Huella del cierre de un rito: sha256 de un JSON canónico (claves en orden fijo,
- * asistentes sin duplicados y ordenados). Es lo que se ancla en la red de pruebas.
- * La lista nominal de asistentes existe SOLO aquí dentro: no se publica en claro.
+ * Huella del cierre de un rito: HMAC-SHA256 de un JSON canónico (claves en orden
+ * fijo, asistentes sin duplicados y ordenados) con una clave derivada del secreto de
+ * los ritos. Es lo que se ancla en la red de pruebas.
+ *
+ * Por qué con secreto y no un sha256 a secas: todo lo que entra en el JSON se puede
+ * adivinar (las wallets del equipo se conocen, y el tipo, la fecha, el resumen y el
+ * CONTEO de asistentes son públicos). Con un sha256 sin secreto, bastaría probar
+ * cada lista de tamaño N de las wallets candidatas para sacar quién asistió, y eso
+ * mediría la presencia de cada persona. Con el secreto, la huella sigue siendo
+ * determinista y reproducible para el servidor (mismo cierre y mismo secreto, misma
+ * huella), y la lista nominal existe SOLO aquí dentro: no se publica en claro ni se
+ * puede enumerar desde fuera. Nadie de fuera podía verificarla igualmente, porque la
+ * lista no es pública.
+ *
+ * Ojo al rotar `RITES_SECRET` (o `SESSION_SECRET`, si es de ahí de donde se deriva):
+ * las huellas ya ancladas siguen valiendo tal cual, pero el servidor ya no podrá
+ * recalcularlas.
  */
-export function hashCierre(i: {
-  kind: RiteKind;
-  scheduledFor: string;
-  asistentes: string[];
-  host: string | null;
-  recorder: string | null;
-  summary: string | null;
-}): string {
+export function hashCierre(
+  i: {
+    kind: RiteKind;
+    scheduledFor: string;
+    asistentes: string[];
+    host: string | null;
+    recorder: string | null;
+    summary: string | null;
+  },
+  secret: string = ritesSecret()
+): string {
   const canonico = JSON.stringify({
     asistentes: [...new Set(i.asistentes)].sort(),
     host: i.host ?? null,
@@ -104,5 +126,5 @@ export function hashCierre(i: {
     scheduledFor: i.scheduledFor,
     summary: i.summary ?? null,
   });
-  return sha256Hex(canonico);
+  return hmacHex(hmacHex(secret, DERIVACION_HUELLA), canonico);
 }

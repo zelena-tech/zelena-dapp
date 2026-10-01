@@ -1,8 +1,9 @@
 /**
- * WP31-D · código de asistencia rotativo y huella de cierre (criterio D2).
+ * WP31-D · código de asistencia rotativo y huella de cierre (criterios D2 y D4).
  */
 import { describe, it, expect } from "vitest";
 import { bucketDe, codigoRito, expiraEnS, hashCierre, ritesSecret, verificarCodigo } from "./ritos-codigo";
+import { sha256Hex } from "./crypto";
 import { GENOME_DEFAULTS } from "./genome";
 
 const ROT = GENOME_DEFAULTS.RITE_CODE_ROTATION_S; // 90 s
@@ -87,7 +88,45 @@ describe("D2 · ritesSecret: el secreto sale de la configuración, nunca del rep
   });
 });
 
-describe("hashCierre · huella determinista del cierre", () => {
+/** Todos los subconjuntos de `n` elementos de `xs` (para enumerar listas candidatas). */
+function subconjuntos<T>(xs: T[], n: number): T[][] {
+  if (n === 0) return [[]];
+  if (xs.length < n) return [];
+  const [x, ...resto] = xs;
+  return [...subconjuntos(resto, n - 1).map((s) => [x, ...s]), ...subconjuntos(resto, n)];
+}
+
+/**
+ * El ataque que la huella tiene que resistir (§4.D.6): quien conoce las wallets
+ * candidatas (cualquiera del equipo, o quien vea perfiles) y los datos públicos del
+ * cierre (tipo, fecha, conteo y resumen) prueba cada lista de tamaño N con cada
+ * anfitrión y relator posibles, y compara con la huella publicada.
+ */
+function enumerarLista(
+  huella: string,
+  publico: { kind: string; scheduledFor: string; asistentes: number; summary: string | null },
+  candidatas: string[]
+): string[] | null {
+  const papeles = [null, ...candidatas];
+  for (const lista of subconjuntos(candidatas, publico.asistentes)) {
+    for (const host of papeles) {
+      for (const recorder of papeles) {
+        const canonico = JSON.stringify({
+          asistentes: [...lista].sort(),
+          host,
+          kind: publico.kind,
+          recorder,
+          scheduledFor: publico.scheduledFor,
+          summary: publico.summary,
+        });
+        if (sha256Hex(canonico) === huella) return lista;
+      }
+    }
+  }
+  return null;
+}
+
+describe("D4 · hashCierre: huella determinista del cierre, con el secreto del servidor", () => {
   const base = {
     kind: "demo" as const,
     scheduledFor: "2026-10-09T21:00:00.000Z",
@@ -98,18 +137,45 @@ describe("hashCierre · huella determinista del cierre", () => {
   };
 
   it("no depende del orden ni de duplicados de la lista de asistentes", () => {
-    const h = hashCierre(base);
+    const h = hashCierre(base, SECRETO);
     expect(h).toMatch(/^[0-9a-f]{64}$/);
-    expect(hashCierre({ ...base, asistentes: ["GC", "GA", "GB", "GA"] })).toBe(h);
+    expect(hashCierre({ ...base, asistentes: ["GC", "GA", "GB", "GA"] }, SECRETO)).toBe(h);
   });
 
   it("cambia si cambia cualquier dato del cierre", () => {
-    const h = hashCierre(base);
-    expect(hashCierre({ ...base, asistentes: ["GA", "GB"] })).not.toBe(h);
-    expect(hashCierre({ ...base, summary: null })).not.toBe(h);
-    expect(hashCierre({ ...base, host: null })).not.toBe(h);
-    expect(hashCierre({ ...base, recorder: "GX" })).not.toBe(h);
-    expect(hashCierre({ ...base, kind: "retro" })).not.toBe(h);
-    expect(hashCierre({ ...base, scheduledFor: "2026-10-23T21:00:00.000Z" })).not.toBe(h);
+    const h = hashCierre(base, SECRETO);
+    expect(hashCierre({ ...base, asistentes: ["GA", "GB"] }, SECRETO)).not.toBe(h);
+    expect(hashCierre({ ...base, summary: null }, SECRETO)).not.toBe(h);
+    expect(hashCierre({ ...base, host: null }, SECRETO)).not.toBe(h);
+    expect(hashCierre({ ...base, recorder: "GX" }, SECRETO)).not.toBe(h);
+    expect(hashCierre({ ...base, kind: "retro" }, SECRETO)).not.toBe(h);
+    expect(hashCierre({ ...base, scheduledFor: "2026-10-23T21:00:00.000Z" }, SECRETO)).not.toBe(h);
+  });
+
+  it("mismo cierre y mismo secreto → misma huella; con otro secreto, otra", () => {
+    const h = hashCierre(base, SECRETO);
+    expect(hashCierre({ ...base }, SECRETO)).toBe(h);
+    expect(hashCierre(base, "otro-secreto-distinto-0123456789")).not.toBe(h);
+    // Sin secreto explícito usa el de los ritos (el mismo que firma el código).
+    expect(hashCierre(base)).toBe(hashCierre(base, ritesSecret()));
+  });
+
+  it("sin el secreto, enumerar las wallets candidatas no saca la lista nominal", () => {
+    const candidatas = ["GA", "GB", "GC", "GD", "GE", "GH", "GR"];
+    const publico = { kind: base.kind, scheduledFor: base.scheduledFor, asistentes: 3, summary: base.summary };
+    // Control: la enumeración SÍ acierta contra una huella sin secreto (el sha256 de antes).
+    const sinSecreto = sha256Hex(
+      JSON.stringify({
+        asistentes: ["GA", "GB", "GC"],
+        host: "GH",
+        kind: "demo",
+        recorder: "GR",
+        scheduledFor: base.scheduledFor,
+        summary: base.summary,
+      })
+    );
+    expect(enumerarLista(sinSecreto, publico, candidatas)).toEqual(["GA", "GB", "GC"]);
+    // La huella de verdad no se deja enumerar.
+    expect(enumerarLista(hashCierre(base, SECRETO), publico, candidatas)).toBeNull();
   });
 });

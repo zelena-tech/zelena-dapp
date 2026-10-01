@@ -13,7 +13,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { openDb, type DB } from "./db";
 import { seedIfEmpty } from "./seed";
-import { merkleRoot } from "./crypto";
+import { merkleRoot, sha256Hex } from "./crypto";
 import { currentEpoch, GENOME_DEFAULTS } from "./genome";
 import { tipoDesdeEtiqueta } from "./agora-labels";
 import type { Role, TeamActor } from "./roles";
@@ -110,6 +110,36 @@ function lanza(fn: () => unknown, status: number, texto?: RegExp | string): Rito
     return r;
   }
   throw new Error("se esperaba un RitoError");
+}
+
+/**
+ * El ataque del revisor (§4.D.6): con las wallets candidatas y lo que publica
+ * `ritosPublicos` (tipo, fecha, conteo, resumen y huella), probar cada lista de
+ * tamaño N con cada anfitrión y relator posibles contra el sha256 del JSON canónico.
+ */
+function enumerarLista(
+  pasado: { kind: string; scheduledFor: string; asistentes: number; summary: string | null; huella: string | null },
+  candidatas: string[]
+): string[] | null {
+  const listas = (xs: string[], n: number): string[][] =>
+    n === 0 ? [[]] : xs.length < n ? [] : [...listas(xs.slice(1), n - 1).map((l) => [xs[0], ...l]), ...listas(xs.slice(1), n)];
+  const papeles = [null, ...candidatas];
+  for (const lista of listas(candidatas, pasado.asistentes)) {
+    for (const host of papeles) {
+      for (const recorder of papeles) {
+        const canonico = JSON.stringify({
+          asistentes: [...lista].sort(),
+          host,
+          kind: pasado.kind,
+          recorder,
+          scheduledFor: pasado.scheduledFor,
+          summary: pasado.summary,
+        });
+        if (sha256Hex(canonico) === pasado.huella) return lista;
+      }
+    }
+  }
+  return null;
 }
 
 let db: DB;
@@ -435,6 +465,34 @@ describe("D4 · cerrar un rito", () => {
     expect(acta.title).toMatch(/^Rito demo quincenal del .* · 1 asistente$/);
     expect(filas(db, `SELECT ref FROM reputation_events WHERE ref LIKE 'rito:%'`)).toEqual([{ ref: refRito(id, "asistencia") }]);
   });
+
+  it("la lista nominal no se saca de la huella pública enumerando wallets candidatas", () => {
+    const id = demoAbierta();
+    registrarAsistencia(db, a1.wallet, { sessionId: id, codigo: codigoEn(id, EN_DEMO) }, EN_DEMO);
+    registrarAsistencia(db, a2.wallet, { sessionId: id, codigo: codigoEn(id, EN_DEMO) }, EN_DEMO);
+    cerrarRito(db, anfitrion, { sessionId: id, summary: "Resumen público." }, CIERRE_DEMO);
+
+    const [pasado] = ritosPublicos(db, new Date("2026-10-09T23:00:00Z")).pasados;
+    expect(pasado).toMatchObject({ id, asistentes: 2, summary: "Resumen público." });
+    expect(pasado.huella).toMatch(/^[0-9a-f]{64}$/);
+    // Quien conoce a todo el equipo y los datos públicos del cierre no acierta.
+    const candidatas = [fundadora, supervisora, core, anfitrion, relator, a1, a2].map((p) => p.wallet);
+    expect(enumerarLista(pasado, candidatas)).toBeNull();
+    // El servidor, con su secreto, sí la reproduce.
+    expect(pasado.huella).toBe(
+      hashCierre(
+        {
+          kind: "demo",
+          scheduledFor: DEMO,
+          asistentes: [a2.wallet, a1.wallet],
+          host: anfitrion.wallet,
+          recorder: relator.wallet,
+          summary: "Resumen público.",
+        },
+        ritesSecret()
+      )
+    );
+  });
 });
 
 describe("D5b · tras cerrar la época N, los ritos no cambian su raíz", () => {
@@ -516,6 +574,49 @@ describe("D6 · lecturas públicas sin wallets ni nombres; el enlace solo con se
       [retro.id, "Planned", 0],
       [id, "Closed", 1],
     ]);
+  });
+
+  it("el enlace del sync es del equipo: un contributor con sesión no lo recibe", () => {
+    const sync = prepararRito(
+      db,
+      fundadora,
+      { kind: "sync", scheduledFor: SYNC, joinUrl: "https://meet.example.org/team-sync" },
+      PREP
+    );
+    const enlace = (conSesion: boolean, wallet?: string) => detalleRito(db, sync.id, conSesion, wallet)?.join_url;
+
+    // Contributor de la comunidad con la cookie vigente: ni con su wallet ni sin decir quién mira.
+    expect(enlace(true, a1.wallet)).toBeNull();
+    expect(enlace(true)).toBeNull();
+    // Sabe que hay enlace (para el copy), pero no cuál es.
+    expect(detalleRito(db, sync.id, true, a1.wallet)?.conEnlace).toBe(true);
+    // Una cuenta del equipo que ya no está activa (alumni) tampoco.
+    const alumni = persona(db, "G_ALUMNI_CORE", { role: "core", status: "alumni" });
+    expect(enlace(true, alumni.wallet)).toBeNull();
+    // Sin sesión, nadie.
+    expect(enlace(false, core.wallet)).toBeNull();
+    // El equipo interno sí (la misma puerta que la asistencia al sync).
+    expect(enlace(true, core.wallet)).toBe("https://meet.example.org/team-sync");
+    expect(enlace(true, supervisora.wallet)).toBe("https://meet.example.org/team-sync");
+    expect(enlace(true, fundadora.wallet)).toBe("https://meet.example.org/team-sync");
+  });
+
+  it("con una cookie vigente de una cuenta inactiva o sin fila, el enlace de la demo no sale", () => {
+    const id = demoPreparada();
+    const baja = persona(db, "G_ALUMNI", { status: "alumni" });
+    expect(detalleRito(db, id, true, baja.wallet)?.join_url).toBeNull();
+    expect(detalleRito(db, id, true, "G_SIN_FILA")?.join_url).toBeNull();
+    // La demo es de la comunidad: cualquier cuenta activa la ve.
+    expect(detalleRito(db, id, true, a1.wallet)?.join_url).toBe("https://meet.example.org/demo");
+  });
+
+  it("las páginas deciden el enlace por la fila activa y la wallet, no solo por la cookie", () => {
+    for (const r of ["app/comunidad/ritos/[id]/page.tsx", "app/comunidad/page.tsx"]) {
+      const src = leer(r);
+      expect(src).toMatch(/actorDeRitos\(db, session\.wallet\)/);
+      expect(src).not.toMatch(/detalleRito\(db, [^)]*!!session\)/);
+      expect(src).toMatch(/detalleRito\(db, [^)]*session\.wallet\)/);
+    }
   });
 
   it("txId solo si el anclaje es verificable; 'pendiente de cerrar' si la ventana pasó abierta", () => {

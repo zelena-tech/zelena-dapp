@@ -14,7 +14,10 @@
  *    explícito, para no caer en una época ya cerrada.
  *  - Nada de horas, presencia ni rankings: el anfitrión y la administración ven
  *    SOLO el conteo; la lista nominal existe únicamente dentro de la huella del
- *    cierre, y cada persona ve la suya (`asistenciaPropia`).
+ *    cierre (con el secreto de los ritos, para que no se pueda enumerar), y cada
+ *    persona ve la suya (`asistenciaPropia`).
+ *  - El enlace de conexión, solo a una cuenta activa; el del sync, solo a quien
+ *    pasa la misma puerta que su asistencia (`esDeLaAudiencia`).
  *  - Cuentas demo, principales `pending:` y personas sin acuerdo firmado no
  *    registran asistencia ni presentan.
  *  - Parámetros solo del genoma; fechas con `zona-horaria.ts`.
@@ -464,14 +467,17 @@ export function cerrarRito(
         .prepare(`SELECT wallet FROM rite_attendance WHERE session_id = ? AND layer = 1 ORDER BY wallet`)
         .all(row.id) as Array<{ wallet: string }>
     ).map((a) => a.wallet);
-    const huella = hashCierre({
-      kind: row.kind,
-      scheduledFor: row.scheduled_for,
-      asistentes,
-      host: row.host_wallet,
-      recorder: row.recorder_wallet,
-      summary,
-    });
+    const huella = hashCierre(
+      {
+        kind: row.kind,
+        scheduledFor: row.scheduled_for,
+        asistentes,
+        host: row.host_wallet,
+        recorder: row.recorder_wallet,
+        summary,
+      },
+      ritesSecret()
+    );
 
     const n = asistentes.length;
     const fecha = diaLocal(ahora, p.tz);
@@ -546,6 +552,18 @@ function asistio(db: DB, identidades: string[], sessionId: number): boolean {
     .get(sessionId, ...identidades);
 }
 
+/**
+ * ¿Esta persona es de la audiencia del rito? La demo y la retro son de la comunidad
+ * (cualquiera con cuenta). El sync es del equipo y de quien trabaja en un proyecto:
+ * la MISMA puerta decide quién registra su asistencia y quién recibe su enlace.
+ * PENDIENTE (WP31-A): cambiar a `equipoActor` (contributors con membresía y acuerdo)
+ * cuando se fusione `wp31-a1`; hoy solo existe la puerta del equipo interno.
+ */
+function esDeLaAudiencia(db: DB, kind: RiteKind, wallet: string): boolean {
+  if (RITE_LABEL[kind].audiencia !== "equipo") return true;
+  return !!equipoInternoActor({ wallet }, db);
+}
+
 /** Todo lo que se exige antes de mirar el código. Lanza `RitoError` con el copy de §8.4. */
 function puertaDeAsistencia(db: DB, wallet: string, sessionId: number, ahora: Date): { row: RiteSessionRow; p: ParamsRitos } {
   comprobarPersona(db, wallet);
@@ -556,9 +574,7 @@ function puertaDeAsistencia(db: DB, wallet: string, sessionId: number, ahora: Da
     throw new RitoError(409, COPY_ASISTENCIA.noAbierto, "no_abierto");
   }
   // El sync es del equipo y de quien trabaja en un proyecto.
-  // PENDIENTE (WP31-A): cambiar a `equipoActor` (contributors con membresía y acuerdo)
-  // cuando se fusione `wp31-a1`; hoy solo existe la puerta del equipo interno.
-  if (RITE_LABEL[row.kind].audiencia === "equipo" && !equipoInternoActor({ wallet }, db)) {
+  if (!esDeLaAudiencia(db, row.kind, wallet)) {
     throw new RitoError(403, "Este rito es del equipo y de quien trabaja en un proyecto.", "audiencia");
   }
   return { row, p };
@@ -755,12 +771,35 @@ function sinWallets(row: RiteSessionRow, asistentes: number): DetalleRito {
   };
 }
 
-/** Detalle de una sesión para /comunidad/ritos/[id]. `join_url` solo con sesión; sin wallets. */
-export function detalleRito(db: DB, sessionId: number, conSesion: boolean): DetalleRito | undefined {
+/**
+ * ¿Quién recibe el enlace de conexión? Hace falta sesión (`conSesion`). Si se dice
+ * quién mira (`wallet`, la de la sesión), su fila tiene que existir y estar activa:
+ * una cookie vigente de una cuenta dada de baja no basta. El sync, además, solo para
+ * quien pasa la puerta de su asistencia; sin `wallet`, el enlace del sync no sale.
+ */
+function veEnlace(db: DB, row: RiteSessionRow, conSesion: boolean, wallet: string | null | undefined): boolean {
+  if (!conSesion) return false;
+  if (wallet === undefined) return RITE_LABEL[row.kind].audiencia !== "equipo";
+  if (!wallet || !actorDeRitos(db, wallet)) return false;
+  return esDeLaAudiencia(db, row.kind, wallet);
+}
+
+/**
+ * Detalle de una sesión para /comunidad/ritos/[id]. Sin wallets. `join_url` solo con
+ * sesión y, si se pasa `wallet` (las páginas siempre la pasan), solo a una cuenta
+ * activa de la audiencia del rito: el enlace del sync es del equipo. `conEnlace` dice
+ * si hay enlace aunque no se entregue (para el copy).
+ */
+export function detalleRito(
+  db: DB,
+  sessionId: number,
+  conSesion: boolean,
+  wallet?: string | null
+): DetalleRito | undefined {
   const row = filaRito(db, sessionId);
   if (!row) return undefined;
   const d = sinWallets(row, conteoAsistentes(db, row.id));
-  return conSesion ? d : { ...d, join_url: null };
+  return veEnlace(db, row, conSesion, wallet) ? d : { ...d, join_url: null };
 }
 
 /** Rango de una época en el tiempo: desde su `created_at` hasta el de la siguiente. */
