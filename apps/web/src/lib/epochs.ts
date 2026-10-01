@@ -12,6 +12,7 @@ import { sha256Hex } from "./crypto";
 import { getActiveGenome } from "./genome";
 import { computeFitness, recommend, type EpochData, type FitnessComponent, type Recommendation } from "./fitness";
 import { mutationDecidedFor } from "./mutation";
+import { participacionRitos } from "./ritos";
 
 export interface EpochFitnessReport {
   id: number;
@@ -28,10 +29,14 @@ export interface EpochFitnessReport {
 
 /**
  * Reúne datos de la época desde señales REALES disponibles. Lo que aún no tiene
- * fuente en el schema (calidad calibrada, ritos) se omite: el motor de fitness lo
- * degrada explícitamente. Doc: se calibra tras las primeras épocas reales (WP11).
+ * fuente en el schema (calidad calibrada) se omite: el motor de fitness lo degrada
+ * explícitamente. Doc: se calibra tras las primeras épocas reales (WP11).
+ *
+ * Participación (WP31-D): asistencia de capa 1 a los ritos cerrados durante la
+ * época sobre (personas activas no demo × ritos cerrados). Sin ningún rito cerrado
+ * en la época, se sigue degradando ("sin datos de ritos").
  */
-export function gatherEpochData(db: DB, _epoch: number): EpochData {
+export function gatherEpochData(db: DB, epoch: number): EpochData {
   const activeBase = (
     db.prepare(
       `SELECT COUNT(*) AS n FROM (SELECT wallet FROM reputation_events UNION SELECT wallet FROM points_ledger)`
@@ -61,7 +66,12 @@ export function gatherEpochData(db: DB, _epoch: number): EpochData {
     data.disputes = 0;
     data.totalDeliveries = approvedDeliveries;
   }
-  // Calidad y ritos: sin señal calibrada en Génesis → se degradan en el reporte.
+  const ritos = participacionRitos(db, epoch);
+  if (ritos) {
+    data.checkins = ritos.checkins;
+    data.expectedCheckins = ritos.expectedCheckins;
+  }
+  // Calidad: sin señal calibrada en Génesis → se degrada en el reporte.
   return data;
 }
 
