@@ -10,6 +10,7 @@ import { FOUNDER_WALLET, BOOTSTRAP_CODE_MAX, BOOTSTRAP_CODE_MIN, bootstrapInvite
 import { GENOME_V1, seedGenomeV1 } from "./genome";
 import { seedTeam } from "./team";
 import { createCohortInvite } from "./invites";
+import { ACADEMIA_S1, aplicarContenidoPublico } from "./contenido-publico";
 
 const DELINA = "GDELINACONTRIBUTORDEMOAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 const MARCOS = "GMARCOSDEVDEMOBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB";
@@ -94,6 +95,10 @@ export function seedIfEmpty(db: DB, env: NodeJS.ProcessEnv = process.env): void 
   // Código de cohorte: también en cada arranque (idempotente), pero SOLO con
   // `SEED_COHORT=1`. Va después de todo lo demás y fuera de `seed()`.
   seedCohortInvite(db, env);
+
+  // Contenido público (WP31-E2): lleva una base con el contenido viejo a la forma que
+  // `seed()` siembra hoy. Idempotente; si falla, el arranque sigue y se reintenta.
+  try { aplicarContenidoPublico(db); } catch (e) { console.error("[seed] contenido público", e); }
 }
 
 /**
@@ -375,7 +380,7 @@ function seed(db: DB, env: NodeJS.ProcessEnv = process.env): void {
     [
       "2026-06-18",
       "Modelo de reparto 20 / 70 / 10",
-      "Cada rol cobra 20% de anticipo, 70% por hitos verificados y 10% de retención de calidad; el treasury recibe 30% de cada proyecto según el Plan Maestro.",
+      "Cada rol cobra 20% de anticipo, 70% por hitos verificados y 10% de retención de calidad; el fondo común recibe 30% de cada proyecto.",
     ],
     [
       "2026-06-20",
@@ -390,7 +395,7 @@ function seed(db: DB, env: NodeJS.ProcessEnv = process.env): void {
     [
       "2026-07-01",
       "Publicación de campañas LUMA + CREDIFONO",
-      "Se abren al Ágora las dos primeras campañas (5 bounties) etiquetadas SAS, con hitos y criterios de aceptación públicos.",
+      "Se abren al Ágora las dos primeras campañas (5 proyectos) etiquetadas como proyectos de cliente, con hitos y criterios de aceptación públicos.",
     ],
   ];
   for (const d of decisions) insDec.run(d[0], d[1], d[2], sha256Hex(d.join("|")));
@@ -487,34 +492,20 @@ function seedAcademia(db: DB): void {
     for (const q of quiz) insQ.run(cid, q[0], JSON.stringify(q[1]), q[2]);
   };
 
+  // S1 (WP31-E2): mismo texto que la migración `aplicarContenidoPublico` deja en una
+  // base existente. Va primero (mismo id que en producción), pero su `ord` es 2.
   addContent(
     {
-      slug: "por-que-sas-dao",
+      slug: ACADEMIA_S1.slug,
       kind: "article",
-      title: "Por qué SAS + DAO",
-      summary: "La arquitectura de dos entidades que protege a los contribuidores y da una contraparte a los clientes.",
+      title: ACADEMIA_S1.title,
+      summary: ACADEMIA_S1.summary,
       points: 150,
       minSeconds: 45,
-      ord: 1,
-      body: `## Por qué SAS + DAO
-
-La descentralización total desde el día uno es una fantasía costosa. Zelena separa la entidad que **sostiene el valor legal** de la comunidad que lo **coordina**.
-
-- **Zelena SAS** — empresa formal. Dueña de la marca, la propiedad intelectual comercial, los ingresos y la relación con clientes.
-- **Zelena DAO** — comunidad gobernada. Coordina el trabajo, la reputación on-chain, el token ZWORK y la gobernanza.
-- **Acuerdo de servicios** — el conector: la DAO presta servicios, la SAS remunera y comercializa.
-
-Esta separación protege a los contribuidores (la responsabilidad legal recae en la SAS), da a los clientes una contraparte con la que contratar, y permite que la comunidad crezca sin cargar con obligaciones societarias individuales.
-
-Firmar el CLA o recibir reputación o ZWORK **no crea relación laboral ni societaria**, y esos activos **no constituyen salario**. La descentralización es la recompensa de la madurez, no el punto de partida.`,
+      ord: 2,
+      body: ACADEMIA_S1.body,
     },
-    [
-      ["¿Qué entidad es dueña de la propiedad intelectual comercial?", ["La DAO", "Zelena SAS", "Los guardianes", "Los clientes"], 1],
-      ["¿Qué une a la SAS y a la DAO?", ["Un token", "Un acuerdo de servicios", "Un contrato laboral", "Nada"], 1],
-      ["Recibir ZWORK o reputación...", ["Es salario", "Crea relación laboral", "No crea relación laboral ni societaria", "Da acciones de la SAS"], 2],
-      ["La descentralización en Zelena es...", ["El punto de partida", "La recompensa de la madurez", "Imposible", "Obligatoria desde el día 1"], 1],
-      ["¿Quién coordina el trabajo y la reputación?", ["La SAS", "La DAO", "El cliente", "Un banco"], 1],
-    ]
+    ACADEMIA_S1.quiz.map(([pregunta, opciones, correcta]): [string, string[], number] => [pregunta, [...opciones], correcta])
   );
 
   addContent(
@@ -525,7 +516,7 @@ Firmar el CLA o recibir reputación o ZWORK **no crea relación laboral ni socie
       summary: "USDC paga, la reputación da voto, ZWORK representa ownership. Ninguno sustituye a otro.",
       points: 150,
       minSeconds: 45,
-      ord: 2,
+      ord: 3,
       body: `## El triángulo USDC / Reputación / ZWORK
 
 El error que este diseño evita es un token que sea "ownership de nada". Por eso se separan tres activos, cada uno con un único rol.
@@ -559,7 +550,7 @@ Esto evita generar expectativa de inversión, evita dinámicas de "farm-and-dump
       summary: "La metodología de 8 pasos y la máquina de estados que hace el scoring transparente y verificable.",
       points: 150,
       minSeconds: 45,
-      ord: 3,
+      ord: 1,
       body: `## Cómo se mide el valor
 
 Todo proyecto recorre un flujo de **ocho pasos** en el Ágora: Intake, Publicación, Aplicación, Asignación, Ejecución, Evaluación, Distribución y Reputación.
@@ -568,7 +559,7 @@ La asignación abre un periodo de trabajo gobernado por una **máquina de estado
 
 \`Open → Assigned → Delivered → Scored → Distributed\`. Sin saltos.
 
-El supervisor cierra el periodo y genera un **score compuesto** por contribuidor: calculado, transparente y verificable, no subjetivo. El presupuesto se reparte proporcional al score.
+El supervisor cierra el periodo y genera un **score compuesto** por entrega: calculado, transparente y verificable, no subjetivo. El presupuesto se reparte proporcional al score.
 
 ### Candados de integridad
 
