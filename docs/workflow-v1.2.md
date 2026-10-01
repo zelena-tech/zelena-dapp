@@ -2,6 +2,13 @@
 
 Derivado de: `docs/specs/AUDITORIA-v1.md` (27 hallazgos) + la visión de John del 30-jul (bot de WhatsApp, líderes que consultan y reportan bugs).
 
+> **Estado (fusión 2026-09-30).** Los IDs de esta release se **renumeraron**: usaba WP20–WP26, que chocaban con los
+> specs WP20–WP30 de la línea desplegada, y WP31 ya es `docs/specs/WP31-herramienta-talento-ritos.md`.
+> WP20→**WP32**, WP21→**WP33**, WP22→**WP34**, WP23→**WP35**, WP24→**WP36**, WP25→**WP37**, WP26→**WP38**,
+> capa async→**WP39**. Los nombres de rama (`wp/20-roster`, …) no cambian. Desde la fusión, WP17 (entornos por
+> cliente) y WP20 (grafo de operación) están **dentro de v1** (John, 2026-08-16) y los **recordatorios de SLA por
+> Telegram** entran en alcance (John, 2026-09-30). La cola operativa es `docs/specs/QUEUE.md`.
+
 Método, igual que `workflow-v1.1.md`: cada mejora es un **WP** con criterios de aceptación binarios. Las **aristas son dependencias de archivos** — dos WPs que tocan el mismo módulo no se paralelizan. El orden topológico produce **olas**; dentro de una ola, un loop autónomo por WP en worktree aislado, y merge ordenado con suite verde antes de la siguiente.
 
 > **Lección de la ola de anoche, incorporada:** correr WPs en paralelo no es solo velocidad — es **detección**. El bug del `CREATE INDEX` de WP16 lo encontró WP13 al pisar su código. Pero cuatro agentes de golpe agotaron el presupuesto de sesión y mataron a un verificador. **Regla nueva: máximo 2 WPs por ola, y el verificador adversarial corre en una invocación aparte, no en la misma.**
@@ -28,45 +35,45 @@ Corolario que también es ley: **el mismo diseño aplica al founder.** Si el gat
 graph TD
     V1["v1 · WP13-16,19 done/scaffolded<br/>(anoche)"] --> A["✅ AUTHZ · gate por rol<br/>+ fuga del backlog<br/>(hoy · 298b441)"]
 
-    A --> WP20["WP20 · Roster como DATOS<br/>+ panel Equipo en /admin<br/>(roles.ts · team.ts · seed.ts · app/admin)"]
-    A --> WP21["WP21 · Endurecer producción<br/>(package.json · docs · config.ts)"]
+    A --> WP32["WP32 · Roster como DATOS<br/>+ panel Equipo en /admin<br/>(roles.ts · team.ts · seed.ts · app/admin)"]
+    A --> WP33["WP33 · Endurecer producción<br/>(package.json · docs · config.ts)"]
 
-    WP20 --> WP22["WP22 · Ciclo de vida completo<br/>alta · baja · reasignación<br/>(team.ts · máquina · app/equipo)"]
-    WP21 --> WP24["WP24 · Suite contra Azure SQL<br/>(harness de tests · smoke)"]
+    WP32 --> WP34["WP34 · Ciclo de vida completo<br/>alta · baja · reasignación<br/>(team.ts · máquina · app/equipo)"]
+    WP33 --> WP36["WP36 · Suite contra Azure SQL<br/>(harness de tests · smoke)"]
 
-    WP20 --> WP25["WP25 · Identidad canónica de John<br/>(seed.ts · entra.ts)"]
+    WP32 --> WP37["WP37 · Identidad canónica de John<br/>(seed.ts · entra.ts)"]
 
-    WP22 --> WP17["WP17 · Entornos por cliente<br/>(DESCONGELA con criterios de uso)"]
-    WP22 --> WP18["WP18 · Capa OKR<br/>(DESCONGELA con criterios de uso)"]
+    WP34 --> WP17["WP17 · Entornos por cliente<br/>(descongelado 2026-08-16 · en v1 con WP20 grafo)"]
+    WP34 --> WP18["WP18 · Capa OKR<br/>(DESCONGELA con criterios de uso)"]
 
-    WP17 --> WP23["WP23 · Canal WhatsApp + notificaciones<br/>(puerto de canal · dispatcher · scopes)"]
-    WP22 --> WP23
+    WP17 --> WP35["WP35 · Canal WhatsApp + notificaciones<br/>(puerto de canal · dispatcher · scopes)"]
+    WP34 --> WP35
 
     style A fill:#F2FBEA,stroke:#1F7A06
-    style WP21 fill:#FFE9E9,stroke:#B00000
-    style WP23 fill:#FFF6DD,stroke:#B08000
-    style WP17 fill:#EEEEEE,stroke:#888888
+    style WP33 fill:#FFE9E9,stroke:#B00000
+    style WP35 fill:#FFF6DD,stroke:#B08000
+    style WP17 fill:#F2FBEA,stroke:#1F7A06
     style WP18 fill:#EEEEEE,stroke:#888888
 ```
 
-Verde = hecho. Rojo = bloquea exponer una URL. Amarillo = tiene gate externo (cuenta Meta + decisión de fase). Gris = congelado hasta cumplir criterios de USO.
+Verde = hecho o ya dentro de v1 (WP17). Rojo = bloquea exponer una URL. Amarillo = tiene gate externo (cuenta Meta + decisión de fase). Gris = congelado hasta cumplir criterios de USO.
 
 ## Olas de ejecución
 
 | Ola | WPs en paralelo | Por qué juntos | Cuándo |
 |---|---|---|---|
 | **0** | ✅ AUTHZ | hecho hoy | — |
-| **1** | **WP21** · **WP20** | WP21 toca `package.json`+docs, WP20 toca `roles.ts`/`team.ts`/`app/admin` → disjuntos | hoy / mañana |
-| **2** | **WP22** · **WP24** | WP22 toca el módulo equipo, WP24 solo el harness de tests → disjuntos | tras ola 1 |
-| **3** | **WP25** | toca `seed.ts` y `entra.ts`, que WP20 ya movió → secuencial | tras ola 1 |
-| **4** | WP17 · WP18 | solo si se cumplen los criterios de uso de v1 | v1.1 |
-| **5** | WP23 | necesita WP17 (clientes) + WP22 (ciclo de vida) | fase automatizar |
+| **1** | **WP33** · **WP32** | WP33 toca `package.json`+docs, WP32 toca `roles.ts`/`team.ts`/`app/admin` → disjuntos | hoy / mañana |
+| **2** | **WP34** · **WP36** | WP34 toca el módulo equipo, WP36 solo el harness de tests → disjuntos | tras ola 1 |
+| **3** | **WP37** | toca `seed.ts` y `entra.ts`, que WP32 ya movió → secuencial | tras ola 1 |
+| **4** | WP18 | solo si se cumplen los criterios de uso de v1 (WP17 ya entró en v1, 2026-08-16) | v1.1 |
+| **5** | WP35 | necesita WP17 (clientes) + WP34 (ciclo de vida) | fase automatizar |
 
 **Regla de paralelización:** `roles.ts` es el archivo más disputado del repo (lo consumen team, entra, dashboard, bot). Cualquier WP que lo toque va **solo** en su ola.
 
 ---
 
-## WP20 · Roster como datos + panel de Equipo 🔴 *el corazón del principio*
+## WP32 · Roster como datos + panel de Equipo 🔴 *el corazón del principio*
 
 Cierra: A-01, D1-03, D1-04, D1-06, D1-08.
 
@@ -79,7 +86,7 @@ Cierra: A-01, D1-03, D1-04, D1-06, D1-08.
 - El importador CSV resuelve `Assignee` contra la **base** (display_name + aliases), no contra la constante.
 - El bot genera los nombres del system prompt y del schema de la herramienta desde `listTeamMembers(db)` en runtime.
 
-**NO-alcance.** Permisos granulares/scopes (eso es WP23). Invitaciones de equipo por correo. Jerarquías o reportes de línea.
+**NO-alcance.** Permisos granulares/scopes (eso es WP35). Invitaciones de equipo por correo. Jerarquías o reportes de línea.
 
 **Criterios de aceptación.**
 - [ ] Dar de alta a "María" desde `/admin`, hacerla supervisora, y que vea el dashboard — **sin reiniciar y sin tocar código**.
@@ -93,7 +100,7 @@ Cierra: A-01, D1-03, D1-04, D1-06, D1-08.
 
 ---
 
-## WP21 · Endurecer producción antes de exponer la URL 🔴
+## WP33 · Endurecer producción antes de exponer la URL 🔴
 
 Cierra: D3-05, D3-06, D3-07.
 
@@ -113,7 +120,7 @@ Cierra: D3-05, D3-06, D3-07.
 
 ---
 
-## WP22 · Ciclo de vida completo: alta, baja y reasignación
+## WP34 · Ciclo de vida completo: alta, baja y reasignación
 
 Cierra: D2-03, D2-04, D2-05, D1-09.
 
@@ -122,7 +129,7 @@ Cierra: D2-03, D2-04, D2-05, D1-09.
 **Alcance.**
 - `listTeamMembers` filtra `status = 'active'` (arregla de un golpe la salud de ritos y la carga por persona).
 - Acción **"reasignar"**: evento append-only en `assignment_events` (`action='reasignar'`, destino en `reason`) + `UPDATE owner_wallet`. Disponible para founder/supervisor en `/equipo` y como comando del bot.
-- Marcar `alumni` / reactivar desde el panel de WP20, con evento registrado.
+- Marcar `alumni` / reactivar desde el panel de WP32, con evento registrado.
 - **Regla de producto (doc 16), no negociable:** dar de baja a alguien **nunca** borra ni confisca su historial, sus puntos ni su reputación. Sale del denominador de los ritos activos; no sale de la historia.
 - Copy del dashboard condicionado al rol: founder → "esperando una decisión tuya"; supervisora → "esperando una decisión del founder".
 
@@ -136,7 +143,7 @@ Cierra: D2-03, D2-04, D2-05, D1-09.
 
 ---
 
-## WP24 · Hacer ejecutable la verificación contra Azure SQL
+## WP36 · Hacer ejecutable la verificación contra Azure SQL
 
 Cierra: D3-03.
 
@@ -153,7 +160,7 @@ Cierra: D3-03.
 
 ---
 
-## WP25 · Identidad canónica del founder
+## WP37 · Identidad canónica del founder
 
 Cierra: D1-07, D3-04.
 
@@ -171,16 +178,16 @@ Cierra: D1-07, D3-04.
 
 ---
 
-## WP23 · Canal WhatsApp + notificaciones salientes 🟡 *fase automatizar*
+## WP35 · Canal WhatsApp + notificaciones salientes 🟡 *fase automatizar*
 
 Cierra: D4-01 … D4-06. **La visión de John del 30-jul.**
 
 > "Un bot en WhatsApp que le escriba a los líderes: «ya la mejora está lista, recarga»; que puedan preguntar cosas del sistema o crear tickets de bugs, así no vivo pendiente de un montón de grupos."
 
 **Gates que hay que atravesar ANTES de escribir código** (ninguno es técnico):
-1. **Decisión de fase.** Las notificaciones son "automatizar", excluidas de v1 por `CLAUDE.md`. Requiere que John mueva la frontera explícitamente.
+1. **Decisión de fase.** Las notificaciones son "automatizar". John ya movió la frontera para un caso (2026-09-30): los **recordatorios de SLA por Telegram** entran en alcance y están registrados en `CLAUDE.md`. Para WhatsApp y para cualquier otro aviso saliente sigue haciendo falta su decisión explícita.
 2. **Cuenta de Meta.** Verificación de negocio + número dedicado. Los mensajes proactivos fuera de la ventana de 24 h van con **plantilla pre-aprobada**: el "ya está lista, recarga" *es* una plantilla, con su aprobación y su costo por conversación. *(Confirmar tarifas y tiempos vigentes con la documentación de Meta antes de presupuestar.)*
-3. **WP17 descongelado**, porque "líderes" son de clientes y clasificar por cliente necesita el modelo de clientes.
+3. **WP17 descongelado** (hecho: John, 2026-08-16), porque "líderes" son de clientes y clasificar por cliente necesita el modelo de clientes.
 
 **Alcance por etapas** (recomendación: en este orden, y cada etapa se puede parar).
 
@@ -205,7 +212,7 @@ Cierra: D4-01 … D4-06. **La visión de John del 30-jul.**
 
 ## Qué NO entra en v1.2, y por qué
 
-- **WP17 / WP18** siguen congelados. Se descongelan con los **criterios de USO** de `QUEUE.md` (100% de tareas nuevas por el sistema, ≥10 asignaciones cerradas contra criterios, ≥2 reuniones reemplazadas, los 5 con asignaciones reales) — no con criterios de features.
+- **WP18** sigue congelado. Se descongela con los **criterios de USO** de `QUEUE.md` (100% de tareas nuevas por el sistema, ≥10 asignaciones cerradas contra criterios, ≥2 reuniones reemplazadas, los 5 con asignaciones reales) — no con criterios de features. **WP17** ya se descongeló por decisión explícita de John (2026-08-16) y entra en v1 junto con WP20; los criterios de uso se cumplirán más tarde, consecuencia aceptada y registrada en `QUEUE.md`.
 - **WP04 (Privy), WP06 (repo público), WP10 (nómina)** son fase descentralizar. El orden se mantiene: organizar → automatizar → descentralizar.
 - **Módulo de bonos:** no se construye (decisión de John). El equipo interno corre el sistema de puntos y épocas ya construido; dinero real sobre scores solo tras 3 épocas cerradas + calibración + gate legal.
 

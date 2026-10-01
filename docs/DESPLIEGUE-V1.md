@@ -152,6 +152,7 @@ La ruta Azure SQL (`mssql`) **no migra** todavía: una base Azure SQL nueva se c
   devuelve el hash `03293c93…`; John entra a `/admin`.
 - **Rollback:** volver al paquete anterior **y** restaurar `/home/data/zelena-pre-fusion-*.db`. Sin
   restaurar la base, el código viejo arranca pero su módulo equipo no puede escribir.
+
 **Definición de "v1 desplegada":** los 6 entran con su correo, ven sus asignaciones y hacen check-in; John captura tareas desde Telegram y recibe sus 3 focos del día; el dashboard responde sin preguntar.
 
 **Definición de "v1 exitosa" (descongelar v1.1 — se mide con ~2 semanas de USO, no de código):** los 4 criterios de QUEUE.md — 100% de tareas nuevas de John por el sistema, ≥10 asignaciones cerradas contra criterios, ≥2 reuniones de estado reemplazadas, los 5 con asignaciones reales.

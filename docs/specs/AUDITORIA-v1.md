@@ -29,14 +29,14 @@ Al verificar a mano los de severidad alta **encontré un tercer agujero que el r
 
 Consecuencia: dar de alta a María "funciona" (entra por Entra como `core`), pero **no puede recibir trabajo del importador, ni ser supervisora, ni aparecer en el prompt del bot** sin un PR. Y quitarle la supervisión a Vale cuando salga tampoco es una operación de datos.
 
-Ya arreglado hoy (commit `298b441`): el gate por rol. Lo demás está planificado en `docs/workflow-v1.2.md` como **WP20**.
+Ya arreglado hoy (commit `298b441`): el gate por rol. Lo demás está planificado en `docs/workflow-v1.2.md` como **WP32**.
 
 ---
 
 ## A · Severidad alta
 
 ### A-01 · `TEAM_ROSTER` es código y el arranque lo re-impone sobre la base
-`D1-01`, `D2-01` — confirmado · esfuerzo M · **pendiente (WP20)**
+`D1-01`, `D2-01` — confirmado · esfuerzo M · **pendiente (WP32)**
 
 - [roles.ts:52](../../apps/web/src/lib/roles.ts:52) — `export const TEAM_ROSTER: readonly RosterMember[] = [`
 - [team.ts:200](../../apps/web/src/lib/team.ts:200) — `UPDATE users SET role = ?, is_supervisor = ? WHERE wallet = ?`
@@ -171,7 +171,7 @@ Tres cosas que conviene tener claras antes de ilusionarse con la fecha:
 2. **WhatsApp cobra la fricción que Telegram no.** La Cloud API de Meta exige verificación de negocio, número dedicado, y —lo decisivo para tu caso— **los mensajes proactivos fuera de la ventana de 24 h van con plantilla pre-aprobada por Meta**. El "Hola, ya está lista, recarga" *es* un mensaje proactivo: es una plantilla, con su aprobación y su costo por conversación. *(Conviene confirmar tarifas y tiempos actuales contra la documentación vigente de Meta antes de presupuestar.)*
 3. **Lo que falta no es el canal, es el dispatcher.** El bot está razonablemente separado en su capa de herramientas, pero **no hay tabla de notificaciones ni disparador** (D4-05). Ese es el trabajo real; el transporte de WhatsApp es la parte fácil.
 
-Y una consecuencia de diseño que sí importa: los líderes de cliente **no pueden tener el permiso de escritura actual**, que es binario y global. Necesitan *scopes* (`leer`, `crear_ticket`) y clasificación por cliente, que depende de **WP17 — congelado**. Está estructurado como **WP23** en `docs/workflow-v1.2.md`.
+Y una consecuencia de diseño que sí importa: los líderes de cliente **no pueden tener el permiso de escritura actual**, que es binario y global. Necesitan *scopes* (`leer`, `crear_ticket`) y clasificación por cliente, que depende de **WP17 — congelado**. Está estructurado como **WP35** en `docs/workflow-v1.2.md`.
 
 ---
 

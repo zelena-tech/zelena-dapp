@@ -36,7 +36,7 @@ node packages/scripts/import-tareas.mjs --dry-run "C:/Users/Omnia/Desktop/DAO/Ze
 
 `--dry-run` valida y reporta **sin escribir**. El importador **rechaza** valores desconocidos de `Status`, `Priority`, `Horizonte` y `Assignee` en vez de adivinar, así que revisa que no haya filas rechazadas.
 
-⚠️ Hoy `Assignee` se resuelve contra los 6 nombres del roster **que están en código**. Si tu CSV trae a alguien más, esas filas se rechazan — eso lo arregla **WP20** (ver `workflow-v1.2.md`).
+⚠️ Hoy `Assignee` se resuelve contra los 6 nombres del roster **que están en código**. Si tu CSV trae a alguien más, esas filas se rechazan — eso lo arregla **WP32** (ver `workflow-v1.2.md`).
 
 ### A4. Importar de verdad
 
@@ -54,7 +54,7 @@ Entra en `http://localhost:3000` con `GENESIS-0001` + "Usar wallet de prueba".
 - **`/equipo/proyectos`** — por iniciativa, filtrable por horizonte.
 - **`/equipo/dashboard`** — bloqueos primero, bandeja "esperando una decisión tuya", carga por persona, salud de ritos, digest del día exportable.
 
-> **Sabelo antes de que te confunda:** tus tareas del CSV cuelgan de `pending:john`, pero la sesión de invitación usa la wallet demo — así que **`/equipo/hoy` te puede salir vacío mientras el tablero está lleno**. Es el hallazgo D3-04 y lo arregla **WP25**. Mientras tanto, mira `/equipo/proyectos` y el dashboard, que sí muestran todo.
+> **Sabelo antes de que te confunda:** tus tareas del CSV cuelgan de `pending:john`, pero la sesión de invitación usa la wallet demo — así que **`/equipo/hoy` te puede salir vacío mientras el tablero está lleno**. Es el hallazgo D3-04 y lo arregla **WP37**. Mientras tanto, mira `/equipo/proyectos` y el dashboard, que sí muestran todo.
 
 ### A6. Lo que no vas a tener en la ruta A
 
@@ -66,9 +66,9 @@ Login corporativo (ruta C), bot (ruta C), y acceso para los otros 5 desde sus m�
 
 ### B0. Antes de exponer nada — no es opcional
 
-1. **Parchear Next.** `npm audit` reporta 21 vulnerabilidades (2 critical, 16 high) sobre `next@14.2.15`. Subir a la última 14.2.x parcheada y correr la suite. Es **WP21** y es lo primero.
+1. **Parchear Next.** `npm audit` reporta 21 vulnerabilidades (2 critical, 16 high) sobre `next@14.2.15`. Subir a la última 14.2.x parcheada y correr la suite. Es **WP33** y es lo primero.
 2. **Confirmar que el seed de demo no va a producción.** Ya está resuelto: `demoInvitesAllowed()` excluye los códigos `GENESIS-000x` cuando `NODE_ENV=production`. **No pongas `SEED_DEMO=1`** en el App Service — esos códigos están publicados en el README.
-3. **Verificar el dialecto contra la instancia real.** Nadie ha ejecutado el T-SQL generado contra Azure SQL. Es **WP24**: hasta que exista ese comando, el despliegue es un primer contacto, no una verificación.
+3. **Verificar el dialecto contra la instancia real.** Nadie ha ejecutado el T-SQL generado contra Azure SQL. Es **WP36**: hasta que exista ese comando, el despliegue es un primer contacto, no una verificación.
 
 ### B1. Recursos (~30 min)
 
@@ -170,9 +170,9 @@ node packages/scripts/telegram-bot.mjs
 |---|---|---|---|
 | 1 | **Ruta A** — importar el CSV y usar el tablero hoy | John | nada |
 | 2 | Escribir lo que no te guste en `docs/specs/FEEDBACK.md` | John | 1 |
-| 3 | **WP21** (parchear Next + docs) y **WP20** (roster como datos) | agente | nada |
+| 3 | **WP33** (parchear Next + docs) y **WP32** (roster como datos) | agente | nada |
 | 4 | **Ruta B** — Azure, con B0 hecho | Fausto + John | 3 |
-| 5 | **WP24** — verificación real contra Azure SQL | Fausto | 4 |
+| 5 | **WP36** — verificación real contra Azure SQL | Fausto | 4 |
 | 6 | **Ruta C** — encender Entra y el bot | Fausto + John | 4 |
 | 7 | Alta de los 6 + primer check-in de todos | equipo | 6 |
 
@@ -189,4 +189,4 @@ Se mide con ~2 semanas de **uso**, no de código (`QUEUE.md`):
 3. El dashboard reemplazó ≥2 reuniones de estado por semana.
 4. Los 5 del equipo hicieron login y tienen asignaciones reales.
 
-Solo al cumplirse se descongelan **WP17** (entornos por cliente) y **WP18** (OKRs) — y con WP17 se habilita el camino al bot de WhatsApp (**WP23**).
+Solo al cumplirse se descongela **WP18** (OKRs). **WP17** (entornos por cliente) ya se descongeló por decisión tuya del 2026-08-16 y entra en v1 con WP20 (grafo de operación); con WP17 se habilita el camino al bot de WhatsApp (**WP35**). Los IDs de v1.2 se renumeraron en la fusión del 2026-09-30 (WP20→WP32 … WP26→WP38; ver `docs/specs/QUEUE.md`).

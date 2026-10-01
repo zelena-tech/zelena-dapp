@@ -12,11 +12,13 @@ node packages/scripts/anchor-worker.mjs --watch  # worker de anclaje testnet (co
 
 Login demo: código de invitación `GENESIS-0001` + wallet demo.
 
-## Fase actual: v1 "Organizar" — NÚCLEO CONGELADO (WP13, WP14, WP15, WP16, WP19)
+## Fase actual: v1 "Organizar" — NÚCLEO CONGELADO (WP13, WP14, WP15, WP16, WP19 + WP17, WP20)
 
-Orden estratégico: **organizar → automatizar → descentralizar.** v1 = login Entra (@zelena.tech) + módulo equipo + dashboard + despliegue Azure + asistente personal de Telegram para John. **WP17 y WP18 están congelados (v1.1)**: solo se descongelan cuando se cumplan los criterios de USO definidos en QUEUE.md. Los WPs de comunidad/DAO (WP04, WP06, WP10) tampoco son v1. Checklist: `docs/DESPLIEGUE-V1.md`. Identidad dual y fases: `docs/blueprints/05-identidad-y-fases.md`.
+Orden estratégico: **organizar → automatizar → descentralizar.** v1 = login Entra (@zelena.tech) + módulo equipo + dashboard + despliegue Azure + asistente personal de Telegram para John + **entornos por cliente (WP17) y grafo de operación (WP20)**. WP17 se descongeló y WP20 entró por decisión explícita de John (2026-08-16, registrada en QUEUE.md: los criterios de USO se cumplirán más tarde, consecuencia aceptada). **WP18 sigue congelado (v1.1)** hasta cumplir esos criterios de USO. Los WPs de comunidad/DAO (WP04, WP06, WP10) tampoco son v1. Checklist: `docs/DESPLIEGUE-V1.md`. Identidad dual y fases: `docs/blueprints/05-identidad-y-fases.md`.
 
-Nada de la fase "automatizar" entra en v1: sin Microsoft Graph, sin envío de correos/Teams, sin notificaciones. Lo financiero (facturación, cotizaciones, contabilidad) vive en Odoo, FUERA de esta app — nunca se replica aquí. El NO-alcance de cada spec es ley.
+Nada de la fase "automatizar" entra en v1: sin Microsoft Graph, sin envío de correos/Teams, sin WhatsApp (WP35). **Única excepción, decisión registrada de John (2026-09-30): los recordatorios de SLA por Telegram entran en alcance.** Se redactan sobre la entrega, nunca sobre la persona, sin bombardear (idempotentes y con tope), y los parámetros (SLA, horas) van en el genoma. Cualquier otro aviso saliente sigue necesitando una decisión explícita de John. Lo financiero (facturación, cotizaciones, contabilidad) vive en Odoo, FUERA de esta app — nunca se replica aquí. El NO-alcance de cada spec es ley.
+
+**Producción real hoy (fusión 2026-09-30):** SQLite en `/home/data/zelena.db` con firmas y datos reales — **en producción NUNCA se borra la base**. Toda columna nueva sobre una tabla existente se añade a `COLUMNAS_NUEVAS` en `lib/db.ts`; los cambios de forma van como migración idempotente con respaldo `VACUUM INTO` previo (ver `prepararSqlite`). La autorización es por **rol leído de la base** (`lib/authz.ts`): nunca un gate `=== FOUNDER_WALLET` en `app/` ni en `src/components/` (lo fija un test estático). `CLA.md` y `apps/web/CLA.md` no se tocan: su sha256 (`03293c93…`) es lo que firman las altas.
 
 ## Ejecución con subagentes
 
@@ -24,7 +26,7 @@ Dentro de una misma ola, los WPs que no comparten archivos pueden ejecutarse con
 
 ## Nota técnica del bot de Telegram (WP19)
 
-En desarrollo local el bot corre en modo **polling** (`getUpdates`) — no requiere URL pública. El webhook con secret token se activa solo al desplegar en Azure. Sin `TELEGRAM_BOT_TOKEN`/`ANTHROPIC_API_KEY` en el entorno, el scaffolding se construye y testea con mocks detrás del flag `TELEGRAM_ENABLED=false`.
+En desarrollo local el bot corre en modo **polling** (`getUpdates`) — no requiere URL pública. El webhook con secret token se activa solo al desplegar en Azure. Sin `TELEGRAM_BOT_TOKEN`/`ANTHROPIC_API_KEY` en el entorno, el scaffolding se construye y testea con mocks detrás del flag `TELEGRAM_ENABLED=false`. Ojo con los recordatorios de SLA (en alcance desde 2026-09-30): en Azure, en modo webhook, **no hay programador** (el único es el bucle de polling de `packages/scripts/telegram-bot.mjs`), así que necesitan uno propio (endpoint protegido por secret y disparado desde fuera) y un registro de envíos para no repetir.
 
 ## Documentos que gobiernan el trabajo
 
@@ -51,7 +53,7 @@ Para correr una ola usa el grafo ejecutable, no re-derives las olas a mano:
 
 ```
 Workflow({ name: "ola", args: { ola: "1", base: "<rama>", wps: [
-  { id: "WP21", rama: "wp/21-hardening", spec: "docs/specs/...", archivos: ["..."] }
+  { id: "WP33", rama: "wp/21-hardening", spec: "docs/specs/...", archivos: ["..."] }
 ] } })
 ```
 
