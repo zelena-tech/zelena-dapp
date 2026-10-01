@@ -1,37 +1,43 @@
 /**
- * Alta de Telegram (WP19): la dapp genera el código de un solo uso y la persona lo
- * envía al bot como `/start CODIGO`.
+ * Alta de Telegram (WP19, ampliada en WP31-C2): la dapp genera el código de un solo
+ * uso y la persona lo envía al bot como `/start CODIGO`.
  *
- * Solo el founder puede pedirlo, porque v1 es su asistente personal. El código se
- * devuelve UNA vez en la respuesta y la base solo guarda su hash.
+ * Desde WP31-C2 lo pide cualquiera que entra a `/equipo` (`equipoActor`, leído de la
+ * base): así recibe por Telegram el resumen de sus entregas y lo urgente. Cada quien
+ * emite SU código: el founder, para su identidad de equipo (`walletParaVinculo` →
+ * `founderTeamWallet`); el resto, para su propia wallet. La escritura por Telegram
+ * sigue siendo solo del founder (`canAuthorizeWrite`, sin cambios): el resto queda en
+ * lectura.
+ *
+ * El código se devuelve UNA vez en la respuesta y la base solo guarda su hash.
+ * Ni el envío ni la vinculación exigen `ANTHROPIC_API_KEY`.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { telegramStatus } from "@/lib/config";
-import { adminActor } from "@/lib/authz";
+import { equipoActor } from "@/lib/authz";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
-import { BotStoreError, founderTeamWallet, issueLinkCode, linkForWallet, unlinkTelegram } from "@/lib/bot-store";
+import { BotStoreError, issueLinkCode, linkForWallet, unlinkTelegram, walletParaVinculo } from "@/lib/bot-store";
 
 export const dynamic = "force-dynamic";
+
+const SIN_ACCESO = "Telegram se vincula desde el equipo: entra a un proyecto para activarlo.";
 
 export async function POST(req: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Entra para vincular Telegram." }, { status: 401 });
   const db = getDb();
-  // Gate por ROL contra la base: el founder que entra por Entra llega con su
-  // principal del roster, no con FOUNDER_WALLET, y debe poder dar de alta el bot.
-  if (!adminActor(session, db)) {
-    return NextResponse.json({ error: "El asistente de Telegram es del founder en v1." }, { status: 403 });
-  }
-  if (!rateLimit(`telegram:vincular:${session.wallet}:${clientIp(req.headers)}`, 10, 60_000)) {
+  // Gate por la base, nunca por la cookie: equipo interno o quien trabaja por proyecto.
+  const actor = equipoActor(session, db);
+  if (!actor) return NextResponse.json({ error: SIN_ACCESO }, { status: 403 });
+  if (!rateLimit(`telegram:vincular:${actor.wallet}:${clientIp(req.headers)}`, 10, 60_000)) {
     return NextResponse.json({ error: "Demasiadas solicitudes." }, { status: 429 });
   }
 
   const body = (await req.json().catch(() => null)) as { action?: string } | null;
-  // El vínculo cuelga de la identidad de EQUIPO del founder (su fila del roster),
-  // que es donde vive su trabajo, no de la wallet con la que abrió sesión.
-  const wallet = founderTeamWallet(db, session.wallet);
+  // Cada quien vincula SU cuenta. El founder, la de equipo (donde vive su trabajo).
+  const wallet = walletParaVinculo(db, actor.wallet);
 
   try {
     if (body?.action === "desvincular") {
@@ -57,10 +63,9 @@ export async function GET() {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Entra para ver el estado." }, { status: 401 });
   const db = getDb();
-  if (!adminActor(session, db)) {
-    return NextResponse.json({ error: "El asistente de Telegram es del founder en v1." }, { status: 403 });
-  }
-  const link = linkForWallet(db, founderTeamWallet(db, session.wallet));
+  const actor = equipoActor(session, db);
+  if (!actor) return NextResponse.json({ error: SIN_ACCESO }, { status: 403 });
+  const link = linkForWallet(db, walletParaVinculo(db, actor.wallet));
   return NextResponse.json({
     ok: true,
     linked: !!link?.telegram_user_id,

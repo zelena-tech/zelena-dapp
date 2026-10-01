@@ -23,7 +23,9 @@
 import { z } from "zod";
 import type { DB } from "./db";
 import { dailyFocusHour } from "./genome.ts";
-import { puedeVerTodoElEquipo, findRosterMember, pendingPrincipal, type TeamActor } from "./roles.ts";
+import { puedeVerTodoElEquipo, findRosterMember, type TeamActor } from "./roles.ts";
+import type { EquipoActor } from "./authz";
+import { walletDeRoster } from "./talento.ts";
 import { availableTeamActions, type TeamAction } from "./team-state-machine.ts";
 import {
   PRIORITIES,
@@ -313,6 +315,23 @@ export interface BotContext {
   /** v1: solo John. Sin esto, ninguna herramienta de escritura llega a proponer. */
   canWrite: boolean;
   now: Date;
+  /**
+   * WP31-C2: la puerta de `/equipo` para esta persona (`equipoActor`), resuelta por
+   * bot-agent contra la base. `null` = hoy no entra a `/equipo` (alumni, sin acuerdo o
+   * sin proyectos): solo ve lo suyo. `undefined` (tests que arman el contexto a mano)
+   * = se decide solo por el rol de `actor`.
+   */
+  equipo?: EquipoActor | null;
+}
+
+/**
+ * ¿Esta persona ve por Telegram SOLO lo suyo? (spec WP31 §5.C.3). Todo el que no ve
+ * todo el equipo en la web —un core sin supervisión, un contributor— y todo el que
+ * hoy no entra a `/equipo`. Para ellos: su texto libre nunca llega al modelo, el
+ * estado se limita a lo propio y los focos no traen la bandeja del founder.
+ */
+export function soloLoPropio(ctx: BotContext): boolean {
+  return ctx.equipo === null || !puedeVerTodoElEquipo(ctx.actor);
 }
 
 // ---------------------------------------------------------------------------
@@ -362,6 +381,10 @@ export interface ResolvedOwner {
  * Traduce el nombre que dijo John al principal real del roster (WP14) y la
  * iniciativa a una que YA exista. Si no reconoce algo lo deja en null y lo dice en
  * la ficha: no inventa personas ni crea iniciativas de contrabando.
+ *
+ * WP31-C2: el roster es un dato. `walletDeRoster` respeta `roster_links`: si la fila
+ * ya se vinculó con la cuenta real, el trabajo va a esa cuenta; si no, a
+ * `pending:<slug>`.
  */
 export function resolveOwnerAndInitiative(db: DB, input: CrearAsignacionInput): ResolvedOwner {
   let ownerWallet: string | null = null;
@@ -369,8 +392,8 @@ export function resolveOwnerAndInitiative(db: DB, input: CrearAsignacionInput): 
   if (input.responsable) {
     const miembro = findRosterMember(input.responsable);
     if (miembro) {
-      const principal = pendingPrincipal(miembro.slug);
-      const enDb = listTeamMembers(db).find((m) => m.wallet === principal);
+      const principal = walletDeRoster(db, miembro.slug);
+      const enDb = principal ? listTeamMembers(db).find((m) => m.wallet === principal) : undefined;
       if (enDb) {
         ownerWallet = enDb.wallet;
         ownerName = enDb.display_name;
@@ -526,10 +549,27 @@ export function runBotTool(db: DB, ctx: BotContext, name: string, input: unknown
 // consultar_estado — todo sale de WP14/WP15, nada se recalcula aquí
 // ---------------------------------------------------------------------------
 
+/**
+ * Quien ve SOLO lo suyo (`soloLoPropio`, spec WP31 §5.C.3) recibe sus pendientes en
+ * cualquier alcance que describa al equipo entero (bloqueos, la bandeja del founder,
+ * las iniciativas, la carga por persona, la época, los ritos o el digest). Solo
+ * conservan su camino `equipo`, que ya pasa por `visibleAssignments` (para esa persona,
+ * lo propio), y `todo`, que se queda en la puerta de `buildDashboard` (403); y ni
+ * esos dos si hoy no entra a `/equipo` (`equipo === null`).
+ */
+function soloSusPendientes(ctx: BotContext, alcance: EstadoScope): boolean {
+  if (!soloLoPropio(ctx)) return false;
+  const conPuertaPropia = ctx.equipo !== null && (alcance === "equipo" || alcance === "todo");
+  return !conPuertaPropia;
+}
+
 function renderEstado(db: DB, ctx: BotContext, alcance: EstadoScope, iniciativa?: string): string {
+  if (soloSusPendientes(ctx, alcance)) return renderPendientes(db, ctx);
+  // Con `actor`, los agregados solo cuentan lo que esta persona ve (§4.A.12): nada de
+  // un proyecto de cliente donde no participa. Al founder no le cambia nada.
   switch (alcance) {
     case "bloqueos": {
-      const items = blockedWithAge(db, ctx.now);
+      const items = blockedWithAge(db, ctx.now, ctx.actor);
       if (items.length === 0) return BOT_COPY.sinBloqueos;
       return [
         `Bloqueado ahora (${items.length}), del bloqueo más viejo al más nuevo:`,
@@ -541,13 +581,13 @@ function renderEstado(db: DB, ctx: BotContext, alcance: EstadoScope, iniciativa?
       ].join("\n");
     }
     case "esperando_a_mi": {
-      const items = founderInbox(db);
+      const items = founderInbox(db, ctx.actor);
       if (items.length === 0) return BOT_COPY.sinEsperandoAJohn;
       return [`Esperando una decisión tuya (${items.length}):`, ...items.map((a) => `· ${formatAssignmentLine(a)}`)].join("\n");
     }
     case "iniciativas": {
       const slug = iniciativa ? slugify(iniciativa) : null;
-      const barras = initiativeBars(db, ctx.now).filter((b) => {
+      const barras = initiativeBars(db, ctx.now, ctx.actor).filter((b) => {
         if (!slug) return b.total > 0;
         return b.initiative ? b.initiative.slug === slug : false;
       });
@@ -561,7 +601,7 @@ function renderEstado(db: DB, ctx: BotContext, alcance: EstadoScope, iniciativa?
       ].join("\n");
     }
     case "carga": {
-      const carga = loadByPerson(db);
+      const carga = loadByPerson(db, ctx.actor);
       return [
         "Trabajo abierto por persona:",
         ...carga.people.map((p) => `· ${p.name}: ${p.open} abiertas · ${p.blocked} bloqueadas`),
@@ -570,7 +610,7 @@ function renderEstado(db: DB, ctx: BotContext, alcance: EstadoScope, iniciativa?
       ].join("\n");
     }
     case "epoca": {
-      const snap = epochSnapshot(db);
+      const snap = epochSnapshot(db, ctx.actor);
       if (!snap.period) return "Todavía no hay ninguna época abierta.";
       const lineas = [
         `Época ${snap.period.name} (${snap.period.state}), abierta desde ${snap.period.startDay}`,
@@ -590,7 +630,7 @@ function renderEstado(db: DB, ctx: BotContext, alcance: EstadoScope, iniciativa?
       ]);
     }
     case "digest":
-      return renderDigestText(buildTodayDigest(db, ctx.now));
+      return renderDigestText(buildTodayDigest(db, ctx.now, ctx.actor));
     case "mis_pendientes":
       return renderPendientes(db, ctx);
     case "equipo": {
@@ -752,14 +792,16 @@ function compareRank(x: ReturnType<typeof focusRank>, y: ReturnType<typeof focus
 
 /**
  * Las tres piezas candidatas del día: el trabajo abierto de John más lo que
- * espera una decisión suya (`founderInbox` de WP15), sin duplicados.
+ * espera una decisión suya (`founderInbox` de WP15), sin duplicados. Quien ve solo
+ * lo suyo (`soloLoPropio`, WP31-C2) recibe solo su trabajo abierto: nunca la bandeja
+ * del founder.
  */
 export function focosDelDia(db: DB, ctx: BotContext): AssignmentView[] {
   const hoy = today(ctx.now);
   const candidatas = new Map<number, AssignmentView>();
   for (const a of assignmentsForOwner(db, ctx.actor.wallet)) candidatas.set(a.id, a);
-  if (puedeVerTodoElEquipo(ctx.actor)) {
-    for (const a of founderInbox(db)) candidatas.set(a.id, a);
+  if (!soloLoPropio(ctx)) {
+    for (const a of founderInbox(db, ctx.actor)) candidatas.set(a.id, a);
   }
   return [...candidatas.values()]
     .sort((a, b) => compareRank(focusRank(a, hoy), focusRank(b, hoy)))

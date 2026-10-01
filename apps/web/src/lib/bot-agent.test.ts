@@ -14,8 +14,17 @@ import { describe, it, expect, beforeEach } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import { openDb, type DB } from "./db";
-import { pendingPrincipal } from "./roles";
-import { assignmentsForOwner, createAssignment, getCheckin, seedTeam, upsertInitiative } from "./team";
+import { pendingPrincipal, type TeamActor } from "./roles";
+import {
+  agregarMiembro,
+  assignmentsForOwner,
+  createAssignment,
+  crearProyecto,
+  getCheckin,
+  seedTeam,
+  upsertInitiative,
+} from "./team";
+import { createClient } from "./clients";
 import { blockedWithAge, founderInbox, loadByPerson } from "./dashboard";
 import { BOT_COPY, type TelegramTransport } from "./telegram";
 import { consumeLinkCode, issueLinkCode, listBotActions, listNotes } from "./bot-store";
@@ -379,22 +388,22 @@ describe("flujo completo: captura → propuesta → confirmación → tablero", 
         tool: "guardar_nota",
         input: {
           texto: req.message,
-          resumen: "Hogar Center quiere analítica",
-          referencia_reunion: "Hogar Center",
+          resumen: "Cliente Demo quiere analítica",
+          referencia_reunion: "Cliente Demo",
           tareas: ["Revisar la propuesta de analítica"],
           confianza: 0.9,
         },
       };
     });
     const deps = { db, transport: t, claude, now: AHORA };
-    await handleUpdate(deps, mensaje("/nota Hogar Center pidió la propuesta de analítica"));
+    await handleUpdate(deps, mensaje("/nota Cliente Demo pidió la propuesta de analítica"));
     expect(listNotes(db, JOHN)).toHaveLength(0);
 
     const draftId = (db.prepare(`SELECT id FROM bot_drafts ORDER BY id DESC LIMIT 1`).get() as { id: number }).id;
     await handleUpdate(deps, boton(`ok:${draftId}`));
     const notas = listNotes(db, JOHN);
     expect(notas).toHaveLength(1);
-    expect(notas[0].meeting_ref).toBe("Hogar Center");
+    expect(notas[0].meeting_ref).toBe("Cliente Demo");
     expect(textosEnviados(t).at(-1)).toContain("Revisar la propuesta de analítica");
     expect(countAssignments(db)).toBe(0); // la tarea sigue siendo una propuesta
   });
@@ -498,7 +507,7 @@ describe("comandos deterministas: no pasan por el modelo", () => {
     const claude = fakeClaude({ tool: "no_entendido", input: { pregunta: "¿Para quién?" } });
     const res = await handleUpdate(
       { db, transport: t, claude, now: AHORA },
-      mensaje("pendiente con Hogar Center: revisar propuesta de analítica")
+      mensaje("pendiente con Cliente Demo: revisar propuesta de analítica")
     );
     // No lo trató como /pendientes: fue al modelo.
     expect(claude.requests).toHaveLength(1);
@@ -571,5 +580,193 @@ describe("log: toda acción del bot queda registrada (visible en admin)", () => 
     expect(res.outcome).toBe("error");
     expect(textosEnviados(t)).toEqual([BOT_COPY.errorInterno]);
     expect(listBotActions(db)[0]).toMatchObject({ action: "clasificar", outcome: "error" });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// WP31-C2 · Telegram para todo el equipo
+// ---------------------------------------------------------------------------
+
+const ACTOR_JOHN: TeamActor = { wallet: JOHN, name: "John", role: "founder", isSupervisor: true };
+// Personas ficticias (wallets de prueba): nada de este bloque nombra a un cliente real.
+const ANA = "GANAEJECUTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+const BETO = "GBETOEJECUTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+const TG_ANA = "88";
+const TG_DAVID = "99";
+
+function contributor(db: DB, wallet: string, nombre: string): void {
+  db.prepare(
+    `INSERT INTO users (wallet, display_name, role, status, is_demo, cla_signed) VALUES (?, ?, 'contributor', 'active', 0, 1)`
+  ).run(wallet, nombre);
+}
+
+function contarBorradores(db: DB): number {
+  return (db.prepare(`SELECT COUNT(*) AS n FROM bot_drafts`).get() as { n: number }).n;
+}
+
+describe("C2-3 · sin ANTHROPIC_API_KEY el bot atiende comandos (claude = null)", () => {
+  let db: DB;
+  beforeEach(() => {
+    db = freshDb();
+  });
+
+  it("/start CODIGO vincula, /pendientes responde y el texto libre recibe soloComandos", async () => {
+    createAssignment(db, { title: "Revisar propuesta", ownerWallet: JOHN, status: "Asignada" });
+    const t = fakeTransport();
+    const deps = { db, transport: t, claude: null, now: AHORA };
+
+    const { code } = issueLinkCode(db, JOHN, AHORA);
+    expect((await handleUpdate(deps, mensaje(`/start ${code}`))).outcome).toBe("ok");
+    expect(textosEnviados(t)[0]).toContain(BOT_COPY.bienvenida);
+
+    const pendientes = await handleUpdate(deps, mensaje("/pendientes"));
+    expect(pendientes.outcome).toBe("ok");
+    expect(textosEnviados(t)[1]).toContain("Revisar propuesta");
+
+    const libre = await handleUpdate(deps, mensaje("asigna a David el dashboard de bloqueos"));
+    expect(libre.reply?.text).toBe(BOT_COPY.soloComandos);
+    expect(textosEnviados(t)[2]).toBe(BOT_COPY.soloComandos);
+    expect(contarBorradores(db)).toBe(0);
+    expect(listBotActions(db)[0]).toMatchObject({ action: "texto_libre", outcome: "rechazado", wallet: JOHN });
+    // Minimización: el log no guarda el texto.
+    expect(JSON.stringify(listBotActions(db))).not.toContain("dashboard de bloqueos");
+  });
+
+  it("/nota sin modelo se propone tal cual y se guarda solo al confirmar", async () => {
+    vincularJohn(db);
+    const t = fakeTransport();
+    const deps = { db, transport: t, claude: null, now: AHORA };
+    const res = await handleUpdate(deps, mensaje("/nota Acordamos revisar la propuesta con Cliente Demo"));
+    expect(res.tool).toBe("guardar_nota");
+    expect(res.reply?.keyboard).toBeDefined();
+    expect(listNotes(db, JOHN)).toHaveLength(0);
+
+    const draftId = (db.prepare(`SELECT id FROM bot_drafts ORDER BY id DESC LIMIT 1`).get() as { id: number }).id;
+    await handleUpdate(deps, boton(`ok:${draftId}`));
+    const notas = listNotes(db, JOHN);
+    expect(notas).toHaveLength(1);
+    expect(notas[0].text).toBe("Acordamos revisar la propuesta con Cliente Demo");
+  });
+
+  it("quien no escribe por Telegram recibe soloComandosLectura (sin /nota, que sería rechazada)", async () => {
+    vincularVale(db);
+    const t = fakeTransport();
+    const deps = { db, transport: t, claude: null, now: AHORA };
+    await handleUpdate(deps, mensaje("¿qué está bloqueado?", TG_VALE));
+    await handleUpdate(deps, mensaje("/ayuda", TG_VALE));
+    expect(textosEnviados(t)).toEqual([BOT_COPY.soloComandosLectura, BOT_COPY.soloComandosLectura]);
+    expect(BOT_COPY.soloComandosLectura).not.toContain("/nota");
+    expect(BOT_COPY.soloComandos).toContain("/nota");
+  });
+
+  it("una supervisora sin escritura, con modelo, tampoco gasta una llamada en /nota", async () => {
+    vincularVale(db);
+    const t = fakeTransport();
+    const claude = fakeClaude({ tool: "guardar_nota", input: { texto: "x" } });
+    const res = await handleUpdate({ db, transport: t, claude, now: AHORA }, mensaje("/nota algo de la reunión", TG_VALE));
+    expect(res.outcome).toBe("rechazado");
+    expect(textosEnviados(t)).toEqual([BOT_COPY.soloLectura]);
+    expect(claude.requests).toHaveLength(0);
+  });
+});
+
+describe("C2-5 · Telegram sin fugas para quien no ve todo el equipo", () => {
+  let db: DB;
+  beforeEach(() => {
+    db = freshDb();
+    contributor(db, ANA, "Ana");
+    const p = crearProyecto(db, ACTOR_JOHN, { name: "Proyecto Abierto Demo" });
+    agregarMiembro(db, ACTOR_JOHN, { initiativeId: p.id, wallet: ANA, rol: "ejecuta" });
+    createAssignment(db, { title: "Lo de Ana", initiativeId: p.id, ownerWallet: ANA, status: "Asignada" });
+    createAssignment(db, { title: "Lo de David", ownerWallet: DAVID, status: "Asignada" });
+    createAssignment(db, { title: "Gate del founder", ownerWallet: VALE, status: "En curso", needsFounder: true });
+    consumeLinkCode(db, issueLinkCode(db, ANA, AHORA).code, TG_ANA, AHORA);
+    consumeLinkCode(db, issueLinkCode(db, DAVID, AHORA).code, TG_DAVID, AHORA);
+  });
+
+  it("su texto libre nunca llega al modelo, aunque haya clave: responde soloComandosLectura", async () => {
+    for (const tg of [TG_ANA, TG_DAVID]) {
+      const t = fakeTransport();
+      const claude = fakeClaude({ tool: "consultar_estado", input: { alcance: "carga" } });
+      for (const texto of [
+        "¿cómo va la carga del equipo?",
+        "qué está bloqueado",
+        "¿qué espera una decisión del founder?",
+        "resumen del día",
+        "/nota algo de la reunión",
+        "crea una tarea para Vale",
+      ]) {
+        const res = await handleUpdate({ db, transport: t, claude, now: AHORA }, mensaje(texto, tg));
+        expect(res.reply?.text, `${tg}: ${texto}`).toBe(BOT_COPY.soloComandosLectura);
+      }
+      expect(claude.requests, tg).toHaveLength(0); // el doble de Claude nunca se invocó
+    }
+    expect(contarBorradores(db)).toBe(0);
+  });
+
+  it("sus comandos muestran solo lo suyo: /pendientes y /focos sin la bandeja del founder", async () => {
+    const t = fakeTransport();
+    const deps = { db, transport: t, claude: claudeProhibido, now: AHORA };
+    await handleUpdate(deps, mensaje("/pendientes", TG_ANA));
+    await handleUpdate(deps, mensaje("/focos", TG_ANA));
+    await handleUpdate(deps, mensaje("/focos", TG_DAVID));
+    const [pendientes, focosAna, focosDavid] = textosEnviados(t);
+    expect(pendientes).toContain("Lo de Ana");
+    expect(pendientes).not.toContain("Lo de David");
+    expect(focosAna).toContain("Lo de Ana");
+    expect(focosDavid).toContain("Lo de David");
+    for (const texto of [pendientes, focosAna, focosDavid]) expect(texto).not.toContain("Gate del founder");
+  });
+
+  it("al vincularse recibe la bienvenida de lectura, y su /ayuda no promete escribir", async () => {
+    contributor(db, BETO, "Beto");
+    const p = crearProyecto(db, ACTOR_JOHN, { name: "Otro Proyecto Demo" });
+    agregarMiembro(db, ACTOR_JOHN, { initiativeId: p.id, wallet: BETO, rol: "ejecuta" });
+    const t = fakeTransport();
+    const deps = { db, transport: t, claude: claudeProhibido, now: AHORA };
+    const alta = await handleUpdate(deps, mensaje(`/start ${issueLinkCode(db, BETO, AHORA).code}`, "111"));
+    expect(alta.outcome).toBe("ok");
+    expect(textosEnviados(t)[0]).toBe(`${BOT_COPY.bienvenidaLectura}\n\n${BOT_COPY.soloComandosLectura}`);
+    expect(textosEnviados(t)[0]).not.toContain(BOT_COPY.bienvenida);
+
+    await handleUpdate(deps, mensaje("/ayuda", TG_ANA));
+    expect(textosEnviados(t)[1]).toBe(BOT_COPY.soloComandosLectura);
+  });
+
+  it("si deja de entrar a /equipo (pasa a alumni), por Telegram ve solo lo suyo y no llega al modelo", async () => {
+    vincularVale(db);
+    db.prepare(`UPDATE users SET status = 'alumni' WHERE wallet = ?`).run(VALE);
+    const t = fakeTransport();
+    const claude = fakeClaude({ tool: "consultar_estado", input: { alcance: "bloqueos" } });
+    const res = await handleUpdate({ db, transport: t, claude, now: AHORA }, mensaje("¿qué está bloqueado?", TG_VALE));
+    expect(res.reply?.text).toBe(BOT_COPY.soloComandosLectura);
+    expect(claude.requests).toHaveLength(0);
+  });
+
+  it("el founder, en cambio, sigue usando el modelo y escribiendo", async () => {
+    vincularJohn(db);
+    const t = fakeTransport();
+    const claude = fakeClaude({ tool: "crear_asignacion", input: { titulo: "Pieza nueva", confianza: 0.9 } });
+    const res = await handleUpdate({ db, transport: t, claude, now: AHORA }, mensaje("apunta una pieza nueva"));
+    expect(res.tool).toBe("crear_asignacion");
+    expect(claude.requests).toHaveLength(1);
+    expect(contarBorradores(db)).toBe(1);
+  });
+});
+
+describe("supervisión con modelo: las pistas solo nombran los proyectos que ve", () => {
+  it("un proyecto de cliente donde no participa no llega al modelo", async () => {
+    const db = freshDb();
+    crearProyecto(db, ACTOR_JOHN, { name: "Proyecto Interno Demo" });
+    const cliente = createClient(db, { name: "Cliente Demo" });
+    crearProyecto(db, ACTOR_JOHN, { name: "Proyecto Reservado Demo", clientId: cliente });
+    vincularVale(db);
+    const t = fakeTransport();
+    const claude = fakeClaude({ tool: "consultar_estado", input: { alcance: "bloqueos" } });
+    await handleUpdate({ db, transport: t, claude, now: AHORA }, mensaje("¿qué está bloqueado?", TG_VALE));
+    expect(claude.requests).toHaveLength(1);
+    expect(claude.requests[0].hints).toContain("Proyecto Interno Demo");
+    expect(claude.requests[0].hints).not.toContain("Proyecto Reservado Demo");
+    expect(claude.requests[0].hints).toMatch(/^Hoy es \d{4}-\d{2}-\d{2}\./);
   });
 });

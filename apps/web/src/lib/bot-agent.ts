@@ -10,6 +10,12 @@
  *  - Un `telegram_user_id` no registrado se IGNORA (sin responderle, para no
  *    confirmarle que el bot existe) y queda en el log.
  *  - v1 = solo John escribe. Cualquier otra persona vinculada queda en lectura.
+ *  - WP31-C2 · TODO EL EQUIPO SE VINCULA, SIN FUGAS. Quien no ve todo el equipo en
+ *    la web (`soloLoPropio`: un core sin supervisión, un contributor, o quien hoy no
+ *    entra a `/equipo`) recibe por aquí solo lo suyo: su texto libre NUNCA llega al
+ *    modelo, haya o no `ANTHROPIC_API_KEY` (responde `soloComandosLectura`).
+ *  - El modelo es OPCIONAL (`claude = null` sin `ANTHROPIC_API_KEY`): `/start`, los
+ *    comandos y `/nota` funcionan; el texto libre responde `soloComandos`.
  *  - MINIMIZACIÓN: el texto del mensaje y el audio viven en memoria mientras se
  *    procesa la petición. Lo único que se persiste es la pieza resultante (nota,
  *    borrador, asignación, check-in) y una línea de log sin contenido.
@@ -17,7 +23,10 @@
  */
 import type { DB } from "./db";
 import { botModel } from "./config.ts";
-import { TeamError, actorFromSession, listInitiatives, today } from "./team.ts";
+import { TeamError, actorFromSession, proyectosVisibles } from "./team.ts";
+import { equipoActor } from "./authz";
+import { getActiveGenome } from "./genome.ts";
+import { diaLocal } from "./zona-horaria.ts";
 import {
   BOT_MIN_CONFIDENCE,
   BOT_TOOL_SPECS,
@@ -32,6 +41,7 @@ import {
   renderPendientes,
   reordenarFocos,
   runBotTool,
+  soloLoPropio,
   subirPrioridadPieza,
   type BotContext,
   type BotReply,
@@ -205,7 +215,11 @@ export function fixedTranscriber(text: string): Transcriber {
 export interface BotDeps {
   db: DB;
   transport: TelegramTransport;
-  claude: ClaudeClient;
+  /**
+   * `null` = sin `ANTHROPIC_API_KEY` (WP31-C2): `/start`, los comandos y `/nota`
+   * funcionan; el texto libre responde `soloComandos` sin llamar a nadie.
+   */
+  claude: ClaudeClient | null;
   /** `null` = todavía no hay proveedor de transcripción (estado real de v1). */
   transcriber?: Transcriber | null;
   now?: Date;
@@ -221,14 +235,17 @@ export interface HandleResult {
 }
 
 /**
- * Contexto de solo lectura que se le pasa al modelo para resolver nombres. Sale de
- * `listInitiatives` (WP14), no de una consulta propia.
+ * Contexto de solo lectura que se le pasa al modelo para resolver nombres. Solo
+ * nombra los proyectos que esta persona ve (`proyectosVisibles`, WP31-C2): un
+ * proyecto de cliente donde no participa no llega al modelo. La fecha es la del día
+ * hábil del genoma (`BUSINESS_TZ`), no la del servidor.
  */
 function hintsFor(db: DB, ctx: BotContext): string {
-  const iniciativas = listInitiatives(db);
+  const proyectos = ctx.equipo ? proyectosVisibles(db, ctx.equipo) : [];
+  const hoy = diaLocal(ctx.now, getActiveGenome(db).BUSINESS_TZ);
   return [
-    `Hoy es ${today(ctx.now)}.`,
-    iniciativas.length > 0 ? `Iniciativas que existen: ${iniciativas.map((i) => i.name).join(", ")}.` : "",
+    `Hoy es ${hoy}.`,
+    proyectos.length > 0 ? `Iniciativas que existen: ${proyectos.map((i) => i.name).join(", ")}.` : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -265,10 +282,15 @@ export async function handleUpdate(deps: BotDeps, raw: unknown): Promise<HandleR
     return { attended: false, outcome: "ignorado", reason: "no_registrado" };
   }
 
+  // El actor y la puerta de `/equipo` salen de la base en CADA mensaje (nunca de lo
+  // que se guardó al vincular): si mañana la persona deja un proyecto o pasa a
+  // alumni, por aquí ve solo lo suyo y deja de escribir.
+  const equipo = equipoActor({ wallet: link.wallet }, db);
   const ctx: BotContext = {
     actor: actorFromSession(db, { wallet: link.wallet }),
-    canWrite: link.is_authorized === 1,
+    canWrite: link.is_authorized === 1 && equipo !== null,
     now,
+    equipo,
   };
 
   try {
@@ -316,9 +338,19 @@ async function intentarAlta(
     return { attended: true, outcome: "rechazado", reply: { text: texto }, reason: res.reason };
   }
   logBotAction(deps.db, { wallet: res.link.wallet, action: "alta", outcome: "ok", detail: "vínculo creado" });
-  const texto = `${BOT_COPY.bienvenida}\n\n${BOT_COPY.ayuda}`;
+  // Quien queda en lectura (todo el equipo salvo el founder) no recibe la promesa de
+  // capturar tareas: recibe lo que de verdad le sirve por aquí.
+  const texto =
+    res.link.is_authorized === 1
+      ? `${BOT_COPY.bienvenida}\n\n${BOT_COPY.ayuda}`
+      : `${BOT_COPY.bienvenidaLectura}\n\n${BOT_COPY.soloComandosLectura}`;
   await sendMessage(deps.transport, update.chatId, { text: texto });
   return { attended: true, outcome: "ok", reply: { text: texto } };
+}
+
+/** La ayuda que corresponde: la completa a quien escribe; la de lectura al resto. */
+function ayudaPara(ctx: BotContext): string {
+  return ctx.canWrite ? BOT_COPY.ayuda : BOT_COPY.soloComandosLectura;
 }
 
 async function atender(deps: BotDeps, ctx: BotContext, update: BotUpdate): Promise<HandleResult> {
@@ -344,7 +376,7 @@ async function atender(deps: BotDeps, ctx: BotContext, update: BotUpdate): Promi
     }
   }
 
-  const resultado = atenderComando(deps, ctx, texto) ?? (await atenderConModelo(deps, ctx, texto));
+  const resultado = atenderComando(deps, ctx, texto) ?? (await atenderTextoLibre(deps, ctx, texto));
   if (update.kind === "audio" && resultado.reply) {
     // Se le devuelve lo que se entendió para que pueda corregir antes de confirmar.
     return {
@@ -382,7 +414,7 @@ async function atenderBoton(deps: BotDeps, ctx: BotContext, update: BotUpdate): 
 }
 
 // Los comandos se reconocen con anclas estrictas para no secuestrar una captura
-// normal: «pendiente con Hogar Center: revisar propuesta» NO es `/pendientes`.
+// normal: «pendiente con un cliente: revisar propuesta» NO es `/pendientes`.
 const RE_PENDIENTES = /^(?:\/pendientes(?:@\w+)?|pendientes)\s*([\wáéíóúñ-]{0,40})\s*$/i;
 const RE_FOCOS = /^(?:\/focos(?:@\w+)?|focos)\s*([\d\s,]*)$/i;
 const RE_AVANZAR =
@@ -406,12 +438,12 @@ function atenderComando(deps: BotDeps, ctx: BotContext, texto: string): HandleRe
 
   if (RE_AYUDA.test(t)) {
     logBotAction(deps.db, { wallet: ctx.actor.wallet, action: "ayuda", outcome: "ok" });
-    return { attended: true, outcome: "ok", reply: { text: BOT_COPY.ayuda } };
+    return { attended: true, outcome: "ok", reply: { text: ayudaPara(ctx) } };
   }
 
   if (RE_START.test(t)) {
     logBotAction(deps.db, { wallet: ctx.actor.wallet, action: "alta", outcome: "ok", detail: "ya estaba vinculado" });
-    return { attended: true, outcome: "ok", reply: { text: `${BOT_COPY.yaVinculado}\n\n${BOT_COPY.ayuda}` } };
+    return { attended: true, outcome: "ok", reply: { text: `${BOT_COPY.yaVinculado}\n\n${ayudaPara(ctx)}` } };
   }
 
   const pendientes = RE_PENDIENTES.exec(t);
@@ -509,12 +541,73 @@ function rechazoSoloLectura(deps: BotDeps, ctx: BotContext, action: string): Han
   return { attended: true, outcome: "rechazado", reply: { text: BOT_COPY.soloLectura } };
 }
 
+/** Respuesta fija a un texto que no se interpreta. Deja la línea en el log, sin el texto. */
+function soloComandos(deps: BotDeps, ctx: BotContext, texto: string, detalle: string): HandleResult {
+  logBotAction(deps.db, { wallet: ctx.actor.wallet, action: "texto_libre", outcome: "rechazado", detail: detalle });
+  return { attended: true, outcome: "rechazado", tool: null, reply: { text: texto } };
+}
+
+/**
+ * Todo lo que no es un comando determinista (WP31-C2). El orden importa:
+ *  1. quien ve solo lo suyo (`soloLoPropio`) nunca llega al modelo, haya o no clave;
+ *  2. `/nota` sin escritura sería rechazada: se dice sin gastar una llamada;
+ *  3. sin modelo, `/nota` se propone tal cual (sin resumen) y el resto recibe la lista
+ *     de comandos;
+ *  4. si no, el camino con modelo de siempre.
+ */
+async function atenderTextoLibre(deps: BotDeps, ctx: BotContext, texto: string): Promise<HandleResult> {
+  if (soloLoPropio(ctx)) {
+    return soloComandos(deps, ctx, BOT_COPY.soloComandosLectura, "solo lo propio: el texto no va al modelo");
+  }
+  const nota = RE_NOTA.exec(texto.trim());
+  if (nota && !ctx.canWrite) return rechazoSoloLectura(deps, ctx, "guardar_nota");
+
+  const claude = deps.claude;
+  if (!claude) {
+    if (nota) return proponerNotaSinModelo(deps, ctx, nota[1]);
+    return soloComandos(
+      deps,
+      ctx,
+      ctx.canWrite ? BOT_COPY.soloComandos : BOT_COPY.soloComandosLectura,
+      "sin modelo configurado"
+    );
+  }
+  return atenderConModelo(deps, claude, ctx, texto);
+}
+
+/**
+ * `/nota` sin modelo: la misma herramienta (`guardar_nota`) con el texto tal cual, sin
+ * resumen ni tareas detectadas. Sigue siendo un BORRADOR que hay que confirmar.
+ */
+function proponerNotaSinModelo(deps: BotDeps, ctx: BotContext, texto: string): HandleResult {
+  try {
+    const salida = runBotTool(deps.db, ctx, "guardar_nota", { texto });
+    logBotAction(deps.db, {
+      wallet: ctx.actor.wallet,
+      action: salida.tool,
+      outcome: salida.outcome,
+      target: salida.target ?? null,
+      detail: "sin modelo: texto tal cual",
+    });
+    return { attended: true, outcome: salida.outcome, tool: salida.tool, reply: salida.reply };
+  } catch (e) {
+    if (!(e instanceof BotToolError)) throw e;
+    logBotAction(deps.db, { wallet: ctx.actor.wallet, action: "guardar_nota", outcome: "no_entendido", detail: e.message });
+    return { attended: true, outcome: "no_entendido", tool: "no_entendido", reply: { text: `${BOT_COPY.noEntendido} ${e.message}` } };
+  }
+}
+
 /**
  * Camino con modelo: una llamada, una herramienta. Cualquier desvío —herramienta
  * inventada, datos que no validan, confianza baja— termina en una pregunta y en el
  * log, nunca en una escritura.
  */
-async function atenderConModelo(deps: BotDeps, ctx: BotContext, texto: string): Promise<HandleResult> {
+async function atenderConModelo(
+  deps: BotDeps,
+  claude: ClaudeClient,
+  ctx: BotContext,
+  texto: string
+): Promise<HandleResult> {
   const nota = RE_NOTA.exec(texto.trim());
   const req: ClaudeRequest = nota
     ? { message: nota[1], forceTool: "guardar_nota", hints: hintsFor(deps.db, ctx) }
@@ -522,7 +615,7 @@ async function atenderConModelo(deps: BotDeps, ctx: BotContext, texto: string): 
 
   let decision: ClaudeDecision;
   try {
-    decision = await deps.claude.decide(req);
+    decision = await claude.decide(req);
   } catch (e) {
     logBotAction(deps.db, {
       wallet: ctx.actor.wallet,

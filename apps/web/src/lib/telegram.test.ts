@@ -7,7 +7,8 @@
  *  - v1 es 1:1: un update de grupo se reconoce como tal.
  *  - Cero red: aquí no se instancia el transporte real.
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
+import { telegramBotUsername, telegramMissingVars, telegramOptionalMissing, telegramStatus } from "./config";
 import {
   BOT_COPY,
   TELEGRAM_SECRET_HEADER,
@@ -149,5 +150,61 @@ describe("envío de mensajes (con transporte inyectado: cero red)", () => {
     const t = fakeTransport();
     await sendMessage(t, 555, { text: BOT_COPY.sinBloqueos });
     expect(t.calls[0].payload.reply_markup).toBeUndefined();
+  });
+});
+
+describe("WP31-C2 · configuración: la clave de Anthropic es opcional", () => {
+  const CLAVES = ["TELEGRAM_BOT_TOKEN", "TELEGRAM_WEBHOOK_SECRET", "ANTHROPIC_API_KEY", "TELEGRAM_BOT_USERNAME", "TELEGRAM_ENABLED"];
+  const antes: Record<string, string | undefined> = {};
+  for (const k of CLAVES) antes[k] = process.env[k];
+  afterEach(() => {
+    for (const k of CLAVES) {
+      if (antes[k] === undefined) delete process.env[k];
+      else process.env[k] = antes[k];
+    }
+  });
+  function limpiar() {
+    for (const k of CLAVES) delete process.env[k];
+  }
+
+  it("sin ANTHROPIC_API_KEY el bot queda configurado: falta solo como opcional", () => {
+    limpiar();
+    process.env.TELEGRAM_BOT_TOKEN = "token-de-prueba";
+    process.env.TELEGRAM_WEBHOOK_SECRET = "secreto-de-prueba";
+    process.env.TELEGRAM_ENABLED = "1";
+    expect(telegramMissingVars({ webhook: true })).toEqual([]);
+    expect(telegramOptionalMissing()).toEqual(["ANTHROPIC_API_KEY"]);
+    const s = telegramStatus({ webhook: true });
+    expect(s).toMatchObject({ enabled: true, configured: true, missing: [], optional: ["ANTHROPIC_API_KEY"], textoLibre: false });
+  });
+
+  it("lo obligatorio sigue siendo el token (y el secret en modo webhook)", () => {
+    limpiar();
+    expect(telegramMissingVars()).toEqual(["TELEGRAM_BOT_TOKEN"]);
+    expect(telegramMissingVars({ webhook: true })).toEqual(["TELEGRAM_BOT_TOKEN", "TELEGRAM_WEBHOOK_SECRET"]);
+    process.env.ANTHROPIC_API_KEY = "clave-de-prueba";
+    expect(telegramOptionalMissing()).toEqual([]);
+    expect(telegramStatus().textoLibre).toBe(true);
+    expect(telegramStatus().configured).toBe(false);
+  });
+
+  it("el usuario del bot es solo copy: con @, sin espacios, o null si no es válido", () => {
+    limpiar();
+    expect(telegramBotUsername()).toBeNull();
+    process.env.TELEGRAM_BOT_USERNAME = " zelena_demo_bot ";
+    expect(telegramBotUsername()).toBe("@zelena_demo_bot");
+    process.env.TELEGRAM_BOT_USERNAME = "@zelena_demo_bot";
+    expect(telegramBotUsername()).toBe("@zelena_demo_bot");
+    process.env.TELEGRAM_BOT_USERNAME = "no vale <b>";
+    expect(telegramBotUsername()).toBeNull();
+  });
+
+  it("los copys nuevos del bot son los del spec", () => {
+    expect(BOT_COPY.soloComandos).toBe(
+      "Por ahora atiendo comandos: /pendientes, /focos, /nota y /ayuda. Para capturar tareas, usa la app."
+    );
+    expect(BOT_COPY.soloComandosLectura).toBe(
+      "Por aquí te atiendo con /pendientes, /focos y /ayuda. Lo demás está en la app."
+    );
   });
 });

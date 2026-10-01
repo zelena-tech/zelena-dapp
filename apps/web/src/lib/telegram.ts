@@ -305,6 +305,13 @@ export async function getUpdates(
 export const BOT_COPY = {
   bienvenida:
     "Listo, quedaste vinculado. Escríbeme lo que haya que capturar y te lo propongo antes de crear nada.",
+  /** Bienvenida de quien se vincula en solo lectura (WP31-C2: todo el equipo puede vincularse). */
+  bienvenidaLectura: "Listo, quedaste vinculado. Por aquí te llega el resumen de tus entregas y lo urgente.",
+  /** Sin ANTHROPIC_API_KEY, para quien puede escribir: el texto libre no se interpreta. */
+  soloComandos:
+    "Por ahora atiendo comandos: /pendientes, /focos, /nota y /ayuda. Para capturar tareas, usa la app.",
+  /** Para quien no escribe por Telegram o no ve todo el equipo: su texto nunca llega al modelo. */
+  soloComandosLectura: "Por aquí te atiendo con /pendientes, /focos y /ayuda. Lo demás está en la app.",
   ayuda: [
     "Esto es lo que sé hacer:",
     "· Escríbeme una tarea y te la propongo estructurada; nada se crea sin que confirmes.",
