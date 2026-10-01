@@ -1,5 +1,6 @@
 import React from "react";
 import Link from "next/link";
+import { esTipoCliente, etiquetaEstado, etiquetaTipo } from "@/lib/agora-labels";
 
 export function Logo({ className = "" }: { className?: string }) {
   return (
@@ -63,9 +64,9 @@ export function ProgressBar({ value, max }: { value: number; max: number }) {
   );
 }
 
+/** Para quién es un proyecto del Ágora: "Cliente" o "Comunidad" (el valor de la base no cambia). */
 export function Tag({ type }: { type: string }) {
-  const isSas = type === "SAS";
-  return <span className={`tag ${isSas ? "tag-sas" : "tag-dao"}`}>{type}</span>;
+  return <span className={`tag ${esTipoCliente(type) ? "tag-sas" : "tag-dao"}`}>{etiquetaTipo(type)}</span>;
 }
 
 export function StateBadge({ state }: { state: string }) {
@@ -76,7 +77,7 @@ export function StateBadge({ state }: { state: string }) {
     Scored: "text-violet-300 border-violet-700/40 bg-violet-950/20",
     Distributed: "text-emerald-300 border-emerald-700/40 bg-emerald-950/20",
   };
-  return <span className={`tag ${map[state] ?? "text-muted border-line"}`}>{state}</span>;
+  return <span className={`tag ${map[state] ?? "text-muted border-line"}`}>{etiquetaEstado(state)}</span>;
 }
 
 export function Skeleton({ className = "" }: { className?: string }) {
