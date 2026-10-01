@@ -24,16 +24,25 @@
  *    `mapRow` sigue siendo puro: devuelve el nombre crudo y la resolución pasa a
  *    `importTasks`.
  *  - Importar NO emite puntos ni reputación: no crea eventos `aprobar` ni toca los
- *    ledgers. Una fila `Hecho` del CSV entra como historia, sin premio.
- *  - Reimportar no reasigna ni replanifica una entrega En revisión ni edita una Hecha
- *    (misma regla que `editarAsignacion`).
+ *    ledgers. Una fila `Hecho` del CSV entra como historia, sin premio y sin evento.
+ *  - Solo nacen piezas Backlog (sin responsable), Asignada (con responsable) o Hecha
+ *    (historia). Con responsable, Backlog, En curso, En revisión y Bloqueada entran
+ *    como Asignada con aviso: el importador no fabrica estados que la máquina no puede
+ *    explicar. Cada pieza nueva (salvo la historia) abre su historial con un evento
+ *    `crear` de quien importa.
+ *  - Reimportar no reasigna ni replanifica una entrega En revisión (ni una bloqueada
+ *    desde revisión) ni edita una Hecha (misma regla que `editarAsignacion`). Fuera de
+ *    Backlog tampoco cambia el responsable: eso se hace en el tablero, con su evento.
+ *    Nunca mueve de proyecto lo que el tablero movió. Todo cambio deja su evento.
  *
  * Cadena del CLI (`packages/scripts/import-tareas.mjs`, type-stripping de Node):
  * imports de valor con sufijo `.ts` y sintaxis borrable.
  */
 import type { DB } from "./db";
 import { findRosterMember, isPendingPrincipal, normalizeName, pendingPrincipal } from "./roles.ts";
-import { isTeamStatus, type TeamStatus } from "./team-state-machine.ts";
+import { isTeamStatus, teamTransition, type TeamStatus } from "./team-state-machine.ts";
+import { getActiveGenome } from "./genome.ts";
+import { diaLocal, instanteDb } from "./zona-horaria.ts";
 import {
   createAssignment,
   getAssignment,
@@ -296,6 +305,18 @@ export function mapRow(rawCells: Record<string, string>): { row?: MappedRow; err
     warnings.push(`sin Assignee: '${status}' se importa como 'Backlog'`);
     status = "Backlog";
   }
+  // Con responsable, el importador solo crea lo que la máquina puede explicar: Asignada
+  // (o Hecha, como historia). Una pieza En curso, En revisión o Bloqueada no se fabrica:
+  // sin el evento de quien la empezó, la envió o la bloqueó, nadie sabría quién no
+  // puede aprobarla, y quien importa podría aprobar lo que nadie entregó. Backlog con
+  // responsable tampoco: con dueño la pieza está asignada, como cuando se crea en la web.
+  if (assignee && status === "Backlog") {
+    warnings.push(`con Assignee, 'Backlog' se importa como 'Asignada'`);
+    status = "Asignada";
+  } else if (assignee && status !== "Asignada" && status !== "Hecha") {
+    warnings.push(`'${status}' se importa como 'Asignada': quien la tiene la mueve desde el tablero`);
+    status = "Asignada";
+  }
   if (!isTeamStatus(status)) return { error: `Estado inválido tras el mapeo: '${status}'.` };
 
   return {
@@ -364,40 +385,86 @@ export function resolverPersona(db: DB, nombre: string): string | null {
  * Un contributor (sin supervisión) solo ve sus proyectos: no se le importa trabajo
  * en uno donde no es miembro, o quedaría a su nombre algo que no puede ver.
  */
-function faltaMembresia(db: DB, wallet: string, initiativeName: string): boolean {
+function faltaMembresiaEn(db: DB, wallet: string, initiativeId: number | null): boolean {
   const u = db.prepare(`SELECT role, is_supervisor FROM users WHERE wallet = ?`).get(wallet) as
     | { role: string; is_supervisor: number }
     | undefined;
   if (!u || u.role !== "contributor" || u.is_supervisor) return false;
+  if (initiativeId === null) return true;
+  return !db
+    .prepare(`SELECT 1 AS x FROM project_members WHERE initiative_id = ? AND wallet = ?`)
+    .get(initiativeId, wallet);
+}
+
+function faltaMembresia(db: DB, wallet: string, initiativeName: string): boolean {
   const ini = db.prepare(`SELECT id FROM initiatives WHERE slug = ?`).get(slugify(initiativeName)) as
     | { id: number }
     | undefined;
-  if (!ini) return true;
-  return !db
-    .prepare(`SELECT 1 AS x FROM project_members WHERE initiative_id = ? AND wallet = ?`)
-    .get(ini.id, wallet);
+  return faltaMembresiaEn(db, wallet, ini ? ini.id : null);
 }
 
 // ---------------------------------------------------------------------------
 // Importación
 // ---------------------------------------------------------------------------
 
-/** Estados que el CSV ya no toca: una entrega en revisión no se replanifica y una aprobada no se edita. */
-const FIJOS: readonly string[] = ["En revisión", "Hecha"];
+/** Lo que el CSV puede cambiar de una pieza que ya existe, con su columna. */
+interface PiezaExistente {
+  id: number;
+  status: string;
+  status_before_block: string | null;
+  owner_wallet: string | null;
+  initiative_id: number | null;
+  title: string;
+  description: string;
+  priority: string;
+  horizon: string;
+  acceptance_criteria: string;
+  size: string | null;
+  due_date: string | null;
+}
+
+/**
+ * Pieza que el CSV ya no toca: una aprobada no se edita, y una entrega en revisión
+ * (o bloqueada desde revisión, que vuelve a revisión al desbloquearse) no se
+ * reasigna ni se replanifica. Misma regla que `editarAsignacion`.
+ */
+function esFija(p: Pick<PiezaExistente, "status" | "status_before_block">): boolean {
+  return (
+    p.status === "Hecha" ||
+    p.status === "En revisión" ||
+    (p.status === "Bloqueada" && p.status_before_block === "En revisión")
+  );
+}
 
 /**
  * Importa un CSV. Idempotente por `import_key`: la segunda pasada actualiza los
  * campos descriptivos y NO duplica nada.
  *
- * Al reimportar NO se pisa el `status` de una asignación que el equipo ya movió en
- * la app: el tablero es la fuente de verdad una vez el trabajo empezó. El CSV solo
- * fija el estado inicial de las filas nuevas. Una entrega En revisión o Hecha no se
- * toca (cuenta como "ya estaba").
+ * Filas nuevas: nacen Backlog (sin responsable), Asignada (con responsable) o Hecha
+ * (historia, sin evento ni premio; ver `mapRow`). Las demás abren su historial con un
+ * evento `crear` a nombre de quien importa (`cli` desde la consola), con el `now`
+ * inyectado. Así ninguna pieza aparece "en revisión" sin que nadie la haya enviado.
+ *
+ * Al reimportar el tablero es la fuente de verdad una vez la pieza existe:
+ *  - El `status` nunca se pisa.
+ *  - Una pieza Hecha, En revisión o bloqueada desde revisión no se toca.
+ *  - El responsable solo sigue al CSV mientras la pieza está en Backlog: recibirlo es
+ *    la transición `asignar` de la máquina (Backlog → Asignada), y quitárselo solo
+ *    cabe en Backlog. Fuera de Backlog se conserva y se avisa: reasignar trabajo
+ *    empezado se hace en el tablero, con su evento y sus reglas.
+ *  - Una pieza que el tablero movió de proyecto no vuelve al del CSV.
+ *  - Si cambia algo, un evento (`asignar`, `reasignar` o `editar`) con los nombres de
+ *    los campos (nunca valores). Si no cambia nada, ningún evento.
  *
  * No emite puntos ni reputación. Deja una fila `importar` en `talent_events` con los
  * conteos (quién importó y cuánto, nunca el contenido).
  */
-export function importTasks(db: DB, csvText: string, createdBy: string | null = null): ImportSummary {
+export function importTasks(
+  db: DB,
+  csvText: string,
+  createdBy: string | null = null,
+  now: Date = new Date()
+): ImportSummary {
   const rows = parseCsv(csvText);
   if (rows.length === 0) throw new Error("El CSV está vacío.");
 
@@ -415,6 +482,18 @@ export function importTasks(db: DB, csvText: string, createdBy: string | null = 
   // Solo inserta lo que falta: no pisa roles ni recrea filas ya vinculadas.
   seedTeamRoster(db);
 
+  // Cada cambio deja su evento, a nombre de quien importa y con el `now` inyectado
+  // (spec §3.1): `created_at` explícito y el día en la zona del genoma.
+  const quienImporta = createdBy ?? "cli";
+  const dia = diaLocal(now, getActiveGenome(db).BUSINESS_TZ);
+  const instante = instanteDb(now);
+  const insEvento = db.prepare(
+    `INSERT INTO assignment_events (assignment_id, action, from_status, to_status, reason, actor_wallet, day, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+  );
+  const evento = (id: number, accion: string, de: string, a: string, motivo: string) =>
+    insEvento.run(id, accion, de, a, motivo, quienImporta, dia, instante);
+
   const tx = db.transaction(() => {
     for (let r = 1; r < rows.length; r++) {
       const cells: Record<string, string> = {};
@@ -430,6 +509,14 @@ export function importTasks(db: DB, csvText: string, createdBy: string | null = 
         continue;
       }
 
+      const existing = db
+        .prepare(
+          `SELECT id, status, status_before_block, owner_wallet, initiative_id, title, description, priority,
+                  horizon, acceptance_criteria, size, due_date
+             FROM assignments WHERE import_key = ?`
+        )
+        .get(row.importKey) as PiezaExistente | undefined;
+
       let ownerWallet: string | null = null;
       if (row.assignee) {
         const res = resolver(db, row.assignee);
@@ -437,17 +524,25 @@ export function importTasks(db: DB, csvText: string, createdBy: string | null = 
           summary.errors.push({ line, title: row.title, reason: res.motivo });
           continue;
         }
-        if (faltaMembresia(db, res.wallet, row.initiativeName)) {
+        ownerWallet = res.wallet;
+      }
+      // La membresía importa cuando la persona de verdad recibe la pieza: al crearla o
+      // al asignarle una que sigue en Backlog (en el proyecto donde está HOY la pieza).
+      if (ownerWallet !== null && (!existing || (existing.status === "Backlog" && existing.owner_wallet !== ownerWallet))) {
+        const falta = existing
+          ? faltaMembresiaEn(db, ownerWallet, existing.initiative_id)
+          : faltaMembresia(db, ownerWallet, row.initiativeName);
+        if (falta) {
           summary.errors.push({
             line,
             title: row.title,
-            reason: `«${row.assignee}» no está en el proyecto «${row.initiativeName}»: primero súmale`,
+            reason: existing
+              ? `«${row.assignee}» no está en el proyecto de esta pieza: primero súmale`
+              : `«${row.assignee}» no está en el proyecto «${row.initiativeName}»: primero súmale`,
           });
           continue;
         }
-        ownerWallet = res.wallet;
       }
-      for (const w of row.warnings) summary.warnings.push({ line, title: row.title, warning: w });
 
       const initiativeId = upsertInitiative(db, row.initiativeName, row.horizon);
       if (!seenInitiatives.has(row.initiativeName)) {
@@ -455,34 +550,9 @@ export function importTasks(db: DB, csvText: string, createdBy: string | null = 
         summary.initiatives++;
       }
 
-      const existing = db.prepare(`SELECT id, status FROM assignments WHERE import_key = ?`).get(row.importKey) as
-        | { id: number; status: string }
-        | undefined;
-
-      if (existing) {
-        if (!FIJOS.includes(existing.status)) {
-          db.prepare(
-            `UPDATE assignments
-                SET title = ?, description = ?, initiative_id = ?, owner_wallet = ?, priority = ?,
-                    horizon = ?, acceptance_criteria = ?, size = COALESCE(?, size),
-                    due_date = COALESCE(?, due_date), updated_at = datetime('now')
-              WHERE id = ?`
-          ).run(
-            row.title,
-            row.description,
-            initiativeId,
-            ownerWallet,
-            row.priority,
-            row.horizon,
-            row.acceptanceCriteria,
-            row.size,
-            row.dueDate,
-            existing.id
-          );
-        }
-        summary.updated++;
-      } else {
-        createAssignment(db, {
+      if (!existing) {
+        for (const w of row.warnings) summary.warnings.push({ line, title: row.title, warning: w });
+        const id = createAssignment(db, {
           title: row.title,
           description: row.description,
           initiativeId,
@@ -496,8 +566,68 @@ export function importTasks(db: DB, csvText: string, createdBy: string | null = 
           createdBy,
           importKey: row.importKey,
         });
+        // La historia (Hecha) entra sin evento: no es una entrega aprobada hoy, y un
+        // evento hacia Hecha la contaría como tal en el resumen del día.
+        if (row.status !== "Hecha") evento(id, "crear", "Backlog", row.status, "importada desde CSV");
         summary.created++;
+        continue;
       }
+
+      summary.updated++;
+      const avisar = (warning: string) => summary.warnings.push({ line, title: row.title, warning });
+      const noSeReasigna = `está '${existing.status}' con su responsable: no se reasigna desde el CSV (se cambia en el tablero)`;
+      if (esFija(existing)) {
+        if (ownerWallet !== existing.owner_wallet) avisar(noSeReasigna);
+        continue;
+      }
+
+      const sets: string[] = [];
+      const valores: Array<string | null> = [];
+      const campos: string[] = [];
+      const cambia = (campo: string, columna: string, nuevo: string | null, actual: string | null) => {
+        if (nuevo === actual) return;
+        sets.push(`${columna} = ?`);
+        valores.push(nuevo);
+        campos.push(campo);
+      };
+      cambia("title", "title", row.title, existing.title);
+      cambia("description", "description", row.description, existing.description ?? "");
+      cambia("priority", "priority", row.priority, existing.priority);
+      cambia("horizon", "horizon", row.horizon, existing.horizon);
+      cambia("acceptanceCriteria", "acceptance_criteria", row.acceptanceCriteria, existing.acceptance_criteria ?? "");
+      // Una celda vacía no borra lo que ya se planificó.
+      if (row.size !== null) cambia("size", "size", row.size, existing.size);
+      if (row.dueDate !== null) cambia("dueDate", "due_date", row.dueDate, existing.due_date);
+
+      if (existing.initiative_id !== initiativeId) {
+        avisar("en el tablero está en otro proyecto: el CSV no la mueve");
+      }
+
+      let status = existing.status;
+      let accion = "editar";
+      if (ownerWallet !== existing.owner_wallet) {
+        if (existing.status !== "Backlog") {
+          avisar(noSeReasigna);
+        } else if (ownerWallet === null) {
+          // Dato viejo (Backlog con responsable): en Backlog sí puede quedar sin él.
+          cambia("ownerWallet", "owner_wallet", null, existing.owner_wallet);
+          accion = "reasignar";
+        } else {
+          // Recibir responsable en Backlog es la transición `asignar` de la máquina.
+          status = teamTransition({ status: "Backlog", statusBeforeBlock: null, blockedReason: null }, "asignar").status;
+          cambia("ownerWallet", "owner_wallet", ownerWallet, existing.owner_wallet);
+          accion = "asignar";
+        }
+      }
+
+      if (campos.length === 0) continue;
+      db.prepare(`UPDATE assignments SET ${sets.join(", ")}, status = ?, updated_at = ? WHERE id = ?`).run(
+        ...valores,
+        status,
+        now.toISOString(),
+        existing.id
+      );
+      evento(existing.id, accion, existing.status, status, `campos: ${campos.join(", ")}`);
     }
 
     db.prepare(
