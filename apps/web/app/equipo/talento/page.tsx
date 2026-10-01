@@ -21,6 +21,7 @@ import { PENDING_PREFIX, ROLE_LABEL, puedeVerTodoElEquipo } from "@/lib/roles";
 import { mismaPersona } from "@/lib/identidades";
 import { candidatosAVincular, directorioTalento } from "@/lib/talento";
 import TeamTalentRow, { type PersonaTalento } from "@/components/TeamTalentRow";
+import TeamImportCsv from "@/components/TeamImportCsv";
 import { EmptyState } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -137,6 +138,12 @@ export default async function EquipoTalentoPage({ searchParams }: { searchParams
           ))}
         </ul>
       )}
+
+      {/* Importar backlog (founder y supervisores; la página ya lo exige). /equipo/proyectos lo enlaza. */}
+      <section id="importar" className="scroll-mt-24 space-y-3">
+        <h2 className="font-head text-2xl font-bold text-white">Importar CSV</h2>
+        <TeamImportCsv />
+      </section>
     </div>
   );
 }

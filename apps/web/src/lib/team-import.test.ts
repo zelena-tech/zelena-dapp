@@ -387,3 +387,15 @@ describe("importTasks — Assignee por datos (WP31-A2, A2-3)", () => {
     expect(JSON.parse(ev[0].detail)).toEqual({ creadas: 6, yaEstaban: 0, conError: 1, proyectos: 2 });
   });
 });
+
+describe("importTasks — una fila rara no tumba la importación entera", () => {
+  it("título o iniciativa sin letras ni números → error de fila, el resto entra", () => {
+    const db = freshDb();
+    const s = importTasks(db, "Initiative,Title\n¿?,Algo\nHuerto Demo,!!!\nHuerto Demo,Regar\n");
+    expect(s.created).toBe(1);
+    expect(s.errors.map((e) => [e.line, e.reason])).toEqual([
+      [2, "La 'Iniciativa' necesita letras o números."],
+      [3, "El 'Task Name' necesita letras o números."],
+    ]);
+  });
+});

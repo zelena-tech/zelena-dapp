@@ -237,9 +237,13 @@ export function mapRow(rawCells: Record<string, string>): { row?: MappedRow; err
   const cells = celdasCanonicas(rawCells);
   const title = (cells["Task Name"] ?? "").trim();
   if (!title) return { error: "Fila sin 'Task Name'." };
+  // Sin letras ni números no hay `import_key` estable (chocaría con otras filas).
+  if (!slugify(title)) return { error: "El 'Task Name' necesita letras o números." };
 
   const initiativeName = (cells["Iniciativa"] ?? "").trim();
   if (!initiativeName) return { error: "Fila sin 'Iniciativa'." };
+  // Ídem para la iniciativa: `upsertInitiative` la rechazaría y abortaría toda la importación.
+  if (!slugify(initiativeName)) return { error: "La 'Iniciativa' necesita letras o números." };
 
   const warnings: string[] = [];
 
