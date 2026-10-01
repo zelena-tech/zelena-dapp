@@ -51,7 +51,7 @@ import {
   type TeamActor,
   type Vinculo,
 } from "./roles.ts";
-import { identidadesDe, mismaPersona, principalFounder } from "./identidades.ts";
+import { identidadesDe, mismaPersona, reglaB8 } from "./identidades.ts";
 import { diaLocal, instanteDb, parseInstanteDb } from "./zona-horaria.ts";
 import { getActiveGenome } from "./genome.ts";
 // Gancho de emisión (WP31-I1): imports de valor con sufijo `.ts`, porque el CLI de
@@ -845,8 +845,9 @@ export function piezasSinResponsable(db: DB, initiativeId: number): number {
  *  - `esDueno` = `mismaPersona(dueño, actor)`: las dos identidades del founder son una.
  *  - `esQuienEnvio` = las identidades del actor incluyen a quien hizo el último
  *    `enviar_a_revision`.
- *  - `vinculoInvitacion` (B8, en las dos direcciones) = ni el actor ni el dueño son el
- *    founder, y el `invited_by` de alguna identidad del dueño es del actor, o al revés.
+ *  - `vinculoInvitacion` (B8, en las dos direcciones) = `reglaB8` (identidades.ts): ni
+ *    el actor ni el dueño son el founder, y el `invited_by` de alguna identidad del
+ *    dueño es del actor, o al revés. Es la misma función que usa la emisión.
  *  - `vinculoAsignacion` (solo al aprobar) = ni el actor ni el dueño son el founder, y
  *    el actor sumó al dueño a este proyecto (`project_members.added_by`) o le dio la
  *    pieza: el último `crear`/`asignar`/`reasignar` (o, sin eventos, `created_by`) es
@@ -855,7 +856,9 @@ export function piezasSinResponsable(db: DB, initiativeId: number): number {
  *
  * El founder queda exento de B8 y del vínculo de asignación en las DOS direcciones:
  * invitó a casi todo el equipo, y si la regla lo atara como dueño nadie podría revisar
- * sus entregas. Se reconoce por rol y por roster (`principalFounder`), nunca por wallet.
+ * sus entregas. Se reconoce por rol en la base y por roster (`principalFounder`), nunca
+ * por wallet ni por el rol que trae el actor: así la puerta y la emisión, que solo
+ * conoce wallets, deciden con los mismos datos.
  */
 function flagsDeTransicion(
   db: DB,
@@ -882,22 +885,14 @@ function flagsDeTransicion(
 
   let vinculoInvitacion = false;
   let vinculoAsignacion = false;
-  const exentoFounder = actor.role === "founder" || esFounderPersona(db, actor.wallet) || (!!owner && esFounderPersona(db, owner));
-  if (owner && !exentoFounder) {
-    const delDueno = identidadesDe(db, owner);
-    const invitadoPor = (w: string) =>
-      (db.prepare(`SELECT invited_by FROM users WHERE wallet = ?`).get(w) as { invited_by: string | null } | undefined)
-        ?.invited_by ?? null;
-    vinculoInvitacion =
-      delDueno.some((w) => {
-        const i = invitadoPor(w);
-        return !!i && delActor.includes(i);
-      }) ||
-      delActor.some((w) => {
-        const i = invitadoPor(w);
-        return !!i && delDueno.includes(i);
-      });
-    if (accion === "aprobar") vinculoAsignacion = leDioLaPieza(db, row, delActor, delDueno);
+  if (owner) {
+    // B8 con la regla ÚNICA (`reglaB8`), la misma que aplica la emisión al aprobar: si
+    // aquí se deja aprobar, `emitirPorAprobacion` no la frena por invitación.
+    const b8 = reglaB8(db, actor.wallet, owner);
+    vinculoInvitacion = b8.vinculoInvitacion;
+    if (accion === "aprobar" && !b8.founderExento) {
+      vinculoAsignacion = leDioLaPieza(db, row, delActor, identidadesDe(db, owner));
+    }
   }
 
   let duenoPendiente = false;
@@ -918,15 +913,6 @@ function flagsDeTransicion(
     duenoPendiente,
     esGlobal,
   };
-}
-
-/**
- * ¿Es el founder? Por rol en la base (con cualquiera de sus identidades) o por ser su
- * principal de equipo (`principalFounder`). Nunca comparando con `FOUNDER_WALLET`.
- */
-function esFounderPersona(db: DB, wallet: string): boolean {
-  const principal = principalFounder(db);
-  return identidadesDe(db, wallet).some((w) => w === principal || usuarioBasico(db, w)?.role === "founder");
 }
 
 /**

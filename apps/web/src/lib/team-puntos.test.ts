@@ -18,6 +18,7 @@ import { MOTIVO_TRANSICION, pendingPrincipal, type TeamActor } from "./roles";
 import { InvalidTeamTransitionError } from "./team-state-machine";
 import { calcularPremioTarea, refTarea, textoEmision } from "./gamificacion";
 import {
+  accionesPermitidas,
   agregarMiembro,
   aplicarAccionAsignacion,
   applyAssignmentAction,
@@ -245,6 +246,114 @@ describe("WP31-I1 · gancho de emisión al aprobar", () => {
       const r = aprobar(id, MANANA_3PM, FOUNDER);
       expect(r.emision?.emitido).toBe(true);
       expect(filas(db, id).puntos[0]?.wallet).toBe(ANA);
+    });
+
+    describe("B8 · el founder también está exento como DUEÑO: la puerta y la emisión aplican la misma regla", () => {
+      // Casi todo el equipo entró con una invitación del founder (por su fila de equipo o
+      // por la cuenta con la que firma). Si la puerta deja aprobar su entrega pero la
+      // emisión la trata como B8, la pieza queda Hecha (estado final) sin lo suyo.
+      const SESION_FOUNDER = "GFOUNDERSESIONAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"; // rol founder en la base
+      const SUPERVISORA = "GSUPERVISAINVITADAPORELFOUNDERAAAAAAAAAAAAAAAAAAAAAAAAAA";
+      const SUPERVISORA_ACTOR: TeamActor = { wallet: SUPERVISORA, name: "Super", role: "core", isSupervisor: true };
+
+      beforeEach(() => {
+        db.prepare(
+          `INSERT INTO users (wallet, display_name, role, status, is_demo, cla_signed) VALUES (?, 'John', 'founder', 'active', 0, 1)`
+        ).run(SESION_FOUNDER);
+        db.prepare(
+          `INSERT INTO users (wallet, display_name, role, is_supervisor, status, is_demo, cla_signed, invited_by)
+           VALUES (?, 'Super', 'core', 1, 'active', 0, 1, ?)`
+        ).run(SUPERVISORA, SESION_FOUNDER);
+      });
+
+      /** Una pieza del founder: él la planifica, la empieza y la envía a revisión con `quien`. */
+      function delFounder(dueno: string, quien: TeamActor): number {
+        const id = createAssignmentAs(
+          db,
+          FOUNDER,
+          { title: "Pieza del founder", initiativeId: p, ownerWallet: dueno, size: "M", dueDate: MANANA },
+          HOY_9AM
+        );
+        applyAssignmentAction(db, { assignmentId: id, action: "empezar", actor: quien, now: HOY_9AM });
+        applyAssignmentAction(db, { assignmentId: id, action: "enviar_a_revision", actor: quien, now: HOY_2PM });
+        return id;
+      }
+
+      it("su fila de equipo aún sin vincular: la aprueba una supervisora que él invitó y emite", () => {
+        const id = delFounder(JOHN, FOUNDER);
+        const r = aprobar(id, MANANA_3PM, SUPERVISORA_ACTOR);
+        expect(r.row.status).toBe("Hecha");
+        const premio = calcularPremioTarea({ size: "M", aTiempo: true }, G);
+        expect(r.emision).toEqual({
+          emitido: true,
+          puntos: premio.puntos,
+          reputacion: G.TASK_REP.M,
+          bono: premio.bono,
+          periodo: currentEpoch(db),
+        });
+        expect(filas(db, id).puntos).toEqual([
+          { wallet: JOHN, points: premio.puntos, period_id: currentEpoch(db), bucket: "ejecucion" },
+        ]);
+        expect(filas(db, id).rep).toEqual([{ wallet: JOHN, axis: "ejecucion", delta: G.TASK_REP.M, period_id: currentEpoch(db) }]);
+      });
+
+      it("ya vinculada (su cuenta real es la de la sesión): la aprueba quien revisa, invitada por su fila de equipo, y emite", () => {
+        db.prepare(`INSERT INTO roster_links (slug, wallet, linked_by) VALUES ('john', ?, ?)`).run(SESION_FOUNDER, SESION_FOUNDER);
+        db.prepare(`UPDATE users SET invited_by = ? WHERE wallet = ?`).run(JOHN, RITA);
+        const founderSesion: TeamActor = { wallet: SESION_FOUNDER, name: "John", role: "founder", isSupervisor: true };
+        const id = delFounder(SESION_FOUNDER, founderSesion);
+        const r = aprobar(id, MANANA_3PM, actor(RITA));
+        expect(r.row.status).toBe("Hecha");
+        expect(r.emision?.emitido).toBe(true);
+        expect(r.emision?.motivo).toBeUndefined();
+        expect(filas(db, id).puntos.map((f) => f.wallet)).toEqual([SESION_FOUNDER]);
+        expect(filas(db, id).rep.map((f) => f.wallet)).toEqual([SESION_FOUNDER]);
+      });
+
+      it("el founder sigue sin cobrar su propia aprobación con ninguna de sus identidades", () => {
+        const founderSesion: TeamActor = { wallet: SESION_FOUNDER, name: "John", role: "founder", isSupervisor: true };
+        const id = delFounder(JOHN, FOUNDER);
+        expect(fallo(() => aprobar(id, MANANA_3PM, founderSesion))).toEqual({ status: 403, message: MOTIVO_TRANSICION.dueno });
+        expect(ledgers(db)).toBe(0);
+      });
+
+      it("la puerta y la emisión dicen lo mismo: lo que se deja aprobar emite, lo que se frena no llega a Hecha", () => {
+        // Invitaciones de las dos identidades del founder (sesión y fila de equipo) y una
+        // entre dos personas del equipo (MADRINA invitó a ANA).
+        db.prepare(`UPDATE users SET invited_by = ? WHERE wallet = ?`).run(SESION_FOUNDER, RITA);
+        db.prepare(`UPDATE users SET invited_by = ? WHERE wallet = ?`).run(JOHN, MADRINA);
+        db.prepare(`UPDATE users SET invited_by = ? WHERE wallet = ?`).run(MADRINA, ANA);
+        const founderSesion: TeamActor = { wallet: SESION_FOUNDER, name: "John", role: "founder", isSupervisor: true };
+        const casos: Array<{ dueno: string; quien: TeamActor; aprobador: TeamActor; frena?: string }> = [
+          // Su fila de equipo sin vincular la revisa un supervisor (otra regla, no B8).
+          { dueno: JOHN, quien: FOUNDER, aprobador: SUPERVISORA_ACTOR },
+          { dueno: JOHN, quien: FOUNDER, aprobador: actor(RITA), frena: MOTIVO_TRANSICION.pendiente },
+          // Con la cuenta de su sesión, quien él invitó (por cualquiera de sus identidades) sí.
+          { dueno: SESION_FOUNDER, quien: founderSesion, aprobador: actor(RITA) },
+          { dueno: SESION_FOUNDER, quien: founderSesion, aprobador: actor(MADRINA) },
+          // Entre dos personas del equipo, B8 sigue en pie.
+          { dueno: ANA, quien: actor(ANA), aprobador: SUPERVISORA_ACTOR },
+          { dueno: ANA, quien: actor(ANA), aprobador: actor(RITA) },
+          { dueno: ANA, quien: actor(ANA), aprobador: actor(MADRINA), frena: MOTIVO_TRANSICION.invitacion },
+        ];
+        for (const c of casos) {
+          const caso = `${c.dueno} aprobada por ${c.aprobador.wallet}`;
+          const id = delFounder(c.dueno, c.quien);
+          const puerta = accionesPermitidas(db, c.aprobador, getAssignment(db, id)!).includes("aprobar");
+          expect(puerta, caso).toBe(!c.frena);
+          if (!c.frena) {
+            const r = aprobar(id, MANANA_3PM, c.aprobador);
+            expect(r.row.status, caso).toBe("Hecha");
+            expect(r.emision, caso).toMatchObject({ emitido: true });
+            expect(r.emision?.motivo, caso).toBeUndefined();
+            expect(filas(db, id).rep.map((f) => f.wallet), caso).toEqual([c.dueno]);
+          } else {
+            expect(fallo(() => aprobar(id, MANANA_3PM, c.aprobador)), caso).toEqual({ status: 403, message: c.frena });
+            expect(getAssignment(db, id)!.status, caso).toBe("En revisión");
+            expect(filas(db, id), caso).toEqual({ puntos: [], rep: [] });
+          }
+        }
+      });
     });
 
     it("si la base falla al emitir, la aprobación entera se revierte (el gancho no lleva try/catch)", () => {
