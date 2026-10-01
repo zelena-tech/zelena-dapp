@@ -15,12 +15,18 @@ export default async function AcademiaPage() {
   const genome = getActiveGenome(getDb());
 
   return (
-    <div className="space-y-8">
-      <header>
-        <h1 className="font-head text-4xl font-bold text-white">Academia</h1>
-        <p className="mt-2 max-w-2xl text-muted">
-          Aprende cómo funciona Zelena y gana puntos en el eje Investigación / Contenido. Lee de verdad: hay tiempo
-          mínimo, un quiz al final y rendimientos decrecientes. El conocimiento se premia, el farmeo no.
+    <div className="space-y-10">
+      <header className="flex flex-col gap-6 pt-4 md:pt-8">
+        <p className="label">Academia</p>
+        <h1 className="max-w-4xl font-serif text-4xl font-normal normal-case leading-[1.1] tracking-normal text-paper sm:text-5xl lg:text-[64px]">
+          Aprende haciendo.
+        </h1>
+        <p className="max-w-2xl text-base leading-7 text-muted">
+          Aprende cómo funciona Zelena y gana puntos y reputación en investigación. Cada lectura tiene un tiempo
+          mínimo y unas preguntas al final, y cada contenido extra del mismo día vale un poco menos.
+        </p>
+        <p className="max-w-2xl font-serif text-xl normal-case italic leading-snug text-primary">
+          Se premia aprender, no acumular sin aprender.
         </p>
       </header>
 
@@ -30,20 +36,21 @@ export default async function AcademiaPage() {
             Contenidos con puntos hoy: <span className="text-primary">{usedToday}</span> / {genome.ACADEMIA_DAILY_CAP}
           </span>
           <span className="text-faint">
-            2º del día 75% · 3º 50% · presupuesto de época Academia: {genome.ACADEMIA_BUDGET.toLocaleString("es")} pts
+            El 2.º del día vale 75 % y el 3.º, 50 % · presupuesto de la Academia esta temporada:{" "}
+            {genome.ACADEMIA_BUDGET.toLocaleString("es")} pts
           </span>
         </div>
       ) : (
         <div className="card p-4 text-sm text-faint">
           Puedes leer sin entrar, pero para ganar puntos necesitas{" "}
-          <Link href="/entrar" className="text-primary hover:underline">firmar el CLA</Link>.
+          <Link href="/entrar" className="text-primary hover:underline">firmar el acuerdo de contribución</Link>.
         </div>
       )}
 
       {content.length === 0 ? (
         <EmptyState
           title="Aún no hay contenidos publicados"
-          message="La Academia se está preparando. Mientras tanto, explora el Ágora y toma tu primer bounty — tu reputación puede empezar hoy."
+          message="La Academia se está preparando. Mientras tanto, explora el Ágora y toma tu primer proyecto: tu reputación puede empezar hoy."
           cta={{ href: "/agora", label: "Ir al Ágora" }}
         />
       ) : (
@@ -56,10 +63,10 @@ export default async function AcademiaPage() {
                 <span className="tag border-line text-muted">{c.kind === "video" ? "Video" : "Artículo"}</span>
                 <span className="font-head text-lg text-primary">+{c.points} pts</span>
               </div>
-              <h2 className="mt-3 font-head text-xl font-bold text-white">{c.title}</h2>
+              <h2 className="mt-3 font-serif text-2xl font-normal normal-case leading-snug tracking-normal text-paper">{c.title}</h2>
               <p className="mt-2 flex-1 text-sm text-muted">{c.summary}</p>
               <div className="mt-4 flex items-center justify-between border-t border-line/50 pt-3 text-xs text-faint">
-                <span>Tiempo mínimo {c.min_seconds}s · quiz 2/3</span>
+                <span>Lectura mínima {c.min_seconds} s · 2 de 3 respuestas</span>
                 {awarded ? <span className="text-emerald-400">completado</span> : <span className="text-primary">disponible</span>}
               </div>
             </Link>

@@ -6,8 +6,8 @@ export const metadata = {
     "Lo que creemos: lo que entregas debería determinar lo que recibes. Los principios que guían a ZELENA en el trabajo, en la comunidad y en la forma en que construimos.",
 };
 
-// Valores y filosofía, no estructura: aquí no se explica la SAS ni la
-// mecánica de la DAO (eso vive en el whitepaper). Contenido en constantes para
+// Valores y filosofía, no estructura: aquí no se explica la forma legal ni la
+// mecánica de la comunidad (eso vive en el whitepaper). Contenido en constantes para
 // que la capa de idiomas solo tenga que añadir el lado en inglés.
 
 const ORIGEN = [

@@ -20,7 +20,7 @@ function bytesToBase64(bytes: Uint8Array): string {
   return btoa(bin);
 }
 
-const STEPS = ["Ecosistema", "Invitación", "Wallet", "Firma del CLA"];
+const STEPS = ["Bienvenida", "Invitación", "Tu cuenta", "Tu firma"];
 
 export default function Entrar() {
   const router = useRouter();
@@ -70,7 +70,7 @@ export default function Entrar() {
           setClaText(d.text);
           setClaHash(await sha256Hex(d.text));
         })
-        .catch(() => setError("No se pudo cargar el CLA."));
+        .catch(() => setError("No se pudo cargar el acuerdo."));
     }
   }, [step, claText]);
 
@@ -298,7 +298,7 @@ export default function Entrar() {
         const freighter: any = await import("@stellar/freighter-api");
         if (!freighter.signMessage) {
           // Sin signMessage no hay firma real; NO enviar un placeholder (se anclaría
-          // on-chain sin valor probatorio — hallazgo H3). Bloquear el registro.
+          // en la red sin valor probatorio — hallazgo H3). Bloquear el registro.
           setError(
             "Esta versión de Freighter no permite firmar mensajes. Usa la wallet de prueba para completar el registro."
           );
@@ -362,8 +362,8 @@ export default function Entrar() {
     <div className={`mx-auto space-y-8 ${step === 0 ? "max-w-4xl" : "max-w-2xl"}`}>
       {step > 0 ? (
         <header>
-          <h1 className="font-head text-4xl font-bold text-white">Entrar</h1>
-          <p className="mt-2 text-muted">Invitación → wallet → CLA anclado. Sin CLA no hay acceso al Ágora.</p>
+          <h1 className="font-serif text-4xl font-normal normal-case tracking-normal text-paper sm:text-5xl">Entrar</h1>
+          <p className="mt-3 text-muted">Tres pasos: tu invitación, tu cuenta y tu firma.</p>
         </header>
       ) : null}
 
@@ -481,7 +481,7 @@ export default function Entrar() {
           <div className="border-t border-line pt-4">
             <p className="text-xs text-faint">
               ¿Tu wallet ya está registrada (por ejemplo la del fundador o la de una entrada anterior)? No necesitas
-              código: entra firmando el CLA con tu wallet.
+              código: entra firmando el acuerdo con tu wallet.
             </p>
             <button
               className="btn btn-ghost mt-2"
@@ -505,38 +505,40 @@ export default function Entrar() {
             <p className="mt-1 text-sm text-muted">
               {returning
                 ? "Firma con la wallet que ya está registrada. No se consume ninguna invitación."
-                : "Tu wallet es tu identidad en la DAO. Todo ocurre en testnet: no hay dinero real."}
+                : "Tu wallet es tu cuenta en Zelena. Vive en la red de pruebas de Stellar: no mueve dinero real."}
             </p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-md border border-line-strong bg-surface-2 p-4">
-              <p className="label">Tu propia wallet</p>
-              <p className="mt-1 text-xs text-muted">
-                Freighter (extensión de navegador). Es la opción para entrar como fundador o con tu wallet de siempre.
-              </p>
-              <button
-                className="btn btn-primary mt-3 w-full"
-                onClick={connectFreighter}
-                disabled={ocupado !== ""}
-              >
-                {ocupado === "freighter" ? "Conectando…" : "Conectar Freighter"}
-              </button>
-            </div>
-            <div className="rounded-md border border-line bg-surface-2 p-4">
-              <p className="label">Wallet de prueba</p>
-              <p className="mt-1 text-xs text-muted">
-                Se genera en tu navegador en un segundo. Ideal para invitados que solo quieren ver la DAO.
-              </p>
-              <button
-                className="btn btn-ghost mt-3 w-full"
-                onClick={() => void elegirWalletDemo()}
-                disabled={ocupado !== ""}
-              >
-                {ocupado === "demo" ? "Creando…" : "Crear wallet de prueba"}
-              </button>
-            </div>
+          <div className="rounded-md border border-line-strong bg-surface-2 p-4">
+            <p className="label">Crea tu cuenta</p>
+            <p className="mt-1 text-xs text-muted">
+              Se genera en tu navegador en un segundo, sin instalar nada.
+            </p>
+            <button
+              className="btn btn-primary mt-3 w-full"
+              onClick={() => void elegirWalletDemo()}
+              disabled={ocupado !== ""}
+            >
+              {ocupado === "demo" ? "Creando…" : "Crear wallet de prueba"}
+            </button>
           </div>
+
+          {/* Freighter, solo tras "ver detalle" (abierto de entrada para quien vuelve con su wallet). */}
+          <details className="rounded-md border border-line bg-surface-2 p-4" open={returning}>
+            <summary className="cursor-pointer text-sm text-muted hover:text-primary">
+              ¿Ya tienes tu propia wallet? Ver detalle
+            </summary>
+            <p className="mt-3 text-xs text-muted">
+              Freighter (extensión de navegador). Es la opción para entrar como fundador o con tu wallet de siempre.
+            </p>
+            <button
+              className="btn btn-ghost mt-3 w-full"
+              onClick={connectFreighter}
+              disabled={ocupado !== ""}
+            >
+              {ocupado === "freighter" ? "Conectando…" : "Conectar Freighter"}
+            </button>
+          </details>
 
           {walletGuardada ? (
             <div className="border border-primary/40 bg-glow p-4">
@@ -590,6 +592,13 @@ export default function Entrar() {
                 onChange={(e) => setName(e.target.value)}
                 maxLength={40}
               />
+              <p className="mt-1 text-xs text-faint">
+                Cómo tratamos tus datos:{" "}
+                <Link href="/privacidad" className="text-primary hover:underline">
+                  aviso de privacidad
+                </Link>
+                .
+              </p>
             </div>
           ) : null}
 
@@ -614,17 +623,28 @@ export default function Entrar() {
       {/* Paso 3 */}
       {step === 3 && (
         <div className="card space-y-4 p-6">
-          <h2 className="font-head text-xl font-bold text-white">Firma el CLA</h2>
+          <h2 className="font-head text-xl font-bold text-white">Firma el acuerdo de contribución</h2>
           <p className="text-sm text-muted">
-            Al firmar cedes los derechos patrimoniales a Zelena SAS (derechos morales inalienables). No crea relación
-            laboral. Se calcula el SHA-256 del texto y se ancla en testnet.
+            Tu autoría es tuya para siempre. Al firmar cedes a Zelena los derechos patrimoniales de lo que aportes,
+            para que pueda llegar a clientes. Firmar no te convierte en empleado ni en socio. Guardamos la huella del
+            acuerdo en la red de pruebas de Stellar.
           </p>
+          {/* El texto legal completo, tal cual se firma (CLA.md, servido por /api/cla). */}
           <div className="max-h-72 overflow-y-auto rounded-md border border-line bg-surface-2 p-4">
-            {claText ? <Markdown source={claText} /> : <p className="text-sm text-faint">Cargando CLA…</p>}
+            {claText ? <Markdown source={claText} /> : <p className="text-sm text-faint">Cargando el acuerdo…</p>}
           </div>
-          {claHash ? (
-            <p className="break-all font-mono text-[11px] text-faint">SHA-256: {claHash}</p>
-          ) : null}
+          <details className="text-xs text-faint">
+            <summary className="cursor-pointer text-muted hover:text-primary">Ver detalle</summary>
+            <p className="mt-2 leading-6">
+              Tus derechos morales (que se reconozca que eres el autor) no se ceden nunca, y firmar no crea relación
+              laboral. Calculamos el SHA-256 del texto del acuerdo y lo anclamos en la red de pruebas de Stellar.{" "}
+              <Link href="/acuerdo" className="text-primary hover:underline">
+                Leer el acuerdo en su propia página
+              </Link>
+              .
+            </p>
+            {claHash ? <p className="mt-2 break-all font-mono text-[11px]">SHA-256: {claHash}</p> : null}
+          </details>
           <div className="text-xs text-faint">
             Firmando como <span className="text-white">{name || shortWallet(wallet)}</span> · {shortWallet(wallet)}
           </div>
@@ -643,6 +663,8 @@ export default function Entrar() {
 
       <p className="text-center text-xs text-faint">
         ¿Ya tienes cuenta? <Link href="/perfil" className="text-primary hover:underline">Ir a mi perfil</Link>
+        {" · "}
+        <Link href="/privacidad" className="text-primary hover:underline">Aviso de privacidad</Link>
       </p>
     </div>
   );

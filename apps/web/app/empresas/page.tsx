@@ -10,7 +10,7 @@ export const metadata = {
 // de idiomas solo tenga que añadir el lado en inglés sin tocar la maqueta.
 const ESTADO = [
   { etiqueta: "Fase 1", valor: "En producción", vivo: true },
-  { etiqueta: "Fase 2", valor: "Verificado en testnet", tenue: true },
+  { etiqueta: "Fase 2", valor: "Piloto en testnet", tenue: true },
   { etiqueta: "Infraestructura", valor: "Stellar · Soroban" },
   { etiqueta: "Cobertura", valor: "Colombia → México → Argentina" },
 ];
@@ -25,23 +25,23 @@ const FASES = [
   },
   {
     num: "02",
-    estado: "Testnet · En camino a mainnet",
+    estado: "Piloto en testnet",
     acento: false,
-    titulo: "Nómina por desempeño",
-    desc: "Distribución automática de incentivos basada en el desempeño medido. Recompensas financiadas en USDC, entregadas a la cuenta bancaria de cada trabajador en moneda local — COP, MXN, ARS — sin fricción cripto.",
+    titulo: "Incentivos por desempeño",
+    desc: "Distribución automática de incentivos basada en el desempeño medido. Recompensas financiadas en USDC y pensadas para llegar a la cuenta bancaria de cada trabajador en moneda local — COP, MXN, ARS — sin fricción cripto. Hoy corre como piloto en testnet.",
   },
 ];
 
 const PASOS = [
   { n: "01", t: "Crear campaña", d: "El dueño define las reglas de recompensa, el periodo y los parámetros de puntuación." },
-  { n: "02", t: "Financiar el fondo", d: "El fondo de recompensas en USDC se deposita automáticamente en Blend. Genera rendimiento mientras el periodo está abierto." },
+  { n: "02", t: "Financiar el fondo", d: "El fondo de recompensas se deposita antes de que empiece el periodo. Así nadie trabaja por una promesa." },
   { n: "03", t: "Ejecutar tareas", d: "Los trabajadores completan las operaciones. Cada acción se registra en vivo desde el piso." },
-  { n: "04", t: "Puntuar y cerrar", d: "El supervisor revisa y aplica el multiplicador de calidad. El periodo se cierra on-chain." },
-  { n: "05", t: "Verificar y pagar", d: "Stellar ancla los puntajes. Las recompensas llegan a la cuenta bancaria de cada trabajador." },
+  { n: "04", t: "Puntuar y cerrar", d: "El supervisor revisa y aplica el multiplicador de calidad. El cierre del periodo queda registrado y se puede verificar." },
+  { n: "05", t: "Verificar y pagar", d: "Stellar ancla los puntajes y las recompensas se reparten. El pago a la cuenta bancaria de cada trabajador es hoy un piloto en testnet." },
 ];
 
 const STELLAR = [
-  { t: "Moneda local, última milla", d: "Los anchors de Stellar convierten USDC directamente a COP, MXN y ARS — entregado como transferencias bancarias estándar, sin necesidad de conocimientos de cripto." },
+  { t: "Moneda local, última milla", d: "Los anchors de Stellar convierten USDC a COP, MXN y ARS y lo entregan como transferencias bancarias estándar, sin necesidad de conocimientos de cripto. En Zelena, piloto en testnet." },
   { t: "Comisiones de centavos", d: "Pagar a docenas de trabajadores por periodo se vuelve económicamente viable. A escala PyME, esta es la diferencia entre lo posible y lo imposible." },
   { t: "Cero fricción cripto", d: "Autenticación con passkeys. Face ID o huella digital. Los trabajadores reciben recompensas sin saber jamás que hay blockchain de por medio." },
 ];
@@ -54,9 +54,9 @@ export default function Empresas() {
         <span className="inline-flex w-fit max-w-full items-center gap-2 rounded-full border border-line-strong bg-surface px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.06em] text-primary sm:tracking-[0.1em]">
           <span className="h-1.5 w-1.5 animate-pulseline rounded-full bg-primary" />
           {/* En movil la version larga partia la pildora en varias lineas. */}
-          <span className="sm:hidden">Nómina por desempeño · Stellar</span>
+          <span className="sm:hidden">Incentivos por desempeño · Stellar</span>
           <span className="hidden sm:inline">
-            Infraestructura de Nómina por Desempeño · Construido en Stellar
+            Incentivos por desempeño · Construido en Stellar
           </span>
         </span>
 
@@ -68,7 +68,7 @@ export default function Empresas() {
 
         <p className="max-w-2xl text-base leading-7 text-muted lg:text-lg">
           ZELENA ayuda a los operadores de almacenes a modernizar sus operaciones y recompensar el
-          desempeño real — en moneda local, entregado automáticamente a través de Stellar.
+          desempeño real, con incentivos que se calculan a partir del trabajo y se registran en Stellar.
         </p>
 
         <div className="flex flex-wrap items-center gap-4 pt-2">
@@ -230,8 +230,8 @@ export default function Empresas() {
         <div className="card flex flex-col items-start gap-8 border-primary/30 p-8 md:p-12 lg:flex-row lg:items-center lg:justify-between lg:gap-12">
           <div className="max-w-2xl space-y-4">
             <h2 className="font-serif text-2xl font-normal normal-case leading-snug tracking-normal text-paper sm:text-3xl sm:leading-snug lg:text-[40px]">
-              ¿Listo para el futuro de{" "}
-              <em className="font-normal italic text-primary">la colaboración?</em>
+              ¿Hablamos de{" "}
+              <em className="font-normal italic text-primary">tu operación?</em>
             </h2>
             <p className="text-base leading-7 text-muted lg:text-lg">
               Agenda una demostración y descubre cómo ZELENA moderniza tu operación.
