@@ -29,6 +29,15 @@ jobs:
       - name: Instalar (lockfile de la raíz)
         run: npm ci
 
+      # El lockfile se genera en Windows y npm omite los binarios opcionales de
+      # otras plataformas (npm/cli#4828). Rollup y esbuild son de vitest (no van
+      # al paquete); se instalan los de Linux con la versión exacta ya resuelta.
+      - name: Binarios de Linux de las herramientas de test
+        run: |
+          RV=$(node -p "require('rollup/package.json').version")
+          EV=$(node -p "require('esbuild/package.json').version")
+          npm install --no-save --no-package-lock "@rollup/rollup-linux-x64-gnu@$RV" "@esbuild/linux-x64@$EV"
+
       - name: Tipos y tests
         working-directory: apps/web
         run: |
@@ -60,6 +69,29 @@ jobs:
           (cd "$S" && zip -qr "$GITHUB_WORKSPACE/paquete-azure.zip" .)
           ls -la paquete-azure.zip
           echo "BUILD_ID: $(cat apps/web/.next/BUILD_ID)"
+
+      # Ensayo en Linux del MISMO zip que se va a subir, sobre una base con el
+      # esquema que hoy corre en producción (fixture del 58ee2fd): arranca con
+      # start.sh, migra y responde. Si algo falla, no hay artefacto.
+      - name: Ensayo del paquete (base con el esquema desplegado)
+        run: |
+          set -euo pipefail
+          E="$RUNNER_TEMP/ensayo"; mkdir -p "$E/app" "$E/data"
+          unzip -q paquete-azure.zip -d "$E/app"
+          node -e "const {DatabaseSync}=require('node:sqlite');const fs=require('fs');new DatabaseSync(process.argv[1]).exec(fs.readFileSync(process.argv[2],'utf8'))" "$E/data/zelena.db" apps/web/src/lib/__fixtures__/schema-58ee2fd.sql
+          export DATABASE_FILE="$E/data/zelena.db" DATABASE_DRIVER=sqlite PORT=8080 NODE_ENV=production
+          export SESSION_SECRET="$(openssl rand -hex 32)" FOUNDER_WALLET=GA7ZELENAFOUNDERDEMOWALLET000000000000000000000000000AAA
+          sh "$E/app/start.sh" > "$E/server.log" 2>&1 &
+          for i in $(seq 1 40); do curl -sf -o /dev/null http://127.0.0.1:8080/api/cla && break; sleep 1; done
+          falla() { echo "FALLA: $1"; tail -80 "$E/server.log"; exit 1; }
+          for p in / /manifiesto /encuentros /empresas /empresas/servicios /ecosistema /agora /academia /gobernanza /whitepaper /entrar; do
+            c=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:8080$p"); echo "$p $c"; [ "$c" = 200 ] || falla "$p respondió $c"
+          done
+          for p in /equipo/hoy /admin /perfil /clientes; do
+            c=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:8080$p"); echo "$p $c"; [ "$c" = 307 ] || falla "$p respondió $c sin sesión"
+          done
+          curl -s http://127.0.0.1:8080/api/cla | grep -q 03293c9378146cbd || falla "hash del CLA distinto"
+          echo "--- log del servidor"; tail -40 "$E/server.log"
 
       - uses: actions/upload-artifact@v4
         with:
