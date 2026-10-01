@@ -29,21 +29,31 @@ import { sha256Hex } from "./crypto";
 import { currentEpoch, getActiveGenome, GENOME_DEFAULTS, type Genome, type RiteKind } from "./genome";
 import { identidadesDe, mismaPersona } from "./identidades";
 import { effectiveRole, isPendingPrincipal, isRole, puedeVerTodoElEquipo, type TeamActor } from "./roles";
-import { equipoInternoActor } from "./authz";
+import { equipoActor } from "./authz";
 import { esActaDeRito, esDecisionReemplazada } from "./agora-labels";
 import { txVerificable } from "./pruebas-testnet";
 import { diaLocal, instanteDb, parseInstanteDb } from "./zona-horaria";
 import {
+  ESTADO_RITO_LABEL,
+  RITE_KINDS,
   RITE_LABEL,
   dentroDeVentana,
   esOcurrenciaValida,
   fechaLargaRito,
+  fechaRito,
+  horaRito,
   isRiteKind,
   margenTexto,
   normalizarCodigo,
+  personasRegistradas,
   proximasOcurrencias,
   ventanaRito,
+  zonaTexto,
+  type CandidatoRito,
+  type FechaRitoPreparable,
   type OcurrenciaRito,
+  type PanelRitosAdmin,
+  type SesionRitoAdmin,
 } from "./ritos-labels";
 import { bucketDe, codigoRito, expiraEnS, hashCierre, ritesSecret, verificarCodigo } from "./ritos-codigo";
 
@@ -555,13 +565,13 @@ function asistio(db: DB, identidades: string[], sessionId: number): boolean {
 /**
  * ¿Esta persona es de la audiencia del rito? La demo y la retro son de la comunidad
  * (cualquiera con cuenta). El sync es del equipo y de quien trabaja en un proyecto:
- * la MISMA puerta decide quién registra su asistencia y quién recibe su enlace.
- * PENDIENTE (WP31-A): cambiar a `equipoActor` (contributors con membresía y acuerdo)
- * cuando se fusione `wp31-a1`; hoy solo existe la puerta del equipo interno.
+ * la MISMA puerta que `/equipo` (`equipoActor`: equipo interno, o contributor con el
+ * acuerdo firmado y al menos una membresía) decide quién registra su asistencia y
+ * quién recibe su enlace. Se lee de la base, nunca de la cookie.
  */
 function esDeLaAudiencia(db: DB, kind: RiteKind, wallet: string): boolean {
   if (RITE_LABEL[kind].audiencia !== "equipo") return true;
-  return !!equipoInternoActor({ wallet }, db);
+  return !!equipoActor({ wallet }, db);
 }
 
 /** Todo lo que se exige antes de mirar el código. Lanza `RitoError` con el copy de §8.4. */
@@ -864,6 +874,93 @@ export function sesionesGestionables(
     ...sinWallets(row, conteoAsistentes(db, row.id)),
     pendienteDeCerrar: row.state === "Open" && ahora.getTime() > ventanaDe(row, margen).cierra.getTime(),
   }));
+}
+
+// ---------------------------------------------------------------------------
+// Gestión en /admin (corte 2): preparar, quién presenta y relata, abrir y cerrar
+// ---------------------------------------------------------------------------
+
+/**
+ * Quién puede presentar o relatar: las mismas condiciones que `asignarRolesRito`
+ * (cuenta activa, propia, no demo, no `pending:` y con el acuerdo firmado), por
+ * nombre. Es una lista para elegir, no una evaluación de nadie.
+ */
+export function candidatosPresentador(db: DB): CandidatoRito[] {
+  const filas = db
+    .prepare(
+      `SELECT wallet, display_name FROM users
+       WHERE status = 'active' AND is_demo = 0 AND cla_signed = 1 AND wallet NOT LIKE 'pending:%'
+       ORDER BY display_name, wallet`
+    )
+    .all() as Array<{ wallet: string; display_name: string }>;
+  return filas.map((f) => ({ wallet: f.wallet, nombre: f.display_name }));
+}
+
+/**
+ * Fechas de la cadencia del genoma que todavía se pueden preparar: las próximas
+ * `porTipo` de cada rito dentro de los 60 días que acepta `prepararRito`, sin las
+ * que ya tienen sesión. Así el panel no ofrece fechas inventadas.
+ */
+export function ocurrenciasPreparables(db: DB, ahora: Date = new Date(), porTipo: number = 4): FechaRitoPreparable[] {
+  const p = paramsRitos(db);
+  const tope = Math.min(Math.max(1, Math.floor(porTipo) || 1), 12);
+  const preparada = db.prepare(`SELECT 1 AS x FROM rite_sessions WHERE kind = ? AND scheduled_for = ?`);
+  const porKind = new Map<RiteKind, number>();
+  const out: FechaRitoPreparable[] = [];
+  for (const o of proximasOcurrencias(p.cadencia, ahora, p.tz, 100)) {
+    if ((porKind.get(o.kind) ?? 0) >= tope) continue;
+    if (!esOcurrenciaValida(p.cadencia, o.kind, o.inicio, p.tz, ahora)) continue;
+    const scheduledFor = o.inicio.toISOString();
+    if (preparada.get(o.kind, scheduledFor)) continue;
+    porKind.set(o.kind, (porKind.get(o.kind) ?? 0) + 1);
+    out.push({ kind: o.kind, scheduledFor, etiqueta: `${fechaRito(o.inicio, p.tz)} · ${horaRito(o.inicio, p.tz)}` });
+  }
+  return out;
+}
+
+/**
+ * Todo lo que el panel de ritos de `/admin` necesita, ya armado (la página es solo
+ * del founder). De cada sesión, el CONTEO de asistentes y nunca la lista; las
+ * wallets de anfitrión y relator van solo para preseleccionar el selector.
+ */
+export function panelRitosAdmin(db: DB, ahora: Date = new Date()): PanelRitosAdmin {
+  const p = paramsRitos(db);
+  const asignados = db.prepare(`SELECT host_wallet, recorder_wallet FROM rite_sessions WHERE id = ?`);
+  const sesiones: SesionRitoAdmin[] = sesionesGestionables(db, ahora).map((s) => {
+    const a = asignados.get(s.id) as { host_wallet: string | null; recorder_wallet: string | null } | undefined;
+    const inicio = parseInstanteDb(s.scheduled_for);
+    return {
+      id: s.id,
+      kind: s.kind,
+      nombre: RITE_LABEL[s.kind].nombre,
+      cuando: `${fechaRito(inicio, p.tz)} · ${horaRito(inicio, p.tz)}`,
+      state: s.state,
+      estado: ESTADO_RITO_LABEL[s.state] ?? s.state,
+      lugar: s.lugar,
+      conEnlace: s.conEnlace,
+      asistentes: personasRegistradas(s.asistentes),
+      pendienteDeCerrar: s.pendienteDeCerrar,
+      ventanaPasada: s.state === "Planned" && ahora.getTime() > ventanaDe(s, p.margenMin).cierra.getTime(),
+      anfitrion: a?.host_wallet ?? null,
+      relator: a?.recorder_wallet ?? null,
+    };
+  });
+  return {
+    sesiones,
+    preparables: ocurrenciasPreparables(db, ahora),
+    candidatos: candidatosPresentador(db),
+    tipos: RITE_KINDS.map((kind) => ({ kind, nombre: RITE_LABEL[kind].nombre })),
+    margen: margenTexto(p.margenMin),
+    zona: zonaTexto(p.tz),
+  };
+}
+
+/**
+ * El próximo rito DE COMUNIDAD (demo o retro; el sync es del equipo) para la landing,
+ * o `null`. Sin wallets ni enlace de conexión: lo mismo que `ritosPublicos`.
+ */
+export function proximoRitoDeComunidad(db: DB, ahora: Date = new Date()): RitoProximo | null {
+  return ritosPublicos(db, ahora, 1).proximos[0] ?? null;
 }
 
 /**
