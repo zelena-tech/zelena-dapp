@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { openDb, type DB } from "./db";
 import { seedTeam } from "./team";
-import { identidadesDe, mismaPersona, principalFounder } from "./identidades";
+import { identidadesDe, mismaPersona, principalFounder, reglaB8 } from "./identidades";
 
 const SESION = "GFOUNDERSESIONAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"; // wallet con la que entra el founder
 const DEMO = "GA7ZELENAFOUNDERDEMOWALLET000000000000000000000000000AAA"; // fila demo con rol founder
@@ -95,6 +95,48 @@ describe("identidades (WP31 §5.0, criterio B1c)", () => {
     // Una wallet que no está en la base sigue siendo ella misma, y nada más.
     expect(identidadesDe(db, "GDESCONOCIDA")).toEqual(["GDESCONOCIDA"]);
     expect(mismaPersona(db, "", "")).toBe(false);
+  });
+
+  it("reglaB8: simétrica, sobre todas las identidades, con el founder exento como quien revisa y como dueño", () => {
+    const INVITA = "GINVITAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+    usuario(db, INVITA);
+    const invito = (por: string, a: string) => db.prepare(`UPDATE users SET invited_by = ? WHERE wallet = ?`).run(por, a);
+    const nada = { founderExento: false, vinculoInvitacion: false };
+    const vinculo = { founderExento: false, vinculoInvitacion: true };
+    const exento = { founderExento: true, vinculoInvitacion: false };
+
+    // Las dos direcciones.
+    invito(INVITA, ANA);
+    expect(reglaB8(db, INVITA, ANA)).toEqual(vinculo);
+    expect(reglaB8(db, ANA, INVITA)).toEqual(vinculo);
+    expect(reglaB8(db, ANA, "pending:david")).toEqual(nada);
+
+    // Todas las identidades: la fila de equipo de Vale entró invitada por INVITA y Vale ya
+    // entra con su cuenta real (vinculada sin borrar la fila de equipo).
+    invito(INVITA, "pending:vale");
+    usuario(db, VALE_REAL, { role: "core" });
+    db.prepare(`INSERT INTO roster_links (slug, wallet, linked_by) VALUES ('vale', ?, ?)`).run(VALE_REAL, SESION);
+    expect(reglaB8(db, INVITA, VALE_REAL)).toEqual(vinculo);
+    expect(reglaB8(db, VALE_REAL, INVITA)).toEqual(vinculo);
+
+    // El founder, con cualquiera de sus identidades, exento en las dos direcciones: como
+    // quien invitó (sesión o fila de equipo) y revisa, y como dueño revisado por su invitado.
+    invito(SESION, "pending:david");
+    invito("pending:john", "pending:fausto");
+    for (const founder of [SESION, "pending:john", DEMO]) {
+      for (const invitado of ["pending:david", "pending:fausto"]) {
+        expect(reglaB8(db, founder, invitado)).toEqual(exento);
+        expect(reglaB8(db, invitado, founder)).toEqual(exento);
+      }
+    }
+    // Vinculado a su cuenta real, igual (lo reconoce el roster aunque esa fila no diga founder).
+    usuario(db, JOHN_REAL, { role: "core" });
+    db.prepare(`INSERT INTO roster_links (slug, wallet, linked_by) VALUES ('john', ?, ?)`).run(JOHN_REAL, SESION);
+    invito(JOHN_REAL, ANA);
+    expect(reglaB8(db, ANA, JOHN_REAL)).toEqual(exento);
+
+    expect(reglaB8(db, "", ANA)).toEqual(nada);
+    expect(reglaB8(db, ANA, "")).toEqual(nada);
   });
 
   it("sin duplicados y ordenadas", () => {

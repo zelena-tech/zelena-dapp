@@ -13,8 +13,10 @@
  *    copy y viven aquí.
  *  - Cuatro ojos: quien entrega no cobra su propia aprobación (sus identidades cuentan
  *    como una, `identidadesDe`) y quien invita no evalúa a su invitado, ni al revés
- *    (B8, founder exento). La regla real está en `puedeTransicionar`; aquí es defensa
- *    en profundidad.
+ *    (B8 con `reglaB8`, la misma regla que la puerta: founder exento como quien aprueba
+ *    y como dueño). La regla real está en `puedeTransicionar`; aquí es defensa en
+ *    profundidad, y en B8 decide igual que ella: lo que ella deja aprobar, aquí no se
+ *    frena por invitación.
  *  - Todo INSERT lleva `period_id = currentEpoch(db)` explícito: después de cerrar una
  *    época, ninguna fila nueva cae en ella (su raíz Merkle sigue siendo reproducible).
  *
@@ -26,7 +28,7 @@
 import type { DB } from "./db";
 import type { Size } from "./team";
 import { GENOME_DEFAULTS, currentEpoch, getActiveGenome, type Genome } from "./genome.ts";
-import { identidadesDe, mismaPersona, principalFounder } from "./identidades.ts";
+import { identidadesDe, mismaPersona, reglaB8 } from "./identidades.ts";
 import { aprobadaATiempo } from "./sla.ts";
 import { cargarPiezaSla, slaConfig } from "./sla-db.ts";
 
@@ -100,39 +102,6 @@ export interface EmisionTarea {
   periodo: number;
 }
 
-function invitadoPor(db: DB, wallet: string): string | null {
-  const r = db.prepare(`SELECT invited_by FROM users WHERE wallet = ?`).get(wallet) as
-    | { invited_by: string | null }
-    | undefined;
-  return r?.invited_by ?? null;
-}
-
-/** ¿Es el founder? Por su rol en la base o por el roster (nunca por `FOUNDER_WALLET`). */
-function esFounder(db: DB, wallet: string): boolean {
-  const ids = identidadesDe(db, wallet);
-  const principal = principalFounder(db);
-  if (principal && ids.includes(principal)) return true;
-  return ids.some((w) => {
-    const r = db.prepare(`SELECT role FROM users WHERE wallet = ?`).get(w) as { role: string | null } | undefined;
-    return r?.role === "founder";
-  });
-}
-
-/**
- * B8 en las dos direcciones (misma regla que `puedeTransicionar`): el aprobador no es
- * founder y (quien invitó al dueño es una identidad del aprobador, o quien invitó al
- * aprobador es una identidad del dueño).
- */
-function vinculoInvitacion(db: DB, aprobador: string, dueno: string): boolean {
-  if (esFounder(db, aprobador)) return false;
-  const invDueno = invitadoPor(db, dueno);
-  const invAprobador = invitadoPor(db, aprobador);
-  return (
-    (!!invDueno && identidadesDe(db, aprobador).includes(invDueno)) ||
-    (!!invAprobador && identidadesDe(db, dueno).includes(invAprobador))
-  );
-}
-
 function refYaEmitido(db: DB, ref: string): boolean {
   // En las DOS tablas y sin filtrar wallet: sobrevive a una vinculación de cuentas.
   return (
@@ -170,7 +139,9 @@ export function emitirPorAprobacion(
     const dueno = typeof input.ownerWallet === "string" ? input.ownerWallet.trim() : "";
     if (!dueno) return nada("sin_responsable");
     if (mismaPersona(db, input.aprobadorWallet, dueno)) return nada("autoaprobacion");
-    if (vinculoInvitacion(db, input.aprobadorWallet, dueno)) return nada("invitacion");
+    // B8 con la MISMA regla que la puerta (`reglaB8`): el founder exento como quien
+    // aprueba y como dueño, y todas las identidades de cada uno.
+    if (reglaB8(db, input.aprobadorWallet, dueno).vinculoInvitacion) return nada("invitacion");
 
     const pieza = db.prepare(`SELECT published_as_project_id FROM assignments WHERE id = ?`).get(input.assignmentId) as
       | { published_as_project_id: number | null }

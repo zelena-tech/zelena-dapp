@@ -215,6 +215,44 @@ describe("emitirPorAprobacion (criterio B4)", () => {
     ).toBe(true);
   });
 
+  it("B8 exime al founder también como DUEÑO: su entrega la aprueba quien él invitó, y emite", () => {
+    // Misma regla que la puerta (`puedeTransicionar`): si allí se aprueba, aquí se emite.
+    // Con cualquiera de sus identidades como dueño (fila de equipo o cuenta de sesión).
+    for (const dueno of [PRINCIPAL, SESION]) {
+      const id = asignacion(db, dueno);
+      const r = emitirPorAprobacion(db, { assignmentId: id, ownerWallet: dueno, aprobadorWallet: DEL_FOUNDER, size: "S", aTiempo: false });
+      expect(r).toMatchObject({ emitido: true, puntos: 10, reputacion: 1 });
+      expect(r.motivo).toBeUndefined();
+      expect(filas(db, refTarea(id)).rep).toHaveLength(1);
+    }
+    // Y cuando la invitación salió de su fila de equipo (no de la sesión), igual.
+    db.prepare(`UPDATE users SET invited_by = ? WHERE wallet = ?`).run(PRINCIPAL, REVISA);
+    const otra = asignacion(db, SESION);
+    expect(
+      emitirPorAprobacion(db, { assignmentId: otra, ownerWallet: SESION, aprobadorWallet: REVISA, size: "S", aTiempo: false }).emitido
+    ).toBe(true);
+  });
+
+  it("B8 mira todas las identidades: la invitación de la fila de equipo cuenta para la cuenta vinculada", () => {
+    // DUENA es la cuenta real de un slug del roster cuya fila de equipo entró invitada por
+    // INVITA: la puerta no deja aprobar a INVITA, y la emisión tampoco paga.
+    db.prepare(`UPDATE users SET invited_by = ? WHERE wallet = ?`).run(INVITA, "pending:juan");
+    db.prepare(`INSERT INTO roster_links (slug, wallet, linked_by) VALUES ('juan', ?, ?)`).run(DUENA, SESION);
+    const id = asignacion(db, DUENA);
+    expect(
+      emitirPorAprobacion(db, { assignmentId: id, ownerWallet: DUENA, aprobadorWallet: INVITA, size: "S", aTiempo: false }).motivo
+    ).toBe("invitacion");
+    // Al revés: si DUENA aprueba a quien entró con la invitación de su fila de equipo, no se emite.
+    const deSuInvitada = asignacion(db, INVITADA);
+    db.prepare(`UPDATE users SET invited_by = ? WHERE wallet = ?`).run("pending:juan", INVITADA);
+    expect(
+      emitirPorAprobacion(db, { assignmentId: deSuInvitada, ownerWallet: INVITADA, aprobadorWallet: DUENA, size: "S", aTiempo: false })
+        .motivo
+    ).toBe("invitacion");
+    expect(filas(db, refTarea(id))).toEqual({ puntos: [], rep: [] });
+    expect(filas(db, refTarea(deSuInvitada))).toEqual({ puntos: [], rep: [] });
+  });
+
   it("pieza publicada en el Ágora → publicada_en_agora, sin filas (se paga por sus hitos)", () => {
     const proyecto = db
       .prepare(

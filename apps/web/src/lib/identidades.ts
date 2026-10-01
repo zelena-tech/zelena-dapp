@@ -97,3 +97,45 @@ export function mismaPersona(db: DB, a: string, b: string): boolean {
   if (a === b) return true;
   return identidadesDe(db, a).includes(b) || identidadesDe(db, b).includes(a);
 }
+
+function invitadoPor(db: DB, wallet: string): string | null {
+  const r = db.prepare(`SELECT invited_by FROM users WHERE wallet = ?`).get(wallet) as
+    | { invited_by: string | null }
+    | undefined;
+  return r?.invited_by ?? null;
+}
+
+/** ¿Alguna identidad de `de` entró con la invitación de alguna identidad de `por`? */
+function entroInvitadaPor(db: DB, de: readonly string[], por: readonly string[]): boolean {
+  return de.some((w) => {
+    const i = invitadoPor(db, w);
+    return !!i && por.includes(i);
+  });
+}
+
+/**
+ * B8, la regla ÚNICA de los cuatro ojos por invitación (WP31 §4.A.4): quien invitó al
+ * dueño de una entrega no la evalúa, ni el invitado evalúa la entrega de quien lo invitó.
+ *  - Simétrica y sobre TODAS las identidades de cada una: el `invited_by` de cualquiera
+ *    de sus filas (cuenta de sesión, `pending:<slug>`, cuenta vinculada) cuenta.
+ *  - `founderExento`: alguna de las dos es el founder (por su rol en la base o por ser
+ *    `principalFounder`, nunca por `FOUNDER_WALLET`). Queda exento en las DOS
+ *    direcciones, como quien revisa y como dueño: invitó a casi todo el equipo, y si la
+ *    regla lo atara nadie revisaría sus entregas, o ninguna le daría lo suyo.
+ *  - `vinculoInvitacion`: nadie está exento y una de las dos entró invitada por la otra.
+ *
+ * La usan la puerta (`flagsDeTransicion` → `puedeTransicionar`) y la defensa de
+ * `emitirPorAprobacion`, con las mismas identidades: si la puerta deja aprobar, la
+ * emisión no la frena por B8, y ninguna entrega queda Hecha (estado final) sin lo suyo.
+ */
+export function reglaB8(db: DB, a: string, b: string): { founderExento: boolean; vinculoInvitacion: boolean } {
+  if (typeof a !== "string" || typeof b !== "string" || a === "" || b === "") {
+    return { founderExento: false, vinculoInvitacion: false };
+  }
+  const deA = identidadesDe(db, a);
+  const deB = identidadesDe(db, b);
+  const principal = principalFounder(db);
+  const esFounder = (ids: readonly string[]) => ids.some((w) => w === principal || esFounderEnBase(db, w));
+  if (esFounder(deA) || esFounder(deB)) return { founderExento: true, vinculoInvitacion: false };
+  return { founderExento: false, vinculoInvitacion: entroInvitadaPor(db, deB, deA) || entroInvitadaPor(db, deA, deB) };
+}

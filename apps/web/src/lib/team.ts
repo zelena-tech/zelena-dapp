@@ -51,9 +51,14 @@ import {
   type TeamActor,
   type Vinculo,
 } from "./roles.ts";
-import { identidadesDe, mismaPersona, principalFounder } from "./identidades.ts";
+import { identidadesDe, mismaPersona, reglaB8 } from "./identidades.ts";
 import { diaLocal, instanteDb, parseInstanteDb } from "./zona-horaria.ts";
 import { getActiveGenome } from "./genome.ts";
+// Gancho de emisión (WP31-I1): imports de valor con sufijo `.ts`, porque el CLI de
+// importación carga este archivo con el type-stripping de Node.
+import { emitirPorAprobacion, textoEmision, type EmisionTarea } from "./gamificacion.ts";
+import { aprobadaATiempo } from "./sla.ts";
+import { cargarPiezaSla, slaConfig } from "./sla-db.ts";
 
 // ---------------------------------------------------------------------------
 // Vocabularios
@@ -687,17 +692,33 @@ export interface ApplyActionInput {
   now?: Date;
 }
 
+/** Resultado de una acción con lo que emitió la aprobación (WP31-I1). */
+export interface ResultadoAccion {
+  row: AssignmentRow;
+  /** Puntos y reputación de la entrega si la acción la aprobó; null en cualquier otra acción. */
+  emision: EmisionTarea | null;
+  /** Copy de §8.5 si hay algo que explicar (tope alcanzado, pieza del Ágora); si no, null. */
+  textoEmision: string | null;
+}
+
 /**
  * Aplica una acción sobre una asignación:
  *  1. autoriza con `permisosDe` + `puedeTransicionar` (cuatro ojos: quien entrega no
  *     aprueba lo suyo —con cualquiera de sus identidades—, quien la envió a revisión
  *     tampoco, ni quien invitó al dueño o fue invitado por él, salvo el founder),
  *  2. delega el cálculo del estado a la función PURA de la máquina,
- *  3. persiste el resultado y añade un evento append-only con `created_at` = `now`.
+ *  3. persiste el resultado y añade un evento append-only con `created_at` = `now`,
+ *  4. si la pieza pasa a `Hecha`, emite puntos y reputación en la MISMA transacción.
  *
- * Nunca decide el estado por su cuenta.
+ * Nunca decide el estado por su cuenta. Devuelve la fila; quien necesita lo emitido
+ * (la ruta de la aprobación) usa `aplicarAccionAsignacion`.
  */
 export function applyAssignmentAction(db: DB, input: ApplyActionInput): AssignmentRow {
+  return aplicarAccionAsignacion(db, input).row;
+}
+
+/** `applyAssignmentAction` con el resultado de la emisión (para explicar la aprobación). */
+export function aplicarAccionAsignacion(db: DB, input: ApplyActionInput): ResultadoAccion {
   const row = getAssignment(db, input.assignmentId);
   if (!row) throw new TeamError(404, "Asignación no encontrada.");
   if (!isTeamStatus(row.status)) {
@@ -733,7 +754,7 @@ export function applyAssignmentAction(db: DB, input: ApplyActionInput): Assignme
   const motivoEvento =
     input.action === "devolver" ? (input.reason ?? "").trim() || null : next.blockedReason;
 
-  const tx = db.transaction(() => {
+  const tx = db.transaction((): EmisionTarea | null => {
     db.prepare(
       `UPDATE assignments
           SET status = ?, status_before_block = ?, blocked_reason = ?, blocked_at = ?,
@@ -753,10 +774,32 @@ export function applyAssignmentAction(db: DB, input: ApplyActionInput): Assignme
       `INSERT INTO assignment_events (assignment_id, action, from_status, to_status, reason, actor_wallet, day, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(row.id, input.action, row.status, next.status, motivoEvento, input.actor.wallet, day, instanteDb(now));
-  });
-  tx();
 
-  return getAssignment(db, row.id) as AssignmentRow;
+    // Gancho de emisión (WP31-I1, spec §5.B.3): aprobar emite puntos y reputación en
+    // esta misma transacción. SIN try/catch a propósito: si la emisión falla por la
+    // base, se revierte la aprobación entera (nadie queda aprobado sin lo suyo, ni con
+    // puntos de una aprobación que no ocurrió). "A tiempo" (literal del líder) = se
+    // aprobó, en este `now`, antes del vencimiento de entrega.
+    if (next.status === "Hecha" && row.status !== "Hecha") {
+      const pieza = cargarPiezaSla(db, row.id);
+      const aTiempo = pieza ? aprobadaATiempo(pieza, slaConfig(db), now) : false;
+      return emitirPorAprobacion(db, {
+        assignmentId: row.id,
+        ownerWallet: owner,
+        aprobadorWallet: input.actor.wallet,
+        size: row.size,
+        aTiempo,
+      });
+    }
+    return null;
+  });
+  const emision = tx();
+
+  return {
+    row: getAssignment(db, row.id) as AssignmentRow,
+    emision,
+    textoEmision: emision ? textoEmision(emision) : null,
+  };
 }
 
 /**
@@ -802,8 +845,9 @@ export function piezasSinResponsable(db: DB, initiativeId: number): number {
  *  - `esDueno` = `mismaPersona(dueño, actor)`: las dos identidades del founder son una.
  *  - `esQuienEnvio` = las identidades del actor incluyen a quien hizo el último
  *    `enviar_a_revision`.
- *  - `vinculoInvitacion` (B8, en las dos direcciones) = ni el actor ni el dueño son el
- *    founder, y el `invited_by` de alguna identidad del dueño es del actor, o al revés.
+ *  - `vinculoInvitacion` (B8, en las dos direcciones) = `reglaB8` (identidades.ts): ni
+ *    el actor ni el dueño son el founder, y el `invited_by` de alguna identidad del
+ *    dueño es del actor, o al revés. Es la misma función que usa la emisión.
  *  - `vinculoAsignacion` (solo al aprobar) = ni el actor ni el dueño son el founder, y
  *    el actor sumó al dueño a este proyecto (`project_members.added_by`) o le dio la
  *    pieza: el último `crear`/`asignar`/`reasignar` (o, sin eventos, `created_by`) es
@@ -812,7 +856,9 @@ export function piezasSinResponsable(db: DB, initiativeId: number): number {
  *
  * El founder queda exento de B8 y del vínculo de asignación en las DOS direcciones:
  * invitó a casi todo el equipo, y si la regla lo atara como dueño nadie podría revisar
- * sus entregas. Se reconoce por rol y por roster (`principalFounder`), nunca por wallet.
+ * sus entregas. Se reconoce por rol en la base y por roster (`principalFounder`), nunca
+ * por wallet ni por el rol que trae el actor: así la puerta y la emisión, que solo
+ * conoce wallets, deciden con los mismos datos.
  */
 function flagsDeTransicion(
   db: DB,
@@ -839,22 +885,14 @@ function flagsDeTransicion(
 
   let vinculoInvitacion = false;
   let vinculoAsignacion = false;
-  const exentoFounder = actor.role === "founder" || esFounderPersona(db, actor.wallet) || (!!owner && esFounderPersona(db, owner));
-  if (owner && !exentoFounder) {
-    const delDueno = identidadesDe(db, owner);
-    const invitadoPor = (w: string) =>
-      (db.prepare(`SELECT invited_by FROM users WHERE wallet = ?`).get(w) as { invited_by: string | null } | undefined)
-        ?.invited_by ?? null;
-    vinculoInvitacion =
-      delDueno.some((w) => {
-        const i = invitadoPor(w);
-        return !!i && delActor.includes(i);
-      }) ||
-      delActor.some((w) => {
-        const i = invitadoPor(w);
-        return !!i && delDueno.includes(i);
-      });
-    if (accion === "aprobar") vinculoAsignacion = leDioLaPieza(db, row, delActor, delDueno);
+  if (owner) {
+    // B8 con la regla ÚNICA (`reglaB8`), la misma que aplica la emisión al aprobar: si
+    // aquí se deja aprobar, `emitirPorAprobacion` no la frena por invitación.
+    const b8 = reglaB8(db, actor.wallet, owner);
+    vinculoInvitacion = b8.vinculoInvitacion;
+    if (accion === "aprobar" && !b8.founderExento) {
+      vinculoAsignacion = leDioLaPieza(db, row, delActor, identidadesDe(db, owner));
+    }
   }
 
   let duenoPendiente = false;
@@ -875,15 +913,6 @@ function flagsDeTransicion(
     duenoPendiente,
     esGlobal,
   };
-}
-
-/**
- * ¿Es el founder? Por rol en la base (con cualquiera de sus identidades) o por ser su
- * principal de equipo (`principalFounder`). Nunca comparando con `FOUNDER_WALLET`.
- */
-function esFounderPersona(db: DB, wallet: string): boolean {
-  const principal = principalFounder(db);
-  return identidadesDe(db, wallet).some((w) => w === principal || usuarioBasico(db, w)?.role === "founder");
 }
 
 /**
