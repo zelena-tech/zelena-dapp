@@ -57,11 +57,28 @@ const HUELLA: Record<string, string> = {
   leads: "SELECT * FROM leads ORDER BY id",
 };
 
-function huella(db: DB): Record<string, string> {
+/**
+ * Tablas append-only donde el arranque SÍ inserta filas nuevas: `seedGenomeV2` (WP31)
+ * publica la versión v2 del genoma con su decisión. Su huella se compara como PREFIJO:
+ * las filas con id ≤ el máximo previo, idénticas.
+ */
+const PREFIJO = ["decision_log", "genome_versions"] as const;
+type Topes = Partial<Record<(typeof PREFIJO)[number], number>>;
+
+function huella(db: DB, topes: Topes = {}): Record<string, string> {
   const out: Record<string, string> = {};
   for (const [t, q] of Object.entries(HUELLA)) {
-    out[t] = createHash("sha256").update(JSON.stringify(db.prepare(q).all())).digest("hex");
+    const tope = topes[t as keyof Topes];
+    const filas = tope === undefined ? db.prepare(q).all() : db.prepare(`SELECT * FROM ${t} WHERE id <= ? ORDER BY id`).all(tope);
+    out[t] = createHash("sha256").update(JSON.stringify(filas)).digest("hex");
   }
+  return out;
+}
+
+/** Máximo id actual de las tablas que se comparan como prefijo. */
+function topesDe(db: DB): Topes {
+  const out: Topes = {};
+  for (const t of PREFIJO) out[t] = (db.prepare(`SELECT COALESCE(MAX(id), 0) AS m FROM ${t}`).get() as { m: number }).m;
   return out;
 }
 
@@ -161,6 +178,8 @@ describe("migración de la base de producción (forma 58ee2fd → v1)", () => {
   it("(a) arranca sobre la base desplegada, respalda antes y deja intactos los datos reales", () => {
     const db = baseDesplegada(file);
     const antes = huella(db);
+    const topes = topesDe(db);
+    const filasAntes = { dl: cuenta(db, "decision_log"), gv: cuenta(db, "genome_versions") };
 
     const inf = prepararSqlite(db, { archivo: file, founderWallet: JOHN_REAL, ahora: AHORA });
 
@@ -168,7 +187,29 @@ describe("migración de la base de producción (forma 58ee2fd → v1)", () => {
     expect(inf.preColumnas).toEqual(["users.role", "users.entra_oid", "users.auth_provider"]);
     expect(inf.apartado).toBe(true);
     expect(inf.copiado).toEqual({ assignment_events: 5, checkins: 1, assignments: 3, initiatives: 2 });
-    expect(huella(db)).toEqual(antes);
+    // decision_log y genome_versions como prefijo: lo previo, idéntico…
+    expect(huella(db, topes)).toEqual(antes);
+    // …y exactamente 1 versión y 1 decisión nuevas: las de seedGenomeV2 (WP31).
+    expect({ dl: cuenta(db, "decision_log"), gv: cuenta(db, "genome_versions") }).toEqual({
+      dl: filasAntes.dl + 1,
+      gv: filasAntes.gv + 1,
+    });
+    const nueva = db
+      .prepare(
+        `SELECT gv.version AS version, gv.effective_from_epoch AS eff, gv.params AS params, dl.title AS title
+           FROM genome_versions gv JOIN decision_log dl ON dl.id = gv.decision_log_id
+          WHERE gv.id > ?`
+      )
+      .get(topes.genome_versions) as { version: number; eff: number; params: string; title: string };
+    expect(nueva.version).toBe(2);
+    expect(nueva.eff).toBe(2);
+    expect(nueva.title).toBe("Genoma v2: claves nuevas de entregas, plazos y ritos");
+    expect(JSON.parse(nueva.params)).toHaveProperty("TASK_POINTS");
+    expect(cuenta(db, "mutation_decisions")).toBe(0);
+    // El resto de la huella, igual que antes (sin prefijo).
+    const sinPrefijo = (h: Record<string, string>) =>
+      Object.fromEntries(Object.entries(h).filter(([t]) => !(PREFIJO as readonly string[]).includes(t)));
+    expect(sinPrefijo(huella(db))).toEqual(sinPrefijo(antes));
 
     // Respaldo consistente ANTES de migrar, junto a la base, con la forma vieja.
     expect(inf.respaldo).toBe(`${file}.pre-fusion-2026-09-30T23-00-00-000Z.db`);
