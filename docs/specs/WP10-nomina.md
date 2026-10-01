@@ -1,6 +1,6 @@
 # WP10 · Nómina Modo A+ (blocked_external: gate legal)
 
-CONTEXTO — Doc 15 §3: pagos del core en USDC wallet-a-wallet desde multisig de la SAS, con contrato anclado por hash y registro verificable. GATE: consulta legal/tributaria ANTES del primer pago real. La UI y el schema sí se pueden construir detrás de flag.
+CONTEXTO — Doc 15 §3: pagos del core en USDC wallet-a-wallet desde el multisig de Zelena, con contrato anclado por hash y registro verificable. GATE: consulta legal/tributaria ANTES del primer pago real. La UI y el schema sí se pueden construir detrás de flag.
 
 RESULTADO ESPERADO — Módulo privado donde cada pago del core enlaza contrato → hash anclado → transacción Stellar, verificable por el pagado y el admin.
 

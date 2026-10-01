@@ -5,7 +5,7 @@ seguimos un proceso simple pero estricto.
 
 ## 1. Firma el CLA (obligatorio, antes de tu primer PR)
 
-Lee y firma el **Acuerdo de Contribuidor** (`CLA.md`). Al firmarlo cedes a Zelena SAS los
+Lee y firma el **Acuerdo de Contribuidor** (`CLA.md`). Al firmarlo cedes a Zelena los
 derechos patrimoniales sobre tus contribuciones (tus derechos morales se respetan).
 - Firma comentando en tu primer PR: `Acepto el CLA de Zelena (v1).`
 - O firma on-chain anclando el hash del CLA con tu wallet (ver `packages/scripts`).

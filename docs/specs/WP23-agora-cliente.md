@@ -3,7 +3,7 @@
 CONTEXTO — La metodología de 8 pasos del manifiesto **ya asume un cliente que
 paga**: Intake → Publicación → Aplicación → Asignación → Ejecución → Evaluación →
 Distribución → Reputación. Y el modelo de datos ya está casi completo:
-`projects` tiene `type` (SAS|DAO, inmutable tras intake), `budget_usd`,
+`projects` tiene `type` (cliente o comunidad, inmutable tras intake), `budget_usd`,
 `acceptance` y la máquina de estados `Open → Assigned → Delivered → Scored →
 Distributed`; `milestones` tiene `pct`, `amount_usd` y `approved` — la estructura
 20/70/10 del Modo A ya es representable.
@@ -28,7 +28,7 @@ factura sale de Odoo.
 
 ## Lo que esto NO es (y por qué la distinción importa)
 
-Esto es un **contrato de prestación de servicios**: la SAS cotiza, entrega y
+Esto es un **contrato de prestación de servicios**: Zelena cotiza, entrega y
 factura; el cliente paga por lo entregado. No hay promesa de rendimiento, no hay
 intermediación de recursos ajenos, no hay producto financiero. **No requiere
 autorización financiera ni gate regulatorio.** Es, literalmente, el negocio que
@@ -38,7 +38,7 @@ La frontera que **sí** tiene gate está una capa más adelante:
 
 | Escenario | Qué es | Gate |
 |---|---|---|
-| El cliente paga contra hito aprobado, factura de la SAS | Prestación de servicios. **Modo A. Este WP.** | Ninguno nuevo |
+| El cliente paga contra hito aprobado, factura de Zelena | Prestación de servicios. **Modo A. Este WP.** | Ninguno nuevo |
 | ZELENA **retiene** el dinero del cliente hasta la entrega | Custodia de recursos de terceros | Plano 04: escrow, auditoría independiente + legal |
 | El dinero del cliente se distribuye solo, on-chain, por score | **Modo B** | Los tres gates del plano 04 + WP10 |
 | ZELENA recibe dinero del público ofreciendo un retorno | Captación (Art. 316 CP) | **No está en ningún roadmap.** No confundir con lo anterior |

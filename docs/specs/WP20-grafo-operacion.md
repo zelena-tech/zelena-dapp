@@ -74,7 +74,7 @@ Esto es lo que convierte el grafo en algo confiable: no es que sepamos todo, es 
 - [x] Un `kind` desconocido se rechaza en vez de guardarse (test).
 - [x] Las aristas que apuntan a nodos inexistentes se descartan (test).
 - [x] Un no-miembro del cliente no puede leer el grafo por API (test, no solo UI).
-- [x] `impactOf()` responde "¿qué se rompe si tumbamos esto?" recorriendo transitivamente (test sobre el grafo real de Montoc).
+- [x] `impactOf()` responde "¿qué se rompe si tumbamos esto?" recorriendo transitivamente (test sobre el grafo real de un cliente).
 - [x] La cobertura calcula `pct_verified`, preguntas abiertas y bus factor ≤1 (test).
 - [ ] La pestaña Operación muestra los nodos con su confianza y enlaza al detalle (validación humana en localhost).
 

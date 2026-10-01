@@ -61,7 +61,7 @@ intransferibles y sin valor monetario (mismas reglas de Génesis).
   > "fondear proyectos" era captación masiva de dineros del público (Art. 316 CP).
   > **Eso era una lectura equivocada del caso de uso.** Un empresario que paga por
   > un desarrollo que necesita celebra un contrato de prestación de servicios: la
-  > SAS factura, entrega y cobra. No hay promesa de rendimiento ni intermediación
+  > Zelena factura, entrega y cobra. No hay promesa de rendimiento ni intermediación
   > de recursos ajenos, y por lo tanto no hay captación. Ver **WP23**, que no tiene
   > gate regulatorio. La captación aparecería solo si ZELENA recibiera dinero del
   > público ofreciendo un retorno — algo que no está en ningún roadmap.

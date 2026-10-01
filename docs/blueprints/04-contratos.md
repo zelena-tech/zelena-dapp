@@ -9,7 +9,7 @@ Principio (fork F1 + Plan Maestro §7.3): **un contrato solo existe cuando custo
 | Firma del CLA | Hash anclado con manageData | Igual (no necesita contrato) | Igual |
 | Contratos del core (nómina) | Hash anclado en mainnet (no mueve dinero) | Igual | Igual |
 | Cierre de época (scores) | Merkle root anclado con manageData | **Performance Verifier**: root + verificación de pruebas individuales | Tras auditoría |
-| Pagos por hitos (proyectos SAS) | Modo A: fiat/manual con tabla 20/70/10 | **Escrow de Milestones** en testnet | Gates: auditoría + anchor + legal |
+| Pagos por hitos (proyectos de cliente) | Modo A: fiat/manual con tabla 20/70/10 | **Escrow de Milestones** en testnet | Gates: auditoría + anchor + legal |
 | Tesoro DAO (30%) | Registro off-chain + decision log | **Treasury/Vault** en testnet (multisig + timelock) | Tras auditoría; migración, no upgrade |
 | Registro de células/orgs | Tabla en DB | **Registry/Factory** (una instancia por célula) | Con la 2ª célula (México) |
 | Puntos ZWORK | Ledger off-chain no transferible | Igual (deliberado) | **Token ZWORK** solo si la gobernanza lo ratifica (M3+) |
@@ -25,7 +25,7 @@ Principio (fork F1 + Plan Maestro §7.3): **un contrato solo existe cuando custo
 
 ### 2. Escrow de Milestones / Disbursement (M2 — el corazón del Modo B)
 **Qué hace:** implementa on-chain los estados del doc 11: `Funded → InProgress → Delivered → Approved → Claimable → Claimed`, con rama `Disputed` que congela solo ese hito. Fondeo 100% upfront; anticipo 20%; retención 10%; multiplicador de calidad 0–200bp; `recover_undistributed` y `sweep_expired_claims`; patrón CEI anti-reentrancy.
-**Dónde se usa:** proyectos SAS del Ágora con presupuesto en dinero (LUMA, CREDIFONO cuando pasen a Modo B).
+**Dónde se usa:** proyectos de cliente del Ágora con presupuesto en dinero (las campañas de cliente, cuando pasen a Modo B).
 **Integraciones evaluadas (no dependencias):** Blend para yield del escrow ocioso (regla: si Blend se congela, el yield degrada a cero pero los pagos NUNCA se bloquean — el escrow no depende del yield); Stellar Private Payments (X-Ray, ZK Groth16) para que los montos no sean públicos.
 **Estado:** diseñado (doc 11 + security review §3); no implementado.
 
