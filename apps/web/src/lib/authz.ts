@@ -22,6 +22,7 @@
  */
 import { getDb, type DB } from "./db";
 import { effectiveRole, esEquipoInterno, isRole, type Role, type RoleClaims, type TeamActor } from "./roles";
+import { membresiasDe } from "./team";
 
 /** Claims mínimos que necesita el gate (subconjunto de SessionData). */
 export interface AdminSession extends RoleClaims {
@@ -90,6 +91,71 @@ export function equipoInternoActor(session: AdminSession | null, db: DB = getDb(
   if (!session) return null;
   const actor = actorEstricto(session, db);
   return actor && esEquipoInterno({ role: actor.role, isSupervisor: actor.isSupervisor }) ? actor : null;
+}
+
+/**
+ * Quien entra a `/equipo` (WP31). Dos alcances:
+ *  - `equipo`: el equipo interno (founder, core, supervisión), como siempre.
+ *  - `proyectos`: un `contributor` con el acuerdo de contribución firmado y al menos
+ *    una membresía. Ve y actúa SOLO en sus proyectos; no ve el check-in diario (no se
+ *    mide jornada), ni el dashboard, ni el directorio de talento, ni `/clientes`.
+ */
+export interface EquipoActor extends TeamActor {
+  alcance: "equipo" | "proyectos";
+  /** `initiative_id` donde tiene al menos un rol (de cualquiera de sus identidades). */
+  proyectos: number[];
+}
+
+/**
+ * Puerta de `/equipo` (spec WP31 §5.A.2). Lee la base, nunca la cookie:
+ *  - sin fila en `users`, o con `status` distinto de `active` (alumni) → null;
+ *  - equipo interno → alcance `equipo`;
+ *  - contributor con `cla_signed = 1` y ≥ 1 membresía → alcance `proyectos`;
+ *  - cualquier otro caso (contributor sin acuerdo aunque tenga membresía) → null.
+ *
+ * La regla dura: el layout NO es la puerta. Cada página de `app/equipo/**` y cada
+ * ruta de `app/api/equipo/**` llama a esta función (o a `equipoInternoActor` /
+ * `adminActor`) por sí misma; lo vigila un test estático en authz.test.ts.
+ */
+export function equipoActor(session: AdminSession | null, db: DB = getDb()): EquipoActor | null {
+  if (!session || typeof session.wallet !== "string" || !session.wallet) return null;
+  const row = db
+    .prepare(
+      `SELECT display_name, role, is_supervisor, is_founder, status, cla_signed FROM users WHERE wallet = ?`
+    )
+    .get(session.wallet) as
+    | {
+        display_name: string;
+        role: string;
+        is_supervisor: number;
+        is_founder: number;
+        status: string;
+        cla_signed: number;
+      }
+    | undefined;
+  if (!row || row.status !== "active") return null;
+
+  const actor: TeamActor = {
+    wallet: session.wallet,
+    name: row.display_name,
+    role: isRole(row.role) ? row.role : effectiveRole({ isFounder: !!row.is_founder }),
+    isSupervisor: !!row.is_supervisor,
+  };
+  const proyectos = membresiasDe(db, session.wallet).map((m) => m.initiativeId);
+
+  if (esEquipoInterno({ role: actor.role, isSupervisor: actor.isSupervisor })) {
+    return { ...actor, alcance: "equipo", proyectos };
+  }
+  // Sin acuerdo de contribución no hay primer trabajo (spec WP31 §4.A.2).
+  if (actor.role === "contributor" && row.cla_signed === 1 && proyectos.length > 0) {
+    return { ...actor, alcance: "proyectos", proyectos };
+  }
+  return null;
+}
+
+/** ¿Esta sesión entra a `/equipo`? Para el menú; la autorización real es `equipoActor`. */
+export function accesoEquipo(session: AdminSession | null, db: DB = getDb()): boolean {
+  return equipoActor(session, db) !== null;
 }
 
 /**

@@ -349,7 +349,13 @@ describe("criterio 4 — backlog conversacional sobre la misma fuente", () => {
     expect(getAssignment(db, id)!.status).toBe("En curso");
     avanzarPieza(db, ctxJohn(), id);
     expect(getAssignment(db, id)!.status).toBe("En revisión");
-    const ultima = avanzarPieza(db, ctxJohn(), id);
+    // WP31 · cuatro ojos: la entrega de John la aprueba otra persona (Vale, supervisora).
+    const ctxVale: BotContext = {
+      actor: { wallet: VALE, name: "Vale", role: "core", isSupervisor: true },
+      canWrite: true,
+      now: JUEVES,
+    };
+    const ultima = avanzarPieza(db, ctxVale, id);
     expect(getAssignment(db, id)!.status).toBe("Hecha");
     expect(ultima.text).toContain("aprobada");
 

@@ -8,7 +8,8 @@
  * Luego: salud del rito de check-in y métricas de la época (WP07, solo lectura).
  *
  * Acceso: SOLO founder y supervisores. La regla es `puedeVerTodoElEquipo` de
- * lib/roles.ts, invocada dentro de `buildDashboard`; aquí no se decide nada.
+ * lib/roles.ts. La página la aplica ella misma (puerta por página, WP31) y `buildDashboard`
+ * la vuelve a aplicar dentro: dos capas, la misma regla.
  *
  * Doc 16, obligatorio en esta pantalla:
  *  - La carga por persona sirve para REPARTIR trabajo, no para rankear a nadie:
@@ -22,8 +23,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/session";
-import { ROLE_LABEL } from "@/lib/roles";
-import { actorFromSession, today, TeamError, type AssignmentView } from "@/lib/team";
+import { equipoActor } from "@/lib/authz";
+import { ROLE_LABEL, puedeVerTodoElEquipo } from "@/lib/roles";
+import { today, TeamError, type AssignmentView } from "@/lib/team";
 import { buildDashboard, type BlockedItem } from "@/lib/dashboard";
 import { buildDailyDigest, renderDigestText } from "@/lib/digest";
 import DashboardStatusBar from "@/components/DashboardStatusBar";
@@ -90,8 +92,12 @@ export default async function EquipoDashboardPage() {
   const session = await getSession();
   if (!session) redirect("/entrar");
 
+  // Puerta propia (spec WP31 §5.A.2): el layout no se reevalúa en cada navegación.
+  // Se lee la base, nunca la cookie; y además de entrar a /equipo hay que supervisar.
   const db = getDb();
-  const actor = actorFromSession(db, session);
+  const actor = equipoActor(session, db);
+  if (!actor) redirect("/perfil");
+  if (!puedeVerTodoElEquipo(actor)) return <AccessDenied />;
 
   let data;
   try {
@@ -103,7 +109,8 @@ export default async function EquipoDashboardPage() {
   }
 
   const day = today();
-  const digest = buildDailyDigest(db, day);
+  // Como el resto del dashboard: solo lo que esta persona ve (§4.A.12).
+  const digest = buildDailyDigest(db, day, actor);
   const digestText = renderDigestText(digest);
 
   const { blocked, waitingOnFounder, initiatives, load, rites, epoch } = data;

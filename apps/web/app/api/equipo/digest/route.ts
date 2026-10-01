@@ -12,8 +12,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/session";
+import { equipoActor } from "@/lib/authz";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
-import { actorFromSession, today, TeamError } from "@/lib/team";
+import { today, TeamError } from "@/lib/team";
 import { dailyDigestFor, digestFilename, renderDigestText } from "@/lib/digest";
 
 export const dynamic = "force-dynamic";
@@ -35,8 +36,13 @@ export async function GET(req: NextRequest) {
   }
   const day = raw ?? today();
 
+  // La puerta lee la base (nunca los claims de la cookie). Quien no entra a /equipo
+  // recibe 403, igual que quien entra pero no supervisa (lo decide dailyDigestFor).
   const db = getDb();
-  const actor = actorFromSession(db, session);
+  const actor = equipoActor(session, db);
+  if (!actor) {
+    return NextResponse.json({ error: "El digest del equipo es para el founder y los supervisores." }, { status: 403 });
+  }
   try {
     const text = renderDigestText(dailyDigestFor(db, actor, day));
     return new NextResponse(text, {

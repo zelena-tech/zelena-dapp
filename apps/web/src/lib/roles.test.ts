@@ -19,7 +19,19 @@ import {
   pendingPrincipal,
   puedeVerTodoElEquipo,
   rosterByPrincipal,
+  MOTIVO_TRANSICION,
+  ROLES_PROYECTO,
+  ROL_PROYECTO_LABEL,
+  SIN_PERMISOS,
+  isRolProyecto,
+  permisosEnProyecto,
+  puedeTransicionar,
+  rolesQuePuedeConceder,
+  type PermisosProyecto,
+  type RolProyecto,
+  type TransicionInput,
 } from "./roles";
+import { TEAM_ACTIONS } from "./team-state-machine";
 
 describe("roles y roster del equipo (WP14 / plano 07)", () => {
   it("los roles son exactamente los de WP13 y 'supervisor' NO es uno de ellos", () => {
@@ -99,5 +111,249 @@ describe("roles y roster del equipo (WP14 / plano 07)", () => {
   it("el roster completo se clasifica correctamente por la regla de visibilidad", () => {
     const veTodo = TEAM_ROSTER.filter((m) => puedeVerTodoElEquipo(m)).map((m) => m.slug);
     expect(veTodo).toEqual(["john", "vale"]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// WP31 · criterio A2 — roles por proyecto, cuatro ojos y quién concede qué
+// ---------------------------------------------------------------------------
+
+const P = (ver: boolean, crear: boolean, planificar: boolean, revisar: boolean, tomar: boolean): PermisosProyecto => ({
+  ver,
+  crear,
+  planificar,
+  revisar,
+  tomar,
+});
+const TODO = P(true, true, true, true, true);
+const NADA = P(false, false, false, false, false);
+
+describe("WP31 · permisosEnProyecto (tabla completa de §5.A.1)", () => {
+  const FOUNDER = { role: "founder" as const, isSupervisor: false };
+  const SUPERVISORA = { role: "core" as const, isSupervisor: true };
+  const CORE = { role: "core" as const, isSupervisor: false };
+  const CONTRIB = { role: "contributor" as const, isSupervisor: false };
+
+  it("los roles de proyecto son exactamente cuatro, con su etiqueta", () => {
+    expect([...ROLES_PROYECTO]).toEqual(["estructura", "ejecuta", "revisa", "vende"]);
+    expect(ROL_PROYECTO_LABEL).toEqual({ estructura: "Estructura", ejecuta: "Ejecuta", revisa: "Revisa", vende: "Vende" });
+    expect(isRolProyecto("revisa")).toBe(true);
+    expect(isRolProyecto("supervisor")).toBe(false);
+    expect(isRolProyecto(null)).toBe(false);
+  });
+
+  it("founder o supervisor: todo, con o sin roles", () => {
+    expect(permisosEnProyecto(FOUNDER, [])).toEqual(TODO);
+    expect(permisosEnProyecto(SUPERVISORA, [])).toEqual(TODO);
+    expect(permisosEnProyecto({ role: "contributor", isSupervisor: true }, [])).toEqual(TODO);
+  });
+
+  it("core sin roles: ver, crear y tomar; ni planifica ni revisa", () => {
+    expect(permisosEnProyecto(CORE, [])).toEqual(P(true, true, false, false, true));
+  });
+
+  it("contributor sin roles: nada", () => {
+    expect(permisosEnProyecto(CONTRIB, [])).toEqual(NADA);
+    expect(SIN_PERMISOS).toEqual(NADA);
+  });
+
+  it("cada rol da su fila (contributor, para aislarla)", () => {
+    expect(permisosEnProyecto(CONTRIB, ["estructura"])).toEqual(TODO);
+    expect(permisosEnProyecto(CONTRIB, ["ejecuta"])).toEqual(P(true, true, false, false, true));
+    expect(permisosEnProyecto(CONTRIB, ["revisa"])).toEqual(P(true, false, false, true, false));
+    expect(permisosEnProyecto(CONTRIB, ["vende"])).toEqual(P(true, false, false, false, false));
+  });
+
+  it("varias filas se suman (OR): ejecuta + revisa, core + revisa", () => {
+    expect(permisosEnProyecto(CONTRIB, ["ejecuta", "revisa"])).toEqual(P(true, true, false, true, true));
+    expect(permisosEnProyecto(CORE, ["revisa"])).toEqual(P(true, true, false, true, true));
+    expect(permisosEnProyecto(CORE, ["vende"])).toEqual(P(true, true, false, false, true));
+  });
+
+  it("un valor basura en la lista de roles no concede nada", () => {
+    expect(permisosEnProyecto(CONTRIB, ["supervisor" as RolProyecto])).toEqual(NADA);
+  });
+});
+
+describe("WP31 · puedeTransicionar (flags y orden de los motivos)", () => {
+  const revisor = P(true, false, false, true, false);
+  const planificador = TODO;
+  const ejecutor = P(true, true, false, false, true);
+  const base = (o: Partial<TransicionInput>): TransicionInput => ({
+    accion: "aprobar",
+    esDueno: false,
+    sinDueno: false,
+    permisos: revisor,
+    ...o,
+  });
+
+  for (const accion of ["aprobar", "devolver"] as const) {
+    describe(accion, () => {
+      it("otra persona con permiso de revisar puede", () => {
+        expect(puedeTransicionar(base({ accion }))).toEqual({ ok: true });
+      });
+
+      it("el dueño nunca, aunque planifique (el motivo del dueño va primero)", () => {
+        expect(puedeTransicionar(base({ accion, esDueno: true, permisos: planificador, esGlobal: true }))).toEqual({
+          ok: false,
+          motivo: MOTIVO_TRANSICION.dueno,
+        });
+        // Con TODOS los flags activos, gana el motivo del dueño.
+        expect(
+          puedeTransicionar(
+            base({
+              accion,
+              esDueno: true,
+              esQuienEnvio: true,
+              vinculoInvitacion: true,
+              duenoPendiente: true,
+              permisos: NADA,
+            })
+          )
+        ).toEqual({ ok: false, motivo: MOTIVO_TRANSICION.dueno });
+      });
+
+      it("quien la envió a revisión tampoco (segundo motivo), aunque sea global", () => {
+        expect(
+          puedeTransicionar(base({ accion, esQuienEnvio: true, vinculoInvitacion: true, duenoPendiente: true, permisos: NADA }))
+        ).toEqual({ ok: false, motivo: MOTIVO_TRANSICION.envio });
+        expect(puedeTransicionar(base({ accion, esQuienEnvio: true, permisos: planificador, esGlobal: true }))).toEqual({
+          ok: false,
+          motivo: MOTIVO_TRANSICION.envio,
+        });
+      });
+
+      it("B8: con relación de invitación tampoco (tercer motivo)", () => {
+        expect(puedeTransicionar(base({ accion, vinculoInvitacion: true, duenoPendiente: true, permisos: NADA }))).toEqual({
+          ok: false,
+          motivo: MOTIVO_TRANSICION.invitacion,
+        });
+        expect(puedeTransicionar(base({ accion, vinculoInvitacion: true, vinculoAsignacion: true }))).toEqual({
+          ok: false,
+          motivo: MOTIVO_TRANSICION.invitacion,
+        });
+      });
+
+      it("dueño pending sin vincular: solo founder o supervisor (quinto motivo)", () => {
+        expect(puedeTransicionar(base({ accion, duenoPendiente: true, permisos: NADA }))).toEqual({
+          ok: false,
+          motivo: MOTIVO_TRANSICION.pendiente,
+        });
+        expect(puedeTransicionar(base({ accion, duenoPendiente: true }))).toEqual({
+          ok: false,
+          motivo: MOTIVO_TRANSICION.pendiente,
+        });
+        expect(puedeTransicionar(base({ accion, duenoPendiente: true, esGlobal: true, permisos: planificador }))).toEqual({
+          ok: true,
+        });
+      });
+
+      it("sin permiso de revisar: la revisión es de quien revisa o estructura (último motivo)", () => {
+        expect(puedeTransicionar(base({ accion, permisos: ejecutor }))).toEqual({
+          ok: false,
+          motivo: MOTIVO_TRANSICION.revision,
+        });
+      });
+    });
+  }
+
+  describe("quien sumó al dueño al proyecto o le asignó la pieza (cuarto motivo, solo al aprobar)", () => {
+    it("no aprueba, aunque revise o sea global; el motivo va antes del de pending", () => {
+      expect(puedeTransicionar(base({ accion: "aprobar", vinculoAsignacion: true }))).toEqual({
+        ok: false,
+        motivo: MOTIVO_TRANSICION.asignacion,
+      });
+      expect(
+        puedeTransicionar(base({ accion: "aprobar", vinculoAsignacion: true, permisos: planificador, esGlobal: true }))
+      ).toEqual({ ok: false, motivo: MOTIVO_TRANSICION.asignacion });
+      expect(
+        puedeTransicionar(base({ accion: "aprobar", vinculoAsignacion: true, duenoPendiente: true, permisos: NADA }))
+      ).toEqual({ ok: false, motivo: MOTIVO_TRANSICION.asignacion });
+    });
+
+    it("devolver sí puede (devolver no emite nada: es pedir lo que falta)", () => {
+      expect(puedeTransicionar(base({ accion: "devolver", vinculoAsignacion: true }))).toEqual({ ok: true });
+      expect(puedeTransicionar(base({ accion: "devolver", vinculoAsignacion: true, permisos: ejecutor }))).toEqual({
+        ok: false,
+        motivo: MOTIVO_TRANSICION.revision,
+      });
+    });
+  });
+
+  describe("asignar", () => {
+    it("pieza sin dueño: con tomar o planificar", () => {
+      expect(puedeTransicionar({ accion: "asignar", esDueno: false, sinDueno: true, permisos: ejecutor })).toEqual({ ok: true });
+      expect(
+        puedeTransicionar({ accion: "asignar", esDueno: false, sinDueno: true, permisos: P(true, false, true, false, false) })
+      ).toEqual({ ok: true });
+      expect(puedeTransicionar({ accion: "asignar", esDueno: false, sinDueno: true, permisos: revisor })).toEqual({
+        ok: false,
+        motivo: MOTIVO_TRANSICION.tomar,
+      });
+      expect(puedeTransicionar({ accion: "asignar", esDueno: false, sinDueno: true, permisos: NADA })).toEqual({
+        ok: false,
+        motivo: MOTIVO_TRANSICION.tomar,
+      });
+    });
+
+    it("pieza con responsable: nadie más la toma (el dueño o quien planifica la pasa a Asignada)", () => {
+      expect(puedeTransicionar({ accion: "asignar", esDueno: false, sinDueno: false, permisos: ejecutor })).toEqual({
+        ok: false,
+        motivo: MOTIVO_TRANSICION.conDueno,
+      });
+      expect(puedeTransicionar({ accion: "asignar", esDueno: true, sinDueno: false, permisos: NADA })).toEqual({ ok: true });
+      expect(puedeTransicionar({ accion: "asignar", esDueno: false, sinDueno: false, permisos: planificador })).toEqual({
+        ok: true,
+      });
+    });
+  });
+
+  for (const accion of ["empezar", "enviar_a_revision", "bloquear", "desbloquear"] as const) {
+    it(accion + ": el dueño o quien planifica", () => {
+      expect(puedeTransicionar({ accion, esDueno: true, sinDueno: false, permisos: NADA })).toEqual({ ok: true });
+      expect(puedeTransicionar({ accion, esDueno: false, sinDueno: false, permisos: planificador })).toEqual({ ok: true });
+      expect(puedeTransicionar({ accion, esDueno: false, sinDueno: false, permisos: ejecutor })).toEqual({
+        ok: false,
+        motivo: MOTIVO_TRANSICION.mover,
+      });
+      expect(puedeTransicionar({ accion, esDueno: false, sinDueno: false, permisos: revisor })).toEqual({
+        ok: false,
+        motivo: MOTIVO_TRANSICION.mover,
+      });
+    });
+  }
+
+  it("cubre todas las acciones de la máquina de estados: sin permisos, ninguna pasa", () => {
+    for (const accion of TEAM_ACTIONS) {
+      const r = puedeTransicionar({ accion, esDueno: false, sinDueno: false, permisos: NADA });
+      expect(r.ok, accion).toBe(false);
+    }
+  });
+
+  it("los motivos hablan de la entrega, nunca juzgan a la persona", () => {
+    const texto = Object.values(MOTIVO_TRANSICION).join(" ").toLowerCase();
+    for (const prohibido of ["desempeño", "ranking", "castigo", "atrasad", "jornada"]) {
+      expect(texto).not.toContain(prohibido);
+    }
+  });
+});
+
+describe("WP31 · rolesQuePuedeConceder", () => {
+  it("founder y supervisor: los cuatro", () => {
+    expect(rolesQuePuedeConceder({ role: "founder", isSupervisor: false }, [])).toEqual([...ROLES_PROYECTO]);
+    expect(rolesQuePuedeConceder({ role: "core", isSupervisor: true }, [])).toEqual([...ROLES_PROYECTO]);
+  });
+
+  it("estructura sin supervisión: solo ejecuta y vende (los que dan revisión, nunca)", () => {
+    expect(rolesQuePuedeConceder({ role: "contributor", isSupervisor: false }, ["estructura"])).toEqual(["ejecuta", "vende"]);
+    expect(rolesQuePuedeConceder({ role: "core", isSupervisor: false }, ["estructura", "revisa"])).toEqual([
+      "ejecuta",
+      "vende",
+    ]);
+  });
+
+  it("sin estructura: ninguno (ni un core ni un revisa)", () => {
+    expect(rolesQuePuedeConceder({ role: "core", isSupervisor: false }, [])).toEqual([]);
+    expect(rolesQuePuedeConceder({ role: "contributor", isSupervisor: false }, ["revisa", "ejecuta", "vende"])).toEqual([]);
   });
 });
