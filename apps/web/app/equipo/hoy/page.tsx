@@ -8,20 +8,25 @@
  *
  * Visibilidad: un `core` ve SOLO lo suyo; founder y supervisores ven todo el equipo
  * (regla única en `puedeVerTodoElEquipo` de lib/roles.ts).
+ *
+ * WP31: la página es su propia puerta (`equipoActor`, nunca la cookie). Quien trabaja
+ * por proyecto (alcance `proyectos`) no ve el check-in diario —no se mide jornada— y
+ * las listas de sus formularios salen de SUS proyectos (`proyectosVisibles`), nunca
+ * del equipo completo.
  */
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/session";
+import { equipoActor } from "@/lib/authz";
 import { ROLE_LABEL, puedeVerTodoElEquipo, rosterByPrincipal } from "@/lib/roles";
 import { availableTeamActions } from "@/lib/team-state-machine";
 import {
-  actorFromSession,
   assignmentsForOwner,
   getCheckin,
-  listInitiatives,
   listTeamMembers,
   ownProgress,
+  proyectosVisibles,
   today,
   visibleAssignments,
   type AssignmentView,
@@ -105,17 +110,25 @@ export default async function EquipoHoyPage() {
   const session = await getSession();
   if (!session) redirect("/entrar");
 
+  // Puerta propia: el layout no se reevalúa en cada navegación (spec WP31 §5.A.2).
   const db = getDb();
-  const actor = actorFromSession(db, session);
+  const actor = equipoActor(session, db);
+  if (!actor) redirect("/perfil");
   const seesAll = puedeVerTodoElEquipo(actor);
+  const esEquipo = actor.alcance === "equipo";
   const day = today();
+  // Las listas del alta salen de lo que esta persona puede ver, nunca del equipo entero.
+  const proyectos = proyectosVisibles(db, actor);
+  const personas = seesAll
+    ? listTeamMembers(db).map((m) => ({ wallet: m.wallet, nombre: m.display_name }))
+    : [{ wallet: actor.wallet, nombre: actor.name }];
 
   const mine = assignmentsForOwner(db, actor.wallet);
   const all = seesAll ? visibleAssignments(db, actor) : mine;
   const others = seesAll ? all.filter((a) => a.owner_wallet !== actor.wallet) : [];
 
   const progress = ownProgress(db, actor.wallet);
-  const checkin = getCheckin(db, actor.wallet, day);
+  const checkin = esEquipo ? getCheckin(db, actor.wallet, day) : undefined;
   const member = rosterByPrincipal(actor.wallet);
 
   return (
@@ -139,8 +152,8 @@ export default async function EquipoHoyPage() {
 
       {/* Alta rápida: capturar lo que acaba de salir en una reunión, sin salir de aquí. */}
       <TeamNewAssignment
-        personas={listTeamMembers(db).map((m) => ({ wallet: m.wallet, nombre: m.display_name }))}
-        iniciativas={listInitiatives(db).map((i) => ({ id: i.id, nombre: i.name }))}
+        personas={personas}
+        iniciativas={proyectos.map((i) => ({ id: i.id, nombre: i.name }))}
         puedeAsignarAOtros={seesAll}
         miWallet={actor.wallet}
       />
@@ -158,7 +171,7 @@ export default async function EquipoHoyPage() {
           Aquí la comparación es contigo: cuántas entregas cerraste contra su criterio de aceptación esta semana
           frente a la anterior. No se compara a personas entre sí y nada de lo logrado se descuenta nunca.
         </p>
-        <div className="mt-5 grid gap-5 sm:grid-cols-3">
+        <div className={`mt-5 grid gap-5 ${esEquipo ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
           <div>
             <div className="font-head text-3xl font-bold text-primary glow-text">{progress.closedThisWeek}</div>
             <div className="text-sm text-white">entregas cerradas esta semana</div>
@@ -177,11 +190,13 @@ export default async function EquipoHoyPage() {
                 : "ninguna bloqueada ahora mismo"}
             </div>
           </div>
-          <div>
-            <div className="font-head text-3xl font-bold text-primary glow-text">{progress.checkinsThisWeek}</div>
-            <div className="text-sm text-white">check-ins esta semana</div>
-            <div className="text-xs text-faint">participación en el rito, no control de horas</div>
-          </div>
+          {esEquipo ? (
+            <div>
+              <div className="font-head text-3xl font-bold text-primary glow-text">{progress.checkinsThisWeek}</div>
+              <div className="text-sm text-white">check-ins esta semana</div>
+              <div className="text-xs text-faint">participación en el rito, no control de horas</div>
+            </div>
+          ) : null}
         </div>
       </section>
 
@@ -206,16 +221,18 @@ export default async function EquipoHoyPage() {
         )}
       </section>
 
-      {/* Check-in diario */}
-      <section className="card p-6">
-        <h2 className="font-head text-2xl font-bold text-white">Tu check-in de hoy</h2>
-        <div className="mt-3">
-          <TeamCheckinForm
-            initial={{ done: checkin?.done ?? "", doing: checkin?.doing ?? "", blocked: checkin?.blocked ?? "" }}
-            alreadySent={!!checkin}
-          />
-        </div>
-      </section>
+      {/* Check-in diario: solo del equipo interno. Quien trabaja por proyecto no lo ve. */}
+      {esEquipo ? (
+        <section className="card p-6">
+          <h2 className="font-head text-2xl font-bold text-white">Tu check-in de hoy</h2>
+          <div className="mt-3">
+            <TeamCheckinForm
+              initial={{ done: checkin?.done ?? "", doing: checkin?.doing ?? "", blocked: checkin?.blocked ?? "" }}
+              alreadySent={!!checkin}
+            />
+          </div>
+        </section>
+      ) : null}
 
       {/* Resto del equipo: solo founder y supervisores */}
       {seesAll ? (

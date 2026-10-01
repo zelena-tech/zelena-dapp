@@ -1,34 +1,36 @@
 /**
- * Layout del módulo equipo (WP14/WP15) — y su ÚNICA puerta de entrada.
+ * Layout del módulo equipo (WP14/WP15/WP31). Es un ATAJO DE UX, no la puerta.
  *
  * `middleware.ts` ya exige sesión para `/equipo`, pero "tener sesión" no alcanza:
- * cualquier contribuidor de la cohorte Génesis tiene sesión, y `/equipo/proyectos`
- * mostraba el backlog interno COMPLETO (títulos, responsables, motivos de bloqueo)
- * a cualquiera que hubiera entrado con una invitación. Aquí se cierra: el módulo es
- * trabajo interno de la SAS, así que exige ser del equipo interno, resuelto contra
- * la base (`equipoInternoActor`), no contra los claims de la cookie.
+ * cualquier contribuidor de la cohorte Génesis tiene sesión. Aquí se evita pintar el
+ * marco a quien no tiene acceso, resuelto contra la base (`equipoActor`), nunca
+ * contra los claims de la cookie: entra el equipo interno y, desde WP31, quien
+ * trabaja por proyecto (contributor con el acuerdo firmado y al menos una membresía).
  *
- * Un `core` pasa; el dashboard de WP15 aplica DESPUÉS su propio gate más estrecho
- * (solo founder y supervisores). Dos reglas distintas, cada una en su sitio.
+ * La regla dura (spec WP31 §5.A.2): en App Router el layout NO se vuelve a evaluar en
+ * cada navegación del cliente y una petición RSC puede pedir solo el segmento de la
+ * página. Por eso cada `page.tsx` de `/equipo` repite su propia puerta, y cada ruta
+ * de `/api/equipo` la suya; lo vigila un test estático en lib/authz.test.ts.
  *
- * Monta además el banner del segundo correo personal (WP13, doc 15 §2) para todo
- * `/equipo`: es donde el core team pasa el día, el único sitio donde "persistente"
- * significa algo. Se autoconsulta y no se dibuja si ya hay correo vinculado.
+ * Monta además el banner del segundo correo personal (WP13, doc 15 §2) para el equipo
+ * interno: es donde el core team pasa el día. Se autoconsulta y no se dibuja si ya
+ * hay correo vinculado.
  */
 import { redirect } from "next/navigation";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/session";
-import { equipoInternoActor } from "@/lib/authz";
+import { equipoActor } from "@/lib/authz";
 import { EntraSecondEmailBanner } from "@/components/EntraSecondEmailBanner";
 
 export default async function EquipoLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
   if (!session) redirect("/entrar");
-  if (!equipoInternoActor(session, getDb())) redirect("/perfil");
+  const actor = equipoActor(session, getDb());
+  if (!actor) redirect("/perfil");
 
   return (
     <>
-      <EntraSecondEmailBanner />
+      {actor.alcance === "equipo" ? <EntraSecondEmailBanner /> : null}
       {children}
     </>
   );

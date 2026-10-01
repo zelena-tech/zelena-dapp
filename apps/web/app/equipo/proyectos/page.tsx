@@ -10,7 +10,16 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/session";
-import { assignmentsByInitiative, HORIZONS, isHorizon, weekStart, type Horizon } from "@/lib/team";
+import { equipoActor } from "@/lib/authz";
+import {
+  assignmentsByInitiative,
+  HORIZONS,
+  isHorizon,
+  permisosDe,
+  proyectosVisibles,
+  weekStart,
+  type Horizon,
+} from "@/lib/team";
 import { TeamHorizonBadge, TeamPriorityBadge, TeamStatusBadge } from "@/components/TeamStatusBadge";
 import { EmptyState } from "@/components/ui";
 
@@ -23,10 +32,19 @@ export default async function EquipoProyectosPage({
 }) {
   const session = await getSession();
   if (!session) redirect("/entrar");
+  // Puerta propia (spec WP31 §5.A.2): la base, nunca la cookie; y solo los proyectos
+  // que esta persona ve (un proyecto de cliente, solo quien participa).
+  const db = getDb();
+  const actor = equipoActor(session, db);
+  if (!actor) redirect("/perfil");
+  const visibles = new Set(proyectosVisibles(db, actor).map((i) => i.id));
+  const veSinProyecto = permisosDe(db, actor, null).ver;
 
   const raw = searchParams.horizonte;
   const horizon: Horizon | undefined = isHorizon(raw) ? raw : undefined;
-  const summaries = assignmentsByInitiative(getDb(), { horizon });
+  const summaries = assignmentsByInitiative(db, { horizon }).filter((s) =>
+    s.initiative ? visibles.has(s.initiative.id) : veSinProyecto
+  );
   const week = weekStart();
 
   const totalOpen = summaries.reduce((n, s) => n + s.open.length, 0);

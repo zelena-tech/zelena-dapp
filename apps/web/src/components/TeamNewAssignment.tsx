@@ -123,7 +123,7 @@ export default function TeamNewAssignment({
           onChange={(e) => setTitle(e.target.value)}
           maxLength={200}
           autoFocus
-          placeholder="Ej.: revisar la propuesta de analítica de Hogar Center"
+          placeholder="Ej.: revisar la propuesta de analítica para el cliente"
           className={`mt-1 ${campo}`}
         />
       </div>

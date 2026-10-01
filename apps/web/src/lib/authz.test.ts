@@ -16,9 +16,22 @@ import fs from "node:fs";
 import path from "node:path";
 import { openDb, type DB } from "./db";
 import { seedIfEmpty, demoInvitesAllowed, seedBootstrapInvite, bootstrapInviteCode } from "./seed";
-import { adminActor, equipoInternoActor, rolPuedeAdministrar, claimsPuedenAdministrar } from "./authz";
+import {
+  accesoEquipo,
+  adminActor,
+  clientActor,
+  equipoActor,
+  equipoInternoActor,
+  rolPuedeAdministrar,
+  claimsPuedenAdministrar,
+} from "./authz";
 import { esEquipoInterno, pendingPrincipal } from "./roles";
 import { FOUNDER_WALLET } from "./config";
+import { Keypair } from "@stellar/stellar-sdk";
+import { claCanonicalHash } from "./cla";
+import { claSigningPayload } from "./cla-signing";
+import { performLogin, performOnboard } from "./onboard";
+import { agregarMiembro, crearProyecto, seedTeam } from "./team";
 
 function seededDb(): DB {
   const db = openDb(":memory:");
@@ -195,5 +208,172 @@ describe("demoInvitesAllowed: los códigos GENESIS no existen en producción", (
       db.prepare(`SELECT COUNT(*) AS n FROM invites WHERE code LIKE 'GENESIS-%'`).get() as { n: number }
     ).n;
     expect(n).toBe(6);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// WP31 · A1, A9, A10, A11 — la puerta de /equipo con quien trabaja por proyecto
+// ---------------------------------------------------------------------------
+
+const JOHN_ACTOR = { wallet: pendingPrincipal("john"), name: "John", role: "founder" as const, isSupervisor: true };
+
+function dbEquipo(): DB {
+  const db = openDb(":memory:");
+  db.pragma("foreign_keys = ON");
+  db.exec(fs.readFileSync(path.join(process.cwd(), "src", "lib", "schema.sql"), "utf8"));
+  seedTeam(db);
+  return db;
+}
+
+function contributor(db: DB, wallet: string, o: { cla?: number; status?: string } = {}): void {
+  db.prepare(
+    `INSERT INTO users (wallet, display_name, role, status, is_demo, cla_signed) VALUES (?, 'Ana', 'contributor', ?, 0, ?)`
+  ).run(wallet, o.status ?? "active", o.cla ?? 1);
+}
+
+describe("WP31 · A1 · equipoActor: la puerta de /equipo", () => {
+  const ANA = "GANAEXTERNAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+  let db: DB;
+  let p: number;
+  beforeEach(() => {
+    db = dbEquipo();
+    contributor(db, ANA);
+    p = crearProyecto(db, JOHN_ACTOR, { name: "Proyecto Abierto" }).id;
+  });
+
+  it("contributor sin membresía → null", () => {
+    expect(equipoActor(sesion(ANA), db)).toBeNull();
+    expect(accesoEquipo(sesion(ANA), db)).toBe(false);
+  });
+
+  it("contributor con membresía y acuerdo firmado → alcance 'proyectos' con sus proyectos", () => {
+    agregarMiembro(db, JOHN_ACTOR, { initiativeId: p, wallet: ANA, rol: "ejecuta" });
+    const a = equipoActor(sesion(ANA), db);
+    expect(a?.alcance).toBe("proyectos");
+    expect(a?.proyectos).toEqual([p]);
+    expect(a?.role).toBe("contributor");
+    expect(accesoEquipo(sesion(ANA), db)).toBe(true);
+  });
+
+  it("con membresía pero SIN acuerdo → null (aunque la fila exista)", () => {
+    agregarMiembro(db, JOHN_ACTOR, { initiativeId: p, wallet: ANA, rol: "ejecuta" });
+    db.prepare(`UPDATE users SET cla_signed = 0 WHERE wallet = ?`).run(ANA);
+    expect(equipoActor(sesion(ANA), db)).toBeNull();
+  });
+
+  it("core → 'equipo'; founder → 'equipo'; alumni → null; sin sesión o sin fila → null", () => {
+    expect(equipoActor(sesion(pendingPrincipal("fausto")), db)?.alcance).toBe("equipo");
+    expect(equipoActor(sesion(pendingPrincipal("john")), db)?.alcance).toBe("equipo");
+    db.prepare(`UPDATE users SET status = 'alumni' WHERE wallet = ?`).run(pendingPrincipal("david"));
+    expect(equipoActor(sesion(pendingPrincipal("david")), db)).toBeNull();
+    agregarMiembro(db, JOHN_ACTOR, { initiativeId: p, wallet: ANA, rol: "ejecuta" });
+    db.prepare(`UPDATE users SET status = 'alumni' WHERE wallet = ?`).run(ANA);
+    expect(equipoActor(sesion(ANA), db)).toBeNull();
+    expect(equipoActor(null, db)).toBeNull();
+    expect(equipoActor(sesion("GNOEXISTE"), db)).toBeNull();
+  });
+
+  it("la cookie no concede nada: un contributor que se declara founder sigue siendo contributor", () => {
+    agregarMiembro(db, JOHN_ACTOR, { initiativeId: p, wallet: ANA, rol: "ejecuta" });
+    const a = equipoActor(sesion(ANA, { role: "founder", isFounder: true, isSupervisor: true }), db);
+    expect(a?.role).toBe("contributor");
+    expect(a?.isSupervisor).toBe(false);
+    expect(a?.alcance).toBe("proyectos");
+  });
+
+  it("A10 · un contributor miembro no entra a /clientes ni al equipo interno", () => {
+    agregarMiembro(db, JOHN_ACTOR, { initiativeId: p, wallet: ANA, rol: "estructura" });
+    expect(clientActor(sesion(ANA), db)).toBeNull();
+    expect(equipoInternoActor(sesion(ANA), db)).toBeNull();
+    expect(adminActor(sesion(ANA), db)).toBeNull();
+  });
+});
+
+describe("WP31 · A11 · reingreso: un contributor miembro vuelve a entrar y llega a sus proyectos", () => {
+  it("performLogin + equipoActor → alcance 'proyectos'", () => {
+    const db = dbEquipo();
+    db.prepare(
+      `INSERT INTO invites (code, issuer_wallet, expires_at) VALUES ('INVITA-PRUEBA', ?, datetime('now','+30 days'))`
+    ).run(pendingPrincipal("john"));
+    const kp = Keypair.random();
+    const wallet = kp.publicKey();
+    const hash = claCanonicalHash();
+    const firma = Buffer.from(kp.sign(Buffer.from(claSigningPayload(hash), "utf8"))).toString("base64");
+    performOnboard(db, { code: "INVITA-PRUEBA", wallet, name: "Ana", isDemo: false, claHash: hash, signature: firma });
+    const p = crearProyecto(db, JOHN_ACTOR, { name: "Proyecto De Regreso" }).id;
+    agregarMiembro(db, JOHN_ACTOR, { initiativeId: p, wallet, rol: "ejecuta" });
+
+    const login = performLogin(db, { wallet, claHash: hash, signature: firma });
+    expect(login.role).toBe("contributor");
+    // La cookie se firma con lo que devuelve el login; la puerta relee la base.
+    const a = equipoActor({ wallet: login.wallet, name: login.name, role: login.role, isSupervisor: login.isSupervisor }, db);
+    expect(a?.alcance).toBe("proyectos");
+    expect(a?.proyectos).toEqual([p]);
+  });
+});
+
+describe("WP31 · A9 · puertas por página y por ruta (test estático)", () => {
+  const RAIZ = process.cwd();
+  const PUERTA = /\b(equipoActor|equipoInternoActor|adminActor)\(/;
+
+  function recorrer(dir: string, nombre: string): string[] {
+    if (!fs.existsSync(dir)) return [];
+    const out: string[] = [];
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, e.name);
+      if (e.isDirectory()) out.push(...recorrer(p, nombre));
+      else if (e.name === nombre) out.push(p);
+    }
+    return out;
+  }
+
+  const paginas = recorrer(path.join(RAIZ, "app", "equipo"), "page.tsx");
+  const rutas = recorrer(path.join(RAIZ, "app", "api", "equipo"), "route.ts");
+  const EXENTA = path.join(RAIZ, "app", "equipo", "page.tsx"); // redirección pura a /equipo/hoy
+
+  it("recorre de verdad las páginas y rutas del módulo (no pasa por vacío)", () => {
+    expect(paginas.length).toBeGreaterThanOrEqual(4);
+    expect(rutas.length).toBeGreaterThanOrEqual(6);
+    expect(paginas).toContain(path.join(RAIZ, "app", "equipo", "proyectos", "page.tsx"));
+    expect(rutas).toContain(path.join(RAIZ, "app", "api", "equipo", "asignacion", "route.ts"));
+  });
+
+  it("cada page.tsx de /equipo y cada route.ts de /api/equipo autoriza por sí misma", () => {
+    const sinPuerta = [...paginas, ...rutas, path.join(RAIZ, "app", "equipo", "layout.tsx")]
+      .filter((p) => p !== EXENTA)
+      .filter((p) => !PUERTA.test(fs.readFileSync(p, "utf8")))
+      .map((p) => path.relative(RAIZ, p));
+    expect(sinPuerta).toEqual([]);
+  });
+
+  it("ninguna usa actorFromSession (cae a los claims de la cookie)", () => {
+    const conCookie = [...paginas, ...rutas]
+      .filter((p) => /\bactorFromSession\(/.test(fs.readFileSync(p, "utf8")))
+      .map((p) => path.relative(RAIZ, p));
+    expect(conCookie).toEqual([]);
+  });
+
+  it("la exenta es solo una redirección", () => {
+    const src = fs.readFileSync(EXENTA, "utf8");
+    expect(src).toMatch(/redirect\("\/equipo\/hoy"\)/);
+    expect(src).not.toMatch(/getDb|getSession/);
+  });
+
+  it("el dashboard y el directorio de talento piden además supervisión", () => {
+    for (const rel of [
+      ["app", "equipo", "dashboard", "page.tsx"],
+      ["app", "equipo", "talento", "page.tsx"],
+    ]) {
+      const p = path.join(RAIZ, ...rel);
+      if (rel[2] === "talento" && !fs.existsSync(p)) continue; // la crea WP31-A2
+      expect(fs.readFileSync(p, "utf8"), rel.join("/")).toMatch(/\bpuedeVerTodoElEquipo\(/);
+    }
+  });
+
+  it("A10 · el check-in es solo del alcance 'equipo' (página y ruta)", () => {
+    const hoy = fs.readFileSync(path.join(RAIZ, "app", "equipo", "hoy", "page.tsx"), "utf8");
+    expect(hoy).toMatch(/alcance === "equipo"/);
+    const ruta = fs.readFileSync(path.join(RAIZ, "app", "api", "equipo", "checkin", "route.ts"), "utf8");
+    expect(ruta).toMatch(/alcance !== "equipo"/);
   });
 });
