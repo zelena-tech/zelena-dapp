@@ -13,8 +13,10 @@ import { pendingPrincipal, MOTIVO_TRANSICION, type TeamActor } from "./roles";
 import { equipoActor, type EquipoActor } from "./authz";
 import { instanteDb } from "./zona-horaria";
 import {
+  accionesPermitidas,
   agregarMiembro,
   applyAssignmentAction,
+  piezasSinResponsable,
   candidatosParaProyecto,
   COPY_EN_REVISION,
   createAssignment,
@@ -642,6 +644,30 @@ describe("A8 · ataques", () => {
       message: MOTIVO_TRANSICION.dueno,
     });
     expect(ledgers(db)).toBe(0);
+  });
+});
+
+describe("accionesPermitidas y piezasSinResponsable (lo que pinta la UI)", () => {
+  it("el dueño no ve Aprobar sobre lo suyo; quien revisa sí; quien no planifica no mueve lo ajeno", () => {
+    const db = freshDb();
+    const { p } = escenario(db);
+    const id = enRevision(db, p, ANA);
+    const row = getAssignment(db, id)!;
+    expect(accionesPermitidas(db, actor(ANA), row)).toEqual(["bloquear"]);
+    expect(accionesPermitidas(db, actor(RITA), row)).toEqual(["aprobar", "devolver"]);
+    expect(accionesPermitidas(db, actor(EJE2), row)).toEqual([]);
+    expect(accionesPermitidas(db, actor(EST), row)).toEqual(["aprobar", "devolver", "bloquear"]);
+  });
+
+  it("cuenta solo lo que está en Backlog sin responsable", () => {
+    const db = freshDb();
+    const { p, q } = escenario(db);
+    createAssignment(db, { title: "Libre", initiativeId: p, status: "Backlog" });
+    createAssignment(db, { title: "Libre 2", initiativeId: p, status: "Backlog" });
+    createAssignment(db, { title: "Con dueño", initiativeId: p, ownerWallet: ANA, status: "Backlog" });
+    createAssignment(db, { title: "De otro", initiativeId: q, status: "Backlog" });
+    expect(piezasSinResponsable(db, p)).toBe(2);
+    expect(piezasSinResponsable(db, q)).toBe(1);
   });
 });
 

@@ -370,6 +370,19 @@ describe("WP31 · A9 · puertas por página y por ruta (test estático)", () => 
     }
   });
 
+  it("A10 · el tablero de un proyecto ajeno responde notFound (puerta propia de la página)", () => {
+    const p = path.join(RAIZ, "app", "equipo", "proyectos", "[slug]", "page.tsx");
+    const src = fs.readFileSync(p, "utf8");
+    expect(src).toMatch(/\bequipoActor\(/);
+    expect(src).toMatch(/!puedeVerProyecto\(db, actor, proyecto\.id\)\) notFound\(\)/);
+  });
+
+  it("las listas del alta en /equipo/hoy salen de proyectosVisibles, nunca de listInitiatives", () => {
+    const hoy = fs.readFileSync(path.join(RAIZ, "app", "equipo", "hoy", "page.tsx"), "utf8");
+    expect(hoy).toMatch(/\bproyectosVisibles\(/);
+    expect(hoy).not.toMatch(/\blistInitiatives\(/);
+  });
+
   it("A10 · el check-in es solo del alcance 'equipo' (página y ruta)", () => {
     const hoy = fs.readFileSync(path.join(RAIZ, "app", "equipo", "hoy", "page.tsx"), "utf8");
     expect(hoy).toMatch(/alcance === "equipo"/);

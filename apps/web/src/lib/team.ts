@@ -20,6 +20,7 @@ import type { EquipoActor } from "./authz";
 import {
   TEAM_ACTIONS,
   TEAM_STATUSES,
+  availableTeamActions,
   isTeamStatus,
   teamTransition,
   type TeamAction,
@@ -642,6 +643,30 @@ export function applyAssignmentAction(db: DB, input: ApplyActionInput): Assignme
   tx();
 
   return getAssignment(db, row.id) as AssignmentRow;
+}
+
+/**
+ * Acciones de un click que ESTA persona puede aplicar ahora sobre la pieza: las que
+ * la máquina de estados ofrece desde su estado y que `puedeTransicionar` permite. La
+ * UI solo pinta estas (así el dueño nunca ve "Aprobar entrega" sobre lo suyo); el
+ * servidor vuelve a decidir en `applyAssignmentAction`.
+ */
+export function accionesPermitidas(db: DB, actor: TeamActor, row: AssignmentRow): TeamAction[] {
+  if (!isTeamStatus(row.status)) return [];
+  return availableTeamActions(row.status).filter(
+    (accion) => puedeTransicionar({ accion, ...flagsDeTransicion(db, actor, row, accion) }).ok
+  );
+}
+
+/** Piezas del proyecto en Backlog sin responsable: lo que hay para tomar. */
+export function piezasSinResponsable(db: DB, initiativeId: number): number {
+  return (
+    db
+      .prepare(
+        `SELECT COUNT(*) AS n FROM assignments WHERE initiative_id = ? AND owner_wallet IS NULL AND status = 'Backlog'`
+      )
+      .get(initiativeId) as { n: number }
+  ).n;
 }
 
 /**
