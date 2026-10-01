@@ -18,6 +18,7 @@ import {
   cuandoRito,
   dentroDeVentana,
   duracionTexto,
+  elegirProximo,
   esOcurrenciaValida,
   fechaLargaRito,
   fechaRito,
@@ -26,6 +27,7 @@ import {
   normalizarCodigo,
   personasRegistradas,
   proximasOcurrencias,
+  proximoRitoTexto,
   ventanaRito,
   zonaTexto,
 } from "./ritos-labels";
@@ -200,6 +202,36 @@ describe("copy de los ritos (§8.4)", () => {
     expect(personasRegistradas(0)).toBe("0 personas registradas");
     expect(personasRegistradas(1)).toBe("1 persona registrada");
     expect(personasRegistradas(7)).toBe("7 personas registradas");
+  });
+});
+
+describe("lo próximo en la landing (§8.1)", () => {
+  it("«Próxima demo: viernes 16:00» en la zona del genoma, con el día aparte", () => {
+    expect(proximoRitoTexto("demo", new Date("2026-10-09T21:00:00Z"), TZ)).toEqual({
+      titulo: "Próxima demo",
+      cuando: "viernes 16:00",
+      fecha: "9 de octubre",
+    });
+    // 21:30 del viernes en Bogotá ya es sábado en UTC: manda la zona del genoma.
+    expect(proximoRitoTexto("retro", new Date("2026-10-10T02:30:00Z"), TZ)).toEqual({
+      titulo: "Próxima retro",
+      cuando: "viernes 21:30",
+      fecha: "9 de octubre",
+    });
+  });
+
+  it("elegirProximo: lo que llegue antes; el mismo día gana el encuentro; sin nada, null", () => {
+    const demo = new Date("2026-10-09T21:00:00Z"); // viernes 9 en Bogotá
+    expect(elegirProximo(null, null, TZ)).toBeNull();
+    expect(elegirProximo(null, demo, TZ)).toBe("rito");
+    expect(elegirProximo("2026-10-20", null, TZ)).toBe("encuentro");
+    expect(elegirProximo("2026-10-08", demo, TZ)).toBe("encuentro");
+    expect(elegirProximo("2026-10-09", demo, TZ)).toBe("encuentro");
+    expect(elegirProximo("2026-10-10", demo, TZ)).toBe("rito");
+    // El día del rito es el de Bogotá: el viernes 21:30 local no "pasa" al sábado.
+    expect(elegirProximo("2026-10-10", new Date("2026-10-10T02:30:00Z"), TZ)).toBe("rito");
+    expect(elegirProximo("no-es-fecha", demo, TZ)).toBe("rito");
+    expect(elegirProximo("2026-10-10", new Date("x"), TZ)).toBe("encuentro");
   });
 });
 

@@ -16,6 +16,10 @@ import BotLinkPanel from "@/components/BotLinkPanel";
 import GenomeMutationPanel from "@/components/GenomeMutationPanel";
 import LatentAuditForm from "@/components/LatentAuditForm";
 import { INTERES_ENCUENTROS, nombreInteres } from "@/lib/servicios";
+import { estadoCierreEpoca } from "@/lib/epocas";
+import { panelRitosAdmin, zonaRitos } from "@/lib/ritos";
+import EpocaPanel from "@/components/EpocaPanel";
+import RitosAdminPanel from "@/components/RitosAdminPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -77,6 +81,18 @@ export default async function AdminPage() {
         <h1 className="font-head text-4xl font-bold text-white">Admin · Founder</h1>
         <p className="mt-2 text-muted">Aprueba aplicaciones, avanza estados, aprueba hitos y modera la Academia.</p>
       </header>
+
+      {/* Épocas (WP31-D) — cerrar la actual y abrir la siguiente es UNA operación */}
+      <section>
+        <h2 className="mb-4 font-head text-2xl font-bold text-white">Épocas</h2>
+        <EpocaPanel estado={estadoCierreEpoca(db)} tz={zonaRitos(db)} />
+      </section>
+
+      {/* Ritos (WP31-D) — preparar, quién presenta y relata, abrir y cerrar; solo el conteo */}
+      <section>
+        <h2 className="mb-4 font-head text-2xl font-bold text-white">Ritos</h2>
+        <RitosAdminPanel {...panelRitosAdmin(db)} />
+      </section>
 
       {/* Motor de épocas · Fitness (WP07) — el algoritmo propone, el founder firma */}
       <section>

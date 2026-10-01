@@ -1,5 +1,6 @@
 /**
- * WP31-D · ritos en la base (criterios D3, D4, D5, D5b, D6, D8 y D9).
+ * WP31-D · ritos en la base (criterios D3, D4, D5, D5b, D6, D8 y D9), y la gestión
+ * del corte 2 en /admin (épocas y ritos) y en la landing (próxima demo o retro).
  *
  * Base en memoria con `schema.sql` + `seedIfEmpty` (las cuentas sembradas son demo).
  * Las personas de cada test se crean aquí con wallets de mentira: ningún dato real.
@@ -15,6 +16,10 @@ import { openDb, type DB } from "./db";
 import { seedIfEmpty } from "./seed";
 import { merkleRoot, sha256Hex } from "./crypto";
 import { currentEpoch, GENOME_DEFAULTS } from "./genome";
+import { computeAndStoreEpochFitness, signEpochDecision } from "./epochs";
+import { recordNoMutation } from "./mutation";
+import { cerrarYAbrirEpoca, hojasDeEpoca } from "./epocas";
+import { translate } from "./sql-dialect";
 import { tipoDesdeEtiqueta } from "./agora-labels";
 import type { Role, TeamActor } from "./roles";
 import { bucketDe, codigoRito, hashCierre, ritesSecret } from "./ritos-codigo";
@@ -28,14 +33,18 @@ import {
   asignarRolesRito,
   asistenciaPropia,
   asistioARito,
+  candidatosPresentador,
   cerrarRito,
   codigoActual,
   decisionesPublicas,
   demasiadosFallos,
   detalleRito,
   estadoAsistencia,
+  ocurrenciasPreparables,
+  panelRitosAdmin,
   participacionRitos,
   prepararRito,
+  proximoRitoDeComunidad,
   puedePresentarRito,
   refRito,
   registrarAsistencia,
@@ -80,6 +89,22 @@ function persona(db: DB, wallet: string, o: OpcionesPersona = {}): TeamActor {
      VALUES (?, ?, 'Bronze', NULL, ?, ?, ?, ?, ?, ?)`
   ).run(wallet, `Nombre ${wallet}`, o.status ?? "active", o.demo ? 1 : 0, role === "founder" ? 1 : 0, o.cla === false ? 0 : 1, role, o.sup ? 1 : 0);
   return { wallet, name: `Nombre ${wallet}`, role, isSupervisor: !!o.sup };
+}
+
+/**
+ * Suma a la persona a un proyecto (la fila que deja `agregarMiembro`): con el acuerdo
+ * firmado, un contributor pasa a tener `equipoActor` con alcance 'proyectos'.
+ */
+function miembroDeProyecto(db: DB, wallet: string): void {
+  let ini = db.prepare(`SELECT id FROM initiatives WHERE slug = 'rito-proyecto-de-prueba'`).get() as { id: number } | undefined;
+  if (!ini) {
+    const r = db.prepare(`INSERT INTO initiatives (slug, name) VALUES ('rito-proyecto-de-prueba', 'Proyecto de prueba')`).run();
+    ini = { id: Number(r.lastInsertRowid) };
+  }
+  db.prepare(`INSERT INTO project_members (initiative_id, wallet, rol_proyecto, vinculo) VALUES (?, ?, 'ejecuta', 'externo')`).run(
+    ini.id,
+    wallet
+  );
 }
 
 function codigoEn(sessionId: number, t: Date): string {
@@ -366,13 +391,26 @@ describe("D3 · registrar asistencia", () => {
     expect(filas(db, `SELECT id FROM reputation_events WHERE ref LIKE 'rito:%'`)).toHaveLength(0);
   });
 
-  it("el sync es del equipo: un contributor no registra; alguien del equipo interno sí", () => {
+  it("el sync es del equipo y de quien trabaja en un proyecto: la misma puerta que /equipo (equipoActor)", () => {
     const id = prepararRito(db, fundadora, { kind: "sync", scheduledFor: SYNC }, PREP).id;
     abrirRito(db, fundadora, id, EN_SYNC);
     const codigo = codigoEn(id, EN_SYNC);
+    // Un contributor de la comunidad sin proyecto: no es su sync.
     const r = lanza(() => registrarAsistencia(db, a1.wallet, { sessionId: id, codigo }, EN_SYNC), 403);
     expect(r.motivo).toBe("audiencia");
+    // El equipo interno, sí.
     expect(registrarAsistencia(db, core.wallet, { sessionId: id, codigo }, EN_SYNC).registrada).toBe(true);
+    // Un contributor con el acuerdo firmado y una membresía (alcance 'proyectos'), también.
+    miembroDeProyecto(db, a2.wallet);
+    expect(registrarAsistencia(db, a2.wallet, { sessionId: id, codigo }, EN_SYNC)).toMatchObject({ registrada: true, reputacion: 2 });
+    // Con membresía pero sin acuerdo no pasa (sin acuerdo no hay primer trabajo).
+    persona(db, "G_MIEMBRO_SIN_ACUERDO", { cla: false });
+    miembroDeProyecto(db, "G_MIEMBRO_SIN_ACUERDO");
+    lanza(() => registrarAsistencia(db, "G_MIEMBRO_SIN_ACUERDO", { sessionId: id, codigo }, EN_SYNC), 403, COPY_ASISTENCIA.sinAcuerdo);
+    expect(filas(db, `SELECT wallet FROM rite_attendance WHERE session_id = ? ORDER BY wallet`, id)).toEqual([
+      { wallet: a2.wallet },
+      { wallet: core.wallet },
+    ]);
   });
 
   it("estadoAsistencia dice a la página qué mostrar sin mirar el código", () => {
@@ -496,29 +534,37 @@ describe("D4 · cerrar un rito", () => {
 });
 
 describe("D5b · tras cerrar la época N, los ritos no cambian su raíz", () => {
-  /** Hojas de la época: JSON canónico por fila de los dos ledgers, orden (tabla, id). */
-  function hojas(e: number): string[] {
-    return [
-      ...filas(db, `SELECT * FROM points_ledger WHERE period_id = ? ORDER BY id`, e).map((r) => JSON.stringify(["points_ledger", r])),
-      ...filas(db, `SELECT * FROM reputation_events WHERE period_id = ? ORDER BY id`, e).map((r) =>
-        JSON.stringify(["reputation_events", r])
-      ),
-    ];
-  }
-
-  it("asistir y cerrar un rito después del cierre no toca la época cerrada", () => {
-    // Época 1: un rito completo.
+  it("asistir y cerrar un rito después de cerrarYAbrirEpoca no cambia merkleRoot(hojasDeEpoca(N))", () => {
+    // Época 1: un rito completo (asistencia, anfitrión y relator).
     const id1 = demoAbierta();
     registrarAsistencia(db, a1.wallet, { sessionId: id1, codigo: codigoEn(id1, EN_DEMO) }, EN_DEMO);
     cerrarRito(db, anfitrion, { sessionId: id1 }, CIERRE_DEMO);
-    expect(hojas(1).length).toBeGreaterThan(0);
+    const refsEpoca1 = hojasDeEpoca(db, 1).map((h) => JSON.parse(h).ref as string | null);
+    expect(refsEpoca1).toEqual(
+      expect.arrayContaining([refRito(id1, "asistencia"), refRito(id1, "anfitrion"), refRito(id1, "relator")])
+    );
 
-    // Cierre de la época 1 y apertura de la 2 (lo hará epocas.ts: aquí, lo mínimo).
-    const raiz = merkleRoot(hojas(1));
-    db.prepare(`UPDATE periods SET state = 'Closed', merkle_root = ? WHERE id = 1`).run(raiz);
-    db.prepare(`INSERT INTO periods (name, epoch_budget, academia_budget, state) VALUES ('Época 2', 100000, 5000, 'Open')`).run();
+    // Cierre real de la época 1 y apertura de la 2 (epocas.ts), con sus precondiciones.
+    recordNoMutation(db, 2, "Sin cambios de genoma para la siguiente época.");
+    signEpochDecision(db, computeAndStoreEpochFitness(db, 1).id, "keep");
+    const cierre = cerrarYAbrirEpoca(
+      db,
+      fundadora,
+      { justificacion: "Cierre de prueba con el fitness firmado." },
+      new Date("2026-10-12T15:00:00Z")
+    );
+    expect(cierre).toMatchObject({ cerrada: 1, abierta: 2 });
+    expect(currentEpoch(db)).toBe(2);
+    const guardada = (db.prepare(`SELECT merkle_root FROM periods WHERE id = 1`).get() as { merkle_root: string }).merkle_root;
+    expect(guardada).toBe(cierre.merkleRoot);
+    expect(merkleRoot(hojasDeEpoca(db, 1))).toBe(guardada);
+    // La raíz queda en la cola para anclarla en la red de pruebas.
+    expect(
+      db.prepare(`SELECT kind, ref, data_key, payload_hash, status FROM anchor_queue WHERE id = ?`).get(cierre.anchorQueueId)
+    ).toEqual({ kind: "merkle_root", ref: "1", data_key: "epoch:1", payload_hash: guardada, status: "pending" });
+    const hojasAntes = hojasDeEpoca(db, 1);
 
-    // Época 2: otra demo, asistencia y cierre; y un intento de volver a emitir la anterior.
+    // Época 2: otra demo con asistencia y cierre; y un intento de volver a registrar la anterior.
     const prep2 = new Date("2026-10-20T12:00:00Z");
     const id2 = prepararRito(db, fundadora, { kind: "demo", scheduledFor: "2026-10-23T21:00:00.000Z" }, prep2).id;
     asignarRolesRito(db, fundadora, { sessionId: id2, hostWallet: anfitrion.wallet, recorderWallet: relator.wallet });
@@ -526,9 +572,12 @@ describe("D5b · tras cerrar la época N, los ritos no cambian su raíz", () => 
     const t2 = new Date("2026-10-23T21:05:00Z");
     registrarAsistencia(db, a1.wallet, { sessionId: id2, codigo: codigoEn(id2, t2) }, t2);
     registrarAsistencia(db, a2.wallet, { sessionId: id2, codigo: codigoEn(id2, t2) }, t2);
+    lanza(() => registrarAsistencia(db, a2.wallet, { sessionId: id1, codigo: codigoEn(id1, t2) }, t2), 409);
     cerrarRito(db, anfitrion, { sessionId: id2 }, new Date("2026-10-23T22:10:00Z"));
 
-    expect(merkleRoot(hojas(1))).toBe(raiz);
+    // Nada nuevo cayó en la época cerrada: sus hojas y su raíz son las mismas.
+    expect(hojasDeEpoca(db, 1)).toEqual(hojasAntes);
+    expect(merkleRoot(hojasDeEpoca(db, 1))).toBe(guardada);
     const nuevas = filas(db, `SELECT DISTINCT period_id FROM reputation_events WHERE ref LIKE ?`, `rito:${id2}:%`);
     expect(nuevas).toEqual([{ period_id: 2 }]);
   });
@@ -597,6 +646,9 @@ describe("D6 · lecturas públicas sin wallets ni nombres; el enlace solo con se
     expect(enlace(false, core.wallet)).toBeNull();
     // El equipo interno sí (la misma puerta que la asistencia al sync).
     expect(enlace(true, core.wallet)).toBe("https://meet.example.org/team-sync");
+    // Y quien trabaja en un proyecto (contributor con acuerdo y membresía): es su sync.
+    miembroDeProyecto(db, a2.wallet);
+    expect(enlace(true, a2.wallet)).toBe("https://meet.example.org/team-sync");
     expect(enlace(true, supervisora.wallet)).toBe("https://meet.example.org/team-sync");
     expect(enlace(true, fundadora.wallet)).toBe("https://meet.example.org/team-sync");
   });
@@ -743,5 +795,176 @@ describe("D8 (corte 1) y reglas duras · estáticos", () => {
         expect(l).not.toMatch(/@\/lib\/(db|crypto|session|ritos|ritos-codigo|authz|genome)["']|node:/);
       }
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Corte 2: gestión en /admin y lo próximo en la landing
+// ---------------------------------------------------------------------------
+
+describe("corte 2 · gestión de ritos en /admin", () => {
+  const DIAS_60 = 60 * 24 * 60 * 60 * 1000;
+
+  it("ocurrenciasPreparables: fechas reales de la cadencia en los próximos 60 días, sin las ya preparadas", () => {
+    // Desde el jueves 1 de octubre de 2026: sync y retro el lunes 5, demo el viernes 9 (ancla).
+    const antes = ocurrenciasPreparables(db, PREP);
+    expect(antes.find((f) => f.kind === "demo")).toEqual({ kind: "demo", scheduledFor: DEMO, etiqueta: "viernes 9 de octubre · 16:00" });
+    expect(antes.find((f) => f.kind === "sync")?.scheduledFor).toBe(SYNC);
+    expect(antes.find((f) => f.kind === "retro")?.scheduledFor).toBe("2026-10-05T15:00:00.000Z");
+    for (const kind of ["sync", "demo", "retro"]) {
+      expect(antes.filter((f) => f.kind === kind).length).toBeGreaterThan(0);
+      expect(antes.filter((f) => f.kind === kind).length).toBeLessThanOrEqual(4);
+    }
+    for (const f of antes) expect(Date.parse(f.scheduledFor) - PREP.getTime()).toBeLessThanOrEqual(DIAS_60);
+
+    demoPreparada();
+    const despues = ocurrenciasPreparables(db, PREP);
+    expect(despues.some((f) => f.kind === "demo" && f.scheduledFor === DEMO)).toBe(false);
+    // Toda fecha que ofrece el panel se puede preparar de verdad (misma guarda que prepararRito).
+    for (const f of despues) {
+      expect(prepararRito(db, fundadora, { kind: f.kind, scheduledFor: f.scheduledFor }, PREP).scheduled_for).toBe(f.scheduledFor);
+    }
+  });
+
+  it("candidatosPresentador: cuentas activas, propias, no demo y con el acuerdo firmado, por nombre", () => {
+    persona(db, "G_DEMO_X", { demo: true });
+    persona(db, "G_SIN_ACUERDO_X", { cla: false });
+    persona(db, "G_BAJA_X", { status: "alumni" });
+    const lista = candidatosPresentador(db);
+    const wallets = lista.map((c) => c.wallet);
+    expect(wallets).toEqual(expect.arrayContaining([fundadora.wallet, anfitrion.wallet, relator.wallet, a1.wallet]));
+    for (const w of ["G_DEMO_X", "G_SIN_ACUERDO_X", "G_BAJA_X"]) expect(wallets).not.toContain(w);
+    expect(wallets.some((w) => w.startsWith("pending:"))).toBe(false);
+    const nombres = lista.map((c) => c.nombre);
+    expect(nombres).toEqual([...nombres].sort());
+    // Quien está en la lista puede presentar de verdad.
+    const id = demoPreparada();
+    for (const c of lista) expect(() => asignarRolesRito(db, fundadora, { sessionId: id, hostWallet: c.wallet })).not.toThrow();
+  });
+
+  it("panelRitosAdmin: solo el conteo de asistentes; quién presenta y relata para el selector; pendiente de cerrar", () => {
+    const id = demoAbierta();
+    registrarAsistencia(db, a1.wallet, { sessionId: id, codigo: codigoEn(id, EN_DEMO) }, EN_DEMO);
+    registrarAsistencia(db, a2.wallet, { sessionId: id, codigo: codigoEn(id, EN_DEMO) }, EN_DEMO);
+
+    const panel = panelRitosAdmin(db, EN_DEMO);
+    expect(panel.sesiones.find((x) => x.id === id)).toEqual({
+      id,
+      kind: "demo",
+      nombre: "Demo quincenal",
+      cuando: "viernes 9 de octubre · 16:00",
+      state: "Open",
+      estado: "Abierto ahora",
+      lugar: "Sala abierta del piso 2",
+      conEnlace: true,
+      asistentes: "2 personas registradas",
+      pendienteDeCerrar: false,
+      ventanaPasada: false,
+      anfitrion: anfitrion.wallet,
+      relator: relator.wallet,
+    });
+    // Nunca la lista nominal ni el enlace de conexión.
+    const sesiones = JSON.stringify(panel.sesiones);
+    for (const w of [a1.wallet, a2.wallet]) expect(sesiones).not.toContain(w);
+    expect(sesiones).not.toContain("meet.example.org");
+    expect(panel).toMatchObject({ margen: "media hora", zona: "hora de Bogotá" });
+    expect(panel.tipos.map((t) => t.kind)).toEqual(["sync", "demo", "retro"]);
+    expect(panel.preparables.some((f) => f.kind === "demo" && f.scheduledFor === DEMO)).toBe(false);
+
+    // Abierta y con la ventana ya pasada: pendiente de cerrar (no hay cierre automático).
+    expect(panelRitosAdmin(db, new Date("2026-10-09T22:31:00Z")).sesiones.find((x) => x.id === id)?.pendienteDeCerrar).toBe(true);
+    // Preparada y con la ventana pasada sin abrirse: ya no se puede abrir.
+    const sync = prepararRito(db, fundadora, { kind: "sync", scheduledFor: SYNC }, PREP).id;
+    const tarde = new Date("2026-10-05T15:01:00Z");
+    expect(panelRitosAdmin(db, tarde).sesiones.find((x) => x.id === sync)).toMatchObject({ state: "Planned", ventanaPasada: true });
+    lanza(() => abrirRito(db, fundadora, sync, tarde), 409);
+  });
+
+  it("todo el SQL de la gestión y de la landing se traduce a T-SQL (Azure)", () => {
+    demoAbierta();
+    const sqls: string[] = [];
+    const espia: DB = {
+      prepare: (sql: string) => {
+        sqls.push(sql);
+        return db.prepare(sql);
+      },
+      exec: (sql: string) => db.exec(sql),
+      pragma: (d: string) => db.pragma(d),
+      transaction: db.transaction.bind(db) as DB["transaction"],
+    };
+    panelRitosAdmin(espia, EN_DEMO);
+    proximoRitoDeComunidad(espia, PREP);
+    expect(sqls.length).toBeGreaterThan(5);
+    for (const s of new Set(sqls)) expect(() => translate(s), s).not.toThrow();
+  });
+
+  it("proximoRitoDeComunidad: la próxima demo o retro, nunca el sync; sin wallets ni enlace", () => {
+    // El sync del lunes 5 a las 09:00 llega antes, pero es del equipo: se anuncia la retro de las 10:00.
+    expect(proximoRitoDeComunidad(db, PREP)).toMatchObject({
+      kind: "retro",
+      inicio: new Date("2026-10-05T15:00:00.000Z"),
+      sessionId: null,
+    });
+    // Pasada la retro, la demo del 9; si está preparada, con su sesión y su lugar.
+    const id = demoPreparada();
+    const p = proximoRitoDeComunidad(db, new Date("2026-10-06T12:00:00Z"));
+    expect(p).toMatchObject({ kind: "demo", sessionId: id, lugar: "Sala abierta del piso 2", conEnlace: true });
+    expect(JSON.stringify(p)).not.toContain("meet.example.org");
+    // Una demo ya cerrada deja de ser "la próxima".
+    asignarRolesRito(db, fundadora, { sessionId: id, hostWallet: anfitrion.wallet });
+    abrirRito(db, anfitrion, id, ABRE_DEMO);
+    cerrarRito(db, anfitrion, { sessionId: id }, new Date("2026-10-09T21:20:00Z"));
+    expect(proximoRitoDeComunidad(db, new Date("2026-10-09T21:25:00Z"))?.sessionId).not.toBe(id);
+  });
+});
+
+describe("D8 (corte 2) · /admin, la ruta de épocas y la landing · estáticos", () => {
+  it("admin/page.tsx importa EpocaPanel y RitosAdminPanel y pone Épocas y Ritos antes del motor de fitness", () => {
+    const src = leer("app/admin/page.tsx");
+    expect(src).toMatch(/import EpocaPanel from "@\/components\/EpocaPanel"/);
+    expect(src).toMatch(/import RitosAdminPanel from "@\/components\/RitosAdminPanel"/);
+    const epocas = src.indexOf(">Épocas</h2>");
+    const ritos = src.indexOf(">Ritos</h2>");
+    const motor = src.indexOf(">Motor de épocas · Fitness</h2>");
+    expect(epocas).toBeGreaterThan(0);
+    expect(ritos).toBeGreaterThan(epocas);
+    expect(motor).toBeGreaterThan(ritos);
+    expect(src).toContain("estadoCierreEpoca(db)");
+    expect(src).toContain("panelRitosAdmin(db)");
+    expect(src).toContain("adminActor(session, db)");
+  });
+
+  it("/api/admin/epoca: solo el founder (adminActor) y todo pasa por epocas.ts con el estado y el copy de EpocaError", () => {
+    const src = leer("app/api/admin/epoca/route.ts");
+    expect(src).toContain("adminActor(");
+    expect(src).toContain("getSession(");
+    expect(src).not.toContain("actorFromSession(");
+    for (const f of ["cerrarYAbrirEpoca(", "abrirEpoca(", "estadoCierreEpoca(", "instanceof EpocaError", "e.status", "e.faltantes", "rateLimit(", "no-store"]) {
+      expect(src).toContain(f);
+    }
+    expect(src).toMatch(/export async function GET\(/);
+    expect(src).toMatch(/export async function POST\(/);
+    // La ruta no escribe SQL: el cierre (y su anclaje) es la operación atómica de epocas.ts.
+    expect(src).not.toMatch(/\.prepare\(|UPDATE\s|INSERT\s+INTO/);
+  });
+
+  it("los paneles de /admin son de cliente y no importan nada de servidor", () => {
+    for (const r of ["src/components/EpocaPanel.tsx", "src/components/RitosAdminPanel.tsx"]) {
+      const src = leer(r);
+      expect(src.startsWith('"use client";')).toBe(true);
+      const imports = src.split("\n").filter((l) => /^\s*import\b/.test(l) && !/^\s*import type\b/.test(l));
+      for (const l of imports) {
+        expect(l).not.toMatch(/@\/lib\/(db|crypto|session|ritos|ritos-codigo|authz|genome|epocas|epochs|mutation)["']|node:/);
+      }
+    }
+  });
+
+  it("ProximoEncuentro anuncia solo ritos de comunidad, sin personas ni enlace de conexión", () => {
+    const src = leer("src/components/ProximoEncuentro.tsx");
+    expect(src).not.toMatch(/^"use client"/);
+    expect(src).toContain("proximoRitoDeComunidad(");
+    expect(src).toContain("elegirProximo(");
+    expect(src).toContain("Las próximas fechas se publican en");
+    expect(src).not.toMatch(/join_url|detalleRito|sesionesGestionables|host_wallet|recorder_wallet/);
   });
 });

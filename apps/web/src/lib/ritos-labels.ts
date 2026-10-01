@@ -340,3 +340,92 @@ export function horaRito(inicio: Date, tz: string): string {
 export function personasRegistradas(n: number): string {
   return n === 1 ? "1 persona registrada" : `${n} personas registradas`;
 }
+
+// ---------------------------------------------------------------------------
+// Lo próximo en la landing (§8.1): la próxima demo o retro, o un encuentro
+// ---------------------------------------------------------------------------
+
+const PROXIMO_LABEL: Record<RiteKind, string> = {
+  sync: "Próximo sync",
+  demo: "Próxima demo",
+  retro: "Próxima retro",
+};
+
+/**
+ * "Próxima demo: viernes 16:00" (§8.1), en la zona del genoma. `fecha` es el día
+ * ("9 de octubre") para la línea de apoyo: una demo quincenal puede caer en dos
+ * semanas y el día de la semana solo no basta.
+ */
+export function proximoRitoTexto(kind: RiteKind, inicio: Date, tz: string): { titulo: string; cuando: string; fecha: string } {
+  const p = partesFecha(inicio, tz);
+  return { titulo: PROXIMO_LABEL[kind], cuando: `${p.weekday} ${horaRito(inicio, tz)}`, fecha: `${p.day} de ${p.month}` };
+}
+
+/**
+ * ¿Qué anuncia la landing? El encuentro publicado (día local AAAA-MM-DD) o el próximo
+ * rito de comunidad, el que llegue antes; el mismo día gana el encuentro (es el
+ * evento más grande). `null` si no hay nada: la landing dice dónde se publican.
+ */
+export function elegirProximo(encuentroDia: string | null, ritoInicio: Date | null, tz: string): "encuentro" | "rito" | null {
+  const hayEncuentro = typeof encuentroDia === "string" && YMD.test(encuentroDia);
+  const hayRito = !!ritoInicio && !Number.isNaN(ritoInicio.getTime());
+  if (!hayEncuentro) return hayRito ? "rito" : null;
+  if (!hayRito) return "encuentro";
+  try {
+    return (encuentroDia as string) <= diaLocal(ritoInicio as Date, tz) ? "encuentro" : "rito";
+  } catch {
+    return "encuentro"; // zona ilegible: el encuentro tiene fecha propia
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Gestión en /admin (corte 2): lo que el panel de cliente recibe ya armado
+// ---------------------------------------------------------------------------
+
+/** Una sesión en el panel de ritos de /admin. Solo el CONTEO de asistentes. */
+export interface SesionRitoAdmin {
+  id: number;
+  kind: RiteKind;
+  nombre: string;
+  /** "viernes 9 de octubre · 16:00" en la zona del genoma. */
+  cuando: string;
+  state: "Planned" | "Open" | "Closed";
+  estado: string;
+  lugar: string | null;
+  conEnlace: boolean;
+  /** "3 personas registradas". */
+  asistentes: string;
+  /** Abierta y con la ventana ya pasada: no hay cierre automático. */
+  pendienteDeCerrar: boolean;
+  /** Preparada y con la ventana ya pasada sin abrirse: ya no se puede abrir. */
+  ventanaPasada: boolean;
+  /** Quién presenta y quién relata (wallet), para el selector de /admin. Nunca quién asistió. */
+  anfitrion: string | null;
+  relator: string | null;
+}
+
+/** Una fecha de la cadencia que aún no está preparada (próximos 60 días). */
+export interface FechaRitoPreparable {
+  kind: RiteKind;
+  /** ISO UTC con Z, tal cual se guarda. */
+  scheduledFor: string;
+  /** "viernes 9 de octubre · 16:00". */
+  etiqueta: string;
+}
+
+/** Persona que puede presentar o relatar: cuenta activa, propia y con el acuerdo firmado. */
+export interface CandidatoRito {
+  wallet: string;
+  nombre: string;
+}
+
+export interface PanelRitosAdmin {
+  sesiones: SesionRitoAdmin[];
+  preparables: FechaRitoPreparable[];
+  candidatos: CandidatoRito[];
+  tipos: Array<{ kind: RiteKind; nombre: string }>;
+  /** "media hora": cuánto antes se abre un rito. */
+  margen: string;
+  /** "hora de Bogotá". */
+  zona: string;
+}
