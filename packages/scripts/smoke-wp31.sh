@@ -5,7 +5,9 @@
 #   SIN_CRON=1 SIN_COMUNIDAD=1 bash packages/scripts/smoke-wp31.sh <base-url>
 #
 #   SIN_CRON=1        omite la ruta del cron (si los recordatorios no salieron a la hora de corte).
-#   SIN_COMUNIDAD=1   omite /comunidad (si los ritos no salieron a la hora de corte).
+#   SIN_COMUNIDAD=1   omite /comunidad (si los ritos no salieron a la hora de corte) y, a
+#                     cambio, exige que ninguna página pública la enlace: con RUTA_COMUNIDAD
+#                     aún en "/comunidad", el menú, la puerta y los CTA darían 404.
 #
 # Usa el host canónico (con www): si la base redirige a otro host, las rutas no dan 200.
 #
@@ -37,6 +39,9 @@ PATRON_ESTRUCTURA='\bSAS\b|S\.A\.S|societari|sociedad'
 
 # Prueba en vivo de la landing: un enlace a una transacción verificable de testnet.
 PATRON_TX='stellar\.expert/explorer/testnet/tx/[0-9a-f]{64}'
+
+# Con SIN_COMUNIDAD=1, un enlace a /comunidad (o a /comunidad/..., ?..., #...) es un 404.
+PATRON_ENLACE_COMUNIDAD='href="/comunidad[/?#"]'
 
 TMP="$(mktemp -d 2>/dev/null || mktemp -d -t smoke-wp31)"
 trap 'rm -rf "$TMP"' EXIT
@@ -140,6 +145,24 @@ for ruta in $RUTAS_SIN_ESTRUCTURA; do
   n="$(grep -cE "$PATRON_ESTRUCTURA" "$pagina" || true)"
   if [ "${n:-0}" = "0" ]; then ok "$ruta 0 menciones"; else falla "$ruta: $n línea(s) casan con '$PATRON_ESTRUCTURA'"; fi
 done
+
+echo "8. Sin /comunidad desplegada, ninguna página la enlaza"
+if [ "$SIN_COMUNIDAD" = "1" ]; then
+  # Revisa lo que bajó el paso 1 (menú, puerta de la landing, CTA y próximo encuentro).
+  for ruta in $RUTAS_200; do
+    if omitir_ruta "$ruta"; then continue; fi
+    pagina="$(archivo_de "$ruta")"
+    if [ ! -s "$pagina" ]; then falla "$ruta: no se pudo revisar (no respondió 200 en el paso 1)"; continue; fi
+    n="$(grep -cE "$PATRON_ENLACE_COMUNIDAD" "$pagina" || true)"
+    if [ "${n:-0}" = "0" ]; then
+      ok "$ruta no enlaza /comunidad"
+    else
+      falla "$ruta enlaza /comunidad con SIN_COMUNIDAD=1 (cambia RUTA_COMUNIDAD a \"/encuentros\" en src/lib/menu.ts)"
+    fi
+  done
+else
+  omitida "no aplica: sin SIN_COMUNIDAD=1, el paso 1 exige /comunidad en 200"
+fi
 
 echo
 if [ "$fallas" -eq 0 ]; then

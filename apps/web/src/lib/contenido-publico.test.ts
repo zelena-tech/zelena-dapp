@@ -10,11 +10,13 @@
  *        cubre `migracion-fusion.test.ts` (f): no se duplica).
  *  E2-6  `packages/scripts/smoke-wp31.sh` hace lo que pide el spec §9, sin secretos.
  */
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach, beforeAll, afterAll } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
-import { execFileSync } from "node:child_process";
+import { execFile, execFileSync } from "node:child_process";
+import http from "node:http";
+import type { AddressInfo } from "node:net";
 import { openDb, type DB } from "./db";
 import { sha256Hex } from "./crypto";
 import { seedIfEmpty } from "./seed";
@@ -660,4 +662,184 @@ describe("E2-6 · packages/scripts/smoke-wp31.sh", () => {
     const hexLargos = g.match(/\b[0-9a-f]{40,}\b/g) ?? [];
     expect(hexLargos).toEqual([variable("HASH_CLA")]);
   });
+
+  it("con SIN_COMUNIDAD=1 busca enlaces a /comunidad en las páginas que bajó el paso 1", () => {
+    const g = guion();
+    expect(g).toContain(`PATRON_ENLACE_COMUNIDAD='href="/comunidad[/?#"]'`);
+    expect(g).toContain(`grep -cE "$PATRON_ENLACE_COMUNIDAD"`);
+    const paso8 = g.slice(g.indexOf('echo "8.'));
+    expect(paso8).toMatch(/^echo "8\.[^\n]*\nif \[ "\$SIN_COMUNIDAD" = "1" \]; then\n(?: {2}#[^\n]*\n)* {2}for ruta in \$RUTAS_200; do\n/);
+  });
+});
+
+/* ------------------------------------------------------------------ *
+ * E2-6 · El smoke, corrido de verdad contra un sitio de mentira
+ * ------------------------------------------------------------------ */
+
+/** Bash candidatos (en Windows, primero el de Git: el de WSL no alcanza el 127.0.0.1 de Windows). */
+function bashCandidatos(): string[] {
+  const git =
+    process.platform === "win32"
+      ? path.join(process.env.ProgramFiles ?? "C:\\Program Files", "Git", "bin", "bash.exe")
+      : "";
+  return [...(git && fs.existsSync(git) ? [git] : []), "bash"];
+}
+
+interface Corrida {
+  codigo: number;
+  salida: string;
+}
+
+/** Corre bash sin bloquear el bucle de eventos (el sitio de mentira vive en este proceso). */
+function correr(bash: string, args: string[], env: Record<string, string>): Promise<Corrida> {
+  return new Promise((resolve) => {
+    execFile(
+      bash,
+      args,
+      {
+        cwd: RAIZ,
+        timeout: 90_000,
+        // Sin proxy hacia 127.0.0.1, y sin heredar SIN_CRON/SIN_COMUNIDAD de quien corre los tests.
+        env: { ...process.env, NO_PROXY: "127.0.0.1,localhost", no_proxy: "127.0.0.1,localhost", ...env },
+      },
+      (err, stdout, stderr) => {
+        const codigo = err ? (typeof err.code === "number" ? err.code : -1) : 0;
+        resolve({ codigo, salida: `${stdout}${stderr}` });
+      }
+    );
+  });
+}
+
+/** Un escenario del sitio de mentira: si `/comunidad` existe y qué enlaces lleva cada página. */
+interface Escenario {
+  comunidadExiste: boolean;
+  /** En el menú de todas las páginas. */
+  enlaces: string[];
+  /** Además, en una sola página. */
+  enlacesEn?: Record<string, string[]>;
+}
+
+const ESCENARIOS: Record<string, Escenario> = {
+  // D llegó: /comunidad en 200 y enlazada desde el menú y el CTA.
+  "con-comunidad": { comunidadExiste: true, enlaces: ["/comunidad", "/comunidad#proximos"] },
+  // D no llegó y el líder ya cambió RUTA_COMUNIDAD. Ni /comunidades ni una consulta que la
+  // nombre cuentan como enlace a /comunidad.
+  "sin-comunidad": {
+    comunidadExiste: false,
+    enlaces: ["/encuentros", "/encuentros#proximos", "/comunidades", "/encuentros?de=/comunidad"],
+  },
+  // D no llegó y se olvidó la línea de RUTA_COMUNIDAD (lo que vio el revisor).
+  "sin-comunidad-enlazada": {
+    comunidadExiste: false,
+    enlaces: [],
+    enlacesEn: {
+      "/": ["/comunidad"], // menú y puerta 03 de la landing
+      "/manifiesto": ["/comunidad#proximos"], // CTA "Ven a la próxima demo"
+      "/encuentros": ["/comunidad/ritos/1"], // acta de un rito
+    },
+  },
+};
+
+describe.concurrent("E2-6 · smoke-wp31.sh contra un sitio de mentira", () => {
+  const HASH_CLA = createHash("sha256").update(fs.readFileSync(path.join(RAIZ, "CLA.md"))).digest("hex");
+  const TX = `https://stellar.expert/explorer/testnet/tx/${"0f".repeat(32)}`;
+  const PAGINAS = new Set([
+    "/",
+    "/metodo",
+    "/manifiesto",
+    "/encuentros",
+    "/empresas",
+    "/privacidad",
+    "/acuerdo",
+    "/agora",
+    "/academia",
+    "/academia/construir-sin-riesgo",
+    "/whitepaper",
+    "/gobernanza",
+  ]);
+  const REDIRECCIONES: Record<string, [number, string]> = {
+    "/ecosistema": [308, "/metodo"],
+    "/academia/por-que-sas-dao": [308, "/academia/construir-sin-riesgo"],
+    "/equipo/hoy": [307, "/entrar?next=%2Fequipo%2Fhoy"],
+  };
+
+  // Cada escenario vive bajo su prefijo (`/<escenario>/...`): así las corridas van en paralelo.
+  const servidor = http.createServer((req, res) => {
+    const m = /^\/([^/?]+)(\/[^?]*)?/.exec(req.url ?? "/");
+    const esc = m ? ESCENARIOS[m[1]] : undefined;
+    if (!m || !esc) return void res.writeHead(404).end();
+    const prefijo = `/${m[1]}`;
+    const ruta = m[2] || "/";
+    if (req.method === "POST" && ruta === "/api/cron/recordatorios") return void res.writeHead(401).end();
+    if (req.method !== "GET") return void res.writeHead(405).end();
+    if (ruta === "/api/cla") {
+      res.writeHead(200, { "content-type": "application/json" });
+      return void res.end(JSON.stringify({ hash: HASH_CLA }));
+    }
+    const redir = REDIRECCIONES[ruta];
+    if (redir) return void res.writeHead(redir[0], { location: prefijo + redir[1] }).end();
+    if (PAGINAS.has(ruta) || (ruta === "/comunidad" && esc.comunidadExiste)) {
+      const menu = [...esc.enlaces, ...(esc.enlacesEn?.[ruta] ?? [])].map((h) => `<a href="${h}">Enlace</a>`).join("");
+      const prueba = ruta === "/" ? `<a href="${TX}">Prueba en testnet</a>` : "";
+      res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+      return void res.end(`<!DOCTYPE html><html><body><nav>${menu}</nav><main>Hola ${prueba}</main></body></html>`);
+    }
+    res.writeHead(404, { "content-type": "text/html" }).end("<h1>404</h1>");
+  });
+  let raiz = "";
+  let bash: string | null = null;
+
+  beforeAll(async () => {
+    await new Promise<void>((ok) => servidor.listen(0, "127.0.0.1", ok));
+    raiz = `http://127.0.0.1:${(servidor.address() as AddressInfo).port}`;
+    for (const candidato of bashCandidatos()) {
+      const sonda = 'curl -s -o /dev/null -w "%{http_code}" "$1/con-comunidad/api/cla"';
+      const r = await correr(candidato, ["-c", sonda, "_", raiz], {});
+      if (r.codigo === 0 && r.salida.trim() === "200") {
+        bash = candidato;
+        break;
+      }
+    }
+  }, 60_000);
+
+  afterAll(async () => {
+    await new Promise<void>((ok) => servidor.close(() => ok()));
+  });
+
+  const smoke = (escenario: keyof typeof ESCENARIOS, env: Record<string, string> = {}) =>
+    correr(bash!, ["packages/scripts/smoke-wp31.sh", `${raiz}/${escenario}`], { SIN_CRON: "0", SIN_COMUNIDAD: "0", ...env });
+
+  // Sin un bash con curl que alcance 127.0.0.1 estas corridas se omiten (el CI de Linux las corre).
+  it("con /comunidad en 200 y enlazada: en verde", async ({ expect, skip }) => {
+    if (!bash) return skip();
+    const r = await smoke("con-comunidad");
+    expect(r, r.salida).toMatchObject({ codigo: 0 });
+    expect(r.salida).toContain("Smoke WP31 en verde.");
+  }, 90_000);
+
+  it("sin SIN_COMUNIDAD sigue exigiendo /comunidad en 200", async ({ expect, skip }) => {
+    if (!bash) return skip();
+    const r = await smoke("sin-comunidad");
+    expect(r, r.salida).toMatchObject({ codigo: 1 });
+    expect(r.salida).toContain("FALLA  /comunidad respondió 404");
+  }, 90_000);
+
+  it("con SIN_COMUNIDAD=1 y RUTA_COMUNIDAD ya en /encuentros: en verde", async ({ expect, skip }) => {
+    if (!bash) return skip();
+    const r = await smoke("sin-comunidad", { SIN_COMUNIDAD: "1" });
+    expect(r, r.salida).toMatchObject({ codigo: 0 });
+    expect(r.salida).toContain("omite  /comunidad (SIN_COMUNIDAD=1)");
+    expect(r.salida).toContain("ok     / no enlaza /comunidad");
+  }, 90_000);
+
+  it("con SIN_COMUNIDAD=1 falla si alguna página aún enlaza /comunidad (menú, puerta o CTA en 404)", async ({ expect, skip }) => {
+    if (!bash) return skip();
+    const r = await smoke("sin-comunidad-enlazada", { SIN_COMUNIDAD: "1" });
+    expect(r, r.salida).toMatchObject({ codigo: 1 });
+    for (const ruta of ["/", "/manifiesto", "/encuentros"]) {
+      expect(r.salida).toContain(`FALLA  ${ruta} enlaza /comunidad con SIN_COMUNIDAD=1`);
+    }
+    expect(r.salida).toContain("ok     /metodo no enlaza /comunidad");
+    expect(r.salida).toContain("Smoke WP31 con 3 falla(s).");
+  }, 90_000);
 });
