@@ -1,0 +1,68 @@
+# Paquete de despliegue para Azure App Service (Linux, NODE:22-lts).
+#
+# La build standalone se hace aquí y no en Windows: en Windows falla con
+# `EPERM symlink` y los binarios nativos (better-sqlite3) tienen que ser de
+# Linux. Este job NO despliega: deja el zip como artefacto y el despliegue se
+# hace a mano (ver docs/DESPLIEGUE-V1.md, "Paquete del despliegue").
+name: paquete-azure
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [feat/v1-unificada, develop]
+
+permissions:
+  contents: read
+
+jobs:
+  paquete:
+    # 22.04 y no latest: glibc 2.35, compatible con la imagen Node 22 de App Service.
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar (lockfile de la raíz)
+        run: npm ci
+
+      - name: Tipos y tests
+        working-directory: apps/web
+        run: |
+          npx tsc --noEmit -p .
+          npm test
+
+      - name: Build standalone
+        env:
+          NEXT_STANDALONE: "1"
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: npm --workspace apps/web run build
+
+      - name: Armar el paquete
+        run: |
+          set -euo pipefail
+          S=apps/web/.next/standalone
+          # standalone no copia ni los estáticos ni public/.
+          cp -r apps/web/.next/static "$S/apps/web/.next/static"
+          if [ -d apps/web/public ]; then cp -r apps/web/public "$S/apps/web/public"; fi
+          mkdir -p "$S/apps/web/scripts"
+          cp apps/web/scripts/verificar-paquete.mjs "$S/apps/web/scripts/"
+          cp apps/web/start-standalone.sh "$S/start.sh"
+          chmod +x "$S/start.sh"
+          # Los enlaces simbólicos (el propio workspace @zelena/web) no sobreviven
+          # al unzip de Kudu y la app no los usa: se listan y se quitan.
+          echo "Enlaces simbólicos en el bundle:"; find "$S" -type l -print
+          find "$S" -type l -delete
+          node "$S/apps/web/scripts/verificar-paquete.mjs" "$S/apps/web"
+          (cd "$S" && zip -qr "$GITHUB_WORKSPACE/paquete-azure.zip" .)
+          ls -la paquete-azure.zip
+          echo "BUILD_ID: $(cat apps/web/.next/BUILD_ID)"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: paquete-azure
+          path: paquete-azure.zip
+          retention-days: 14
