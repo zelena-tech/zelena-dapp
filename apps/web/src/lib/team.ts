@@ -222,19 +222,21 @@ export function slugify(raw: string): string {
  * antes de WP14, para no cambiar el significado de ninguna de ellas.
  */
 export function seedTeamRoster(db: DB): void {
+  // WP31-A2: el roster es DATO. Solo se insertan las filas que faltan; una fila que
+  // ya existe conserva su rol y su supervisión (se cambian en /equipo/talento y el
+  // cambio sobrevive al reinicio). Un slug presente en `roster_links` ya lo absorbió
+  // una cuenta real (`vincularPrincipal`): su `pending:<slug>` no se vuelve a crear.
   const ins = db.prepare(
     `INSERT INTO users (wallet, display_name, tier, invited_by, status, is_demo, is_founder, cla_signed, role, is_supervisor)
      VALUES (?, ?, 'Bronze', NULL, 'active', 0, 0, 0, ?, ?)`
   );
-  const upd = db.prepare(`UPDATE users SET role = ?, is_supervisor = ? WHERE wallet = ?`);
   const exists = db.prepare(`SELECT wallet FROM users WHERE wallet = ?`);
+  const vinculado = db.prepare(`SELECT wallet FROM roster_links WHERE slug = ?`);
   for (const m of TEAM_ROSTER) {
+    if (vinculado.get(m.slug)) continue;
     const principal = pendingPrincipal(m.slug);
-    if (exists.get(principal)) {
-      upd.run(m.role, m.isSupervisor ? 1 : 0, principal);
-    } else {
-      ins.run(principal, m.name, m.role, m.isSupervisor ? 1 : 0);
-    }
+    if (exists.get(principal)) continue;
+    ins.run(principal, m.name, m.role, m.isSupervisor ? 1 : 0);
   }
   // Retrocompatibilidad: el founder ya existente pasa a role='founder' + supervisor.
   db.prepare(`UPDATE users SET role = 'founder', is_supervisor = 1 WHERE is_founder = 1`).run();

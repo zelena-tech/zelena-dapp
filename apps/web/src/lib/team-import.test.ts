@@ -10,9 +10,11 @@ import { describe, it, expect, beforeEach } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import { openDb, type DB } from "./db";
-import { importTasks, mapRow, parseCsv, HORIZON_MAP, STATUS_MAP } from "./team-import";
-import { pendingPrincipal } from "./roles";
-import { listInitiatives, type AssignmentRow } from "./team";
+import { importTasks, mapRow, parseCsv, resolverPersona, HORIZON_MAP, STATUS_MAP } from "./team-import";
+import { pendingPrincipal, type TeamActor } from "./roles";
+import { applyAssignmentAction, listInitiatives, seedTeam, type AssignmentRow } from "./team";
+import { vincularPrincipal } from "./talento";
+import { instanteDb } from "./zona-horaria";
 
 const FIXTURE = path.join(process.cwd(), "src", "lib", "__fixtures__", "tareas-demo.csv");
 
@@ -101,7 +103,10 @@ describe("mapeos del vocabulario del CSV (WP14)", () => {
       "Criterio de aceptación": "QA aprobado",
     });
     expect(row!.ownerWallet).toBe("pending:fausto");
-    expect(row!.status).toBe("En curso");
+    // Revisión A2: el importador no fabrica piezas en vuelo (sin el evento de quien la
+    // empezó o la envió, quien importa podría aprobar lo que nadie entregó).
+    expect(row!.status).toBe("Asignada");
+    expect(row!.warnings.join(" ")).toMatch(/'En curso' se importa como 'Asignada'/);
     expect(row!.priority).toBe("Urgent");
     expect(row!.acceptanceCriteria).toBe("QA aprobado");
   });
@@ -120,7 +125,12 @@ describe("mapeos del vocabulario del CSV (WP14)", () => {
     expect(mapRow({ ...base, Status: "Zombi" }).error).toMatch(/Status desconocido/);
     expect(mapRow({ ...base, Priority: "Critiquísima" }).error).toMatch(/Priority desconocida/);
     expect(mapRow({ ...base, Horizonte: "Nunca" }).error).toMatch(/Horizonte desconocido/);
-    expect(mapRow({ ...base, Assignee: "Marciano" }).error).toMatch(/fuera del roster/);
+    // WP31-A2: mapRow es puro y ya no decide quién está en el equipo; devuelve el
+    // nombre crudo y `importTasks` lo resuelve por datos (o reporta la fila).
+    const marciano = mapRow({ ...base, Assignee: "Marciano" });
+    expect(marciano.error).toBeUndefined();
+    expect(marciano.row!.assignee).toBe("Marciano");
+    expect(marciano.row!.ownerWallet).toBeNull();
     expect(mapRow({ ...base, "Task Name": "" }).error).toMatch(/Task Name/);
     expect(mapRow({ ...base, Iniciativa: "" }).error).toMatch(/Iniciativa/);
   });
@@ -151,12 +161,12 @@ describe("importTasks — criterio 1 de WP14", () => {
   it("crea iniciativas y asignaciones CON responsable y criterio de aceptación", () => {
     const s = importTasks(db, csv());
 
-    // 6 filas válidas de 7: 'Marciano' está fuera del roster y se reporta.
+    // 6 filas válidas de 7: 'Marciano' no está en el equipo y se reporta.
     expect(s.created).toBe(6);
     expect(s.updated).toBe(0);
     expect(s.errors).toHaveLength(1);
     expect(s.errors[0].title).toBe("Diseñar el logo del huerto");
-    expect(s.errors[0].reason).toMatch(/fuera del roster/);
+    expect(s.errors[0].reason).toBe("no encuentro a «Marciano» en el equipo");
 
     // Iniciativas creadas desde el CSV (más las sembradas por el roster).
     const names = listInitiatives(db).map((i) => i.name);
@@ -167,7 +177,8 @@ describe("importTasks — criterio 1 de WP14", () => {
     const plantar = byTitle(db, "Plantar el huerto de pruebas")!;
     expect(plantar.owner_wallet).toBe(pendingPrincipal("fausto"));
     expect(plantar.priority).toBe("High");
-    expect(plantar.status).toBe("Backlog");
+    // Con responsable, la pieza nace Asignada (como en la web), aunque el CSV diga Backlog.
+    expect(plantar.status).toBe("Asignada");
     // Criterio de aceptación importado íntegro, con su coma interna.
     expect(plantar.acceptance_criteria).toBe("Tres bancales sembrados, con riego programado.");
     // Descripción con coma dentro de comillas.
@@ -184,7 +195,8 @@ describe("importTasks — criterio 1 de WP14", () => {
 
   it("mapea los estados y horizontes del CSV al modelo", () => {
     importTasks(db, csv());
-    expect(byTitle(db, "Regar el huerto")!.status).toBe("En curso");
+    // 'En curso' con responsable entra como 'Asignada': quien la tiene la empieza en el tablero.
+    expect(byTitle(db, "Regar el huerto")!.status).toBe("Asignada");
     // 'Hecho' del CSV → 'Hecha' del modelo, y queda con fecha de cierre.
     const cartel = byTitle(db, "Pintar el cartel del huerto")!;
     expect(cartel.status).toBe("Hecha");
@@ -237,5 +249,367 @@ describe("importTasks — criterio 1 de WP14", () => {
   it("falla fuerte si falta una columna obligatoria o el CSV está vacío", () => {
     expect(() => importTasks(db, "Task Name,Status\nAlgo,Backlog\n")).toThrow(/Falta la columna/);
     expect(() => importTasks(db, "")).toThrow(/vacío/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// WP31-A2 · resolución por datos y sin puntos (criterio A2-3, spec §5.A.6)
+// ---------------------------------------------------------------------------
+
+const FUNDADOR = "GFOUNDERSESIONAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+const FAUSTO_REAL = "GFAUSTOREALAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+const MARCIANO = "GMARCIANOAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+const OTRO_MARCIANO = "GOTROMARCIANOAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+const EXTERNA = "GEXTERNAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+
+function persona(db: DB, wallet: string, nombre: string, o: { role?: string; isDemo?: number; status?: string } = {}) {
+  db.prepare(
+    `INSERT INTO users (wallet, display_name, role, is_demo, status, cla_signed) VALUES (?, ?, ?, ?, ?, 1)`
+  ).run(wallet, nombre, o.role ?? "core", o.isDemo ?? 0, o.status ?? "active");
+}
+
+function cuenta(db: DB, sql: string, ...p: unknown[]): number {
+  return Number((db.prepare(sql).get(...p) as { n: number }).n);
+}
+
+describe("importTasks — Assignee por datos (WP31-A2, A2-3)", () => {
+  let db: DB;
+  beforeEach(() => {
+    db = freshDb();
+    seedTeam(db);
+    persona(db, FUNDADOR, "John", { role: "founder" });
+  });
+
+  it("resuelve por el roster VINCULADO: la tarea va a la cuenta real y el pending no se recrea", () => {
+    persona(db, FAUSTO_REAL, "Fausto R");
+    const founder: TeamActor = { wallet: FUNDADOR, name: "John", role: "founder", isSupervisor: true };
+    vincularPrincipal(db, founder, { slug: "fausto", wallet: FAUSTO_REAL });
+
+    const s = importTasks(db, csv(), FUNDADOR);
+
+    expect(byTitle(db, "Plantar el huerto de pruebas")!.owner_wallet).toBe(FAUSTO_REAL);
+    expect(s.errors.map((e) => e.title)).toEqual(["Diseñar el logo del huerto"]);
+    expect(db.prepare(`SELECT wallet FROM users WHERE wallet = ?`).get(pendingPrincipal("fausto"))).toBeUndefined();
+  });
+
+  it("resuelve por display_name único entre activos no demo", () => {
+    persona(db, MARCIANO, "Marciano");
+    const s = importTasks(db, csv());
+    expect(s.errors).toEqual([]);
+    expect(s.created).toBe(7);
+    expect(byTitle(db, "Diseñar el logo del huerto")!.owner_wallet).toBe(MARCIANO);
+    expect(resolverPersona(db, "  marciano ")).toBe(MARCIANO);
+    expect(resolverPersona(db, "Ángela")).toBe(pendingPrincipal("angela"));
+    expect(resolverPersona(db, "Nadie")).toBeNull();
+  });
+
+  it("no adivina: nombre repetido, cuenta demo o inactiva → error de fila", () => {
+    persona(db, MARCIANO, "Marciano");
+    persona(db, OTRO_MARCIANO, "marciano");
+    const repetido = importTasks(db, csv());
+    expect(repetido.errors[0].reason).toBe("hay más de una persona llamada «Marciano» en el equipo");
+    expect(resolverPersona(db, "Marciano")).toBeNull();
+
+    const db2 = freshDb();
+    persona(db2, MARCIANO, "Marciano", { isDemo: 1 });
+    persona(db2, OTRO_MARCIANO, "Marciano", { status: "alumni" });
+    expect(importTasks(db2, csv()).errors[0].reason).toBe("no encuentro a «Marciano» en el equipo");
+  });
+
+  it("un contributor solo recibe trabajo de un proyecto donde es miembro", () => {
+    persona(db, EXTERNA, "Externa", { role: "contributor" });
+    const fila = "Task Name,Iniciativa,Assignee,Status\nPodar,Huerto Demo,Externa,Asignada\n";
+    const sin = importTasks(db, fila);
+    expect(sin.created).toBe(0);
+    expect(sin.errors[0].reason).toBe("«Externa» no está en el proyecto «Huerto Demo»: primero súmale");
+
+    const huerto = (db.prepare(`SELECT id FROM initiatives WHERE slug = 'huerto-demo'`).get() as { id: number } | undefined)?.id;
+    const id = huerto ?? Number(db.prepare(`INSERT INTO initiatives (slug, name) VALUES ('huerto-demo', 'Huerto Demo')`).run().lastInsertRowid);
+    db.prepare(`INSERT INTO project_members (initiative_id, wallet, rol_proyecto, vinculo) VALUES (?, ?, 'ejecuta', 'externo')`).run(id, EXTERNA);
+    const con = importTasks(db, fila);
+    expect(con.created).toBe(1);
+    expect(byTitle(db, "Podar")!.owner_wallet).toBe(EXTERNA);
+  });
+
+  it("importar filas Hecha NO crea puntos, reputación ni eventos de aprobación", () => {
+    const pts = cuenta(db, `SELECT COUNT(*) AS n FROM points_ledger`);
+    const rep = cuenta(db, `SELECT COUNT(*) AS n FROM reputation_events`);
+    importTasks(db, csv(), FUNDADOR);
+    importTasks(db, csv(), FUNDADOR);
+    expect(byTitle(db, "Pintar el cartel del huerto")!.status).toBe("Hecha");
+    expect(cuenta(db, `SELECT COUNT(*) AS n FROM points_ledger`)).toBe(pts);
+    expect(cuenta(db, `SELECT COUNT(*) AS n FROM reputation_events`)).toBe(rep);
+    expect(cuenta(db, `SELECT COUNT(*) AS n FROM assignment_events WHERE action = 'aprobar'`)).toBe(0);
+  });
+
+  it("acepta las columnas del copy (Initiative, Title, Assignee, Status, Priority, Size, Due)", () => {
+    const texto =
+      "Initiative,Title,Assignee,Status,Priority,Size,Due\n" +
+      "Cocina Demo,Hornear pan,Juan,Asignada,P2,m,2026-10-09\n" +
+      "Cocina Demo,Medir harina,,Backlog,Baja,XL,\n" +
+      "Cocina Demo,Lavar platos,,Backlog,Normal,,2026-02-30\n";
+    const s = importTasks(db, texto);
+    expect(s.created).toBe(1);
+    const pan = byTitle(db, "Hornear pan")!;
+    expect(pan).toMatchObject({
+      owner_wallet: pendingPrincipal("juan"),
+      status: "Asignada",
+      priority: "High",
+      size: "M",
+      due_date: "2026-10-09",
+    });
+    expect(s.errors.map((e) => [e.line, e.reason])).toEqual([
+      [3, "Size desconocido: 'XL' (usa S, M o L)."],
+      [4, "Due no es una fecha AAAA-MM-DD: '2026-02-30'."],
+    ]);
+  });
+
+  it("reimportar no reasigna ni replanifica una entrega En revisión, ni edita una Hecha", () => {
+    importTasks(db, csv());
+    const regar = byTitle(db, "Regar el huerto")!;
+    db.prepare(`UPDATE assignments SET status = 'En revisión' WHERE id = ?`).run(regar.id);
+    const cambiado = csv().replace("En curso,Normal,David,Huerto Demo", "En curso,Urgent,Fausto,Huerto Demo");
+    expect(cambiado).not.toBe(csv());
+
+    const s = importTasks(db, cambiado);
+
+    expect(s.updated).toBe(6);
+    expect(byTitle(db, "Regar el huerto")).toMatchObject({
+      owner_wallet: pendingPrincipal("david"),
+      priority: "Normal",
+      status: "En revisión",
+    });
+    expect(s.warnings.filter((w) => w.title === "Regar el huerto").map((w) => w.warning)).toEqual([
+      "está 'En revisión' con su responsable: no se reasigna desde el CSV (se cambia en el tablero)",
+    ]);
+  });
+
+  it("deja una fila 'importar' en talent_events con los conteos", () => {
+    importTasks(db, csv(), FUNDADOR);
+    const ev = db.prepare(`SELECT actor_wallet, action, detail FROM talent_events`).all() as Array<{
+      actor_wallet: string;
+      action: string;
+      detail: string;
+    }>;
+    expect(ev).toHaveLength(1);
+    expect(ev[0]).toMatchObject({ actor_wallet: FUNDADOR, action: "importar" });
+    expect(JSON.parse(ev[0].detail)).toEqual({ creadas: 6, yaEstaban: 0, conError: 1, proyectos: 2 });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Revisión A2 · el importador no fabrica estados ni reasigna en silencio
+// ---------------------------------------------------------------------------
+
+const VALE_SUP: TeamActor = { wallet: pendingPrincipal("vale"), name: "Vale", role: "core", isSupervisor: true };
+const JUAN_ACTOR: TeamActor = { wallet: pendingPrincipal("juan"), name: "Juan", role: "core", isSupervisor: false };
+const AHORA = new Date("2026-10-01T15:30:00.000Z");
+const CABECERA = "Task Name,Iniciativa,Status,Assignee,Priority,Size,Due\n";
+
+function eventos(db: DB, assignmentId: number) {
+  return db
+    .prepare(
+      `SELECT action, from_status, to_status, actor_wallet, created_at FROM assignment_events WHERE assignment_id = ? ORDER BY id`
+    )
+    .all(assignmentId) as Array<{
+    action: string;
+    from_status: string;
+    to_status: string;
+    actor_wallet: string;
+    created_at: string;
+  }>;
+}
+
+describe("importTasks — sin estados fabricados ni reasignaciones en silencio (revisión A2)", () => {
+  let db: DB;
+  beforeEach(() => {
+    db = freshDb();
+    seedTeam(db);
+    persona(db, FUNDADOR, "John", { role: "founder" });
+  });
+
+  it("En curso, En revisión o Bloqueada con responsable entran como Asignada, con aviso y evento 'crear' de quien importa", () => {
+    const s = importTasks(
+      db,
+      CABECERA +
+        "Pieza L,Huerto Demo,En revisión,Fausto,,L,\n" +
+        "Otra,Huerto Demo,En curso,Fausto,,S,\n" +
+        "Trabada,Huerto Demo,Bloqueada,David,,,\n" +
+        "Lista,Huerto Demo,Asignada,Juan,,,\n" +
+        "Propuesta,Huerto Demo,Backlog,Juan,,,\n" +
+        "Suelta,Huerto Demo,Backlog,,,,\n",
+      VALE_SUP.wallet,
+      AHORA
+    );
+    expect(s.created).toBe(6);
+    for (const t of ["Pieza L", "Otra", "Trabada", "Lista", "Propuesta"]) {
+      expect(byTitle(db, t)!.status, t).toBe("Asignada");
+    }
+    expect(byTitle(db, "Suelta")).toMatchObject({ status: "Backlog", owner_wallet: null });
+    expect(s.warnings.filter((w) => /se importa como 'Asignada'/.test(w.warning)).map((w) => w.title)).toEqual([
+      "Pieza L",
+      "Otra",
+      "Trabada",
+      "Propuesta",
+    ]);
+    // Ninguna pieza nace en vuelo: nadie puede aprobar algo que nadie empezó ni envió.
+    expect(cuenta(db, `SELECT COUNT(*) AS n FROM assignments WHERE status IN ('En curso', 'En revisión', 'Bloqueada')`)).toBe(0);
+
+    // Cada pieza nueva empieza su historia con un evento de quien importó, con el `now` inyectado.
+    for (const t of ["Pieza L", "Lista", "Suelta"]) {
+      const a = byTitle(db, t)!;
+      expect(eventos(db, a.id), t).toEqual([
+        {
+          action: "crear",
+          from_status: "Backlog",
+          to_status: a.status,
+          actor_wallet: VALE_SUP.wallet,
+          created_at: instanteDb(AHORA),
+        },
+      ]);
+    }
+
+    // El ataque del PoC: quien importó ya no puede aprobar la pieza L "En revisión".
+    const piezaL = byTitle(db, "Pieza L")!;
+    expect(() => applyAssignmentAction(db, { assignmentId: piezaL.id, action: "aprobar", actor: VALE_SUP })).toThrow();
+    expect(byTitle(db, "Pieza L")!.status).toBe("Asignada");
+    expect(cuenta(db, `SELECT COUNT(*) AS n FROM assignment_events WHERE action = 'aprobar'`)).toBe(0);
+  });
+
+  it("una fila Hecha entra como historia: sin evento, sin puntos y sin nada que aprobar", () => {
+    importTasks(db, CABECERA + "Vieja,Huerto Demo,Hecho,Juan,,M,\n", FUNDADOR, AHORA);
+    const vieja = byTitle(db, "Vieja")!;
+    expect(vieja.status).toBe("Hecha");
+    expect(eventos(db, vieja.id)).toEqual([]);
+    expect(cuenta(db, `SELECT COUNT(*) AS n FROM points_ledger`)).toBe(0);
+  });
+
+  it("el CLI (sin quien importe) deja el evento a nombre del importador, nunca vacío", () => {
+    importTasks(db, CABECERA + "Desde consola,Huerto Demo,Asignada,Juan,,,\n", null, AHORA);
+    expect(eventos(db, byTitle(db, "Desde consola")!.id).map((e) => e.actor_wallet)).toEqual(["cli"]);
+  });
+
+  it("reimportar sobre una pieza En curso no le quita ni le cambia el responsable", () => {
+    importTasks(db, CABECERA + "Pieza uno,Huerto Demo,Asignada,Juan,,,\n", FUNDADOR, AHORA);
+    const id = byTitle(db, "Pieza uno")!.id;
+    applyAssignmentAction(db, { assignmentId: id, action: "empezar", actor: JUAN_ACTOR, now: AHORA });
+
+    const sinAssignee = importTasks(db, CABECERA + "Pieza uno,Huerto Demo,Backlog,,,,\n", FUNDADOR, AHORA);
+    expect(byTitle(db, "Pieza uno")).toMatchObject({ status: "En curso", owner_wallet: pendingPrincipal("juan") });
+    expect(sinAssignee.warnings.map((w) => w.warning).join(" ")).toMatch(/no se reasigna desde el CSV/);
+
+    const otro = importTasks(db, CABECERA + "Pieza uno,Huerto Demo,En curso,David,,,\n", FUNDADOR, AHORA);
+    expect(byTitle(db, "Pieza uno")).toMatchObject({ status: "En curso", owner_wallet: pendingPrincipal("juan") });
+    expect(otro.warnings.map((w) => w.warning).join(" ")).toMatch(/no se reasigna desde el CSV/);
+    expect(eventos(db, id).map((e) => e.action)).toEqual(["crear", "empezar"]);
+  });
+
+  it("reimportar sobre una pieza Asignada tampoco la pasa a otra persona", () => {
+    importTasks(db, CABECERA + "Pieza dos,Huerto Demo,Asignada,Juan,,,\n", FUNDADOR, AHORA);
+    importTasks(db, CABECERA + "Pieza dos,Huerto Demo,Asignada,David,,,\n", FUNDADOR, AHORA);
+    expect(byTitle(db, "Pieza dos")!.owner_wallet).toBe(pendingPrincipal("juan"));
+  });
+
+  it("reimportar no replanifica una pieza bloqueada desde revisión (volvería a revisión cambiada)", () => {
+    importTasks(db, CABECERA + "Pieza tres,Huerto Demo,Asignada,Juan,Normal,S,2026-10-09\n", FUNDADOR, AHORA);
+    const id = byTitle(db, "Pieza tres")!.id;
+    applyAssignmentAction(db, { assignmentId: id, action: "empezar", actor: JUAN_ACTOR, now: AHORA });
+    applyAssignmentAction(db, { assignmentId: id, action: "enviar_a_revision", actor: JUAN_ACTOR, now: AHORA });
+    applyAssignmentAction(db, { assignmentId: id, action: "bloquear", reason: "falta acceso", actor: JUAN_ACTOR, now: AHORA });
+    expect(byTitle(db, "Pieza tres")).toMatchObject({ status: "Bloqueada", status_before_block: "En revisión" });
+
+    importTasks(db, CABECERA + "Pieza tres,Huerto Demo,Asignada,David,Urgent,L,2026-12-31\n", FUNDADOR, AHORA);
+
+    expect(byTitle(db, "Pieza tres")).toMatchObject({
+      owner_wallet: pendingPrincipal("juan"),
+      priority: "Normal",
+      size: "S",
+      due_date: "2026-10-09",
+    });
+  });
+
+  it("en Backlog el responsable sí sigue al CSV, por la máquina y con evento de quien importa", () => {
+    importTasks(db, CABECERA + "Pieza cuatro,Huerto Demo,Backlog,,,,\n", FUNDADOR, AHORA);
+    const id = byTitle(db, "Pieza cuatro")!.id;
+    importTasks(db, CABECERA + "Pieza cuatro,Huerto Demo,Backlog,Juan,,,\n", VALE_SUP.wallet, AHORA);
+    expect(byTitle(db, "Pieza cuatro")).toMatchObject({ status: "Asignada", owner_wallet: pendingPrincipal("juan") });
+    expect(eventos(db, id).slice(1)).toEqual([
+      {
+        action: "asignar",
+        from_status: "Backlog",
+        to_status: "Asignada",
+        actor_wallet: VALE_SUP.wallet,
+        created_at: instanteDb(AHORA),
+      },
+    ]);
+  });
+
+  it("una pieza en Backlog con responsable (dato viejo) puede quedar sin él; fuera de Backlog, nunca", () => {
+    const huerto = Number(
+      db.prepare(`INSERT INTO initiatives (slug, name) VALUES ('huerto-demo', 'Huerto Demo')`).run().lastInsertRowid
+    );
+    db.prepare(
+      `INSERT INTO assignments (title, initiative_id, owner_wallet, status, import_key) VALUES ('Vieja', ?, ?, 'Backlog', 'csv:huerto-demo:vieja')`
+    ).run(huerto, pendingPrincipal("juan"));
+    importTasks(db, CABECERA + "Vieja,Huerto Demo,Backlog,,,,\n", FUNDADOR, AHORA);
+    const vieja = byTitle(db, "Vieja")!;
+    expect(vieja).toMatchObject({ status: "Backlog", owner_wallet: null });
+    expect(eventos(db, vieja.id).map((e) => [e.action, e.actor_wallet])).toEqual([["reasignar", FUNDADOR]]);
+    expect(cuenta(db, `SELECT COUNT(*) AS n FROM assignments WHERE owner_wallet IS NULL AND status <> 'Backlog'`)).toBe(0);
+  });
+
+  it("reimportar no devuelve a su proyecto del CSV una pieza que el tablero movió", () => {
+    importTasks(db, CABECERA + "Pieza cinco,Huerto Demo,Asignada,Juan,,,\n", FUNDADOR, AHORA);
+    const cocina = Number(
+      db.prepare(`INSERT INTO initiatives (slug, name) VALUES ('cocina-demo', 'Cocina Demo')`).run().lastInsertRowid
+    );
+    const id = byTitle(db, "Pieza cinco")!.id;
+    db.prepare(`UPDATE assignments SET initiative_id = ? WHERE id = ?`).run(cocina, id);
+    const s = importTasks(db, CABECERA + "Pieza cinco,Huerto Demo,Asignada,Juan,,,\n", FUNDADOR, AHORA);
+    expect(byTitle(db, "Pieza cinco")!.initiative_id).toBe(cocina);
+    expect(s.warnings.map((w) => w.warning).join(" ")).toMatch(/otro proyecto/);
+  });
+
+  it("asignar al reimportar mira la membresía en el proyecto donde está HOY la pieza", () => {
+    persona(db, EXTERNA, "Externa", { role: "contributor" });
+    importTasks(db, CABECERA + "Pieza siete,Huerto Demo,Backlog,,,,\n", FUNDADOR, AHORA);
+    const huerto = byTitle(db, "Pieza siete")!.initiative_id!;
+    db.prepare(`INSERT INTO project_members (initiative_id, wallet, rol_proyecto, vinculo) VALUES (?, ?, 'ejecuta', 'externo')`).run(
+      huerto,
+      EXTERNA
+    );
+    const cocina = Number(
+      db.prepare(`INSERT INTO initiatives (slug, name) VALUES ('cocina-demo', 'Cocina Demo')`).run().lastInsertRowid
+    );
+    db.prepare(`UPDATE assignments SET initiative_id = ? WHERE title = 'Pieza siete'`).run(cocina);
+
+    const s = importTasks(db, CABECERA + "Pieza siete,Huerto Demo,Backlog,Externa,,,\n", FUNDADOR, AHORA);
+
+    expect(s.errors.map((e) => e.reason)).toEqual(["«Externa» no está en el proyecto de esta pieza: primero súmale"]);
+    expect(byTitle(db, "Pieza siete")).toMatchObject({ status: "Backlog", owner_wallet: null, initiative_id: cocina });
+  });
+
+  it("reimportar deja un evento 'editar' solo si cambia la planificación", () => {
+    importTasks(db, CABECERA + "Pieza seis,Huerto Demo,Asignada,Juan,Normal,,\n", FUNDADOR, AHORA);
+    const id = byTitle(db, "Pieza seis")!.id;
+    importTasks(db, CABECERA + "Pieza seis,Huerto Demo,Asignada,Juan,Normal,,\n", FUNDADOR, AHORA);
+    expect(eventos(db, id)).toHaveLength(1);
+    importTasks(db, CABECERA + "Pieza seis,Huerto Demo,Asignada,Juan,High,M,\n", FUNDADOR, AHORA);
+    expect(byTitle(db, "Pieza seis")).toMatchObject({ priority: "High", size: "M", owner_wallet: pendingPrincipal("juan") });
+    const ev = eventos(db, id);
+    expect(ev).toHaveLength(2);
+    expect(ev[1]).toMatchObject({ action: "editar", from_status: "Asignada", to_status: "Asignada", actor_wallet: FUNDADOR });
+  });
+});
+
+describe("importTasks — una fila rara no tumba la importación entera", () => {
+  it("título o iniciativa sin letras ni números → error de fila, el resto entra", () => {
+    const db = freshDb();
+    const s = importTasks(db, "Initiative,Title\n¿?,Algo\nHuerto Demo,!!!\nHuerto Demo,Regar\n");
+    expect(s.created).toBe(1);
+    expect(s.errors.map((e) => [e.line, e.reason])).toEqual([
+      [2, "La 'Iniciativa' necesita letras o números."],
+      [3, "El 'Task Name' necesita letras o números."],
+    ]);
   });
 });
