@@ -8,8 +8,10 @@
  *
  * WP31: en el tablero de un proyecto la entrega nace en ESE proyecto
  * (`proyectoFijo`); quien trabaja por proyecto siempre elige uno de los suyos
- * (`requiereProyecto`); y el tamaño lo fija quien planifica (`puedeFijarTamano`). Las
- * listas que recibe salen de lo que esta persona puede ver, nunca del equipo entero.
+ * (`requiereProyecto`); y lo que se planifica (tamaño, prioridad, fecha y la bandeja
+ * del founder) lo fija quien planifica (`puedePlanificar`; el servidor lo vuelve a
+ * decidir en `createAssignmentAs`). Las listas que recibe salen de lo que esta
+ * persona puede ver, nunca del equipo entero.
  *
  * Copys de ENTREGA (doc 16): se describe el trabajo, nunca a la persona.
  */
@@ -27,6 +29,7 @@ export interface OpcionIniciativa {
 }
 
 const COPY_SIN_TAMANO = "Sin tamaño: cuenta como S hasta que quien planifica lo defina.";
+const COPY_SIN_PLAN = "Nace con prioridad Normal y sin fecha: la prioridad y la fecha las fija quien planifica el proyecto.";
 
 export default function TeamNewAssignment({
   personas,
@@ -36,6 +39,7 @@ export default function TeamNewAssignment({
   proyectoFijo,
   requiereProyecto = false,
   puedeFijarTamano = true,
+  puedePlanificar,
   etiqueta = "+ Añadir trabajo",
 }: {
   personas: OpcionPersona[];
@@ -49,9 +53,12 @@ export default function TeamNewAssignment({
   requiereProyecto?: boolean;
   /** El tamaño lo fija quien planifica; si no, la entrega nace sin tamaño. */
   puedeFijarTamano?: boolean;
+  /** Prioridad, fecha y bandeja del founder: de quien planifica. Por defecto, igual que el tamaño. */
+  puedePlanificar?: boolean;
   etiqueta?: string;
 }) {
   const router = useRouter();
+  const planifica = puedePlanificar ?? puedeFijarTamano;
   const proyectoInicial = proyectoFijo
     ? String(proyectoFijo.id)
     : requiereProyecto && iniciativas.length > 0
@@ -105,12 +112,12 @@ export default function TeamNewAssignment({
           description: description || undefined,
           initiativeId: initiativeId ? Number(initiativeId) : null,
           ownerWallet: ownerWallet || null,
-          priority,
+          priority: planifica ? priority : undefined,
           horizon,
           size: puedeFijarTamano ? size || null : null,
-          dueDate: dueDate || null,
+          dueDate: planifica ? dueDate || null : null,
           acceptanceCriteria: acceptanceCriteria || undefined,
-          needsFounder,
+          needsFounder: planifica ? needsFounder : false,
         }),
       });
       const data = await res.json();
@@ -203,35 +210,41 @@ export default function TeamNewAssignment({
               ))}
           </select>
         </div>
-        <div>
-          <label className="block text-xs text-muted" htmlFor="nueva-prio">
-            Prioridad
-          </label>
-          <select
-            id="nueva-prio"
-            value={priority}
-            onChange={(e) => setPriority(e.target.value as Priority)}
-            className={`mt-1 ${campo}`}
-          >
-            {PRIORITIES.map((p) => (
-              <option key={p} value={p}>
-                {PRIORITY_LABEL[p]}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs text-muted" htmlFor="nueva-due">
-            Vence
-          </label>
-          <input
-            id="nueva-due"
-            type="date"
-            value={dueDate}
-            onChange={(e) => setDueDate(e.target.value)}
-            className={`mt-1 ${campo}`}
-          />
-        </div>
+        {planifica ? (
+          <>
+            <div>
+              <label className="block text-xs text-muted" htmlFor="nueva-prio">
+                Prioridad
+              </label>
+              <select
+                id="nueva-prio"
+                value={priority}
+                onChange={(e) => setPriority(e.target.value as Priority)}
+                className={`mt-1 ${campo}`}
+              >
+                {PRIORITIES.map((p) => (
+                  <option key={p} value={p}>
+                    {PRIORITY_LABEL[p]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-muted" htmlFor="nueva-due">
+                Vence
+              </label>
+              <input
+                id="nueva-due"
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                className={`mt-1 ${campo}`}
+              />
+            </div>
+          </>
+        ) : (
+          <p className="self-end text-xs text-faint sm:col-span-2">{COPY_SIN_PLAN}</p>
+        )}
       </div>
 
       {detalle ? (
@@ -308,15 +321,17 @@ export default function TeamNewAssignment({
             />
           </div>
 
-          <label className="flex items-center gap-2 text-xs text-muted">
-            <input
-              type="checkbox"
-              checked={needsFounder}
-              onChange={(e) => setNeedsFounder(e.target.checked)}
-              className="h-4 w-4"
-            />
-            Espera una decisión del founder (aparece en su bandeja del dashboard)
-          </label>
+          {planifica ? (
+            <label className="flex items-center gap-2 text-xs text-muted">
+              <input
+                type="checkbox"
+                checked={needsFounder}
+                onChange={(e) => setNeedsFounder(e.target.checked)}
+                className="h-4 w-4"
+              />
+              Espera una decisión del founder (aparece en su bandeja del dashboard)
+            </label>
+          ) : null}
         </div>
       ) : null}
 

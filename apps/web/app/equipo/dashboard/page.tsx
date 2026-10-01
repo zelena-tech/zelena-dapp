@@ -109,7 +109,8 @@ export default async function EquipoDashboardPage() {
   }
 
   const day = today();
-  const digest = buildDailyDigest(db, day);
+  // Como el resto del dashboard: solo lo que esta persona ve (§4.A.12).
+  const digest = buildDailyDigest(db, day, actor);
   const digestText = renderDigestText(digest);
 
   const { blocked, waitingOnFounder, initiatives, load, rites, epoch } = data;

@@ -80,8 +80,11 @@ const ADVANCING: readonly TeamAction[] = ["asignar", "empezar", "enviar_a_revisi
 /**
  * Digest de un día concreto. `day` es `YYYY-MM-DD` y se pasa tal cual a las
  * consultas de WP14, que filtran por su columna `day`.
+ *
+ * Con `actor` (WP31 §4.A.12), los cambios de estado son solo los de piezas que esa
+ * persona ve: nada de un proyecto de cliente donde no participa.
  */
-export function buildDailyDigest(db: DB, day: string): DailyDigest {
+export function buildDailyDigest(db: DB, day: string, actor?: TeamActor): DailyDigest {
   const checkins: DigestCheckin[] = checkinsOfDay(db, day).map((c) => ({
     wallet: c.wallet,
     name: c.name ?? c.wallet,
@@ -90,7 +93,7 @@ export function buildDailyDigest(db: DB, day: string): DailyDigest {
     blocked: c.blocked,
   }));
 
-  const events: DigestEvent[] = assignmentEventsOfDay(db, day).map((e) => ({
+  const events: DigestEvent[] = assignmentEventsOfDay(db, day, actor).map((e) => ({
     assignmentId: e.assignment_id,
     title: e.title,
     action: e.action,
@@ -125,20 +128,21 @@ export function buildDailyDigest(db: DB, day: string): DailyDigest {
   };
 }
 
-/** Digest de hoy. */
-export function buildTodayDigest(db: DB = getDb(), now: Date = new Date()): DailyDigest {
-  return buildDailyDigest(db, today(now));
+/** Digest de hoy. Con `actor`, solo lo que esa persona ve (§4.A.12). */
+export function buildTodayDigest(db: DB = getDb(), now: Date = new Date(), actor?: TeamActor): DailyDigest {
+  return buildDailyDigest(db, today(now), actor);
 }
 
 /**
  * Misma puerta que el dashboard: founder y supervisores. La regla vive en
- * lib/roles.ts; aquí solo se invoca. Lanza `TeamError(403)`.
+ * lib/roles.ts; aquí solo se invoca. Lanza `TeamError(403)`. Y, como el dashboard,
+ * solo cuenta lo que esa persona ve (§4.A.12).
  */
 export function dailyDigestFor(db: DB, actor: TeamActor, day: string): DailyDigest {
   if (!puedeVerTodoElEquipo(actor)) {
     throw new TeamError(403, "El digest del equipo es para el founder y los supervisores.");
   }
-  return buildDailyDigest(db, day);
+  return buildDailyDigest(db, day, actor);
 }
 
 // ---------------------------------------------------------------------------

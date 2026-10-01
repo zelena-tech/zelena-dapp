@@ -228,9 +228,13 @@ describe("WP31 · puedeTransicionar (flags y orden de los motivos)", () => {
           ok: false,
           motivo: MOTIVO_TRANSICION.invitacion,
         });
+        expect(puedeTransicionar(base({ accion, vinculoInvitacion: true, vinculoAsignacion: true }))).toEqual({
+          ok: false,
+          motivo: MOTIVO_TRANSICION.invitacion,
+        });
       });
 
-      it("dueño pending sin vincular: solo founder o supervisor (cuarto motivo)", () => {
+      it("dueño pending sin vincular: solo founder o supervisor (quinto motivo)", () => {
         expect(puedeTransicionar(base({ accion, duenoPendiente: true, permisos: NADA }))).toEqual({
           ok: false,
           motivo: MOTIVO_TRANSICION.pendiente,
@@ -252,6 +256,29 @@ describe("WP31 · puedeTransicionar (flags y orden de los motivos)", () => {
       });
     });
   }
+
+  describe("quien sumó al dueño al proyecto o le asignó la pieza (cuarto motivo, solo al aprobar)", () => {
+    it("no aprueba, aunque revise o sea global; el motivo va antes del de pending", () => {
+      expect(puedeTransicionar(base({ accion: "aprobar", vinculoAsignacion: true }))).toEqual({
+        ok: false,
+        motivo: MOTIVO_TRANSICION.asignacion,
+      });
+      expect(
+        puedeTransicionar(base({ accion: "aprobar", vinculoAsignacion: true, permisos: planificador, esGlobal: true }))
+      ).toEqual({ ok: false, motivo: MOTIVO_TRANSICION.asignacion });
+      expect(
+        puedeTransicionar(base({ accion: "aprobar", vinculoAsignacion: true, duenoPendiente: true, permisos: NADA }))
+      ).toEqual({ ok: false, motivo: MOTIVO_TRANSICION.asignacion });
+    });
+
+    it("devolver sí puede (devolver no emite nada: es pedir lo que falta)", () => {
+      expect(puedeTransicionar(base({ accion: "devolver", vinculoAsignacion: true }))).toEqual({ ok: true });
+      expect(puedeTransicionar(base({ accion: "devolver", vinculoAsignacion: true, permisos: ejecutor }))).toEqual({
+        ok: false,
+        motivo: MOTIVO_TRANSICION.revision,
+      });
+    });
+  });
 
   describe("asignar", () => {
     it("pieza sin dueño: con tomar o planificar", () => {

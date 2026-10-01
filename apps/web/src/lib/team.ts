@@ -51,7 +51,7 @@ import {
   type TeamActor,
   type Vinculo,
 } from "./roles.ts";
-import { identidadesDe, mismaPersona } from "./identidades.ts";
+import { identidadesDe, mismaPersona, principalFounder } from "./identidades.ts";
 import { diaLocal, instanteDb, parseInstanteDb } from "./zona-horaria.ts";
 import { getActiveGenome } from "./genome.ts";
 
@@ -365,7 +365,14 @@ export function createAssignment(db: DB, input: CreateAssignmentInput): number {
  *  - Asignárselo a OTRA persona es de quien planifica el proyecto (founder,
  *    supervisor o rol `estructura`), y el destino tiene que ser del equipo interno o
  *    miembro del proyecto. Sin dueño o consigo mismo, adelante.
- *  - El tamaño lo fija quien planifica: si quien crea no planifica, `size` es null.
+ *  - Lo que se planifica lo fija quien planifica: si quien crea no planifica, la pieza
+ *    nace sin tamaño, sin fecha, fuera de la bandeja del founder y con prioridad
+ *    Normal como mucho (Baja, si la pide). Son los mismos campos que en
+ *    `editarAsignacion` exigen planificar.
+ *  - El cliente: el del proyecto, si lo tiene (no se acepta otro); en una pieza sin
+ *    proyecto de cliente, solo el founder o quien participa en ese cliente
+ *    (`client_members`) lo elige, igual que el nodo de su grafo. Un cliente ajeno y uno
+ *    que no existe responden igual (403): no se pueden enumerar.
  *
  * La regla es por ROL, nunca por nombre: cuando entre otra persona a ese rol, hereda
  * la capacidad sin tocar código.
@@ -377,7 +384,10 @@ export function createAssignmentAs(
   now: Date = new Date()
 ): number {
   const initiativeId = input.initiativeId ?? null;
-  if (initiativeId !== null && !getInitiative(db, initiativeId)) {
+  const ini = initiativeId !== null ? getInitiative(db, initiativeId) : undefined;
+  if (initiativeId !== null && !ini) {
+    // Para quien no ve todo, un proyecto que no existe responde como uno ajeno.
+    if (actor.role !== "founder") throw new TeamError(403, "No puedes crear trabajo en este proyecto.");
     throw new TeamError(400, "Ese proyecto no existe.");
   }
   const permisos = permisosDe(db, actor, initiativeId);
@@ -400,18 +410,29 @@ export function createAssignmentAs(
     if (!u) throw new TeamError(400, "Esa persona no está en el registro.");
     if (paraOtro) validarDestino(db, u, initiativeId);
   }
-  if (input.clientId != null) {
-    const cliente = db.prepare(`SELECT id FROM clients WHERE id = ?`).get(input.clientId);
-    if (!cliente) throw new TeamError(400, "Ese cliente no existe.");
-  }
+  const cliente = clienteDeLaPieza(db, actor, ini ?? null, input);
   // Con dueño, la pieza nace 'Asignada'; sin dueño, al Backlog. Así el estado no
   // miente: nada aparece como asignado a nadie.
   const status: TeamStatus = destino ? "Asignada" : "Backlog";
-  const size = permisos.planificar ? (input.size ?? null) : null;
+  const planifica = permisos.planificar;
+  const plan = {
+    size: planifica ? (input.size ?? null) : null,
+    priority: planifica ? (input.priority ?? "Normal") : input.priority === "Low" ? ("Low" as const) : ("Normal" as const),
+    dueDate: planifica ? (input.dueDate ?? null) : null,
+    needsFounder: planifica ? !!input.needsFounder : false,
+  };
   const day = today(now);
   let id = 0;
   const tx = db.transaction(() => {
-    id = createAssignment(db, { ...input, initiativeId, size, ownerWallet: destino, status, createdBy: actor.wallet });
+    id = createAssignment(db, {
+      ...input,
+      initiativeId,
+      ...cliente,
+      ...plan,
+      ownerWallet: destino,
+      status,
+      createdBy: actor.wallet,
+    });
     // Evento append-only desde el minuto cero: la historia de la entrega empieza
     // aquí, y es lo que hace que el digest del día vea las piezas creadas hoy.
     // `from_status` es NOT NULL, así que el nacimiento se registra como Backlog→X.
@@ -424,6 +445,38 @@ export function createAssignmentAs(
   });
   tx();
   return id;
+}
+
+export const COPY_CLIENTE_NO_DISPONIBLE = "No puedes asociar esta entrega a ese cliente.";
+
+/**
+ * Cliente (y nodo de su grafo) de una pieza nueva. En un proyecto de cliente, el del
+ * proyecto, y otro → 403. Fuera de él, elegir un cliente o un nodo es del founder o de
+ * quien participa en ese cliente; para los demás, uno ajeno y uno que no existe
+ * responden igual (403), así no se enumeran.
+ */
+function clienteDeLaPieza(
+  db: DB,
+  actor: TeamActor,
+  ini: InitiativeRow | null,
+  input: Pick<CreateAssignmentInput, "clientId" | "graphNodeId">
+): { clientId: number | null; graphNodeId: string | null } {
+  const heredado = ini?.client_id ?? null;
+  const pedido = input.clientId ?? null;
+  const graphNodeId = (input.graphNodeId ?? "").trim() || null;
+  if (heredado !== null && pedido !== null && pedido !== heredado) {
+    throw new TeamError(403, COPY_CLIENTE_NO_DISPONIBLE);
+  }
+  const clientId = heredado ?? pedido;
+  const eligeCliente = heredado === null && pedido !== null;
+  if (actor.role === "founder") {
+    if (eligeCliente) validarCliente(db, clientId);
+    return { clientId, graphNodeId };
+  }
+  if ((eligeCliente || graphNodeId !== null) && (clientId === null || !participaEnCliente(db, identidadesDe(db, actor.wallet), clientId))) {
+    throw new TeamError(403, COPY_CLIENTE_NO_DISPONIBLE);
+  }
+  return { clientId, graphNodeId };
 }
 
 export function getAssignment(db: DB, id: number): AssignmentRow | undefined {
@@ -479,23 +532,72 @@ export function assignmentsForAllTeam(db: DB): AssignmentView[] {
 
 /**
  * Criterio 2 de WP14: un `core`/`contributor` ve SOLO lo suyo; founder y supervisor
- * ven todo. Punto ÚNICO de la regla — WP15 y WP19 llaman aquí.
+ * ven todo el equipo. Punto ÚNICO de la regla — WP15 y WP19 llaman aquí.
+ *
+ * WP31 §4.A.12: "todo el equipo" no incluye un proyecto de cliente donde la persona
+ * no participa (`piezasVisiblesPara`); el founder sí lo ve todo.
  */
 export function visibleAssignments(db: DB, actor: TeamActor): AssignmentView[] {
-  return puedeVerTodoElEquipo(actor) ? assignmentsForAllTeam(db) : assignmentsForOwner(db, actor.wallet);
+  return puedeVerTodoElEquipo(actor)
+    ? piezasVisiblesPara(db, actor, assignmentsForAllTeam(db))
+    : assignmentsForOwner(db, actor.wallet);
 }
 
-export function listBlocked(db: DB): AssignmentView[] {
-  return db
+/**
+ * Las piezas de `rows` que el actor puede ver (spec WP31 §4.A.12), para las listas del
+ * equipo (`/equipo/hoy`, `/equipo/proyectos`, el dashboard y el digest):
+ *  - con proyecto, la regla del proyecto (`puedeVerProyecto`: uno de cliente, solo
+ *    quien participa por `client_members` o `project_members`);
+ *  - sin proyecto pero de un cliente, solo quien participa en ese cliente;
+ *  - sin ninguno de los dos, los permisos globales (`permisosDe(null).ver`).
+ * El founder ve todo. No cambia el orden de `rows`.
+ */
+export function piezasVisiblesPara<T extends { initiative_id: number | null; client_id: number | null }>(
+  db: DB,
+  actor: TeamActor,
+  rows: T[]
+): T[] {
+  if (actor.role === "founder") return rows;
+  const ids = identidadesDe(db, actor.wallet);
+  const global = permisosEnProyecto(actor, []).ver;
+  const porProyecto = new Map<number, boolean>();
+  const porCliente = new Map<number, boolean>();
+  return rows.filter((r) => {
+    if (r.initiative_id != null) {
+      let ve = porProyecto.get(r.initiative_id);
+      if (ve === undefined) {
+        const ini = getInitiative(db, r.initiative_id);
+        ve = !!ini && veIniciativa(db, actor, ini);
+        porProyecto.set(r.initiative_id, ve);
+      }
+      return ve;
+    }
+    if (r.client_id != null) {
+      let ve = porCliente.get(r.client_id);
+      if (ve === undefined) {
+        ve = participaEnCliente(db, ids, r.client_id);
+        porCliente.set(r.client_id, ve);
+      }
+      return ve;
+    }
+    return global;
+  });
+}
+
+/** Lo bloqueado. Con `actor`, solo lo que esa persona puede ver (§4.A.12). */
+export function listBlocked(db: DB, actor?: TeamActor): AssignmentView[] {
+  const rows = db
     .prepare(`${VIEW_SELECT} WHERE a.status = 'Bloqueada' ORDER BY a.blocked_at, a.id`)
     .all() as AssignmentView[];
+  return actor ? piezasVisiblesPara(db, actor, rows) : rows;
 }
 
-/** Bandeja de gates de John: lo que espera una decisión suya (WP15). */
-export function listNeedsFounder(db: DB): AssignmentView[] {
-  return db
+/** Bandeja de gates de John: lo que espera una decisión suya (WP15). Con `actor`, solo lo que ve. */
+export function listNeedsFounder(db: DB, actor?: TeamActor): AssignmentView[] {
+  const rows = db
     .prepare(`${VIEW_SELECT} WHERE a.needs_founder = 1 AND a.status <> 'Hecha' ${TODAY_ORDER}`)
     .all() as AssignmentView[];
+  return actor ? piezasVisiblesPara(db, actor, rows) : rows;
 }
 
 export interface InitiativeSummary {
@@ -517,16 +619,23 @@ export interface InitiativeSummary {
  * y `Parqueado`). Si se filtrara por el horizonte de la iniciativa, pedir
  * "Parqueado" no devolvería nada aunque haya trabajo parqueado. La iniciativa
  * conserva su propio horizonte (el más urgente de sus filas) como etiqueta.
+ *
+ * Con `actor` (WP31 §4.A.12), solo los proyectos y las piezas que esa persona ve: un
+ * proyecto de cliente donde no participa no aparece, ni sus piezas sueltas.
  */
 export function assignmentsByInitiative(
   db: DB,
-  opts: { horizon?: Horizon; now?: Date } = {}
+  opts: { horizon?: Horizon; now?: Date; actor?: TeamActor } = {}
 ): InitiativeSummary[] {
   const week = weekStart(opts.now);
-  const all = db.prepare(`${VIEW_SELECT} ${TODAY_ORDER}`).all() as AssignmentView[];
+  const todas = db.prepare(`${VIEW_SELECT} ${TODAY_ORDER}`).all() as AssignmentView[];
+  const all = opts.actor ? piezasVisiblesPara(db, opts.actor, todas) : todas;
   const rows = opts.horizon ? all.filter((r) => r.horizon === opts.horizon) : all;
+  const iniciativas = opts.actor
+    ? listInitiatives(db).filter((i) => veIniciativa(db, opts.actor as TeamActor, i))
+    : listInitiatives(db);
 
-  const summaries: InitiativeSummary[] = listInitiatives(db).map((i) => buildSummary(i, rows, week));
+  const summaries: InitiativeSummary[] = iniciativas.map((i) => buildSummary(i, rows, week));
   // Trabajo sin iniciativa: no se esconde nunca.
   if (rows.some((r) => r.initiative_id === null)) summaries.push(buildSummary(null, rows, week));
   return summaries;
@@ -596,6 +705,9 @@ export function applyAssignmentAction(db: DB, input: ApplyActionInput): Assignme
   const flags = flagsDeTransicion(db, input.actor, row, input.action);
   const veredicto = puedeTransicionar({ accion: input.action, ...flags });
   if (!veredicto.ok) throw new TeamError(403, veredicto.motivo);
+  // Una revisión se devuelve, no se bloquea: bloquearla abriría el candado de los campos
+  // fijos (responsable, tamaño, fecha…) y al desbloquear volvería a revisión cambiada.
+  if (seBloqueaUnaRevision(row.status, input.action)) throw new TeamError(409, COPY_REVISION_NO_SE_BLOQUEA);
   // Tomar del Backlog una pieza sin dueño se la asigna a quien la toma.
   const takingUnowned = input.action === "asignar" && !row.owner_wallet;
 
@@ -653,9 +765,23 @@ export function applyAssignmentAction(db: DB, input: ApplyActionInput): Assignme
  */
 export function accionesPermitidas(db: DB, actor: TeamActor, row: AssignmentRow): TeamAction[] {
   if (!isTeamStatus(row.status)) return [];
-  return availableTeamActions(row.status).filter(
-    (accion) => puedeTransicionar({ accion, ...flagsDeTransicion(db, actor, row, accion) }).ok
+  const status = row.status;
+  return availableTeamActions(status).filter(
+    (accion) =>
+      !seBloqueaUnaRevision(status, accion) && puedeTransicionar({ accion, ...flagsDeTransicion(db, actor, row, accion) }).ok
   );
+}
+
+export const COPY_REVISION_NO_SE_BLOQUEA =
+  "Una entrega en revisión no se bloquea: si le falta algo, devuélvela con lo que hay que ajustar.";
+
+/**
+ * La máquina de estados (que no se toca) deja bloquear desde En revisión; el módulo
+ * no: una revisión se devuelve o se aprueba. Así lo que se envió a revisión no se
+ * replanifica por el rodeo de bloquear, editar y desbloquear.
+ */
+function seBloqueaUnaRevision(status: TeamStatus, accion: TeamAction): boolean {
+  return accion === "bloquear" && status === "En revisión";
 }
 
 /** Piezas del proyecto en Backlog sin responsable: lo que hay para tomar. */
@@ -674,9 +800,17 @@ export function piezasSinResponsable(db: DB, initiativeId: number): number {
  *  - `esDueno` = `mismaPersona(dueño, actor)`: las dos identidades del founder son una.
  *  - `esQuienEnvio` = las identidades del actor incluyen a quien hizo el último
  *    `enviar_a_revision`.
- *  - `vinculoInvitacion` (B8, en las dos direcciones) = el actor no es founder y el
- *    `invited_by` de alguna identidad del dueño es del actor, o al revés.
+ *  - `vinculoInvitacion` (B8, en las dos direcciones) = ni el actor ni el dueño son el
+ *    founder, y el `invited_by` de alguna identidad del dueño es del actor, o al revés.
+ *  - `vinculoAsignacion` (solo al aprobar) = ni el actor ni el dueño son el founder, y
+ *    el actor sumó al dueño a este proyecto (`project_members.added_by`) o le dio la
+ *    pieza: el último `crear`/`asignar`/`reasignar` (o, sin eventos, `created_by`) es
+ *    suyo. Así quien planifica no acuña puntos para una segunda cuenta suya.
  *  - `duenoPendiente` = el dueño es un `pending:<slug>` cuyo slug no está vinculado.
+ *
+ * El founder queda exento de B8 y del vínculo de asignación en las DOS direcciones:
+ * invitó a casi todo el equipo, y si la regla lo atara como dueño nadie podría revisar
+ * sus entregas. Se reconoce por rol y por roster (`principalFounder`), nunca por wallet.
  */
 function flagsDeTransicion(
   db: DB,
@@ -702,7 +836,9 @@ function flagsDeTransicion(
   const esQuienEnvio = !!envio && delActor.includes(envio.actor_wallet);
 
   let vinculoInvitacion = false;
-  if (owner && actor.role !== "founder") {
+  let vinculoAsignacion = false;
+  const exentoFounder = actor.role === "founder" || esFounderPersona(db, actor.wallet) || (!!owner && esFounderPersona(db, owner));
+  if (owner && !exentoFounder) {
     const delDueno = identidadesDe(db, owner);
     const invitadoPor = (w: string) =>
       (db.prepare(`SELECT invited_by FROM users WHERE wallet = ?`).get(w) as { invited_by: string | null } | undefined)
@@ -716,6 +852,7 @@ function flagsDeTransicion(
         const i = invitadoPor(w);
         return !!i && delDueno.includes(i);
       });
+    if (accion === "aprobar") vinculoAsignacion = leDioLaPieza(db, row, delActor, delDueno);
   }
 
   let duenoPendiente = false;
@@ -726,14 +863,58 @@ function flagsDeTransicion(
     duenoPendiente = !vinculado;
   }
 
-  return { esDueno, sinDueno: !owner, permisos, esQuienEnvio, vinculoInvitacion, duenoPendiente, esGlobal };
+  return {
+    esDueno,
+    sinDueno: !owner,
+    permisos,
+    esQuienEnvio,
+    vinculoInvitacion,
+    vinculoAsignacion,
+    duenoPendiente,
+    esGlobal,
+  };
 }
 
-/** Eventos de estado de un día (fuente del digest de WP15). */
-export function assignmentEventsOfDay(db: DB, day: string) {
-  return db
+/**
+ * ¿Es el founder? Por rol en la base (con cualquiera de sus identidades) o por ser su
+ * principal de equipo (`principalFounder`). Nunca comparando con `FOUNDER_WALLET`.
+ */
+function esFounderPersona(db: DB, wallet: string): boolean {
+  const principal = principalFounder(db);
+  return identidadesDe(db, wallet).some((w) => w === principal || usuarioBasico(db, w)?.role === "founder");
+}
+
+/**
+ * ¿Le dio el actor esta pieza a su dueño? Lo sumó a este proyecto (alguna de sus filas
+ * de `project_members` tiene `added_by` del actor) o fijó su responsable: el último
+ * evento `crear`, `asignar` o `reasignar` es suyo; sin eventos (importada, o creada por
+ * el bot), quien la creó (`created_by`).
+ */
+function leDioLaPieza(db: DB, row: AssignmentRow, delActor: string[], delDueno: string[]): boolean {
+  if (row.initiative_id !== null && delDueno.length > 0) {
+    const filas = db
+      .prepare(`SELECT added_by FROM project_members WHERE initiative_id = ? AND wallet IN (${marcas(delDueno.length)})`)
+      .all(row.initiative_id, ...delDueno) as Array<{ added_by: string | null }>;
+    if (filas.some((f) => !!f.added_by && delActor.includes(f.added_by))) return true;
+  }
+  const ultimo = db
     .prepare(
-      `SELECT e.*, a.title, u.display_name AS actor_name
+      `SELECT actor_wallet FROM assignment_events
+        WHERE assignment_id = ? AND action IN ('crear','asignar','reasignar') ORDER BY id DESC LIMIT 1`
+    )
+    .get(row.id) as { actor_wallet: string } | undefined;
+  const quien = ultimo ? ultimo.actor_wallet : row.created_by;
+  return !!quien && delActor.includes(quien);
+}
+
+/**
+ * Eventos de estado de un día (fuente del digest de WP15). Con `actor`, solo los de
+ * piezas que esa persona puede ver (§4.A.12: nada de un proyecto de cliente ajeno).
+ */
+export function assignmentEventsOfDay(db: DB, day: string, actor?: TeamActor) {
+  const rows = db
+    .prepare(
+      `SELECT e.*, a.title, a.initiative_id AS initiative_id, a.client_id AS client_id, u.display_name AS actor_name
          FROM assignment_events e
          JOIN assignments a ON a.id = e.assignment_id
          LEFT JOIN users u ON u.wallet = e.actor_wallet
@@ -750,8 +931,11 @@ export function assignmentEventsOfDay(db: DB, day: string) {
     day: string;
     created_at: string;
     title: string;
+    initiative_id: number | null;
+    client_id: number | null;
     actor_name: string | null;
   }>;
+  return actor ? piezasVisiblesPara(db, actor, rows) : rows;
 }
 
 // ---------------------------------------------------------------------------
@@ -1077,14 +1261,18 @@ function veIniciativa(db: DB, actor: TeamActor, ini: InitiativeRow): boolean {
   if (actor.role === "founder") return true;
   const ids = identidadesDe(db, actor.wallet);
   if (ini.client_id != null) {
-    if (esMiembroDe(db, ids, ini.id)) return true;
-    if (ids.length === 0) return false;
-    return !!db
-      .prepare(`SELECT 1 AS x FROM client_members WHERE client_id = ? AND wallet IN (${marcas(ids.length)})`)
-      .get(ini.client_id, ...ids);
+    return esMiembroDe(db, ids, ini.id) || participaEnCliente(db, ids, ini.client_id);
   }
   if (actor.isSupervisor || actor.role === "core") return true;
   return esMiembroDe(db, ids, ini.id);
+}
+
+/** ¿Alguna de estas identidades participa en el cliente (`client_members`)? */
+function participaEnCliente(db: DB, ids: string[], clientId: number): boolean {
+  if (ids.length === 0) return false;
+  return !!db
+    .prepare(`SELECT 1 AS x FROM client_members WHERE client_id = ? AND wallet IN (${marcas(ids.length)})`)
+    .get(clientId, ...ids);
 }
 
 export function puedeVerProyecto(db: DB, actor: EquipoActor, initiativeId: number): boolean {
@@ -1562,11 +1750,31 @@ export interface EditarAsignacionInput {
   motivo?: string;
 }
 
-/** Campos que quedan fijos mientras la entrega está En revisión (cuatro ojos). */
-export const CAMPOS_FIJOS_EN_REVISION = ["ownerWallet", "size", "dueDate", "priority", "acceptanceCriteria"] as const;
+/**
+ * Campos que quedan fijos mientras la entrega está En revisión (cuatro ojos). El
+ * proyecto también: mudarla cambiaría quién la revisa.
+ */
+export const CAMPOS_FIJOS_EN_REVISION = [
+  "ownerWallet",
+  "size",
+  "dueDate",
+  "priority",
+  "acceptanceCriteria",
+  "initiativeId",
+] as const;
 const CAMPOS_CONTEXTO = ["description", "specUrl"] as const;
 
 export const COPY_EN_REVISION = "Una entrega en revisión no se reasigna ni se replanifica: devuélvela primero.";
+
+/**
+ * ¿Lo que define esta entrega está fijo por revisión? En revisión, o Bloqueada desde En
+ * revisión (un dato previo o importado: hoy una revisión ya no se bloquea). Al
+ * desbloquearse vuelve a revisión, así que el candado la acompaña. Lo usan
+ * `editarAsignacion`, la UI y el importador.
+ */
+export function fijaPorRevision(row: { status: string; status_before_block: string | null }): boolean {
+  return row.status === "En revisión" || (row.status === "Bloqueada" && row.status_before_block === "En revisión");
+}
 
 const FECHA_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -1605,9 +1813,10 @@ export const editarAsignacionSchema: z.ZodType<EditarAsignacionInput> = z.object
  * Edita una entrega (spec WP31 §5.A.4). Solo cuenta lo que CAMBIA de verdad: un
  * formulario que reenvía un campo igual no pide permiso para él.
  *  - `Hecha` no se edita (409).
- *  - `En revisión`: responsable, tamaño, fecha, prioridad y criterio quedan fijos (409).
- *    Así nadie se queda con los puntos de otra persona, ni se fabrica o se quita el
- *    bono, ni se infla el tamaño después de entregar.
+ *  - `En revisión` (o Bloqueada desde En revisión, `fijaPorRevision`): responsable,
+ *    tamaño, fecha, prioridad, criterio y proyecto quedan fijos (409). Así nadie se
+ *    queda con los puntos de otra persona, ni se fabrica o se quita el bono, ni se
+ *    infla el tamaño después de entregar.
  *  - El dueño solo cambia el contexto (`description`, `specUrl`); el resto es de quien
  *    planifica el proyecto (y, si la pieza cambia de proyecto, también del destino).
  *  - Un responsable nuevo es del equipo interno o miembro del proyecto (400 si no);
@@ -1683,8 +1892,9 @@ export function editarAsignacion(
   const campos = Object.keys(cambios) as Array<keyof EditarAsignacionInput>;
   if (campos.length === 0) return row;
 
-  // 2. En revisión, lo que define la entrega queda fijo hasta que se devuelva o se apruebe.
-  if (row.status === "En revisión" && campos.some((c) => (CAMPOS_FIJOS_EN_REVISION as readonly string[]).includes(c))) {
+  // 2. En revisión (o bloqueada desde ahí), lo que define la entrega queda fijo hasta
+  //    que se devuelva o se apruebe.
+  if (fijaPorRevision(row) && campos.some((c) => (CAMPOS_FIJOS_EN_REVISION as readonly string[]).includes(c))) {
     throw new TeamError(409, COPY_EN_REVISION);
   }
 

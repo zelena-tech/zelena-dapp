@@ -5,8 +5,9 @@
  *  - Quien la tiene a cargo cambia el contexto (descripción y enlace de referencia).
  *  - Quien planifica el proyecto cambia también título, criterio, prioridad, tamaño,
  *    horizonte, fecha y responsable.
- *  - En revisión, responsable, tamaño, fecha, prioridad y criterio se ven
- *    deshabilitados: una entrega en revisión no se reasigna ni se replanifica.
+ *  - En revisión (o bloqueada desde En revisión), responsable, tamaño, fecha,
+ *    prioridad y criterio se ven deshabilitados: una entrega en revisión no se
+ *    reasigna ni se replanifica.
  *
  * Solo se envía lo que cambió. El servidor (lib/team.ts) decide de nuevo cada campo.
  * Copys de ENTREGA (doc 16): se describe el trabajo, nunca a la persona.
@@ -38,6 +39,11 @@ export interface PiezaEditable {
   specUrl: string | null;
   needsFounder: boolean;
   status: TeamStatus;
+  /**
+   * Lo calcula el servidor (`fijaPorRevision`): En revisión, o Bloqueada desde En
+   * revisión. Sin el dato, se deduce del estado.
+   */
+  fijaPorRevision?: boolean;
 }
 
 export interface OpcionResponsable {
@@ -77,7 +83,7 @@ export default function TeamEditAssignment({
   const [needsFounder, setNeedsFounder] = useState(pieza.needsFounder);
   const [motivo, setMotivo] = useState("");
 
-  const enRevision = pieza.status === "En revisión";
+  const enRevision = pieza.fijaPorRevision ?? pieza.status === "En revisión";
   const fijo = enRevision || !puedePlanificar;
 
   function reiniciar() {

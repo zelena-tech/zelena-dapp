@@ -33,6 +33,7 @@ import {
   listBlocked,
   listNeedsFounder,
   listTeamMembers,
+  piezasVisiblesPara,
   today,
   weekStart,
   TeamError,
@@ -97,11 +98,13 @@ function lastBlockDayByAssignment(db: DB): Map<number, string> {
  * bloqueo más viejo al más nuevo: la antigüedad es el costo real.
  *
  * Es la sección superior del dashboard porque es lo único que pide una acción.
+ * Con `actor` (WP31 §4.A.12), solo lo que esa persona ve: nada de un proyecto de
+ * cliente donde no participa.
  */
-export function blockedWithAge(db: DB, now: Date = new Date()): BlockedItem[] {
+export function blockedWithAge(db: DB, now: Date = new Date(), actor?: TeamActor): BlockedItem[] {
   const day = today(now);
   const lastBlock = lastBlockDayByAssignment(db);
-  const items: BlockedItem[] = listBlocked(db).map((a) => {
+  const items: BlockedItem[] = listBlocked(db, actor).map((a) => {
     const fromEvent = lastBlock.get(a.id) ?? null;
     // Respaldo: filas creadas directamente como 'Bloqueada' (importador, datos
     // previos) no tienen evento. Nunca se inventa una fecha.
@@ -132,9 +135,10 @@ export function blockedWithAge(db: DB, now: Date = new Date()): BlockedItem[] {
 /**
  * Bandeja de gates del founder: lo marcado `needs_founder` y aún no cerrado.
  * Delega en WP14 (`listNeedsFounder`), que ya ordena por prioridad y vencimiento.
+ * Con `actor`, solo lo que esa persona ve (§4.A.12).
  */
-export function founderInbox(db: DB): AssignmentView[] {
-  return listNeedsFounder(db);
+export function founderInbox(db: DB, actor?: TeamActor): AssignmentView[] {
+  return listNeedsFounder(db, actor);
 }
 
 // ---------------------------------------------------------------------------
@@ -175,28 +179,32 @@ export function epochStartDay(db: DB): string | null {
   return row ? row.created_at.slice(0, 10) : null;
 }
 
-function closedThisEpochByInitiative(db: DB, fromDay: string): Map<number | null, number> {
+function closedThisEpochByInitiative(db: DB, fromDay: string, actor?: TeamActor): Map<number | null, number> {
   const rows = db
     .prepare(
-      `SELECT initiative_id, COUNT(*) AS n
+      `SELECT initiative_id, client_id, COUNT(*) AS n
          FROM assignments
         WHERE status = 'Hecha' AND closed_at IS NOT NULL AND substr(closed_at,1,10) >= ?
-        GROUP BY initiative_id`
+        GROUP BY initiative_id, client_id`
     )
-    .all(fromDay) as Array<{ initiative_id: number | null; n: number }>;
-  return new Map(rows.map((r) => [r.initiative_id, r.n]));
+    .all(fromDay) as Array<{ initiative_id: number | null; client_id: number | null; n: number }>;
+  const out = new Map<number | null, number>();
+  for (const r of actor ? piezasVisiblesPara(db, actor, rows) : rows) {
+    out.set(r.initiative_id, (out.get(r.initiative_id) ?? 0) + r.n);
+  }
+  return out;
 }
 
 /**
  * Una barra de estados por iniciativa (el NO-alcance prohíbe gráficas complejas).
  * Reusa `assignmentsByInitiative` de WP14 y solo agrega el desglose por estado y
- * el cierre de la época.
+ * el cierre de la época. Con `actor`, solo los proyectos y las piezas que ve (§4.A.12).
  */
-export function initiativeBars(db: DB, now: Date = new Date()): InitiativeBar[] {
+export function initiativeBars(db: DB, now: Date = new Date(), actor?: TeamActor): InitiativeBar[] {
   const epochFrom = epochStartDay(db);
-  const closedEpoch = epochFrom ? closedThisEpochByInitiative(db, epochFrom) : null;
+  const closedEpoch = epochFrom ? closedThisEpochByInitiative(db, epochFrom, actor) : null;
 
-  return assignmentsByInitiative(db, { now }).map((s) => {
+  return assignmentsByInitiative(db, { now, actor }).map((s) => {
     const byStatus = emptyByStatus();
     for (const a of s.open) byStatus[a.status]++;
     byStatus.Bloqueada = s.blocked.length;
@@ -288,17 +296,26 @@ const OPEN_LIST = OPEN_STATUSES.map((s) => `'${s}'`).join(",");
 
 /**
  * Abiertas y en curso por miembro. Incluye a quien tiene cero (es el roster, no
- * una tabla de posiciones) y ordena por nombre.
+ * una tabla de posiciones) y ordena por nombre. Con `actor` (WP31 §4.A.12), solo
+ * cuenta las piezas que esa persona ve.
  */
-export function loadByPerson(db: DB): TeamLoad {
-  const counts = db
+export function loadByPerson(db: DB, actor?: TeamActor): TeamLoad {
+  const filas = db
     .prepare(
-      `SELECT owner_wallet, status, COUNT(*) AS n, SUM(needs_founder) AS gates
+      `SELECT owner_wallet, status, initiative_id, client_id, COUNT(*) AS n, SUM(needs_founder) AS gates
          FROM assignments
         WHERE status IN (${OPEN_LIST},'Bloqueada')
-        GROUP BY owner_wallet, status`
+        GROUP BY owner_wallet, status, initiative_id, client_id`
     )
-    .all() as Array<{ owner_wallet: string | null; status: TeamStatus; n: number; gates: number }>;
+    .all() as Array<{
+    owner_wallet: string | null;
+    status: TeamStatus;
+    initiative_id: number | null;
+    client_id: number | null;
+    n: number;
+    gates: number;
+  }>;
+  const counts = actor ? piezasVisiblesPara(db, actor, filas) : filas;
 
   const people: PersonLoad[] = realTeamMembers(db).map((m) => ({
     wallet: m.wallet,
@@ -423,26 +440,34 @@ export interface EpochSnapshot {
   blockedNow: number;
 }
 
-export function epochSnapshot(db: DB): EpochSnapshot {
+/** Con `actor` (WP31 §4.A.12), los conteos solo incluyen las piezas que esa persona ve. */
+export function epochSnapshot(db: DB, actor?: TeamActor): EpochSnapshot {
   const row = db
     .prepare(`SELECT id, name, state, created_at FROM periods ORDER BY id DESC LIMIT 1`)
     .get() as { id: number; name: string; state: string; created_at: string } | undefined;
   const startDay = row ? row.created_at.slice(0, 10) : null;
+  type Conteo = { initiative_id: number | null; client_id: number | null; n: number };
+  const contar = (filas: Conteo[]) => (actor ? piezasVisiblesPara(db, actor, filas) : filas).reduce((t, f) => t + f.n, 0);
   const closedThisEpoch = startDay
-    ? (
+    ? contar(
         db
           .prepare(
-            `SELECT COUNT(*) AS n FROM assignments
-              WHERE status = 'Hecha' AND closed_at IS NOT NULL AND substr(closed_at,1,10) >= ?`
+            `SELECT initiative_id, client_id, COUNT(*) AS n FROM assignments
+              WHERE status = 'Hecha' AND closed_at IS NOT NULL AND substr(closed_at,1,10) >= ?
+              GROUP BY initiative_id, client_id`
           )
-          .get(startDay) as { n: number }
-      ).n
+          .all(startDay) as Conteo[]
+      )
     : null;
-  const blockedNow = (
-    db.prepare(`SELECT COUNT(*) AS n FROM assignments WHERE status = 'Bloqueada'`).get() as {
-      n: number;
-    }
-  ).n;
+  const blockedNow = contar(
+    db
+      .prepare(
+        `SELECT initiative_id, client_id, COUNT(*) AS n FROM assignments
+          WHERE status = 'Bloqueada'
+          GROUP BY initiative_id, client_id`
+      )
+      .all() as Conteo[]
+  );
   return {
     period: row && startDay ? { id: row.id, name: row.name, state: row.state, startDay } : null,
     fitness: latestEpochFitness(db),
@@ -473,6 +498,9 @@ export interface DashboardData {
  *
  * Lanza `TeamError(403)` en vez de devolver datos recortados, para que la página
  * y el endpoint de exportación fallen igual y por el mismo motivo.
+ *
+ * WP31 §4.A.12: todo lo que arma sale filtrado por lo que `actor` ve (un proyecto de
+ * cliente, solo si participa; el founder, todo).
  */
 export function buildDashboard(db: DB = getDb(), actor: TeamActor, now: Date = new Date()): DashboardData {
   if (!puedeVerTodoElEquipo(actor)) {
@@ -481,11 +509,11 @@ export function buildDashboard(db: DB = getDb(), actor: TeamActor, now: Date = n
   return {
     day: today(now),
     actor,
-    blocked: blockedWithAge(db, now),
-    waitingOnFounder: founderInbox(db),
-    initiatives: initiativeBars(db, now),
-    load: loadByPerson(db),
+    blocked: blockedWithAge(db, now, actor),
+    waitingOnFounder: founderInbox(db, actor),
+    initiatives: initiativeBars(db, now, actor),
+    load: loadByPerson(db, actor),
     rites: riteHealth(db, now),
-    epoch: epochSnapshot(db),
+    epoch: epochSnapshot(db, actor),
   };
 }

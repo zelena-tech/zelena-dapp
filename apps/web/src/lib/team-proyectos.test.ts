@@ -2,8 +2,11 @@
  * WP31-A · proyectos, membresías, cuatro ojos y edición de entregas (base en memoria).
  *
  * Criterios del spec §11: A1b, A4, A4b, A4c, A5, A6, A6b, A7, A8 (ataques) y A10
- * (proyecto ajeno). Las personas son ficticias: nada de este archivo nombra a un
- * cliente real ni a alguien del equipo fuera de los slugs del roster.
+ * (proyecto ajeno), más los hallazgos de la revisión: el rodeo de bloquear una
+ * entrega en revisión, la segunda cuenta que suma quien estructura, la escritura en
+ * el backlog de otro cliente y las listas del equipo que mostraban proyectos de
+ * cliente (A5b, A5c, A8b). Las personas son ficticias: nada de este archivo nombra a
+ * un cliente real ni a alguien del equipo fuera de los slugs del roster.
  */
 import { describe, it, expect, beforeEach } from "vitest";
 import fs from "node:fs";
@@ -16,16 +19,23 @@ import {
   accionesPermitidas,
   agregarMiembro,
   applyAssignmentAction,
+  assignmentsByInitiative,
+  assignmentsForClient,
   piezasSinResponsable,
   candidatosParaProyecto,
+  COPY_CLIENTE_NO_DISPONIBLE,
   COPY_EN_REVISION,
+  COPY_REVISION_NO_SE_BLOQUEA,
   createAssignment,
   createAssignmentAs,
+  createAssignmentSchema,
   crearProyecto,
   editarAsignacion,
   editarProyecto,
   getAssignment,
   getProyectoPorSlug,
+  listBlocked,
+  listNeedsFounder,
   membresiasDe,
   miembrosDeProyecto,
   parseFiltrosTablero,
@@ -38,8 +48,11 @@ import {
   supervisoresDeProyecto,
   tableroDeProyecto,
   TeamError,
+  visibleAssignments,
 } from "./team";
 import { createClient, addMember } from "./clients";
+import { buildDashboard } from "./dashboard";
+import { dailyDigestFor } from "./digest";
 
 const JOHN = pendingPrincipal("john");
 const VALE = pendingPrincipal("vale");
@@ -261,6 +274,35 @@ describe("A4c · B8 en las dos direcciones; el founder exento; dueño pending so
     expect(applyAssignmentAction(db, { assignmentId: id, action: "aprobar", actor: actor(JOHN) }).status).toBe("Hecha");
   });
 
+  it("y al revés: quien entró con una invitación del founder sí revisa la entrega del founder", () => {
+    // Con las cuentas reales vinculadas, todo el equipo entró invitado por el founder
+    // (por su fila de equipo o por la cuenta con la que firma las invitaciones). Si la
+    // regla no lo eximiera también como dueño, sus entregas quedarían En revisión para siempre.
+    usuario(db, SESION_FOUNDER, { role: "founder" });
+    db.prepare(`UPDATE users SET invited_by = ? WHERE wallet = ?`).run(JOHN, VALE);
+    db.prepare(`UPDATE users SET invited_by = ? WHERE wallet = ?`).run(SESION_FOUNDER, RITA);
+    // Aún sin vincular su fila de equipo: una supervisora invitada por él la aprueba.
+    const deJohn = enRevision(db, p, JOHN);
+    expect(applyAssignmentAction(db, { assignmentId: deJohn, action: "aprobar", actor: actor(VALE), now: AHORA }).status).toBe(
+      "Hecha"
+    );
+    // Ya vinculada (su cuenta real es la de la sesión): quien revisa el proyecto, también.
+    db.prepare(`INSERT INTO roster_links (slug, wallet, linked_by) VALUES ('john', ?, ?)`).run(SESION_FOUNDER, SESION_FOUNDER);
+    const otra = enRevision(db, p, SESION_FOUNDER);
+    expect(accionesPermitidas(db, actor(RITA), getAssignment(db, otra)!)).toEqual(["aprobar", "devolver"]);
+    expect(
+      applyAssignmentAction(db, { assignmentId: otra, action: "devolver", reason: "falta el caso borde", actor: actor(RITA) })
+        .status
+    ).toBe("En curso");
+    // El dueño sigue sin poder revisarse con ninguna de sus dos identidades.
+    const founderSesion: TeamActor = { wallet: SESION_FOUNDER, name: "John", role: "founder", isSupervisor: true };
+    const tercera = enRevision(db, p, JOHN);
+    expect(fallo(() => applyAssignmentAction(db, { assignmentId: tercera, action: "aprobar", actor: founderSesion }))).toEqual({
+      status: 403,
+      message: MOTIVO_TRANSICION.dueno,
+    });
+  });
+
   it("dueño pending sin vincular: un revisa no aprueba; un supervisor sí", () => {
     agregarMiembro(db, actor(JOHN), { initiativeId: p, wallet: FAUSTO, rol: "ejecuta" });
     const id = enRevision(db, p, FAUSTO);
@@ -334,6 +376,155 @@ describe("A5 · un contributor solo ve y crea en sus proyectos; proyectos de cli
     expect(puedeVerProyecto(db, david, c)).toBe(true);
     expect(puedeVerProyecto(db, equipo(db, JOHN), c)).toBe(true);
     expect(proyectosVisibles(db, fausto).map((i) => i.id)).toContain(c);
+  });
+});
+
+describe("A5b · crear no escribe en el backlog de otro cliente ni planifica sin permiso", () => {
+  let db: DB;
+  let p: number;
+  let cliente: number;
+  let otroCliente: number;
+  beforeEach(() => {
+    db = freshDb();
+    p = escenario(db).p;
+    cliente = createClient(db, { name: "Cliente Demo" });
+    otroCliente = createClient(db, { name: "Otro Cliente Demo" });
+  });
+
+  it("un contributor no cuelga su pieza en el backlog de un cliente donde no participa (403, sin oráculo)", () => {
+    const pedido = createAssignmentSchema.parse({ title: "Inyectada", initiativeId: p, clientId: cliente });
+    const ajeno = fallo(() => createAssignmentAs(db, actor(ANA), pedido, AHORA));
+    const inexistente = fallo(() => createAssignmentAs(db, actor(ANA), { title: "x", initiativeId: p, clientId: 9999 }, AHORA));
+    expect(ajeno).toEqual({ status: 403, message: COPY_CLIENTE_NO_DISPONIBLE });
+    // Un cliente que no existe responde igual que uno ajeno: no se pueden enumerar.
+    expect(inexistente).toEqual(ajeno);
+    expect(fallo(() => createAssignmentAs(db, actor(ANA), { title: "x", initiativeId: p, graphNodeId: "nodo.de.otro" }, AHORA))).toEqual(
+      ajeno
+    );
+    expect(assignmentsForClient(db, cliente)).toEqual([]);
+    // Un core sin participación en el cliente, tampoco; quien participa, sí.
+    expect(fallo(() => createAssignmentAs(db, actor(FAUSTO), { title: "x", clientId: cliente }, AHORA))?.status).toBe(403);
+    addMember(db, cliente, FAUSTO, "colaborador");
+    const id = createAssignmentAs(db, actor(FAUSTO), { title: "Del cliente", clientId: cliente, graphNodeId: "nodo.a" }, AHORA);
+    expect(getAssignment(db, id)!.client_id).toBe(cliente);
+    // El founder, en cualquiera; un cliente que no existe es un 400 para él.
+    expect(getAssignment(db, createAssignmentAs(db, actor(JOHN), { title: "y", clientId: otroCliente }, AHORA))!.client_id).toBe(
+      otroCliente
+    );
+    expect(fallo(() => createAssignmentAs(db, actor(JOHN), { title: "z", clientId: 9999 }, AHORA))?.status).toBe(400);
+  });
+
+  it("en un proyecto de cliente la pieza hereda su cliente y no acepta otro", () => {
+    const c = crearProyecto(db, actor(JOHN), { name: "Proyecto de cliente", clientId: cliente }).id;
+    agregarMiembro(db, actor(JOHN), { initiativeId: c, wallet: ANA, rol: "ejecuta" });
+    const id = createAssignmentAs(db, actor(ANA), { title: "Mía", initiativeId: c }, AHORA);
+    expect(getAssignment(db, id)!.client_id).toBe(cliente);
+    expect(assignmentsForClient(db, cliente).map((a) => a.id)).toEqual([id]);
+    expect(
+      fallo(() => createAssignmentAs(db, actor(JOHN), { title: "Cruzada", initiativeId: c, clientId: otroCliente }, AHORA))
+    ).toEqual({ status: 403, message: COPY_CLIENTE_NO_DISPONIBLE });
+    expect(assignmentsForClient(db, otroCliente)).toEqual([]);
+  });
+
+  it("quien no planifica no fija prioridad urgente, fecha ni la bandeja del founder (como el tamaño)", () => {
+    const pedido = createAssignmentSchema.parse({
+      title: "Lo mío",
+      initiativeId: p,
+      ownerWallet: ANA,
+      needsFounder: true,
+      priority: "Urgent",
+      dueDate: "2099-12-31",
+      size: "L",
+    });
+    const row = getAssignment(db, createAssignmentAs(db, actor(ANA), pedido, AHORA))!;
+    expect([row.needs_founder, row.priority, row.due_date, row.size]).toEqual([0, "Normal", null, null]);
+    // Bajar la prioridad no pide permiso.
+    expect(getAssignment(db, createAssignmentAs(db, actor(ANA), { title: "Baja", initiativeId: p, priority: "Low" }, AHORA))!.priority).toBe(
+      "Low"
+    );
+    // Un core sin roles tampoco, ni sin proyecto.
+    const deFausto = createAssignmentAs(db, actor(FAUSTO), { title: "Suya", priority: "High", dueDate: "2026-10-09", needsFounder: true }, AHORA);
+    expect(getAssignment(db, deFausto)!.priority).toBe("Normal");
+    expect(getAssignment(db, deFausto)!.due_date).toBeNull();
+    expect(getAssignment(db, deFausto)!.needs_founder).toBe(0);
+    // Quien planifica, sí.
+    const plan = getAssignment(db, createAssignmentAs(db, actor(EST), { ...pedido, title: "Plan" }, AHORA))!;
+    expect([plan.needs_founder, plan.priority, plan.due_date, plan.size]).toEqual([1, "Urgent", "2099-12-31", "L"]);
+  });
+});
+
+describe("A5c · un proyecto de cliente no se cuela en las listas del equipo (§4.A.12)", () => {
+  let db: DB;
+  let p: number;
+  let c: number;
+  let cliente: number;
+  const DIA = "2026-10-01";
+  beforeEach(() => {
+    db = freshDb();
+    p = escenario(db).p;
+    cliente = createClient(db, { name: "Cliente Demo" });
+    c = crearProyecto(db, actor(JOHN), { name: "Proyecto de cliente", clientId: cliente }).id;
+    agregarMiembro(db, actor(JOHN), { initiativeId: c, wallet: DAVID, rol: "ejecuta" });
+    // Lo del cliente: una abierta que espera al founder, una bloqueada y una suelta sin proyecto.
+    createAssignment(db, { title: "Secreta abierta", initiativeId: c, clientId: cliente, ownerWallet: DAVID, status: "Asignada", needsFounder: true });
+    const bloqueada = createAssignment(db, { title: "Secreta bloqueada", initiativeId: c, clientId: cliente, ownerWallet: DAVID, status: "Asignada" });
+    applyAssignmentAction(db, { assignmentId: bloqueada, action: "bloquear", reason: "falta el acceso", actor: actor(DAVID), now: AHORA });
+    createAssignment(db, { title: "Secreta suelta", clientId: cliente, ownerWallet: DAVID, status: "Asignada", needsFounder: true });
+    // Lo interno, que sí ve la supervisión.
+    const interna = createAssignment(db, { title: "Interna", initiativeId: p, ownerWallet: ANA, status: "Asignada", needsFounder: true });
+    applyAssignmentAction(db, { assignmentId: interna, action: "bloquear", reason: "espera", actor: actor(ANA), now: AHORA });
+    createAssignment(db, { title: "Interna suelta", ownerWallet: FAUSTO, status: "Asignada" });
+  });
+
+  const titulos = (xs: Array<{ title: string }>) => xs.map((x) => x.title).sort();
+  const secretas = (xs: string[]) => xs.filter((t) => t.startsWith("Secreta"));
+
+  it("una supervisora que no participa no recibe sus piezas en /equipo/hoy, el tablero de proyectos ni el dashboard", () => {
+    const vale = equipo(db, VALE);
+    expect(puedeVerProyecto(db, vale, c)).toBe(false);
+    expect(secretas(titulos(visibleAssignments(db, vale)))).toEqual([]);
+    expect(titulos(visibleAssignments(db, vale))).toEqual(["Interna", "Interna suelta"]);
+
+    const porIniciativa = assignmentsByInitiative(db, { actor: vale, now: AHORA });
+    expect(porIniciativa.some((s) => s.initiative?.id === c)).toBe(false);
+    const sueltas = porIniciativa.find((s) => s.initiative === null)!;
+    expect(titulos(sueltas.open)).toEqual(["Interna suelta"]);
+
+    expect(titulos(listBlocked(db, vale))).toEqual(["Interna"]);
+    expect(titulos(listNeedsFounder(db, vale))).toEqual(["Interna"]);
+
+    const d = buildDashboard(db, vale, AHORA);
+    expect(d.blocked.map((b) => b.assignment.title)).toEqual(["Interna"]);
+    expect(d.waitingOnFounder.map((a) => a.title)).toEqual(["Interna"]);
+    expect(d.initiatives.some((b) => b.initiative?.id === c)).toBe(false);
+    expect(d.initiatives.find((b) => b.initiative === null)!.open).toBe(1);
+    expect(d.load.people.find((x) => x.wallet === DAVID)!.open + d.load.people.find((x) => x.wallet === DAVID)!.blocked).toBe(0);
+    expect(d.load.totalOpen).toBe(1); // "Interna suelta" (la de ANA está bloqueada)
+    expect(d.epoch.blockedNow).toBe(1);
+
+    const digest = dailyDigestFor(db, vale, DIA);
+    expect(digest.blocked.map((e) => e.title)).toEqual(["Interna"]);
+  });
+
+  it("un core no ve en «Sin proyecto» las piezas sueltas de un cliente donde no participa", () => {
+    const fausto = equipo(db, FAUSTO);
+    const sueltas = () => assignmentsByInitiative(db, { actor: fausto }).find((s) => s.initiative === null)!;
+    expect(titulos(sueltas().open)).toEqual(["Interna suelta"]);
+    addMember(db, cliente, FAUSTO, "lectura");
+    expect(titulos(sueltas().open)).toEqual(["Interna suelta", "Secreta suelta"]);
+  });
+
+  it("quien participa sí las ve; el founder, todo", () => {
+    agregarMiembro(db, actor(JOHN), { initiativeId: c, wallet: VALE, rol: "revisa" });
+    const vale = equipo(db, VALE);
+    expect(secretas(titulos(visibleAssignments(db, vale)))).toEqual(["Secreta abierta", "Secreta bloqueada"]);
+    const john = equipo(db, JOHN);
+    expect(secretas(titulos(visibleAssignments(db, john)))).toEqual(["Secreta abierta", "Secreta bloqueada", "Secreta suelta"]);
+    expect(buildDashboard(db, john, AHORA).blocked).toHaveLength(2);
+    expect(dailyDigestFor(db, john, DIA).blocked).toHaveLength(2);
+    // Sin actor, las funciones de siempre no cambian (las usan el bot y los tests de WP14/WP15).
+    expect(listBlocked(db)).toHaveLength(2);
+    expect(listNeedsFounder(db)).toHaveLength(3);
   });
 });
 
@@ -456,10 +647,11 @@ describe("A6 · editarAsignacion: permisos por clase de campo, reasignar, Backlo
 describe("A6b · En revisión: lo que define la entrega queda fijo (409); el contexto no", () => {
   let db: DB;
   let p: number;
+  let q: number;
   let id: number;
   beforeEach(() => {
     db = freshDb();
-    p = escenario(db).p;
+    ({ p, q } = escenario(db));
     id = enRevision(db, p, ANA);
   });
 
@@ -479,6 +671,40 @@ describe("A6b · En revisión: lo que define la entrega queda fijo (409); el con
   it("la descripción sí se puede (el dueño)", () => {
     expect(editarAsignacion(db, actor(ANA), { assignmentId: id, description: "nota" }).description).toBe("nota");
     expect(getAssignment(db, id)!.status).toBe("En revisión");
+  });
+
+  it("tampoco se muda de proyecto (cambiaría quién la revisa) → 409", () => {
+    agregarMiembro(db, actor(JOHN), { initiativeId: q, wallet: ANA, rol: "ejecuta" });
+    expect(fallo(() => editarAsignacion(db, actor(JOHN), { assignmentId: id, initiativeId: q }))).toEqual({
+      status: 409,
+      message: COPY_EN_REVISION,
+    });
+    expect(getAssignment(db, id)!.initiative_id).toBe(p);
+  });
+
+  it("una revisión se devuelve, no se bloquea (409), ni quien planifica ni el dueño", () => {
+    for (const quien of [EST, ANA, JOHN]) {
+      expect(
+        fallo(() => applyAssignmentAction(db, { assignmentId: id, action: "bloquear", reason: "pausa", actor: actor(quien) }))
+      ).toEqual({ status: 409, message: COPY_REVISION_NO_SE_BLOQUEA });
+    }
+    expect(getAssignment(db, id)!.status).toBe("En revisión");
+  });
+
+  it("una pieza Bloqueada que venía de En revisión (dato previo o importado) conserva el candado", () => {
+    db.prepare(
+      `UPDATE assignments SET status = 'Bloqueada', status_before_block = 'En revisión', blocked_reason = 'pausa' WHERE id = ?`
+    ).run(id);
+    for (const cambio of [{ ownerWallet: EJE2 }, { size: "L" as const }, { dueDate: "2099-12-31" }, { priority: "Urgent" as const }]) {
+      expect(fallo(() => editarAsignacion(db, actor(EST), { assignmentId: id, ...cambio }))).toEqual({
+        status: 409,
+        message: COPY_EN_REVISION,
+      });
+    }
+    expect(editarAsignacion(db, actor(ANA), { assignmentId: id, description: "contexto" }).description).toBe("contexto");
+    // Al desbloquear vuelve a revisión tal como se envió.
+    const row = applyAssignmentAction(db, { assignmentId: id, action: "desbloquear", actor: actor(EST), now: AHORA });
+    expect([row.status, row.owner_wallet, row.size, row.due_date, row.priority]).toEqual(["En revisión", ANA, "M", null, "Normal"]);
   });
 });
 
@@ -645,6 +871,107 @@ describe("A8 · ataques", () => {
     });
     expect(ledgers(db)).toBe(0);
   });
+
+  it("(4) el rodeo de bloquear una entrega ajena En revisión para replanificarla tampoco pasa", () => {
+    agregarMiembro(db, actor(EST), { initiativeId: p, wallet: SEGUNDA, rol: "ejecuta" });
+    const deAna = enRevision(db, p, ANA);
+    expect(
+      fallo(() => applyAssignmentAction(db, { assignmentId: deAna, action: "bloquear", reason: "pausa", actor: actor(EST) }))
+    ).toEqual({ status: 409, message: COPY_REVISION_NO_SE_BLOQUEA });
+    expect(
+      fallo(() =>
+        editarAsignacion(db, actor(EST), { assignmentId: deAna, ownerWallet: SEGUNDA, size: "L", dueDate: "2099-12-31" })
+      )
+    ).toEqual({ status: 409, message: COPY_EN_REVISION });
+    const row = getAssignment(db, deAna)!;
+    expect([row.status, row.owner_wallet, row.size, row.due_date]).toEqual(["En revisión", ANA, "M", null]);
+    // Quien la revisa de verdad (otra persona) la aprueba tal como se envió.
+    expect(applyAssignmentAction(db, { assignmentId: deAna, action: "aprobar", actor: actor(RITA) }).owner_wallet).toBe(ANA);
+  });
+});
+
+describe("A8b · ataques con una segunda cuenta que invitó un tercero (sin relación de invitación)", () => {
+  const TERCERO = "GTERCEROQUEINVITAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+  const TITERE = "GSEGUNDACUENTADELEXTERNOAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+  let db: DB;
+  let p: number;
+  beforeEach(() => {
+    db = freshDb();
+    p = escenario(db).p;
+    usuario(db, TERCERO);
+    usuario(db, TITERE, { invitedBy: TERCERO });
+  });
+
+  /** La pieza llega a revisión por las manos de su dueño. */
+  function entrega(id: number, dueno: string): void {
+    applyAssignmentAction(db, { assignmentId: id, action: "empezar", actor: actor(dueno), now: AHORA });
+    applyAssignmentAction(db, { assignmentId: id, action: "enviar_a_revision", actor: actor(dueno), now: AHORA });
+  }
+
+  it("quien estructura la suma al proyecto, le crea una pieza L y no puede aprobarla (sí pedir ajustes)", () => {
+    agregarMiembro(db, actor(EST), { initiativeId: p, wallet: TITERE, rol: "ejecuta" });
+    const id = createAssignmentAs(db, actor(EST), { title: "Nada", initiativeId: p, ownerWallet: TITERE, size: "L" }, AHORA);
+    entrega(id, TITERE);
+    expect(fallo(() => applyAssignmentAction(db, { assignmentId: id, action: "aprobar", actor: actor(EST) }))).toEqual({
+      status: 403,
+      message: MOTIVO_TRANSICION.asignacion,
+    });
+    expect(accionesPermitidas(db, actor(EST), getAssignment(db, id)!)).toEqual(["devolver"]);
+    expect(ledgers(db)).toBe(0);
+    // Otra persona con revisión, que no la sumó ni le dio la pieza, sí la revisa.
+    expect(applyAssignmentAction(db, { assignmentId: id, action: "aprobar", actor: actor(RITA), now: AHORA }).status).toBe(
+      "Hecha"
+    );
+  });
+
+  it("aunque la haya sumado el founder, quien le asignó la pieza no la aprueba", () => {
+    agregarMiembro(db, actor(JOHN), { initiativeId: p, wallet: TITERE, rol: "ejecuta" });
+    const creada = createAssignmentAs(db, actor(EST), { title: "Creada para ella", initiativeId: p, ownerWallet: TITERE, size: "L" }, AHORA);
+    entrega(creada, TITERE);
+    expect(fallo(() => applyAssignmentAction(db, { assignmentId: creada, action: "aprobar", actor: actor(EST) }))?.message).toBe(
+      MOTIVO_TRANSICION.asignacion
+    );
+    // Reasignada por quien estructura: el último que le dio la pieza es quien no la aprueba.
+    const reasignada = createAssignmentAs(db, actor(JOHN), { title: "De Ana", initiativeId: p, ownerWallet: ANA }, AHORA);
+    editarAsignacion(db, actor(EST), { assignmentId: reasignada, ownerWallet: TITERE }, AHORA);
+    entrega(reasignada, TITERE);
+    expect(
+      fallo(() => applyAssignmentAction(db, { assignmentId: reasignada, action: "aprobar", actor: actor(EST) }))?.message
+    ).toBe(MOTIVO_TRANSICION.asignacion);
+    expect(ledgers(db)).toBe(0);
+  });
+
+  it("si la planificó otra persona, quien estructura sí la revisa (cuatro ojos: planifica uno, revisa otro)", () => {
+    agregarMiembro(db, actor(JOHN), { initiativeId: p, wallet: TITERE, rol: "ejecuta" });
+    const id = createAssignmentAs(db, actor(JOHN), { title: "Planificada por el founder", initiativeId: p, ownerWallet: TITERE }, AHORA);
+    entrega(id, TITERE);
+    expect(applyAssignmentAction(db, { assignmentId: id, action: "aprobar", actor: actor(EST), now: AHORA }).status).toBe("Hecha");
+    // Y una pieza del Backlog que la persona toma por su cuenta tampoco ata a quien la creó.
+    const libre = createAssignmentAs(db, actor(EST), { title: "Libre", initiativeId: p }, AHORA);
+    applyAssignmentAction(db, { assignmentId: libre, action: "asignar", actor: actor(TITERE), now: AHORA });
+    entrega(libre, TITERE);
+    expect(applyAssignmentAction(db, { assignmentId: libre, action: "aprobar", actor: actor(EST), now: AHORA }).status).toBe(
+      "Hecha"
+    );
+  });
+
+  it("una pieza que llegó ya En revisión (importada, sin eventos) no la aprueba quien la cargó", () => {
+    const id = createAssignment(db, {
+      title: "Importada",
+      initiativeId: p,
+      ownerWallet: FAUSTO,
+      status: "En revisión",
+      size: "L",
+      createdBy: VALE,
+      importKey: "csv:proyecto-piloto:importada",
+    });
+    expect(fallo(() => applyAssignmentAction(db, { assignmentId: id, action: "aprobar", actor: actor(VALE) }))?.message).toBe(
+      MOTIVO_TRANSICION.asignacion
+    );
+    expect(applyAssignmentAction(db, { assignmentId: id, action: "aprobar", actor: actor(JOHN), now: AHORA }).status).toBe(
+      "Hecha"
+    );
+  });
 });
 
 describe("accionesPermitidas y piezasSinResponsable (lo que pinta la UI)", () => {
@@ -653,10 +980,11 @@ describe("accionesPermitidas y piezasSinResponsable (lo que pinta la UI)", () =>
     const { p } = escenario(db);
     const id = enRevision(db, p, ANA);
     const row = getAssignment(db, id)!;
-    expect(accionesPermitidas(db, actor(ANA), row)).toEqual(["bloquear"]);
+    // Una revisión se devuelve, no se bloquea: nadie ve "Bloquear" sobre una pieza En revisión.
+    expect(accionesPermitidas(db, actor(ANA), row)).toEqual([]);
     expect(accionesPermitidas(db, actor(RITA), row)).toEqual(["aprobar", "devolver"]);
     expect(accionesPermitidas(db, actor(EJE2), row)).toEqual([]);
-    expect(accionesPermitidas(db, actor(EST), row)).toEqual(["aprobar", "devolver", "bloquear"]);
+    expect(accionesPermitidas(db, actor(EST), row)).toEqual(["aprobar", "devolver"]);
   });
 
   it("cuenta solo lo que está en Backlog sin responsable", () => {

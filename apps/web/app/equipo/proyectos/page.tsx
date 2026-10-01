@@ -57,8 +57,9 @@ export default async function EquipoProyectosPage({
   const raw = searchParams.horizonte;
   const horizon: Horizon | undefined = isHorizon(raw) ? raw : undefined;
   // El filtro de horizonte se aplica al trabajo (una iniciativa tiene filas en varios
-  // horizontes) y, para un proyecto sin trabajo, a su propio horizonte.
-  const porIniciativa = assignmentsByInitiative(db, { horizon });
+  // horizontes) y, para un proyecto sin trabajo, a su propio horizonte. Con `actor`,
+  // solo lo que esta persona ve: tampoco en "Sin proyecto" entra lo de un cliente ajeno.
+  const porIniciativa = assignmentsByInitiative(db, { horizon, actor });
   const resumenes = new Map(porIniciativa.filter((s) => s.initiative).map((s) => [s.initiative!.id, s]));
   const sinProyecto = veSinProyecto ? (porIniciativa.find((s) => s.initiative === null) ?? null) : null;
   const week = weekStart();

@@ -321,6 +321,8 @@ export const MOTIVO_TRANSICION = {
   dueno: "Quien entrega no aprueba su propia entrega.",
   envio: "Quien la envió a revisión no la aprueba: la revisa otra persona.",
   invitacion: "Esta entrega la revisa otra persona: quien invita no evalúa a su invitado, ni al revés.",
+  asignacion:
+    "Esta entrega la aprueba otra persona: quien la asignó, o sumó al proyecto a quien la entrega, no la aprueba (sí puede pedir ajustes).",
   pendiente:
     "Esta entrega es de alguien del equipo que aún no vincula su cuenta: la revisa el founder o un supervisor.",
   revision: "La revisión es de quien revisa o estructura el proyecto.",
@@ -337,12 +339,18 @@ export interface TransicionInput {
   permisos: PermisosProyecto;
   /** identidadesDe(actor) incluye a quien hizo el último `enviar_a_revision`. */
   esQuienEnvio?: boolean;
-  /** B8: el actor invitó al dueño o el dueño al actor (false si el actor es founder). */
+  /** B8: el actor invitó al dueño o el dueño al actor (false si el actor o el dueño es founder). */
   vinculoInvitacion?: boolean;
   /** El dueño es un `pending:<slug>` sin vincular. */
   duenoPendiente?: boolean;
   /** Founder o supervisor. */
   esGlobal?: boolean;
+  /**
+   * El actor sumó al dueño a este proyecto o le dio la pieza (el último crear, asignar o
+   * reasignar que fijó su responsable). Solo frena `aprobar`: devolver no emite nada.
+   * False si el actor o el dueño es founder (lo calcula lib/team.ts).
+   */
+  vinculoAsignacion?: boolean;
 }
 
 /**
@@ -350,8 +358,10 @@ export interface TransicionInput {
  *
  *  - `aprobar` / `devolver`: cuatro ojos de verdad. Nunca quien es dueño (ni el
  *    founder con su otra identidad), nunca quien la envió a revisión, nunca con una
- *    relación de invitación entre dueño y revisor, y la de un `pending:` sin vincular
- *    solo la revisa el founder o un supervisor. Los motivos se evalúan en ese orden.
+ *    relación de invitación entre dueño y revisor; `aprobar`, además, nunca quien sumó
+ *    al dueño al proyecto o le dio la pieza (así nadie acuña puntos para una segunda
+ *    cuenta suya); y la de un `pending:` sin vincular solo la revisa el founder o un
+ *    supervisor. Los motivos se evalúan en ese orden.
  *  - `asignar`: tomar una pieza sin dueño exige `tomar` o `planificar`. Si la pieza ya
  *    tiene responsable (p. ej. una fila del CSV que llegó a Backlog con su Assignee),
  *    `asignar` solo la pasa a Asignada SIN cambiar de dueño, y eso lo hace el propio
@@ -366,6 +376,7 @@ export function puedeTransicionar(input: TransicionInput): { ok: true } | { ok: 
     if (esDueno) return no(MOTIVO_TRANSICION.dueno);
     if (input.esQuienEnvio) return no(MOTIVO_TRANSICION.envio);
     if (input.vinculoInvitacion) return no(MOTIVO_TRANSICION.invitacion);
+    if (accion === "aprobar" && input.vinculoAsignacion) return no(MOTIVO_TRANSICION.asignacion);
     if (input.duenoPendiente && !input.esGlobal) return no(MOTIVO_TRANSICION.pendiente);
     if (!permisos.revisar) return no(MOTIVO_TRANSICION.revision);
     return { ok: true };

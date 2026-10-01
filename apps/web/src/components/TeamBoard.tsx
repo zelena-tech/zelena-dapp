@@ -18,6 +18,7 @@ import {
   PRIORITY_LABEL,
   SIZES,
   esEnlaceSeguro,
+  fijaPorRevision,
   type AssignmentView,
   type FiltrosTablero,
 } from "@/lib/team";
@@ -115,6 +116,7 @@ function Tarjeta({ t, personas }: { t: TarjetaTablero; personas: OpcionResponsab
               specUrl: a.spec_url,
               needsFounder: !!a.needs_founder,
               status: a.status,
+              fijaPorRevision: fijaPorRevision(a),
             }}
             puedePlanificar={t.puedePlanificar}
             puedeContexto={t.puedeContexto}
