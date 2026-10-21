@@ -9,6 +9,8 @@
  */
 import { describe, it, expect } from "vitest";
 import fs from "node:fs";
+import os from "node:os";
+import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { openDb, type DB } from "./db";
 import { createHash } from "node:crypto";
@@ -257,4 +259,47 @@ describe("reserva: dos pasadas simultáneas no toman la misma fila", () => {
       claimed_at: null,
     });
   });
+});
+
+describe("packages/scripts/anchor-worker.mjs (auditoría A4: no parseaba)", () => {
+  const WORKER = path.join(RAIZ, "packages", "scripts", "anchor-worker.mjs");
+
+  it("parsea (node --check)", () => {
+    const r = spawnSync(process.execPath, ["--check", WORKER], { encoding: "utf8" });
+    expect(r.status, r.stderr).toBe(0);
+  });
+
+  it("reutiliza lib/anchor.ts y no reimplementa el anclaje", () => {
+    const src = fs.readFileSync(WORKER, "utf8");
+    expect(src).toContain('path.join(WEB_DIR, "src", "lib", "anchor.ts")');
+    expect(src).not.toMatch(/manageData|TransactionBuilder|UPDATE anchor_queue/);
+    // Los scripts npm de packages/scripts siguen apuntando a él.
+    const pkg = JSON.parse(fs.readFileSync(path.join(RAIZ, "packages", "scripts", "package.json"), "utf8"));
+    expect(pkg.scripts.anchor).toBe("node anchor-worker.mjs");
+    expect(pkg.scripts["anchor:watch"]).toBe("node anchor-worker.mjs --watch");
+  });
+
+  it("--pendientes corre sobre una base real sin tocar la red (y aplica el tope)", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "zelena-worker-"));
+    const file = path.join(dir, "zelena.db");
+    try {
+      const db = openDb(file);
+      db.exec(fs.readFileSync(path.join(WEB, "src", "lib", "schema.sql"), "utf8"));
+      encolar(db, "nueva");
+      encolar(db, "agotada", 50);
+      const r = spawnSync(process.execPath, [WORKER, "--pendientes"], {
+        encoding: "utf8",
+        env: { ...process.env, DATABASE_FILE: file },
+        timeout: 60_000,
+      });
+      expect(r.status, r.stderr).toBe(0);
+      expect(r.stdout).toContain("[anchor] pendientes: 1");
+    } finally {
+      try {
+        fs.rmSync(dir, { recursive: true, force: true });
+      } catch {
+        /* Windows puede retener el archivo */
+      }
+    }
+  }, 60_000);
 });

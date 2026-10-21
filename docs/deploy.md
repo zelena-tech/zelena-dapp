@@ -35,16 +35,23 @@ npx --workspace apps/web next start   # sirve el build en :3000
 
 ## Correr el anchor-worker (en tu máquina)
 
-El sandbox de desarrollo NO alcanza la red Stellar, por eso el anclaje es una **cola**.
-El worker corre localmente y ancla los hashes pendientes:
+El anclaje es una **cola** (`anchor_queue`). En el despliegue la procesa el workflow programado
+`.github/workflows/anclaje.yml`, que llama a `POST /api/anchor/run` cada 15 minutos. En local, el
+worker hace lo mismo sobre la base SQLite de `npm run dev`, cargando **la misma lógica**
+(`apps/web/src/lib/anchor.ts`, con su tope de intentos y su reserva de filas) con el type-stripping
+de Node (Node ≥ 22.6):
 
 ```bash
-# La cuenta de servicio se genera y se fondea con friendbot en el primer arranque,
+# La cuenta de servicio se genera en el primer arranque (y anchor.ts la fondea con friendbot),
 # o exporta la tuya:
 export SERVICE_ACCOUNT_SECRET=S....         # opcional (testnet)
-node packages/scripts/anchor-worker.mjs      # una pasada
-node packages/scripts/anchor-worker.mjs --watch   # en bucle cada 15s
+node packages/scripts/anchor-worker.mjs               # una pasada
+node packages/scripts/anchor-worker.mjs --watch       # en bucle cada 60 s
+node packages/scripts/anchor-worker.mjs --pendientes  # solo cuenta, sin red
 ```
+
+Una fila que falla `ANCLAJE_MAX_INTENTOS` veces (8) queda `failed` y no se reintenta sola;
+reintentarla es `UPDATE anchor_queue SET status = 'pending', attempts = 0 WHERE id = <id>`.
 
 Cada firma de CLA encolada se ancla con `manageData` en testnet; el `txId` queda visible en
 el perfil con link a stellar.expert. El secreto de la cuenta de servicio nunca va al repo
@@ -339,10 +346,10 @@ punta contra un backend asíncrono falso. **No** cubre —porque necesita la sus
    la suite con `DATABASE_DRIVER=mssql` apuntando a la instancia).
 2. Managed identity de verdad (token de Entra, permisos del usuario externo).
 3. Latencia real y el timeout del puente (`callTimeoutMs`, 30 s por defecto).
-4. El **worker de anclaje** (`packages/scripts/anchor-worker.mjs`) abre **SQLite
-   directamente**, sin pasar por `lib/db.ts`. Tal cual **no** lee Azure SQL: hay que
-   migrarlo a la capa `db.ts` (o darle su propio cliente `mssql` asíncrono, que ahí sí es
-   trivial porque es un script suelto). **Pendiente declarado**, no cubierto por WP16.
+4. El **worker de anclaje local** (`packages/scripts/anchor-worker.mjs`) abre **SQLite
+   directamente** (reutiliza `lib/anchor.ts`, no `lib/db.ts`). Tal cual **no** lee Azure SQL;
+   en el despliegue el anclaje lo hace la app misma (`/api/anchor/run`, que sí pasa por
+   `lib/db.ts`), así que el worker solo hace falta en desarrollo.
 
 ## Notas
 
