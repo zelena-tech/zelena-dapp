@@ -246,4 +246,13 @@ describe("rutas y cliente (estático)", () => {
     // El alta sigue firmando el CLA.
     expect(src).toContain("claSigningPayload(claHash)");
   });
+
+  it("tras entrar navega por completo (no con el router, que guardaba la redirección a /entrar)", () => {
+    const src = leer("app/entrar/page.tsx");
+    expect(src).not.toMatch(/router\.push\("\/perfil"\)/);
+    expect(src.match(/irTrasEntrar\(\);/g) ?? []).toHaveLength(3);
+    expect(src).toContain("window.location.assign(destinoTrasEntrar())");
+    // ?next= solo si, resuelto, sigue siendo del propio sitio.
+    expect(src).toContain("url.origin === window.location.origin");
+  });
 });

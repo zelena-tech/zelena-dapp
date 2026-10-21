@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Markdown } from "@/components/Markdown";
 import { shortWallet } from "@/components/ui";
@@ -23,8 +22,35 @@ function bytesToBase64(bytes: Uint8Array): string {
 
 const STEPS = ["Bienvenida", "Invitación", "Tu cuenta", "Tu firma"];
 
+/**
+ * A dónde ir al entrar: la ruta de `?next=` (la pone el middleware al pedir sesión) si,
+ * una vez resuelta por el navegador, sigue siendo del propio sitio; si no, /perfil. Se
+ * compara el origen YA resuelto (`new URL`), así "//otro-sitio", "/\otro" o un tabulador
+ * escondido no sacan a nadie del sitio.
+ */
+function destinoTrasEntrar(): string {
+  try {
+    const next = new URLSearchParams(window.location.search).get("next");
+    if (next && next.startsWith("/")) {
+      const url = new URL(next, window.location.origin);
+      if (url.origin === window.location.origin) return url.pathname + url.search + url.hash;
+    }
+  } catch {
+    /* sin URL legible: al perfil */
+  }
+  return "/perfil";
+}
+
+/**
+ * Navegación COMPLETA tras entrar (no `router.push`): el router del cliente guardaba la
+ * redirección a /entrar que vio antes de tener sesión (el prefetch de "Ir a mi perfil") y
+ * dejaba a la persona, ya con sesión, otra vez en /entrar?next=/perfil.
+ */
+function irTrasEntrar(): void {
+  window.location.assign(destinoTrasEntrar());
+}
+
 export default function Entrar() {
-  const router = useRouter();
   // Arranca en 0: nadie conecta una wallet sin saber primero a qué entra.
   const [step, setStep] = useState(0);
   // Reingreso: la wallet ya está registrada, se entra firmando el CLA (sin invitación).
@@ -359,8 +385,7 @@ export default function Entrar() {
       // Reingreso: no se vuelve a firmar el acuerdo, se firma un reto de entrada.
       if (returning || !code.trim()) {
         if (await entrarConReto()) {
-          router.push("/perfil");
-          router.refresh();
+          irTrasEntrar();
         }
         return;
       }
@@ -375,8 +400,7 @@ export default function Entrar() {
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        router.push("/perfil");
-        router.refresh();
+        irTrasEntrar();
         return;
       }
       // Un 409 puede ser "wallet ya registrada" (entonces sí toca reingresar)
@@ -387,8 +411,7 @@ export default function Entrar() {
       }
       // Ya estaba registrada: se entra con un reto (una firma más; la invitación no se gasta).
       if (await entrarConReto()) {
-        router.push("/perfil");
-        router.refresh();
+        irTrasEntrar();
       }
     } catch {
       setError("Error al firmar o registrar.");
