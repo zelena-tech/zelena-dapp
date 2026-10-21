@@ -14,7 +14,7 @@ Al verificar a mano los de severidad alta **encontré un tercer agujero que el r
 | Dimensión | Pregunta | Hallazgos | Verificación |
 |---|---|---|---|
 | D1 | ¿Está el sistema acoplado a personas en vez de a roles? | 9 | adversarial |
-| D2 | ¿Qué pasa si mañana llega María, o si Vale se va? | 5 | adversarial |
+| D2 | ¿Qué pasa si mañana llega María, o si quien lleva Operaciones se va? | 5 | adversarial |
 | D3 | ¿Qué bloquea de verdad desplegar hoy? | 7 | directa (comandos) |
 | D4 | ¿Qué tan lejos está el bot de WhatsApp? | 6 | adversarial |
 
@@ -27,7 +27,7 @@ Al verificar a mano los de severidad alta **encontré un tercer agujero que el r
 1. `TEAM_ROSTER`, una constante de `roles.ts` con los 6 nombres, alias y flags, que **el arranque re-impone sobre la base en cada `npm run dev`**. Un `UPDATE` manual para hacer supervisora a María se revierte al reiniciar.
 2. `FOUNDER_WALLET`, una variable de entorno con la wallet de **una persona**, usada como gate de administración.
 
-Consecuencia: dar de alta a María "funciona" (entra por Entra como `core`), pero **no puede recibir trabajo del importador, ni ser supervisora, ni aparecer en el prompt del bot** sin un PR. Y quitarle la supervisión a Vale cuando salga tampoco es una operación de datos.
+Consecuencia: dar de alta a María "funciona" (entra por Entra como `core`), pero **no puede recibir trabajo del importador, ni ser supervisora, ni aparecer en el prompt del bot** sin un PR. Y quitarle la supervisión a Operaciones cuando salga tampoco es una operación de datos.
 
 Ya arreglado hoy (commit `298b441`): el gate por rol. Lo demás está planificado en `docs/workflow-v1.2.md` como **WP32**.
 
@@ -95,7 +95,7 @@ Con una URL pública, cualquiera con el enlace y un código sin usar se creaba c
 | ID | Hallazgo | Esf. |
 |---|---|---|
 | D2-03 | **La baja no existe como operación de producto**: marcar `alumni` es SQLite a mano. | M |
-| D2-04 | `listTeamMembers` no filtra `status`, así que una Vale `alumni` **sigue contando para siempre** en el denominador de la salud de ritos y en la carga por persona ([team.ts:719](../../apps/web/src/lib/team.ts:719)). Un `AND status='active'` arregla las dos vistas. | S |
+| D2-04 | `listTeamMembers` no filtra `status`, así que una persona `alumni` **sigue contando para siempre** en el denominador de la salud de ritos y en la carga por persona ([team.ts:719](../../apps/web/src/lib/team.ts:719)). Un `AND status='active'` arregla las dos vistas. | S |
 | D2-05 | El trabajo en vuelo de quien se va **queda huérfano**: no existe reasignación de responsable en la web, ni en la máquina de estados, ni en el bot. | M |
 
 ### Despliegue (D3 — verificado con comandos, todos confirmados)

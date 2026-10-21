@@ -23,9 +23,9 @@
 import { z } from "zod";
 import type { DB } from "./db";
 import { dailyFocusHour } from "./genome.ts";
-import { puedeVerTodoElEquipo, findRosterMember, type TeamActor } from "./roles.ts";
+import { puedeVerTodoElEquipo, type TeamActor } from "./roles.ts";
 import type { EquipoActor } from "./authz";
-import { walletDeRoster } from "./talento.ts";
+import { walletDelEquipoPorNombre } from "./talento.ts";
 import { availableTeamActions, type TeamAction } from "./team-state-machine.ts";
 import {
   PRIORITIES,
@@ -84,7 +84,7 @@ export const BOT_TOOLS = [
 ] as const;
 export type BotTool = (typeof BOT_TOOLS)[number];
 
-/** Las que escriben. Requieren confirmación Y autorización (v1: solo John). */
+/** Las que escriben. Requieren confirmación Y autorización (v1: solo el founder). */
 export const WRITE_TOOLS = ["crear_asignacion", "registrar_checkin", "guardar_nota"] as const;
 export type BotWriteTool = (typeof WRITE_TOOLS)[number];
 
@@ -203,7 +203,7 @@ export const BOT_TOOL_SPECS: readonly BotToolSpec[] = [
   {
     name: "crear_asignacion",
     description:
-      "Propone una pieza de trabajo para el tablero del equipo: una asignación para alguien del roster o un pendiente propio de John. Devuelve una propuesta que John tiene que confirmar; no crea nada por sí sola.",
+      "Propone una pieza de trabajo para el tablero del equipo: una asignación para alguien del equipo o un pendiente propio del founder. Devuelve una propuesta que el founder tiene que confirmar; no crea nada por sí sola.",
     input_schema: {
       type: "object",
       properties: {
@@ -211,14 +211,16 @@ export const BOT_TOOL_SPECS: readonly BotToolSpec[] = [
         descripcion: { type: "string", description: "Contexto extra, si lo hay." },
         responsable: {
           type: "string",
-          description: "Nombre de la persona del equipo (John, Vale, Juan, David, Fausto, Angela). Vacío si es un pendiente sin dueño.",
+          description:
+            "Nombre de la persona del equipo, tal como aparece en 'Personas del equipo' del contexto. Vacío si es un pendiente sin dueño o si el nombre no está en esa lista.",
         },
         iniciativa: { type: "string", description: "Iniciativa o proyecto al que pertenece, si se menciona." },
         prioridad: { type: "string", enum: [...PRIORITIES] },
         tamano: { type: "string", enum: [...SIZES] },
         fecha_limite: { type: "string", description: "Fecha de entrega en formato YYYY-MM-DD, si se menciona." },
         criterios_aceptacion: { type: "string", description: "Cómo se sabrá que la entrega está lista." },
-        necesita_a_john: { type: "boolean", description: "true si la pieza espera una decisión de John." },
+        // La clave conserva su nombre: los borradores guardados la usan (bot_drafts).
+        necesita_a_john: { type: "boolean", description: "true si la pieza espera una decisión del founder." },
         confianza: CONFIANZA_PROPERTY,
       },
       required: ["titulo"],
@@ -228,7 +230,7 @@ export const BOT_TOOL_SPECS: readonly BotToolSpec[] = [
   {
     name: "registrar_checkin",
     description:
-      "Registra el check-in del día de John: qué quedó hecho, en qué está y qué lo tiene trabado. Uno por día, editable el mismo día.",
+      "Registra el check-in del día del founder: qué quedó hecho, en qué está y qué lo tiene trabado. Uno por día, editable el mismo día.",
     input_schema: {
       type: "object",
       properties: {
@@ -265,7 +267,7 @@ export const BOT_TOOL_SPECS: readonly BotToolSpec[] = [
   {
     name: "consultar_estado",
     description:
-      "Responde preguntas de solo lectura sobre el tablero: qué está bloqueado, qué espera una decisión de John, cómo va una iniciativa, la época en curso o el resumen del día.",
+      "Responde preguntas de solo lectura sobre el tablero: qué está bloqueado, qué espera una decisión del founder, cómo va una iniciativa, la época en curso o el resumen del día.",
     input_schema: {
       type: "object",
       properties: {
@@ -283,7 +285,7 @@ export const BOT_TOOL_SPECS: readonly BotToolSpec[] = [
     input_schema: {
       type: "object",
       properties: {
-        pregunta: { type: "string", description: "La pregunta concreta que hay que hacerle a John." },
+        pregunta: { type: "string", description: "La pregunta concreta que hay que hacerle al founder." },
       },
       required: [],
       additionalProperties: false,
@@ -312,7 +314,7 @@ export interface BotToolOutcome {
 
 export interface BotContext {
   actor: TeamActor;
-  /** v1: solo John. Sin esto, ninguna herramienta de escritura llega a proponer. */
+  /** v1: solo el founder. Sin esto, ninguna herramienta de escritura llega a proponer. */
   canWrite: boolean;
   now: Date;
   /**
@@ -350,7 +352,7 @@ export function formatAssignmentLine(a: AssignmentView): string {
   return partes.join(" ");
 }
 
-/** Ficha de la pieza propuesta, tal como la verá John antes de confirmar. */
+/** Ficha de la pieza propuesta, tal como la verá el founder antes de confirmar. */
 export function formatDraftPreview(input: CrearAsignacionInput, resolved: ResolvedOwner): string {
   const lineas = [`Título: ${input.titulo}`];
   if (resolved.ownerName) lineas.push(`Responsable: ${resolved.ownerName}`);
@@ -378,26 +380,24 @@ export interface ResolvedOwner {
 }
 
 /**
- * Traduce el nombre que dijo John al principal real del roster (WP14) y la
- * iniciativa a una que YA exista. Si no reconoce algo lo deja en null y lo dice en
- * la ficha: no inventa personas ni crea iniciativas de contrabando.
+ * Traduce el nombre que dijo el founder a la persona real del equipo y la iniciativa
+ * a una que YA exista. Si no reconoce algo lo deja en null y lo dice en la ficha: no
+ * inventa personas ni crea iniciativas de contrabando.
  *
- * WP31-C2: el roster es un dato. `walletDeRoster` respeta `roster_links`: si la fila
- * ya se vinculó con la cuenta real, el trabajo va a esa cuenta; si no, a
- * `pending:<slug>`.
+ * WP31-C2 y A8: el roster es un DATO de la base, no una lista del código.
+ * `walletDelEquipoPorNombre` busca la fila del roster (slug o alias) y respeta
+ * `roster_links` (si la fila ya se vinculó, el trabajo va a la cuenta real; si no, a
+ * `pending:<slug>`); si no, una coincidencia única de nombre visible.
  */
 export function resolveOwnerAndInitiative(db: DB, input: CrearAsignacionInput): ResolvedOwner {
   let ownerWallet: string | null = null;
   let ownerName: string | null = null;
   if (input.responsable) {
-    const miembro = findRosterMember(input.responsable);
-    if (miembro) {
-      const principal = walletDeRoster(db, miembro.slug);
-      const enDb = principal ? listTeamMembers(db).find((m) => m.wallet === principal) : undefined;
-      if (enDb) {
-        ownerWallet = enDb.wallet;
-        ownerName = enDb.display_name;
-      }
+    const principal = walletDelEquipoPorNombre(db, input.responsable);
+    const enDb = principal ? listTeamMembers(db).find((m) => m.wallet === principal) : undefined;
+    if (enDb) {
+      ownerWallet = enDb.wallet;
+      ownerName = enDb.display_name;
     }
   }
 
@@ -664,7 +664,7 @@ function renderEstado(db: DB, ctx: BotContext, alcance: EstadoScope, iniciativa?
 // ---------------------------------------------------------------------------
 
 /**
- * Todo el trabajo abierto de John, agrupado por iniciativa. Llama exactamente a
+ * Todo el trabajo abierto del founder, agrupado por iniciativa. Llama exactamente a
  * `assignmentsForOwner`, que es la función con la que `/equipo/hoy` pinta "lo
  * mío": si la web y el bot difirieran, este es el único sitio donde podría pasar,
  * y no hay consulta propia que pueda desviarse.
@@ -771,7 +771,7 @@ export const FOCUS_COUNT = 3;
 
 /**
  * Orden de los focos: primero lo que vence (hoy o antes), luego lo que espera una
- * decisión de John —porque eso tiene a otra persona detenida—, luego la prioridad
+ * decisión del founder —porque eso tiene a otra persona detenida—, luego la prioridad
  * y el vencimiento. Todo sale de WP14/WP15; no hay métrica nueva.
  */
 function focusRank(a: AssignmentView, hoy: string): [number, number, number, string, number] {
@@ -791,7 +791,7 @@ function compareRank(x: ReturnType<typeof focusRank>, y: ReturnType<typeof focus
 }
 
 /**
- * Las tres piezas candidatas del día: el trabajo abierto de John más lo que
+ * Las tres piezas candidatas del día: el trabajo abierto del founder más lo que
  * espera una decisión suya (`founderInbox` de WP15), sin duplicados. Quien ve solo
  * lo suyo (`soloLoPropio`, WP31-C2) recibe solo su trabajo abierto: nunca la bandeja
  * del founder.
@@ -819,7 +819,7 @@ export function renderFocos(focos: AssignmentView[]): string {
 }
 
 /**
- * Reordena la propuesta con el orden que respondió John (1-based). Los focos son
+ * Reordena la propuesta con el orden que respondió el founder (1-based). Los focos son
  * una propuesta DERIVADA, no un registro: reordenar no escribe estado nuevo, solo
  * cambia lo que el bot repite de vuelta y deja la línea en el log.
  */

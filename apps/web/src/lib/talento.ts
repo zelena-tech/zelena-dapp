@@ -25,17 +25,19 @@ import { z } from "zod";
 import type { DB } from "./db";
 import {
   PENDING_PREFIX,
-  TEAM_ROSTER,
   effectiveRole,
+  findRosterMember,
   isPendingPrincipal,
   isRole,
+  normalizeName,
   pendingPrincipal,
   rosterByPrincipal,
+  rosterConfigurado,
   type Role,
   type RosterMember,
   type TeamActor,
 } from "./roles.ts";
-import { mismaPersona } from "./identidades.ts";
+import { mismaPersona, slugsFounder as slugsFounderDe } from "./identidades.ts";
 import { TeamError } from "./team.ts";
 
 // ---------------------------------------------------------------------------
@@ -103,8 +105,9 @@ export function cuentaActiva(db: DB, wallet: string): boolean {
   return r?.status === "active";
 }
 
-function slugsFounder(): string[] {
-  return TEAM_ROSTER.filter((m) => m.role === "founder").map((m) => m.slug);
+/** Slugs de la fila del founder, por datos de la base (ver `identidades.ts#slugsFounder`). */
+function slugsFounder(db: DB): string[] {
+  return slugsFounderDe(db);
 }
 
 function slugVinculado(db: DB, slug: string): string | null {
@@ -151,11 +154,58 @@ export function walletDeRoster(db: DB, slug: string): string | null {
   return db.prepare(`SELECT wallet FROM users WHERE wallet = ?`).get(pendiente) ? pendiente : null;
 }
 
-/** Miembro del roster de una wallet: por su principal `pending:<slug>` o por `roster_links`. */
+/**
+ * Fila del roster CONFIGURADO de una wallet: por su principal `pending:<slug>` o por
+ * `roster_links`. Con la plantilla de roles, las filas viejas de una base (otros slugs)
+ * no tienen ficha: es solo una etiqueta, las personas siguen siendo datos de la base.
+ */
 export function rosterMemberFor(db: DB, wallet: string): RosterMember | undefined {
   if (isPendingPrincipal(wallet)) return rosterByPrincipal(wallet);
   const r = db.prepare(`SELECT slug FROM roster_links WHERE wallet = ?`).get(wallet) as { slug: string } | undefined;
-  return r ? TEAM_ROSTER.find((m) => m.slug === r.slug) : undefined;
+  return r ? rosterConfigurado().miembros.find((m) => m.slug === r.slug) : undefined;
+}
+
+/**
+ * Slug del roster para un nombre, por DATOS (hallazgo A8: el roster del código es una
+ * plantilla de roles; las personas viven en la base):
+ *  1. alias o slug del roster configurado (plantilla o `ZELENA_TEAM_ROSTER`);
+ *  2. el nombre normalizado ES un slug que existe en la base: su fila `pending:<slug>`
+ *     o su vínculo en `roster_links` (p. ej. un CSV viejo con el slug de la fila).
+ * Solo devuelve slugs con fila o vínculo en la base. null si no hay ninguno.
+ */
+export function slugDelEquipo(db: DB, nombre: string): string | null {
+  const n = normalizeName(nombre ?? "");
+  if (!n) return null;
+  const existe = (slug: string) =>
+    !!db.prepare(`SELECT 1 AS x FROM users WHERE wallet = ?`).get(pendingPrincipal(slug)) ||
+    !!db.prepare(`SELECT 1 AS x FROM roster_links WHERE slug = ?`).get(slug);
+  const configurado = findRosterMember(nombre);
+  if (configurado && existe(configurado.slug)) return configurado.slug;
+  if (/^[a-z0-9][a-z0-9-]{0,59}$/.test(n) && existe(n)) return n;
+  return null;
+}
+
+/**
+ * Persona del equipo a partir de un nombre, por DATOS: su slug del roster
+ * (`slugDelEquipo` → `walletDeRoster`), o si no, la coincidencia ÚNICA de
+ * `display_name` normalizado entre cuentas activas que no son demo. null si no hay o
+ * si hay más de una (no se adivina).
+ */
+export function walletDelEquipoPorNombre(db: DB, nombre: string): string | null {
+  const slug = slugDelEquipo(db, nombre);
+  if (slug) {
+    const w = walletDeRoster(db, slug);
+    if (w) return w;
+  }
+  const n = normalizeName(nombre ?? "");
+  if (!n) return null;
+  const coinciden = (
+    db.prepare(`SELECT wallet, display_name FROM users WHERE status = 'active' AND is_demo = 0`).all() as Array<{
+      wallet: string;
+      display_name: string;
+    }>
+  ).filter((f) => normalizeName(f.display_name ?? "") === n);
+  return coinciden.length === 1 ? coinciden[0].wallet : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -298,7 +348,7 @@ export function candidatosAVincular(
   slug?: string,
   actorWallet?: string
 ): Array<{ wallet: string; nombre: string }> {
-  const delFounder = slug !== undefined && slugsFounder().includes(slug);
+  const delFounder = slug !== undefined && slugsFounder(db).includes(slug);
   const filas = db
     .prepare(
       `SELECT u.wallet, u.display_name, u.is_demo, u.is_founder, u.role FROM users u
@@ -572,7 +622,7 @@ export function vincularPrincipal(
   if (d.status !== "active") throw new TeamError(409, CUENTA_INACTIVA);
 
   // El founder se reconoce por rol en la base y por el roster, nunca por FOUNDER_WALLET.
-  const delFounder = slugsFounder().includes(slug);
+  const delFounder = slugsFounder(db).includes(slug);
   const rolD = rolDe(d);
   if (delFounder) {
     if (rolD !== "founder") {

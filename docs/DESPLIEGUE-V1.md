@@ -29,7 +29,7 @@ Objetivo: el equipo abre la app con su correo @zelena.tech y ve sus asignaciones
   que pide la app: no llama a Graph). Como administrador del tenant, *Grant admin consent*. El
   `User.Read` que el portal añade por defecto no se usa y se puede quitar.
 
-**2. App Settings de `zelena-dao`** (por gestor de secretos, nunca por chat ni en el repo):
+**2. App Settings de la app de producción** (por gestor de secretos, nunca por chat ni en el repo):
 
 | Variable | Valor |
 |---|---|
@@ -60,7 +60,7 @@ founder entra con "Continuar con Microsoft" y llega a `/equipo/hoy` con su rol; 
 sin correo vinculado entra como `core` con una fila nueva. Para apagar: `AUTH_ENTRA_ENABLED=0`.
 
 ### A2. Azure — recursos (~30 min, o delegar a Dev 2 con permisos)
-- Resource group `rg-zelena-workspace`
+- Resource group (su nombre vive en la configuración de Azure, no en el repo)
 - **App Service** (Linux, Node 20, plan B1 o superior; el free tier duerme la app)
 - **Azure SQL Database** — tier Basic para empezar (o General Purpose Serverless con auto-pausa si prefieres que duerma fuera de horario). Backups automáticos vienen activados por defecto.
 - Regla de firewall "Allow Azure services" (o private endpoint). **Nunca** abrir a 0.0.0.0.
@@ -95,12 +95,12 @@ sin correo vinculado entra como `core` con una fila nueva. Para apagar: `AUTH_EN
 - Los tres van a `apps/web/.env.local` (local) y a App Settings (Azure), más `TELEGRAM_ENABLED=1` para encender. En local el bot corre en modo polling — no necesita URL pública.
 
 ### A4. Decisiones (5 min)
-- ¿Quién es supervisor además de John? (ve el dashboard completo; sugerido: Vale)
-- Lista de los 6 correos @zelena.tech que entran en v1 (incluidas Vale y Angela)
+- ¿Quién es supervisor además de John? (ve el dashboard completo; sugerido: Operaciones)
+- Lista de los 6 correos @zelena.tech que entran en v1 (incluidas Operaciones y Contenido)
 - ¿Alguien del equipo no tiene correo corporativo? → entra por la puerta de comunidad
 
 ### A5. En paralelo, no bloquea
-- Consulta legal/tributaria de nómina en USDC (gate de WP10 — la persigue Juan)
+- Consulta legal/tributaria de nómina en USDC (gate de WP10 — la persigue Finanzas)
 - Cuenta de Privy (gate de WP04, fase descentralizar)
 - Org GitHub (gate de WP06, fase descentralizar)
 
@@ -137,9 +137,9 @@ claude
 | 1. Loop nocturno: WP14 → WP15 → WP13 scaffold → WP16 driver Azure SQL → WP19 scaffold | Agente (subagentes en paralelo) | nada |
 | 2. Revisión en localhost + FEEDBACK.md + relanzar loop | John | paso 1 |
 | 3. Secretos: Entra (A1) + bot y API key (A3) | John | — |
-| 4. Encender WP13 y WP19, probar login y bot en local (polling) | Fausto / John | pasos 1 y 3 |
-| 5. Crear recursos Azure (A2) | John / Fausto | — |
-| 6. Desplegar, migrar schema, activar webhook, smoke test | Fausto | pasos 4 y 5 |
+| 4. Encender WP13 y WP19, probar login y bot en local (polling) | Plataforma / John | pasos 1 y 3 |
+| 5. Crear recursos Azure (A2) | John / Plataforma | — |
+| 6. Desplegar, migrar schema, activar webhook, smoke test | Plataforma | pasos 4 y 5 |
 | 7. Alta de los 6 + importar el CSV real | John | paso 6 |
 | 8. Primer check-in diario de todos | Equipo | paso 7 |
 
@@ -194,7 +194,7 @@ falta borrarla para arrancar tras una ola.
 Con la app arrancada una vez (`npm run dev`) para que cree y siembre la base, importa:
 
 ```bash
-node packages/scripts/import-tareas.mjs --dry-run "C:/Users/Omnia/Desktop/DAO/Zelena_Tareas_Import.csv"
+node packages/scripts/import-tareas.mjs --dry-run "<ruta>/tareas.csv"
 ```
 
 `--dry-run` valida y reporta sin escribir: revisa que no haya filas rechazadas (el
@@ -209,7 +209,7 @@ La ruta Azure SQL (`mssql`) **no migra** todavía: una base Azure SQL nueva se c
 
 ### Producción real hoy: SQLite en `/home/data/zelena.db` (Azure SQL todavía no)
 
-- App Service Linux (`zelena-dao`, Node 22) con **SQLite** (`node:sqlite`) en `/home/data/zelena.db`,
+- App Service Linux (Node 22) con **SQLite** (`node:sqlite`) en `/home/data/zelena.db`,
   fuera de `wwwroot`, para que un despliegue no la pise. Azure SQL (`mssql`) está implementado pero
   **no** es la base de producción.
 - Fijar **`DATABASE_DRIVER=sqlite`** en App Settings antes de desplegar: v1 cambia sola a Azure SQL
@@ -232,8 +232,8 @@ La ruta Azure SQL (`mssql`) **no migra** todavía: una base Azure SQL nueva se c
   `docs/whitepaper.md` ya no va: el sitio no lo sirve (`/whitepaper` redirige con 308 a `/manifiesto`).
   Copiar `apps/web/.next/static` a `.next/standalone/apps/web/.next/static`
   (y `apps/web/public` a `.next/standalone/apps/web/public`) y arrancar con `node apps/web/server.js`
-  (`PORT`, `HOSTNAME=0.0.0.0`). Sin `CLA.md` en el paquete la app firma el texto de reserva (pasó el
-  2026-09-04: dos firmas con `cla_hash = 54aecc56…`).
+  (`PORT`, `HOSTNAME=0.0.0.0`). Sin `CLA.md` en el paquete la app firma el texto de reserva (ya pasó
+  una vez en producción).
 - **Antes de cada despliegue que cambie el esquema:** por SSH de Kudu,
   `node -e "new (require('node:sqlite').DatabaseSync)('/home/data/zelena.db').exec(\"VACUUM INTO '/home/data/zelena-pre-fusion-AAAAMMDD.db'\")"`,
   bajar esa copia y ensayar el arranque sobre ella **con el mismo `FOUNDER_WALLET` de App Settings**.
@@ -247,10 +247,10 @@ La ruta Azure SQL (`mssql`) **no migra** todavía: una base Azure SQL nueva se c
 ### Acceso del founder (comprobar ANTES del despliegue)
 
 En la línea desplegada bastaba `session.wallet === FOUNDER_WALLET` (o `is_supervisor=1`). En v1
-`/admin` lo decide `users.role` (`lib/authz.ts`): entra quien tiene una fila `founder`. En la copia
-de prod la única fila `founder` es la wallet demo `GA7ZELENA…AAA`, que **no es una llave Stellar
-válida** (nadie puede firmar con ella), y `pending:john` solo entra por Entra, que está apagado. Si
-nada más cambia, **nadie entra a `/admin`**. Dos caminos dejan `founder` a una wallet real:
+`/admin` lo decide `users.role` (`lib/authz.ts`): entra quien tiene una fila `founder`. Si la única
+fila `founder` de la base es la wallet demo del seed, que **no es una llave Stellar válida** (nadie
+puede firmar con ella), y la fila del founder en el roster (`pending:<slug>`) solo entra por Entra,
+que está apagado, **nadie entra a `/admin`**. Dos caminos dejan `founder` a una wallet real:
 
 - **`FOUNDER_WALLET`, en cada arranque.** La fila con esa wallet pasa a `role='founder'`,
   `is_supervisor=1`. Solo promueve, nunca degrada. Si la wallet se registra **después** del
@@ -263,7 +263,7 @@ nada más cambia, **nadie entra a `/admin`**. Dos caminos dejan `founder` a una 
 
 Pasos:
 
-1. Leer (sin cambiar nada) el valor de `FOUNDER_WALLET` en App Settings de `zelena-dao`.
+1. Leer (sin cambiar nada) el valor de `FOUNDER_WALLET` en App Settings de la app de producción.
 2. Sobre la copia fresca de Kudu (la del `VACUUM INTO` de arriba), en solo lectura. Antes de migrar
    la tabla todavía no tiene `role`, así que no se pide:
    ```bash
@@ -276,10 +276,9 @@ Pasos:
      la promueve. Repetir el ensayo con ese valor y comprobar `/admin` con una **firma real** por
      `/api/login`.
    - **No hay fila, la llave no es válida o no es de John:** antes del primer arranque, o fijar
-     `FOUNDER_WALLET` a la wallet real de John ya registrada (en la copia del 2026-09-30 las únicas
-     filas con llave válida son `GCJGMS44…` "Zzz SEP53", `GCISTLUCM5…` "Prueba Cohorte" y
-     `GDXY2RLC…` "Zzz Gate"), o tener listo `FOUNDER_BOOTSTRAP_CODE` para que John entre con él y su
-     wallet. **Nunca** con el código de cohorte: da `contributor` y obliga a reiniciar.
+     `FOUNDER_WALLET` a la wallet real de John ya registrada (la consulta del paso 2 dice cuáles
+     filas tienen llave válida; ese detalle de producción no se copia al repo), o tener listo
+     `FOUNDER_BOOTSTRAP_CODE` para que John entre con él y su wallet. **Nunca** con el código de cohorte: da `contributor` y obliga a reiniciar.
 4. En el log del primer arranque, `[db] founder: …`. Sin avisos = al menos un founder puede firmar.
    Con `no tiene fila en users` o `ninguna fila founder tiene una llave Stellar válida`, todavía nadie
    entra a `/admin` por firma: volver al paso 3.
@@ -291,20 +290,19 @@ Cambiar `FOUNDER_WALLET` más adelante promueve la nueva y **no** le quita el ro
 Retirar un founder es una decisión explícita: `UPDATE users SET role = 'contributor', is_supervisor = 0
 WHERE wallet = '<wallet>'` por Kudu tras el respaldo, hasta que WP32 lo lleve a `/admin`. La línea
 desplegada también dejaba entrar a `/admin` a las filas con `is_supervisor=1`; v1 lo quita a
-propósito (los supervisores supervisan, no administran). En la copia de prod todas valen 0, así que
-nadie pierde un acceso que tuviera.
+propósito (los supervisores supervisan, no administran). Antes de desplegar, comprobar en la copia
+que ninguna fila depende de `is_supervisor=1` para administrar.
 
 ### Invitaciones vivas en producción
 
-- **`GENESIS-0001…0006`** son predecibles y están publicadas (CLAUDE.md, `docs/deploy.md`). En la
-  copia de prod siguen **sin usar** y vencen el 2026-10-03: con el código fusionado cualquiera se
-  daba de alta con ellas. Ahora cada arranque con `NODE_ENV=production` (sin `SEED_DEMO=1`) las
+- **`GENESIS-0001…0006`** son predecibles y están publicadas (CLAUDE.md, `docs/deploy.md`). Si una
+  base las tiene **sin usar**, cualquiera se daría de alta con ellas. Ahora cada arranque con `NODE_ENV=production` (sin `SEED_DEMO=1`) las
   **vence** (`expires_at` = ahora; no se borran). Solo esos seis códigos exactos: las invitaciones
   reales de `/admin` usan el mismo prefijo `GENESIS-`, así que un `LIKE 'GENESIS-%'` las vencería
   también. Equivalente manual por Kudu, tras el respaldo:
   `UPDATE invites SET expires_at = datetime('now') WHERE code IN ('GENESIS-0001','GENESIS-0002','GENESIS-0003','GENESIS-0004','GENESIS-0005','GENESIS-0006') AND used_by IS NULL`.
-- **`ESPECIALIZACION-2026`** (cohorte; se conserva por decisión del líder) **sigue abierta**: 400
-  cupos, 7 usados, vence el 2026-11-10 en la copia del 2026-09-30. Sin `SEED_COHORT=1` no se siembra
+- **`ESPECIALIZACION-2026`** (cohorte; se conserva por decisión del líder) puede seguir **abierta**:
+  sus cupos, usos y vencimiento se consultan en la base, no se copian aquí. Sin `SEED_COHORT=1` no se siembra
   ni se le alarga el plazo, pero la fila que ya existe sigue valiendo: quien tenga el código se da de
   alta como `contributor`. Con `SEED_COHORT=1`, cada arranque lleva el vencimiento a hoy + 45 días.
   Cerrarla es decisión de John: `UPDATE invites SET expires_at = datetime('now') WHERE code = 'ESPECIALIZACION-2026'`.

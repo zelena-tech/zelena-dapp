@@ -44,7 +44,7 @@ Los ítems `FBxx` (feedback de John, ver FEEDBACK.md) tienen prioridad sobre los
 >
 > **Renumeración (fusión 2026-09-30):** v1.2 usaba WP20–WP26, que chocaban con los archivos de spec WP20–WP30 de la línea desplegada, y WP31 ya es `docs/specs/WP31-herramienta-talento-ritos.md`. Los IDs de v1.2 pasan a 32+: WP20→**WP32**, WP21→**WP33**, WP22→**WP34**, WP23→**WP35**, WP24→**WP36**, WP25→**WP37**, WP26→**WP38**, capa async→**WP39**. Los nombres de rama no cambian.
 >
-> **El principio:** el sistema se diseña para ROLES, no para personas. Que Vale sea hoy la líder de proyectos y el gate de calidad no puede significar que el sistema esté cableado a Vale: si entra María o Andrea a ese rol, deben poder hacer todo lo que hace Vale **sin que nadie toque código**.
+> **El principio:** el sistema se diseña para ROLES, no para personas. Que quien lleva Operaciones sea hoy la líder de proyectos y el gate de calidad no puede significar que el sistema esté cableado a una persona: si entra María o Andrea a ese rol, deben poder hacer todo lo que hace quien lleva Operaciones **sin que nadie toque código**.
 >
 > **Criterio binario del principio — la "prueba de la persona nueva":** dar de alta a alguien, hacerla supervisora, asignarle trabajo importado del CSV, que el bot la reconozca, y darle de baja reasignando su trabajo — todo desde la interfaz, sin un `git commit`. Mientras no pase, el principio es aspiración, no propiedad del sistema. Corolario: **aplica también al founder** — el gate "la wallet de John" era exactamente ese bug.
 >
@@ -93,13 +93,13 @@ WP14 (modelo + importador CSV + /equipo/hoy) → WP15 (dashboard + digest) → W
 
 | WP | Owner humano | Apoyo |
 |---|---|---|
-| WP13 Entra SSO | Fausto | John (secretos) |
-| WP14 Módulo equipo | Fausto (backend) | David (UI) |
-| WP15 Dashboard | David | Vale (define qué se mide) |
-| WP16 Azure | Fausto | John (suscripción) |
-| WP17 Entornos cliente | Fausto (modelo/RBAC) + David (UI) | Juan (dueño del inventario de credenciales) |
-| WP18 OKRs | Vale (dueña del ciclo) | David (UI), John (define OKRs) |
-| Gate de calidad de todos | Vale | — |
+| WP13 Entra SSO | Plataforma | John (secretos) |
+| WP14 Módulo equipo | Plataforma (backend) | Producto (UI) |
+| WP15 Dashboard | Producto | Operaciones (define qué se mide) |
+| WP16 Azure | Plataforma | John (suscripción) |
+| WP17 Entornos cliente | Plataforma (modelo/RBAC) + Producto (UI) | Finanzas (dueño del inventario de credenciales) |
+| WP18 OKRs | Operaciones (dueña del ciclo) | Producto (UI), John (define OKRs) |
+| Gate de calidad de todos | Operaciones | — |
 
 ## Registro de cierres
 

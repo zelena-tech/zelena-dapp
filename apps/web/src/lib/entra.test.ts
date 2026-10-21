@@ -3,7 +3,7 @@
  *
  * Qué se mockea y qué NO: se mockean los CLAIMS del `id_token` (lo que Entra
  * entregaría tras autenticar), porque conseguirlos de verdad exige el app
- * registration de John. Lo que se prueba es TODO lo nuestro: la restricción de
+ * registration de Founder. Lo que se prueba es TODO lo nuestro: la restricción de
  * tenant, la resolución de identidad contra el registro y las escrituras en DB.
  * Ninguna de estas pruebas hace una petición de red.
  *

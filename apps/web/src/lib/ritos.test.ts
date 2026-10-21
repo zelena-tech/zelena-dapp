@@ -243,7 +243,7 @@ describe("D5 · permisos de preparar, asignar, abrir, cerrar y ver el código", 
     lanza(() => asignarRolesRito(db, anfitrion, { sessionId: id, hostWallet: anfitrion.wallet }), 403);
     lanza(() => asignarRolesRito(db, fundadora, { sessionId: id, hostWallet: "G_DEMO" }), 400);
     lanza(() => asignarRolesRito(db, fundadora, { sessionId: id, hostWallet: "G_SIN_ACUERDO" }), 400);
-    lanza(() => asignarRolesRito(db, fundadora, { sessionId: id, hostWallet: "pending:juan" }), 400);
+    lanza(() => asignarRolesRito(db, fundadora, { sessionId: id, hostWallet: "pending:finanzas" }), 400);
     lanza(() => asignarRolesRito(db, fundadora, { sessionId: id, hostWallet: "G_NO_EXISTE" }), 400);
     lanza(() => asignarRolesRito(db, fundadora, { sessionId: id, hostWallet: a1.wallet, recorderWallet: a1.wallet }), 409);
     lanza(() => asignarRolesRito(db, fundadora, { sessionId: 999, hostWallet: a1.wallet }), 404);
@@ -382,7 +382,7 @@ describe("D3 · registrar asistencia", () => {
     persona(db, "G_SIN_ACUERDO", { cla: false });
     persona(db, "G_ALUMNI", { status: "alumni" });
     expect(lanza(() => registrarAsistencia(db, "G_DEMO", { sessionId: id, codigo }, EN_DEMO), 403).motivo).toBe("demo");
-    expect(lanza(() => registrarAsistencia(db, "pending:juan", { sessionId: id, codigo }, EN_DEMO), 403).motivo).toBe("pendiente");
+    expect(lanza(() => registrarAsistencia(db, "pending:finanzas", { sessionId: id, codigo }, EN_DEMO), 403).motivo).toBe("pendiente");
     expect(
       lanza(() => registrarAsistencia(db, "G_SIN_ACUERDO", { sessionId: id, codigo }, EN_DEMO), 403, COPY_ASISTENCIA.sinAcuerdo).motivo
     ).toBe("sin_acuerdo");
@@ -677,7 +677,7 @@ describe("D6 · lecturas públicas sin wallets ni nombres; el enlace solo con se
     expect(sesionesGestionables(db, EN_DEMO)[0].pendienteDeCerrar).toBe(false);
     expect(sesionesGestionables(db, new Date("2026-10-09T22:31:00Z"))[0].pendienteDeCerrar).toBe(true);
     cerrarRito(db, anfitrion, { sessionId: id }, CIERRE_DEMO);
-    db.prepare(`UPDATE anchor_queue SET status = 'anchored', tx_id = 'SEEDTX_NO_VALE' WHERE kind = 'rite'`).run();
+    db.prepare(`UPDATE anchor_queue SET status = 'anchored', tx_id = 'SEEDTX_NO_SIRVE' WHERE kind = 'rite'`).run();
     expect(ritosPublicos(db, CIERRE_DEMO).pasados[0].txId).toBeNull();
     const tx = "a".repeat(64);
     db.prepare(`UPDATE anchor_queue SET tx_id = ? WHERE kind = 'rite'`).run(tx);

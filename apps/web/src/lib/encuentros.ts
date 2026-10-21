@@ -13,7 +13,7 @@ export type Encuentro = {
   /** Texto tal cual se muestra: "Gratis", "$50.000 COP"… */
   precio: string;
   descripcion: string;
-  /** Página de inscripción (Luma, formulario, etc.). */
+  /** Página de inscripción (lu.ma, un formulario, etc.). */
   registro: string;
 };
 

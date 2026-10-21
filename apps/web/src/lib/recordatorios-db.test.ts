@@ -45,9 +45,9 @@ const DEMOSUP = "GDEMOSUPERVISAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 const ALUM = "GALUMNISUPERAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 const EXTERNO = "GEXTERNOESTRUCTURAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 const SESION_FOUNDER = "GFOUNDERSESIONAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-const JOHN = pendingPrincipal("john");
-const VALE = pendingPrincipal("vale");
-const FAUSTO = pendingPrincipal("fausto");
+const FUNDADOR = pendingPrincipal("founder");
+const OPERACIONES = pendingPrincipal("operaciones");
+const PLATAFORMA = pendingPrincipal("plataforma");
 
 const APP = "https://www.zelena.tech";
 /** Activo desde mucho antes: la guarda de arranque no interviene (salvo en C1-11). */
@@ -131,7 +131,7 @@ function pieza(db: DB, o: PiezaInput = {}): number {
     db.prepare(
       `INSERT INTO assignment_events (assignment_id, action, from_status, to_status, actor_wallet, day, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?)`
-    ).run(id, action, from, to, JOHN, instanteDb(d).slice(0, 10), instanteDb(d));
+    ).run(id, action, from, to, FUNDADOR, instanteDb(d).slice(0, 10), instanteDb(d));
   }
   return id;
 }
@@ -447,7 +447,7 @@ describe("C1-3 · cada mensaje cabe en el límite de Telegram (4096)", () => {
     expect(r).toMatchObject({ digestEnviados: 2, inmediatosEnviados: 0, errores: 0 });
     // El dueño, sus 30 vencidas; el founder, por cada pieza, la de supervisor global y la suya.
     const esperado = new Map([
-      [1001, filasMenos(SUPER, SESION_FOUNDER, JOHN)],
+      [1001, filasMenos(SUPER, SESION_FOUNDER, FUNDADOR)],
       [1004, filasMenos(SUPER, ANA)],
     ]);
     expect([esperado.get(1001), esperado.get(1004)]).toEqual([30, 60]);
@@ -605,47 +605,47 @@ describe("C1-6 · destinatarios", () => {
 
   it("si quien estructura es el dueño → supervisores globales válidos (ni demo, ni inactivos, ni pending sin vincular)", () => {
     const ws = resolverDestinatarios(db, { tipo: "supervision", initiativeId: P, incluyeRevisa: false }, EST);
-    // SUPER (core con supervisión) y el principal del founder; VALE es `pending:` sin vincular.
-    expect(ordenar(ws)).toEqual(ordenar([SUPER, JOHN]));
-    expect(ws).not.toContain(VALE);
+    // SUPER (core con supervisión) y el principal del founder; OPERACIONES es `pending:` sin vincular.
+    expect(ordenar(ws)).toEqual(ordenar([SUPER, FUNDADOR]));
+    expect(ws).not.toContain(OPERACIONES);
     expect(ws).not.toContain(DEMOSUP);
     expect(ws).not.toContain(ALUM);
-    expect(ws).not.toContain(SESION_FOUNDER); // misma persona que JOHN: deduplicado
+    expect(ws).not.toContain(SESION_FOUNDER); // misma persona que FUNDADOR: deduplicado
   });
 
   it("sin supervisores globales → founder", () => {
     db.prepare(`UPDATE users SET is_supervisor = 0`).run();
-    expect(resolverDestinatarios(db, { tipo: "supervision", initiativeId: P, incluyeRevisa: false }, EST)).toEqual([JOHN]);
+    expect(resolverDestinatarios(db, { tipo: "supervision", initiativeId: P, incluyeRevisa: false }, EST)).toEqual([FUNDADOR]);
   });
 
   it("founder = su principal de equipo; nunca si el dueño es él (en cualquiera de sus identidades)", () => {
-    expect(resolverDestinatarios(db, { tipo: "founder" }, ANA)).toEqual([JOHN]);
+    expect(resolverDestinatarios(db, { tipo: "founder" }, ANA)).toEqual([FUNDADOR]);
     expect(resolverDestinatarios(db, { tipo: "founder" }, SESION_FOUNDER)).toEqual([]);
-    expect(resolverDestinatarios(db, { tipo: "founder" }, JOHN)).toEqual([]);
+    expect(resolverDestinatarios(db, { tipo: "founder" }, FUNDADOR)).toEqual([]);
     const ws = resolverDestinatarios(db, { tipo: "supervision", initiativeId: null, incluyeRevisa: false }, SESION_FOUNDER);
     expect(ws).toEqual([SUPER]);
   });
 
   it("con el roster vinculado, el founder recibe en la cuenta vinculada", () => {
-    db.prepare(`INSERT INTO roster_links (slug, wallet, linked_by) VALUES ('john', ?, ?)`).run(SESION_FOUNDER, SESION_FOUNDER);
-    db.prepare(`DELETE FROM users WHERE wallet = ?`).run(JOHN);
+    db.prepare(`INSERT INTO roster_links (slug, wallet, linked_by) VALUES ('founder', ?, ?)`).run(SESION_FOUNDER, SESION_FOUNDER);
+    db.prepare(`DELETE FROM users WHERE wallet = ?`).run(FUNDADOR);
     expect(resolverDestinatarios(db, { tipo: "founder" }, ANA)).toEqual([SESION_FOUNDER]);
   });
 
   it("persona: solo el dueño válido (nunca pending sin vincular, demo ni inactivo)", () => {
     expect(resolverDestinatarios(db, { tipo: "persona", wallet: ANA }, ANA)).toEqual([ANA]);
-    expect(resolverDestinatarios(db, { tipo: "persona", wallet: FAUSTO }, FAUSTO)).toEqual([]);
+    expect(resolverDestinatarios(db, { tipo: "persona", wallet: PLATAFORMA }, PLATAFORMA)).toEqual([]);
     expect(resolverDestinatarios(db, { tipo: "persona", wallet: DEMOSUP }, DEMOSUP)).toEqual([]);
     expect(resolverDestinatarios(db, { tipo: "persona", wallet: ALUM }, ALUM)).toEqual([]);
     // El founder sí, como excepción, en su principal de equipo.
-    expect(resolverDestinatarios(db, { tipo: "persona", wallet: SESION_FOUNDER }, SESION_FOUNDER)).toEqual([JOHN]);
+    expect(resolverDestinatarios(db, { tipo: "persona", wallet: SESION_FOUNDER }, SESION_FOUNDER)).toEqual([FUNDADOR]);
   });
 
   it("dos identidades de la misma persona reciben una sola vez", () => {
     const Q = proyecto(db, "otro-proyecto", "Otro Proyecto");
     miembro(db, Q, SESION_FOUNDER, "estructura");
-    miembro(db, Q, JOHN, "estructura");
-    expect(resolverDestinatarios(db, { tipo: "supervision", initiativeId: Q, incluyeRevisa: false }, ANA)).toEqual([JOHN]);
+    miembro(db, Q, FUNDADOR, "estructura");
+    expect(resolverDestinatarios(db, { tipo: "supervision", initiativeId: Q, incluyeRevisa: false }, ANA)).toEqual([FUNDADOR]);
   });
 
   it("un contributor solo recibe avisos de sus piezas (de sus proyectos)", async () => {
@@ -669,9 +669,9 @@ describe("C1-6 · destinatarios", () => {
     miembro(db, C, ANA, "ejecuta");
     const d = { tipo: "supervision", initiativeId: C, incluyeRevisa: false } as const;
     const pz = { initiative_id: C, client_id: null };
-    expect(resolverDestinatarios(db, d, ANA, pz)).toEqual([JOHN]);
+    expect(resolverDestinatarios(db, d, ANA, pz)).toEqual([FUNDADOR]);
     db.prepare(`INSERT INTO client_members (client_id, wallet, access_level) VALUES (?, ?, 'colaborador')`).run(cliente, SUPER);
-    expect(ordenar(resolverDestinatarios(db, d, ANA, pz))).toEqual(ordenar([SUPER, JOHN]));
+    expect(ordenar(resolverDestinatarios(db, d, ANA, pz))).toEqual(ordenar([SUPER, FUNDADOR]));
   });
 
   it("en una corrida real: el dueño recibe lo suyo y quien estructura el escalamiento", async () => {
@@ -681,7 +681,7 @@ describe("C1-6 · destinatarios", () => {
       (db.prepare(`SELECT tipo FROM avisos WHERE wallet = ? ORDER BY id`).all(w) as Array<{ tipo: string }>).map((a) => a.tipo);
     expect(por(ANA)).toEqual(["vencida"]);
     expect(por(EST)).toEqual(["escala_supervisor"]);
-    expect(por(JOHN)).toEqual(["escala_founder"]);
+    expect(por(FUNDADOR)).toEqual(["escala_founder"]);
     expect(por(RITA)).toEqual([]);
   });
 });
@@ -908,7 +908,7 @@ describe("C1-13 · simulación", () => {
     expect(huella(db)).toBe(antes);
     // Solo conteos: ni wallets ni nombres ni textos.
     const json = JSON.stringify(r);
-    for (const w of [ANA, EJE, EST, JOHN]) expect(json).not.toContain(w);
+    for (const w of [ANA, EJE, EST, FUNDADOR]) expect(json).not.toContain(w);
     expect(json).not.toContain("«");
   });
 

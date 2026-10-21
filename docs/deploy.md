@@ -241,7 +241,7 @@ pero el App Service **sí** debe instalarlos.
 
 ## Recursos y configuración de Azure
 
-- **Resource group** `rg-zelena-workspace`.
+- **Resource group** (su nombre vive en la configuración de Azure, no en el repo).
 - **App Service** Linux, **Node 20**, plan **B1** (el free tier duerme la app).
   Arranque: `npm --workspace apps/web run build && npx --workspace apps/web next start`.
   El árbol de `apps/web/src/lib` debe existir en el destino: en tiempo de ejecución se

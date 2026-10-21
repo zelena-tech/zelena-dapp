@@ -9,7 +9,9 @@
  *    datos que no validan, se convierte en una PREGUNTA. El bot no adivina.
  *  - Un `telegram_user_id` no registrado se IGNORA (sin responderle, para no
  *    confirmarle que el bot existe) y queda en el log.
- *  - v1 = solo John escribe. Cualquier otra persona vinculada queda en lectura.
+ *  - v1 = solo el founder escribe. Cualquier otra persona vinculada queda en lectura.
+ *  - El prompt no nombra a NADIE (hallazgo A8, el repo es público): los nombres del
+ *    equipo llegan en el contexto de cada mensaje, leídos de la base (`hintsFor`).
  *  - WP31-C2 · TODO EL EQUIPO SE VINCULA, SIN FUGAS. Quien no ve todo el equipo en
  *    la web (`soloLoPropio`: un core sin supervisión, un contributor, o quien hoy no
  *    entra a `/equipo`) recibe por aquí solo lo suyo: su texto libre NUNCA llega al
@@ -23,7 +25,7 @@
  */
 import type { DB } from "./db";
 import { botModel } from "./config.ts";
-import { TeamError, actorFromSession, proyectosVisibles } from "./team.ts";
+import { TeamError, actorFromSession, listTeamMembers, proyectosVisibles } from "./team.ts";
 import { equipoActor } from "./authz";
 import { getActiveGenome } from "./genome.ts";
 import { diaLocal } from "./zona-horaria.ts";
@@ -96,7 +98,7 @@ export class BotAgentError extends Error {
 }
 
 export const BOT_SYSTEM_PROMPT = [
-  "Eres el asistente personal de John en la dapp de la Zelena DAO. Tu único trabajo es",
+  "Eres el asistente personal del founder en la dapp de la Zelena DAO. Tu único trabajo es",
   "traducir lo que él escribe a UNA de las cinco herramientas disponibles. No conversas,",
   "no opinas y no redactas texto libre.",
   "",
@@ -106,9 +108,9 @@ export const BOT_SYSTEM_PROMPT = [
   "2. Si te falta un dato esencial o no estás seguro de lo que se pide, usa no_entendido",
   `   con una pregunta concreta. Nunca rellenes un hueco por tu cuenta. Si tu confianza`,
   `   es menor que ${BOT_MIN_CONFIDENCE}, usa no_entendido.`,
-  "3. Solo existen estas personas en el equipo: John, Vale, Juan, David, Fausto y Angela.",
+  "3. Las únicas personas del equipo son las de 'Personas del equipo' en el contexto.",
   "   Si el nombre que oyes no es uno de esos, deja el responsable vacío.",
-  "4. Nada de lo que propongas se crea solo: la dapp le pide confirmación a John. No",
+  "4. Nada de lo que propongas se crea solo: la dapp le pide confirmación al founder. No",
   "   prometas que ya está hecho.",
   "5. Escribe sobre la pieza de trabajo y la entrega, nunca sobre la persona. No hables de",
   "   horas, ubicación ni disponibilidad de nadie: aquí se sigue por objetivos.",
@@ -194,7 +196,7 @@ export interface VoiceInput {
 }
 
 /**
- * Costura de transcripción. La API de Claude NO transcribe audio y John todavía no
+ * Costura de transcripción. La API de Claude NO transcribe audio y el founder todavía no
  * ha decidido proveedor ni hay credencial, así que en v1 esto es una interfaz sin
  * implementación real: el flujo completo funciona sobre TEXTO y el audio recibe una
  * respuesta honesta. Cuando haya proveedor, se inyecta aquí y nada más cambia.
@@ -239,12 +241,18 @@ export interface HandleResult {
  * nombra los proyectos que esta persona ve (`proyectosVisibles`, WP31-C2): un
  * proyecto de cliente donde no participa no llega al modelo. La fecha es la del día
  * hábil del genoma (`BUSINESS_TZ`), no la del servidor.
+ *
+ * Las personas del equipo salen de la BASE (`listTeamMembers`: founder y core activos,
+ * sin demos), nunca de una lista del código (hallazgo A8). Este contexto solo llega al
+ * modelo con el texto libre de quien ve todo el equipo (`soloLoPropio` no lo envía).
  */
-function hintsFor(db: DB, ctx: BotContext): string {
+export function hintsFor(db: DB, ctx: BotContext): string {
   const proyectos = ctx.equipo ? proyectosVisibles(db, ctx.equipo) : [];
   const hoy = diaLocal(ctx.now, getActiveGenome(db).BUSINESS_TZ);
+  const personas = [...new Set(listTeamMembers(db).map((m) => m.display_name.trim()).filter(Boolean))];
   return [
     `Hoy es ${hoy}.`,
+    personas.length > 0 ? `Personas del equipo: ${personas.join(", ")}.` : "Personas del equipo: ninguna registrada.",
     proyectos.length > 0 ? `Iniciativas que existen: ${proyectos.map((i) => i.name).join(", ")}.` : "",
   ]
     .filter(Boolean)

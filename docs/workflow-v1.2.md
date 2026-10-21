@@ -19,7 +19,7 @@ Método, igual que `workflow-v1.1.md`: cada mejora es un **WP** con criterios de
 
 **El sistema se diseña para ROLES, no para personas.**
 
-Que Vale sea hoy la líder de proyectos y el gate de calidad no puede significar que el sistema esté cableado a Vale. Si mañana entra María o Andrea a ese rol, deben poder hacer **todo** lo que hace Vale **sin que nadie toque código**: es una operación de datos (cambiar un rol), no un PR.
+Que quien lleva Operaciones sea hoy la líder de proyectos y el gate de calidad no puede significar que el sistema esté cableado a una persona. Si mañana entra María o Andrea a ese rol, deben poder hacer **todo** lo que hace Operaciones **sin que nadie toque código**: es una operación de datos (cambiar un rol), no un PR.
 
 Criterio de verificación del principio, y es binario:
 
@@ -92,11 +92,11 @@ Cierra: A-01, D1-03, D1-04, D1-06, D1-08.
 - [ ] Dar de alta a "María" desde `/admin`, hacerla supervisora, y que vea el dashboard — **sin reiniciar y sin tocar código**.
 - [ ] Reiniciar la app y comprobar que **el cambio persiste** (test que fija que el seed no sobreescribe filas existentes).
 - [ ] Importar un CSV con "Maria" en `Assignee` → resuelve a su fila, no la rechaza.
-- [ ] Quitarle la supervisión a Vale desde el panel; persiste tras reinicio.
+- [ ] Quitarle la supervisión a la fila de Operaciones desde el panel; persiste tras reinicio.
 - [ ] El bot, preguntado por el equipo, incluye a María sin haber recompilado.
 - [ ] Cada cambio de rol queda en `decision_log` con quién y cuándo.
 
-**Owner:** Fausto (modelo) + David (panel) · **Tamaño:** L
+**Owner:** Plataforma (modelo) + Producto (panel) · **Tamaño:** L
 
 ---
 
@@ -116,7 +116,7 @@ Cierra: D3-05, D3-06, D3-07.
 - [ ] Un lector nuevo puede seguir A1/A3 y encender los flags sin preguntar nada.
 - [ ] Cero ocurrencias de "Postgres" como motor de producción en `docs/`.
 
-**Owner:** Fausto · **Tamaño:** S
+**Owner:** Plataforma · **Tamaño:** S
 
 ---
 
@@ -139,7 +139,7 @@ Cierra: D2-03, D2-04, D2-05, D1-09.
 - [ ] La máquina de estados sigue pura: reasignar **no** cambia el `status`.
 - [ ] Test de tabla de la matriz de estados sigue verde sin cambios.
 
-**Owner:** Fausto · **Tamaño:** M
+**Owner:** Plataforma · **Tamaño:** M
 
 ---
 
@@ -156,7 +156,7 @@ Cierra: D3-03.
 - [ ] El consumo atómico de invitaciones se verifica sobre el motor real, no sobre SQLite.
 - [ ] `docs/deploy.md` reemplaza su sección "qué queda por verificar" por el comando real.
 
-**Owner:** Fausto · **Tamaño:** M · Gate: credenciales de Azure (John)
+**Owner:** Plataforma · **Tamaño:** M · Gate: credenciales de Azure (John)
 
 ---
 
@@ -174,7 +174,7 @@ Cierra: D1-07, D3-04.
 - [ ] Sus check-ins cuentan en la salud de ritos.
 - [ ] Ningún dato existente pierde su referencia (la PK no muta: se migra o se decide, no se reescribe).
 
-**Owner:** Fausto + decisión de John · **Tamaño:** M
+**Owner:** Plataforma + decisión de John · **Tamaño:** M
 
 ---
 
@@ -206,7 +206,7 @@ Cierra: D4-01 … D4-06. **La visión de John del 30-jul.**
 - [ ] D: el bot responde preguntas solo desde el corpus; fuera de él dice que no sabe.
 - [ ] E: un aviso real llega a WhatsApp con plantilla aprobada, y queda registrado en `bot_actions`.
 
-**Owner:** Fausto (puerto + dispatcher) + David (copys) + John (cuenta Meta y decisión de fase) · **Tamaño:** L (por etapas)
+**Owner:** Plataforma (puerto + dispatcher) + Producto (copys) + John (cuenta Meta y decisión de fase) · **Tamaño:** L (por etapas)
 
 ---
 
@@ -220,6 +220,6 @@ Cierra: D4-01 … D4-06. **La visión de John del 30-jul.**
 
 1. Máximo **2 WPs por ola**, en worktrees aislados, un loop por WP.
 2. El **verificador adversarial corre en invocación aparte** de los implementadores (lección de hoy: agotar la sesión mata al verificador y te deja hallazgos sin confirmar).
-3. Gate de calidad contra los criterios del WP — no opiniones. **El rol de gate lo ejerce quien tenga el rol, no una persona en particular**: hoy Vale; mañana quien esté en ese rol.
+3. Gate de calidad contra los criterios del WP — no opiniones. **El rol de gate lo ejerce quien tenga el rol, no una persona en particular**: hoy Operaciones; mañana quien esté en ese rol.
 4. Al cerrar la ola: merge ordenado, suite completa verde, `QUEUE.md` actualizado con hash, y siguiente ola.
 5. Este archivo es la fuente del grafo. `QUEUE.md` es la cola operativa.

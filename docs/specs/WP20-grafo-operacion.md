@@ -78,5 +78,5 @@ Esto es lo que convierte el grafo en algo confiable: no es que sepamos todo, es 
 - [x] La cobertura calcula `pct_verified`, preguntas abiertas y bus factor ≤1 (test).
 - [ ] La pestaña Operación muestra los nodos con su confianza y enlaza al detalle (validación humana en localhost).
 
-OWNER — Fausto (modelo + importador) · David (pestaña Operación) · AGENTE: modelo, importador, consultas y tests · HUMANO (John): decide qué clientes tienen grafo y quién participa; Vale valida los criterios.
+OWNER — Plataforma (modelo + importador) · Producto (pestaña Operación) · AGENTE: modelo, importador, consultas y tests · HUMANO (John): decide qué clientes tienen grafo y quién participa; Operaciones valida los criterios.
 TAMAÑO — M · Depende: WP17 (clients y RBAC), WP14 (para el enganche `graph_node_id`).

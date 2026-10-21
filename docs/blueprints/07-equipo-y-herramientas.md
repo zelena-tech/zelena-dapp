@@ -23,12 +23,12 @@ Plano 06: con este tamaño eres UN equipo vertical — la ventaja es no tener si
 
 | Quién | Dominio (dueño de punta a punta) | Su stack de agentes | WPs de v1 |
 |---|---|---|---|
-| **John** | Visión, clientes, portafolio, gates de inversión y visual | Cowork + skill `delegar` (volcado→spec), monitoreo competitivo programado | Gates `needs_founder` · secretos Entra/Azure · OKRs del trimestre (con Vale) |
-| **Vale** (procesos y mejora continua) | **Dueña del sistema operativo**: QUEUE, calidad de specs, ritos, épocas y mutaciones, retro, auditoría de funciones latentes, OKRs | Claude para redactar/afinar specs; skill-creator para volver skills los procesos repetibles; verificación adversarial de entregas | WP18 (dueña del ciclo) · WP12 (auditorías) · gate de calidad de TODOS los WPs (hereda el rol QA) |
-| **Juan** (FinOps, contratos, pagos) | Control financiero, contratos + anclaje de hashes, nómina, costos por cliente, gate legal | Agentes de análisis en xlsx, digest financiero programado, seguimiento de gasto de nube | WP10 (nómina, tras gate legal que él persigue) · inventario de credenciales de WP17 (dueño del registro) · costos v2 |
-| **David** (BI, front-end, vibecoder, asistente de John) | Todo lo que se VE: dashboard, vistas, analítica, experiencia de uso | Claude Code para front (vibecoding sobre specs), agentes de análisis de datos para BI | WP15 (dashboard) · UI de WP14/WP17/WP18 · módulo analítica WMS |
-| **Fausto** (DevOps, backend, arquitectura, integraciones) | Todo lo que SOSTIENE: backend, DB, auth, deploy, CI/CD, contratos Soroban en M2 | Claude Code para backend + loop nocturno (CLAUDE.md), agentes para tests e infra | WP13 (Entra) · WP14 backend · WP16 (Azure) · WP17 modelo/RBAC · CI de WP06 |
-| **Angela** (contenido) | Comunicación: redes, copies, whitepaper, y **contenido de Academia** (la vía de puntos por aprendizaje ya construida en la dapp) | Agentes de contenido con la voz de marca (skill zelena), digest semanal "qué contar de lo que hicimos" programado | Contenido de `/academia` · comunicación del lanzamiento de Génesis |
+| **John** | Visión, clientes, portafolio, gates de inversión y visual | Cowork + skill `delegar` (volcado→spec), monitoreo competitivo programado | Gates `needs_founder` · secretos Entra/Azure · OKRs del trimestre (con Operaciones) |
+| **Operaciones** (procesos y mejora continua) | **Dueña del sistema operativo**: QUEUE, calidad de specs, ritos, épocas y mutaciones, retro, auditoría de funciones latentes, OKRs | Claude para redactar/afinar specs; skill-creator para volver skills los procesos repetibles; verificación adversarial de entregas | WP18 (dueña del ciclo) · WP12 (auditorías) · gate de calidad de TODOS los WPs (hereda el rol QA) |
+| **Finanzas** (FinOps, contratos, pagos) | Control financiero, contratos + anclaje de hashes, nómina, costos por cliente, gate legal | Agentes de análisis en xlsx, digest financiero programado, seguimiento de gasto de nube | WP10 (nómina, tras gate legal que él persigue) · inventario de credenciales de WP17 (dueño del registro) · costos v2 |
+| **Producto** (BI, front-end, vibecoder, asistente de John) | Todo lo que se VE: dashboard, vistas, analítica, experiencia de uso | Claude Code para front (vibecoding sobre specs), agentes de análisis de datos para BI | WP15 (dashboard) · UI de WP14/WP17/WP18 · módulo analítica WMS |
+| **Plataforma** (DevOps, backend, arquitectura, integraciones) | Todo lo que SOSTIENE: backend, DB, auth, deploy, CI/CD, contratos Soroban en M2 | Claude Code para backend + loop nocturno (CLAUDE.md), agentes para tests e infra | WP13 (Entra) · WP14 backend · WP16 (Azure) · WP17 modelo/RBAC · CI de WP06 |
+| **Contenido** (contenido) | Comunicación: redes, copies, whitepaper, y **contenido de Academia** (la vía de puntos por aprendizaje ya construida en la dapp) | Agentes de contenido con la voz de marca (skill zelena), digest semanal "qué contar de lo que hicimos" programado | Contenido de `/academia` · comunicación del lanzamiento de Génesis |
 
 **Regla de auditoría (playbook):** el agente propone, el humano firma. Cada dominio tiene UN nombre responsable; los agentes multiplican el volumen, nunca la responsabilidad.
 
@@ -38,9 +38,9 @@ Plano 06: con este tamaño eres UN equipo vertical — la ventaja es no tener si
 - **Carga visible, no punitiva**: el dashboard (WP15) muestra abiertas/en curso por persona para detectar sobrecarga — regla doc 16: se miden entregas y cargas, jamás "rendimiento de personas".
 - **WIP personal**: máximo 2 asignaciones `en curso` por persona (el resto espera en `asignada`). El multitasking es el impuesto invisible; el límite lo cobra explícito.
 - **Tickets**: un ticket (soporte WMS, pedido de cliente, bug) = una asignación con `client_id` + prioridad. Sin sistema aparte de tickets: mismo modelo, misma cola, mismo dashboard (NO-alcance: no es un helpdesk público con SLA en v1).
-- **Vale es la dueña de que esto se cumpla** — su primer proyecto al entrar es operar y afinar el sistema, no aprenderlo de lejos.
+- **Quien lleva Operaciones es la dueña de que esto se cumpla** — su primer proyecto al entrar es operar y afinar el sistema, no aprenderlo de lejos.
 
-## 4. Onboarding de Vale (su primera semana ES el sistema)
+## 4. Onboarding de Operaciones (su primera semana ES el sistema)
 
 1. Día 1: lee playbook + docs 15/16 + este plano. Recorre la dapp local.
 2. Día 2–3: audita los specs WP14–WP18 con ojos frescos (¿criterios realmente binarios?). Propone mejoras como FBxx.
@@ -49,4 +49,4 @@ Plano 06: con este tamaño eres UN equipo vertical — la ventaja es no tener si
 
 ## 5. Identidades para v1 (WP13)
 
-Los 6 con correo @zelena.tech en Entra (incluye a Vale y Angela desde el día 1) + segundo correo personal obligatorio (continuidad del progreso — plano 05). Roles: John `founder`; Vale, Juan, David, Fausto, Angela `core`. Supervisores del dashboard: John + Vale.
+Los 6 con correo @zelena.tech en Entra (incluye a Operaciones y Contenido desde el día 1) + segundo correo personal obligatorio (continuidad del progreso — plano 05). Roles: John `founder`; Operaciones, Finanzas, Producto, Plataforma, Contenido `core`. Supervisores del dashboard: John + Operaciones.

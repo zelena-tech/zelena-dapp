@@ -33,13 +33,13 @@ import {
   type PublicarInput,
 } from "./agora-publicar";
 
-const JOHN = pendingPrincipal("john");
-const VALE = pendingPrincipal("vale");
-const DAVID = pendingPrincipal("david");
+const FUNDADOR = pendingPrincipal("founder");
+const OPERACIONES = pendingPrincipal("operaciones");
+const PRODUCTO = pendingPrincipal("producto");
 
-const F: TeamActor = { wallet: JOHN, name: "John", role: "founder", isSupervisor: true };
-const S: TeamActor = { wallet: VALE, name: "Vale", role: "core", isSupervisor: true };
-const C: TeamActor = { wallet: DAVID, name: "David", role: "core", isSupervisor: false };
+const F: TeamActor = { wallet: FUNDADOR, name: "Founder", role: "founder", isSupervisor: true };
+const S: TeamActor = { wallet: OPERACIONES, name: "Operaciones", role: "core", isSupervisor: true };
+const C: TeamActor = { wallet: PRODUCTO, name: "Producto", role: "core", isSupervisor: false };
 const X: TeamActor = { wallet: "GEXTERNOAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", name: "Ext", role: "contributor", isSupervisor: false };
 
 const AHORA = new Date("2026-10-01T15:00:00.000Z");
@@ -158,7 +158,7 @@ describe("C2-4 · publicarEnAgora", () => {
       budget_usd: 1000,
       weeks: 8,
       state: "Open",
-      supervisor_wallet: VALE,
+      supervisor_wallet: OPERACIONES,
       assignee_wallet: null,
       summary: "Un panel público que muestra las entregas aprobadas.",
       description: "Construir el panel con filtros por estado y por fecha.",
@@ -187,7 +187,7 @@ describe("C2-4 · publicarEnAgora", () => {
     expect(ev[0]).toMatchObject({
       from_status: "Backlog",
       to_status: "Backlog",
-      actor_wallet: VALE,
+      actor_wallet: OPERACIONES,
       created_at: instanteDb(AHORA),
       day: "2026-10-01",
     });
@@ -214,7 +214,7 @@ describe("C2-4 · publicarEnAgora", () => {
   });
 
   it("solo Backlog sin responsable: con dueño o fuera de Backlog → 409", () => {
-    const conDueno = createAssignment(db, { title: "Con dueño", ownerWallet: DAVID, status: "Asignada" });
+    const conDueno = createAssignment(db, { title: "Con dueño", ownerWallet: PRODUCTO, status: "Asignada" });
     const sinDuenoEnCurso = createAssignment(db, { title: "Sin dueño en curso", status: "En curso" });
     for (const pieza of [conDueno, sinDuenoEnCurso]) {
       try {
@@ -296,7 +296,7 @@ describe("C2-4 · publicarEnAgora", () => {
 
   it("desde que se publica, la pieza se paga por sus hitos: la aprobación interna no emite", () => {
     publicarEnAgora(db, F, entrada(id), AHORA);
-    const em = emitirPorAprobacion(db, { assignmentId: id, ownerWallet: DAVID, aprobadorWallet: VALE, size: "M", aTiempo: true });
+    const em = emitirPorAprobacion(db, { assignmentId: id, ownerWallet: PRODUCTO, aprobadorWallet: OPERACIONES, size: "M", aTiempo: true });
     expect(em).toMatchObject({ emitido: false, motivo: "publicada_en_agora", puntos: 0 });
     expect(contar(db, "points_ledger")).toBe(0);
     expect(contar(db, "reputation_events")).toBe(0);

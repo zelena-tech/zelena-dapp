@@ -601,7 +601,7 @@ export interface EstadoFounder {
   /**
    * Filas `founder` por las que alguien puede entrar HOY firmando con su wallet
    * (`/api/login`): llave Stellar válida y CLA firmado. La wallet demo del seed no
-   * cuenta (no es una llave real) ni `pending:john` (solo entra por Entra).
+   * cuenta (no es una llave real) ni `pending:<slug>` (solo entra por Entra).
    */
   conFirma: number;
 }

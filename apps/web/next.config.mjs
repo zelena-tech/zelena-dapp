@@ -34,8 +34,8 @@ const standalone = process.env.NEXT_STANDALONE === "1";
 // siempre los ve. Si faltan en el paquete, la app arranca mal en silencio:
 //  - schema.sql → db.ts (`cwd/src/lib/schema.sql`);
 //  - el worker y el backend de Azure SQL → db-sync-bridge.ts (`cwd/src/lib/*.mjs`);
-//  - CLA.md → cla.ts. Sin él se firma el TEXTO DE RESERVA: ya pasó en prod con
-//    2 firmas (cla_hash 54aecc56…) cuando el paquete de Azure no traía CLA.md.
+//  - CLA.md → cla.ts. Sin él se firma el TEXTO DE RESERVA: ya pasó en prod
+//    cuando el paquete de Azure no traía CLA.md.
 // docs/whitepaper.md ya no va: el sitio no lo sirve (decisión del founder, el
 // manifiesto cumple esa función) y queda en el repo como documento interno.
 // Rutas relativas a apps/web; la raíz de trazado es la del monorepo.

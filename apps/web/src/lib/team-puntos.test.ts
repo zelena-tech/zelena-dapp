@@ -31,7 +31,7 @@ import {
   type Size,
 } from "./team";
 
-const JOHN = pendingPrincipal("john"); // founder (roster)
+const FUNDADOR = pendingPrincipal("founder"); // founder (roster)
 
 // Personas ficticias (wallets de prueba).
 const ANA = "GANAENTREGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"; // ejecuta
@@ -39,7 +39,7 @@ const RITA = "GRITAREVISAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"; // revi
 const EJE2 = "GOTRAEJECUTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"; // ejecuta (no revisa)
 const MADRINA = "GMADRINAREVISAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"; // revisa e invitó a quien entrega
 
-const FOUNDER: TeamActor = { wallet: JOHN, name: "John", role: "founder", isSupervisor: true };
+const FOUNDER: TeamActor = { wallet: FUNDADOR, name: "Founder", role: "founder", isSupervisor: true };
 const actor = (wallet: string): TeamActor => ({ wallet, name: wallet.slice(1, 6), role: "contributor", isSupervisor: false });
 
 // Calendario (Bogotá = UTC−5). Lunes 5 de octubre de 2026 = "hoy".
@@ -241,7 +241,7 @@ describe("WP31-I1 · gancho de emisión al aprobar", () => {
     });
 
     it("el founder (exento de B8) aprueba a quien invitó y la entrega emite", () => {
-      db.prepare(`UPDATE users SET invited_by = ? WHERE wallet = ?`).run(JOHN, ANA);
+      db.prepare(`UPDATE users SET invited_by = ? WHERE wallet = ?`).run(FUNDADOR, ANA);
       const id = entregada();
       const r = aprobar(id, MANANA_3PM, FOUNDER);
       expect(r.emision?.emitido).toBe(true);
@@ -258,7 +258,7 @@ describe("WP31-I1 · gancho de emisión al aprobar", () => {
 
       beforeEach(() => {
         db.prepare(
-          `INSERT INTO users (wallet, display_name, role, status, is_demo, cla_signed) VALUES (?, 'John', 'founder', 'active', 0, 1)`
+          `INSERT INTO users (wallet, display_name, role, status, is_demo, cla_signed) VALUES (?, 'Founder', 'founder', 'active', 0, 1)`
         ).run(SESION_FOUNDER);
         db.prepare(
           `INSERT INTO users (wallet, display_name, role, is_supervisor, status, is_demo, cla_signed, invited_by)
@@ -280,7 +280,7 @@ describe("WP31-I1 · gancho de emisión al aprobar", () => {
       }
 
       it("su fila de equipo aún sin vincular: la aprueba una supervisora que él invitó y emite", () => {
-        const id = delFounder(JOHN, FOUNDER);
+        const id = delFounder(FUNDADOR, FOUNDER);
         const r = aprobar(id, MANANA_3PM, SUPERVISORA_ACTOR);
         expect(r.row.status).toBe("Hecha");
         const premio = calcularPremioTarea({ size: "M", aTiempo: true }, G);
@@ -292,15 +292,15 @@ describe("WP31-I1 · gancho de emisión al aprobar", () => {
           periodo: currentEpoch(db),
         });
         expect(filas(db, id).puntos).toEqual([
-          { wallet: JOHN, points: premio.puntos, period_id: currentEpoch(db), bucket: "ejecucion" },
+          { wallet: FUNDADOR, points: premio.puntos, period_id: currentEpoch(db), bucket: "ejecucion" },
         ]);
-        expect(filas(db, id).rep).toEqual([{ wallet: JOHN, axis: "ejecucion", delta: G.TASK_REP.M, period_id: currentEpoch(db) }]);
+        expect(filas(db, id).rep).toEqual([{ wallet: FUNDADOR, axis: "ejecucion", delta: G.TASK_REP.M, period_id: currentEpoch(db) }]);
       });
 
       it("ya vinculada (su cuenta real es la de la sesión): la aprueba quien revisa, invitada por su fila de equipo, y emite", () => {
-        db.prepare(`INSERT INTO roster_links (slug, wallet, linked_by) VALUES ('john', ?, ?)`).run(SESION_FOUNDER, SESION_FOUNDER);
-        db.prepare(`UPDATE users SET invited_by = ? WHERE wallet = ?`).run(JOHN, RITA);
-        const founderSesion: TeamActor = { wallet: SESION_FOUNDER, name: "John", role: "founder", isSupervisor: true };
+        db.prepare(`INSERT INTO roster_links (slug, wallet, linked_by) VALUES ('founder', ?, ?)`).run(SESION_FOUNDER, SESION_FOUNDER);
+        db.prepare(`UPDATE users SET invited_by = ? WHERE wallet = ?`).run(FUNDADOR, RITA);
+        const founderSesion: TeamActor = { wallet: SESION_FOUNDER, name: "Founder", role: "founder", isSupervisor: true };
         const id = delFounder(SESION_FOUNDER, founderSesion);
         const r = aprobar(id, MANANA_3PM, actor(RITA));
         expect(r.row.status).toBe("Hecha");
@@ -311,8 +311,8 @@ describe("WP31-I1 · gancho de emisión al aprobar", () => {
       });
 
       it("el founder sigue sin cobrar su propia aprobación con ninguna de sus identidades", () => {
-        const founderSesion: TeamActor = { wallet: SESION_FOUNDER, name: "John", role: "founder", isSupervisor: true };
-        const id = delFounder(JOHN, FOUNDER);
+        const founderSesion: TeamActor = { wallet: SESION_FOUNDER, name: "Founder", role: "founder", isSupervisor: true };
+        const id = delFounder(FUNDADOR, FOUNDER);
         expect(fallo(() => aprobar(id, MANANA_3PM, founderSesion))).toEqual({ status: 403, message: MOTIVO_TRANSICION.dueno });
         expect(ledgers(db)).toBe(0);
       });
@@ -321,13 +321,13 @@ describe("WP31-I1 · gancho de emisión al aprobar", () => {
         // Invitaciones de las dos identidades del founder (sesión y fila de equipo) y una
         // entre dos personas del equipo (MADRINA invitó a ANA).
         db.prepare(`UPDATE users SET invited_by = ? WHERE wallet = ?`).run(SESION_FOUNDER, RITA);
-        db.prepare(`UPDATE users SET invited_by = ? WHERE wallet = ?`).run(JOHN, MADRINA);
+        db.prepare(`UPDATE users SET invited_by = ? WHERE wallet = ?`).run(FUNDADOR, MADRINA);
         db.prepare(`UPDATE users SET invited_by = ? WHERE wallet = ?`).run(MADRINA, ANA);
-        const founderSesion: TeamActor = { wallet: SESION_FOUNDER, name: "John", role: "founder", isSupervisor: true };
+        const founderSesion: TeamActor = { wallet: SESION_FOUNDER, name: "Founder", role: "founder", isSupervisor: true };
         const casos: Array<{ dueno: string; quien: TeamActor; aprobador: TeamActor; frena?: string }> = [
           // Su fila de equipo sin vincular la revisa un supervisor (otra regla, no B8).
-          { dueno: JOHN, quien: FOUNDER, aprobador: SUPERVISORA_ACTOR },
-          { dueno: JOHN, quien: FOUNDER, aprobador: actor(RITA), frena: MOTIVO_TRANSICION.pendiente },
+          { dueno: FUNDADOR, quien: FOUNDER, aprobador: SUPERVISORA_ACTOR },
+          { dueno: FUNDADOR, quien: FOUNDER, aprobador: actor(RITA), frena: MOTIVO_TRANSICION.pendiente },
           // Con la cuenta de su sesión, quien él invitó (por cualquiera de sus identidades) sí.
           { dueno: SESION_FOUNDER, quien: founderSesion, aprobador: actor(RITA) },
           { dueno: SESION_FOUNDER, quien: founderSesion, aprobador: actor(MADRINA) },
@@ -485,7 +485,7 @@ describe("WP31-I1 · gancho de emisión al aprobar", () => {
           `INSERT INTO projects (campaign, title, type, budget_usd, weeks, supervisor_wallet, summary, description, acceptance)
            VALUES ('Zelena', 'Pieza publicada', 'comunidad', 500, 4, ?, 'Resumen', 'Descripción', 'Criterio')`
         )
-        .run(JOHN);
+        .run(FUNDADOR);
       const id = entregada();
       db.prepare(`UPDATE assignments SET published_as_project_id = ? WHERE id = ?`).run(Number(proyecto.lastInsertRowid), id);
 

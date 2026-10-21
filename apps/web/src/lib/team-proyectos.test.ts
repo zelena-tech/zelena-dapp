@@ -55,10 +55,10 @@ import { createClient, addMember } from "./clients";
 import { buildDashboard } from "./dashboard";
 import { dailyDigestFor } from "./digest";
 
-const JOHN = pendingPrincipal("john");
-const VALE = pendingPrincipal("vale");
-const FAUSTO = pendingPrincipal("fausto");
-const DAVID = pendingPrincipal("david");
+const FUNDADOR = pendingPrincipal("founder");
+const OPERACIONES = pendingPrincipal("operaciones");
+const PLATAFORMA = pendingPrincipal("plataforma");
+const PRODUCTO = pendingPrincipal("producto");
 
 // Personas ficticias de la comunidad (wallets de prueba).
 const ANA = "GANAEJECUTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
@@ -99,10 +99,10 @@ function usuario(
 }
 
 const ACTORES: Record<string, TeamActor> = {
-  [JOHN]: { wallet: JOHN, name: "John", role: "founder", isSupervisor: true },
-  [VALE]: { wallet: VALE, name: "Vale", role: "core", isSupervisor: true },
-  [FAUSTO]: { wallet: FAUSTO, name: "Fausto", role: "core", isSupervisor: false },
-  [DAVID]: { wallet: DAVID, name: "David", role: "core", isSupervisor: false },
+  [FUNDADOR]: { wallet: FUNDADOR, name: "Founder", role: "founder", isSupervisor: true },
+  [OPERACIONES]: { wallet: OPERACIONES, name: "Operaciones", role: "core", isSupervisor: true },
+  [PLATAFORMA]: { wallet: PLATAFORMA, name: "Plataforma", role: "core", isSupervisor: false },
+  [PRODUCTO]: { wallet: PRODUCTO, name: "Producto", role: "core", isSupervisor: false },
 };
 function actor(wallet: string): TeamActor {
   return ACTORES[wallet] ?? { wallet, name: wallet.slice(1, 6), role: "contributor", isSupervisor: false };
@@ -135,13 +135,13 @@ function escenario(db: DB): { p: number; q: number } {
   for (const w of [ANA, RITA, EST, EJE2, OTRO]) usuario(db, w);
   usuario(db, CARLA, { cla: 0 });
   usuario(db, DEMO, { isDemo: 1 });
-  const p = crearProyecto(db, actor(JOHN), { name: "Proyecto Piloto" }).id;
-  const q = crearProyecto(db, actor(JOHN), { name: "Otro Proyecto" }).id;
-  agregarMiembro(db, actor(JOHN), { initiativeId: p, wallet: ANA, rol: "ejecuta" });
-  agregarMiembro(db, actor(JOHN), { initiativeId: p, wallet: RITA, rol: "revisa" });
-  agregarMiembro(db, actor(JOHN), { initiativeId: p, wallet: EST, rol: "estructura" });
-  agregarMiembro(db, actor(JOHN), { initiativeId: p, wallet: EJE2, rol: "ejecuta" });
-  agregarMiembro(db, actor(JOHN), { initiativeId: q, wallet: OTRO, rol: "revisa" });
+  const p = crearProyecto(db, actor(FUNDADOR), { name: "Proyecto Piloto" }).id;
+  const q = crearProyecto(db, actor(FUNDADOR), { name: "Otro Proyecto" }).id;
+  agregarMiembro(db, actor(FUNDADOR), { initiativeId: p, wallet: ANA, rol: "ejecuta" });
+  agregarMiembro(db, actor(FUNDADOR), { initiativeId: p, wallet: RITA, rol: "revisa" });
+  agregarMiembro(db, actor(FUNDADOR), { initiativeId: p, wallet: EST, rol: "estructura" });
+  agregarMiembro(db, actor(FUNDADOR), { initiativeId: p, wallet: EJE2, rol: "ejecuta" });
+  agregarMiembro(db, actor(FUNDADOR), { initiativeId: q, wallet: OTRO, rol: "revisa" });
   return { p, q };
 }
 
@@ -169,35 +169,35 @@ describe("A1b · sin acuerdo de contribución no hay primer trabajo", () => {
   });
 
   it("sumar a un contributor sin CLA → 409; con CLA → ok y vínculo externo por defecto", () => {
-    expect(fallo(() => agregarMiembro(db, actor(JOHN), { initiativeId: p, wallet: CARLA, rol: "ejecuta" }))).toEqual({
+    expect(fallo(() => agregarMiembro(db, actor(FUNDADOR), { initiativeId: p, wallet: CARLA, rol: "ejecuta" }))).toEqual({
       status: 409,
       message: "Primero tiene que firmar el acuerdo de contribución.",
     });
     db.prepare(`UPDATE users SET cla_signed = 1 WHERE wallet = ?`).run(CARLA);
-    agregarMiembro(db, actor(JOHN), { initiativeId: p, wallet: CARLA, rol: "ejecuta" });
+    agregarMiembro(db, actor(FUNDADOR), { initiativeId: p, wallet: CARLA, rol: "ejecuta" });
     const fila = miembrosDeProyecto(db, p).find((m) => m.wallet === CARLA)!;
     expect(fila.vinculo).toBe("externo");
-    expect(fila.added_by).toBe(JOHN);
+    expect(fila.added_by).toBe(FUNDADOR);
   });
 
   it("vínculo externo explícito sin CLA → 409 aunque sea del equipo interno; interno por defecto → ok", () => {
     expect(
-      fallo(() => agregarMiembro(db, actor(JOHN), { initiativeId: p, wallet: FAUSTO, rol: "ejecuta", vinculo: "externo" }))
+      fallo(() => agregarMiembro(db, actor(FUNDADOR), { initiativeId: p, wallet: PLATAFORMA, rol: "ejecuta", vinculo: "externo" }))
     ).toEqual({ status: 409, message: "Primero tiene que firmar el acuerdo de contribución." });
-    agregarMiembro(db, actor(JOHN), { initiativeId: p, wallet: FAUSTO, rol: "ejecuta" });
-    expect(miembrosDeProyecto(db, p).find((m) => m.wallet === FAUSTO)!.vinculo).toBe("interno");
+    agregarMiembro(db, actor(FUNDADOR), { initiativeId: p, wallet: PLATAFORMA, rol: "ejecuta" });
+    expect(miembrosDeProyecto(db, p).find((m) => m.wallet === PLATAFORMA)!.vinculo).toBe("interno");
   });
 
   it("cuentas demo o inactivas no se suman", () => {
-    expect(fallo(() => agregarMiembro(db, actor(JOHN), { initiativeId: p, wallet: DEMO, rol: "ejecuta" }))?.status).toBe(400);
+    expect(fallo(() => agregarMiembro(db, actor(FUNDADOR), { initiativeId: p, wallet: DEMO, rol: "ejecuta" }))?.status).toBe(400);
     // La cuenta de prueba está activa: el motivo dice la verdad (hallazgo de la verificación final).
-    expect(fallo(() => agregarMiembro(db, actor(JOHN), { initiativeId: p, wallet: DEMO, rol: "ejecuta" }))?.message).toBe(
+    expect(fallo(() => agregarMiembro(db, actor(FUNDADOR), { initiativeId: p, wallet: DEMO, rol: "ejecuta" }))?.message).toBe(
       COPY_CUENTA_DE_PRUEBA
     );
-    expect(fallo(() => agregarMiembro(db, actor(JOHN), { initiativeId: p, wallet: "GNADIE", rol: "ejecuta" }))?.message).toBe(
+    expect(fallo(() => agregarMiembro(db, actor(FUNDADOR), { initiativeId: p, wallet: "GNADIE", rol: "ejecuta" }))?.message).toBe(
       "Esa persona no está activa en el registro."
     );
-    expect(fallo(() => agregarMiembro(db, actor(JOHN), { initiativeId: p, wallet: "GNADIE", rol: "ejecuta" }))?.status).toBe(
+    expect(fallo(() => agregarMiembro(db, actor(FUNDADOR), { initiativeId: p, wallet: "GNADIE", rol: "ejecuta" }))?.status).toBe(
       400
     );
   });
@@ -277,9 +277,9 @@ describe("A4c · B8 en las dos direcciones; el founder exento; dueño pending so
   });
 
   it("el founder sí puede aunque haya invitado al dueño", () => {
-    db.prepare(`UPDATE users SET invited_by = ? WHERE wallet = ?`).run(JOHN, ANA);
+    db.prepare(`UPDATE users SET invited_by = ? WHERE wallet = ?`).run(FUNDADOR, ANA);
     const id = enRevision(db, p, ANA);
-    expect(applyAssignmentAction(db, { assignmentId: id, action: "aprobar", actor: actor(JOHN) }).status).toBe("Hecha");
+    expect(applyAssignmentAction(db, { assignmentId: id, action: "aprobar", actor: actor(FUNDADOR) }).status).toBe("Hecha");
   });
 
   it("y al revés: quien entró con una invitación del founder sí revisa la entrega del founder", () => {
@@ -287,15 +287,15 @@ describe("A4c · B8 en las dos direcciones; el founder exento; dueño pending so
     // (por su fila de equipo o por la cuenta con la que firma las invitaciones). Si la
     // regla no lo eximiera también como dueño, sus entregas quedarían En revisión para siempre.
     usuario(db, SESION_FOUNDER, { role: "founder" });
-    db.prepare(`UPDATE users SET invited_by = ? WHERE wallet = ?`).run(JOHN, VALE);
+    db.prepare(`UPDATE users SET invited_by = ? WHERE wallet = ?`).run(FUNDADOR, OPERACIONES);
     db.prepare(`UPDATE users SET invited_by = ? WHERE wallet = ?`).run(SESION_FOUNDER, RITA);
     // Aún sin vincular su fila de equipo: una supervisora invitada por él la aprueba.
-    const deJohn = enRevision(db, p, JOHN);
-    expect(applyAssignmentAction(db, { assignmentId: deJohn, action: "aprobar", actor: actor(VALE), now: AHORA }).status).toBe(
+    const deJohn = enRevision(db, p, FUNDADOR);
+    expect(applyAssignmentAction(db, { assignmentId: deJohn, action: "aprobar", actor: actor(OPERACIONES), now: AHORA }).status).toBe(
       "Hecha"
     );
     // Ya vinculada (su cuenta real es la de la sesión): quien revisa el proyecto, también.
-    db.prepare(`INSERT INTO roster_links (slug, wallet, linked_by) VALUES ('john', ?, ?)`).run(SESION_FOUNDER, SESION_FOUNDER);
+    db.prepare(`INSERT INTO roster_links (slug, wallet, linked_by) VALUES ('founder', ?, ?)`).run(SESION_FOUNDER, SESION_FOUNDER);
     const otra = enRevision(db, p, SESION_FOUNDER);
     expect(accionesPermitidas(db, actor(RITA), getAssignment(db, otra)!)).toEqual(["aprobar", "devolver"]);
     expect(
@@ -303,8 +303,8 @@ describe("A4c · B8 en las dos direcciones; el founder exento; dueño pending so
         .status
     ).toBe("En curso");
     // El dueño sigue sin poder revisarse con ninguna de sus dos identidades.
-    const founderSesion: TeamActor = { wallet: SESION_FOUNDER, name: "John", role: "founder", isSupervisor: true };
-    const tercera = enRevision(db, p, JOHN);
+    const founderSesion: TeamActor = { wallet: SESION_FOUNDER, name: "Founder", role: "founder", isSupervisor: true };
+    const tercera = enRevision(db, p, FUNDADOR);
     expect(fallo(() => applyAssignmentAction(db, { assignmentId: tercera, action: "aprobar", actor: founderSesion }))).toEqual({
       status: 403,
       message: MOTIVO_TRANSICION.dueno,
@@ -312,13 +312,13 @@ describe("A4c · B8 en las dos direcciones; el founder exento; dueño pending so
   });
 
   it("dueño pending sin vincular: un revisa no aprueba; un supervisor sí", () => {
-    agregarMiembro(db, actor(JOHN), { initiativeId: p, wallet: FAUSTO, rol: "ejecuta" });
-    const id = enRevision(db, p, FAUSTO);
+    agregarMiembro(db, actor(FUNDADOR), { initiativeId: p, wallet: PLATAFORMA, rol: "ejecuta" });
+    const id = enRevision(db, p, PLATAFORMA);
     expect(fallo(() => applyAssignmentAction(db, { assignmentId: id, action: "aprobar", actor: actor(RITA) }))).toEqual({
       status: 403,
       message: MOTIVO_TRANSICION.pendiente,
     });
-    expect(applyAssignmentAction(db, { assignmentId: id, action: "aprobar", actor: actor(VALE) }).status).toBe("Hecha");
+    expect(applyAssignmentAction(db, { assignmentId: id, action: "aprobar", actor: actor(OPERACIONES) }).status).toBe("Hecha");
   });
 });
 
@@ -370,20 +370,20 @@ describe("A5 · un contributor solo ve y crea en sus proyectos; proyectos de cli
 
   it("un proyecto de cliente: el core sin participación no lo ve; con client_members o membresía sí; el founder siempre", () => {
     const cliente = createClient(db, { name: "Cliente Demo" });
-    const c = crearProyecto(db, actor(JOHN), { name: "Proyecto de cliente", clientId: cliente }).id;
-    const fausto = equipo(db, FAUSTO);
-    const david = equipo(db, DAVID);
-    const vale = equipo(db, VALE);
-    expect(puedeVerProyecto(db, fausto, c)).toBe(false);
-    expect(puedeVerProyecto(db, vale, c)).toBe(false); // supervisar no abre proyectos de cliente
-    expect(permisosDe(db, fausto, c).ver).toBe(false);
-    expect(fallo(() => createAssignmentAs(db, fausto, { title: "X", initiativeId: c }))?.status).toBe(403);
-    addMember(db, cliente, FAUSTO, "colaborador");
-    expect(puedeVerProyecto(db, fausto, c)).toBe(true);
-    agregarMiembro(db, actor(JOHN), { initiativeId: c, wallet: DAVID, rol: "ejecuta" });
-    expect(puedeVerProyecto(db, david, c)).toBe(true);
-    expect(puedeVerProyecto(db, equipo(db, JOHN), c)).toBe(true);
-    expect(proyectosVisibles(db, fausto).map((i) => i.id)).toContain(c);
+    const c = crearProyecto(db, actor(FUNDADOR), { name: "Proyecto de cliente", clientId: cliente }).id;
+    const plataforma = equipo(db, PLATAFORMA);
+    const producto = equipo(db, PRODUCTO);
+    const operaciones = equipo(db, OPERACIONES);
+    expect(puedeVerProyecto(db, plataforma, c)).toBe(false);
+    expect(puedeVerProyecto(db, operaciones, c)).toBe(false); // supervisar no abre proyectos de cliente
+    expect(permisosDe(db, plataforma, c).ver).toBe(false);
+    expect(fallo(() => createAssignmentAs(db, plataforma, { title: "X", initiativeId: c }))?.status).toBe(403);
+    addMember(db, cliente, PLATAFORMA, "colaborador");
+    expect(puedeVerProyecto(db, plataforma, c)).toBe(true);
+    agregarMiembro(db, actor(FUNDADOR), { initiativeId: c, wallet: PRODUCTO, rol: "ejecuta" });
+    expect(puedeVerProyecto(db, producto, c)).toBe(true);
+    expect(puedeVerProyecto(db, equipo(db, FUNDADOR), c)).toBe(true);
+    expect(proyectosVisibles(db, plataforma).map((i) => i.id)).toContain(c);
   });
 });
 
@@ -411,25 +411,25 @@ describe("A5b · crear no escribe en el backlog de otro cliente ni planifica sin
     );
     expect(assignmentsForClient(db, cliente)).toEqual([]);
     // Un core sin participación en el cliente, tampoco; quien participa, sí.
-    expect(fallo(() => createAssignmentAs(db, actor(FAUSTO), { title: "x", clientId: cliente }, AHORA))?.status).toBe(403);
-    addMember(db, cliente, FAUSTO, "colaborador");
-    const id = createAssignmentAs(db, actor(FAUSTO), { title: "Del cliente", clientId: cliente, graphNodeId: "nodo.a" }, AHORA);
+    expect(fallo(() => createAssignmentAs(db, actor(PLATAFORMA), { title: "x", clientId: cliente }, AHORA))?.status).toBe(403);
+    addMember(db, cliente, PLATAFORMA, "colaborador");
+    const id = createAssignmentAs(db, actor(PLATAFORMA), { title: "Del cliente", clientId: cliente, graphNodeId: "nodo.a" }, AHORA);
     expect(getAssignment(db, id)!.client_id).toBe(cliente);
     // El founder, en cualquiera; un cliente que no existe es un 400 para él.
-    expect(getAssignment(db, createAssignmentAs(db, actor(JOHN), { title: "y", clientId: otroCliente }, AHORA))!.client_id).toBe(
+    expect(getAssignment(db, createAssignmentAs(db, actor(FUNDADOR), { title: "y", clientId: otroCliente }, AHORA))!.client_id).toBe(
       otroCliente
     );
-    expect(fallo(() => createAssignmentAs(db, actor(JOHN), { title: "z", clientId: 9999 }, AHORA))?.status).toBe(400);
+    expect(fallo(() => createAssignmentAs(db, actor(FUNDADOR), { title: "z", clientId: 9999 }, AHORA))?.status).toBe(400);
   });
 
   it("en un proyecto de cliente la pieza hereda su cliente y no acepta otro", () => {
-    const c = crearProyecto(db, actor(JOHN), { name: "Proyecto de cliente", clientId: cliente }).id;
-    agregarMiembro(db, actor(JOHN), { initiativeId: c, wallet: ANA, rol: "ejecuta" });
+    const c = crearProyecto(db, actor(FUNDADOR), { name: "Proyecto de cliente", clientId: cliente }).id;
+    agregarMiembro(db, actor(FUNDADOR), { initiativeId: c, wallet: ANA, rol: "ejecuta" });
     const id = createAssignmentAs(db, actor(ANA), { title: "Mía", initiativeId: c }, AHORA);
     expect(getAssignment(db, id)!.client_id).toBe(cliente);
     expect(assignmentsForClient(db, cliente).map((a) => a.id)).toEqual([id]);
     expect(
-      fallo(() => createAssignmentAs(db, actor(JOHN), { title: "Cruzada", initiativeId: c, clientId: otroCliente }, AHORA))
+      fallo(() => createAssignmentAs(db, actor(FUNDADOR), { title: "Cruzada", initiativeId: c, clientId: otroCliente }, AHORA))
     ).toEqual({ status: 403, message: COPY_CLIENTE_NO_DISPONIBLE });
     expect(assignmentsForClient(db, otroCliente)).toEqual([]);
   });
@@ -451,7 +451,7 @@ describe("A5b · crear no escribe en el backlog de otro cliente ni planifica sin
       "Low"
     );
     // Un core sin roles tampoco, ni sin proyecto.
-    const deFausto = createAssignmentAs(db, actor(FAUSTO), { title: "Suya", priority: "High", dueDate: "2026-10-09", needsFounder: true }, AHORA);
+    const deFausto = createAssignmentAs(db, actor(PLATAFORMA), { title: "Suya", priority: "High", dueDate: "2026-10-09", needsFounder: true }, AHORA);
     expect(getAssignment(db, deFausto)!.priority).toBe("Normal");
     expect(getAssignment(db, deFausto)!.due_date).toBeNull();
     expect(getAssignment(db, deFausto)!.needs_founder).toBe(0);
@@ -471,65 +471,65 @@ describe("A5c · un proyecto de cliente no se cuela en las listas del equipo (§
     db = freshDb();
     p = escenario(db).p;
     cliente = createClient(db, { name: "Cliente Demo" });
-    c = crearProyecto(db, actor(JOHN), { name: "Proyecto de cliente", clientId: cliente }).id;
-    agregarMiembro(db, actor(JOHN), { initiativeId: c, wallet: DAVID, rol: "ejecuta" });
+    c = crearProyecto(db, actor(FUNDADOR), { name: "Proyecto de cliente", clientId: cliente }).id;
+    agregarMiembro(db, actor(FUNDADOR), { initiativeId: c, wallet: PRODUCTO, rol: "ejecuta" });
     // Lo del cliente: una abierta que espera al founder, una bloqueada y una suelta sin proyecto.
-    createAssignment(db, { title: "Secreta abierta", initiativeId: c, clientId: cliente, ownerWallet: DAVID, status: "Asignada", needsFounder: true });
-    const bloqueada = createAssignment(db, { title: "Secreta bloqueada", initiativeId: c, clientId: cliente, ownerWallet: DAVID, status: "Asignada" });
-    applyAssignmentAction(db, { assignmentId: bloqueada, action: "bloquear", reason: "falta el acceso", actor: actor(DAVID), now: AHORA });
-    createAssignment(db, { title: "Secreta suelta", clientId: cliente, ownerWallet: DAVID, status: "Asignada", needsFounder: true });
+    createAssignment(db, { title: "Secreta abierta", initiativeId: c, clientId: cliente, ownerWallet: PRODUCTO, status: "Asignada", needsFounder: true });
+    const bloqueada = createAssignment(db, { title: "Secreta bloqueada", initiativeId: c, clientId: cliente, ownerWallet: PRODUCTO, status: "Asignada" });
+    applyAssignmentAction(db, { assignmentId: bloqueada, action: "bloquear", reason: "falta el acceso", actor: actor(PRODUCTO), now: AHORA });
+    createAssignment(db, { title: "Secreta suelta", clientId: cliente, ownerWallet: PRODUCTO, status: "Asignada", needsFounder: true });
     // Lo interno, que sí ve la supervisión.
     const interna = createAssignment(db, { title: "Interna", initiativeId: p, ownerWallet: ANA, status: "Asignada", needsFounder: true });
     applyAssignmentAction(db, { assignmentId: interna, action: "bloquear", reason: "espera", actor: actor(ANA), now: AHORA });
-    createAssignment(db, { title: "Interna suelta", ownerWallet: FAUSTO, status: "Asignada" });
+    createAssignment(db, { title: "Interna suelta", ownerWallet: PLATAFORMA, status: "Asignada" });
   });
 
   const titulos = (xs: Array<{ title: string }>) => xs.map((x) => x.title).sort();
   const secretas = (xs: string[]) => xs.filter((t) => t.startsWith("Secreta"));
 
   it("una supervisora que no participa no recibe sus piezas en /equipo/hoy, el tablero de proyectos ni el dashboard", () => {
-    const vale = equipo(db, VALE);
-    expect(puedeVerProyecto(db, vale, c)).toBe(false);
-    expect(secretas(titulos(visibleAssignments(db, vale)))).toEqual([]);
-    expect(titulos(visibleAssignments(db, vale))).toEqual(["Interna", "Interna suelta"]);
+    const operaciones = equipo(db, OPERACIONES);
+    expect(puedeVerProyecto(db, operaciones, c)).toBe(false);
+    expect(secretas(titulos(visibleAssignments(db, operaciones)))).toEqual([]);
+    expect(titulos(visibleAssignments(db, operaciones))).toEqual(["Interna", "Interna suelta"]);
 
-    const porIniciativa = assignmentsByInitiative(db, { actor: vale, now: AHORA });
+    const porIniciativa = assignmentsByInitiative(db, { actor: operaciones, now: AHORA });
     expect(porIniciativa.some((s) => s.initiative?.id === c)).toBe(false);
     const sueltas = porIniciativa.find((s) => s.initiative === null)!;
     expect(titulos(sueltas.open)).toEqual(["Interna suelta"]);
 
-    expect(titulos(listBlocked(db, vale))).toEqual(["Interna"]);
-    expect(titulos(listNeedsFounder(db, vale))).toEqual(["Interna"]);
+    expect(titulos(listBlocked(db, operaciones))).toEqual(["Interna"]);
+    expect(titulos(listNeedsFounder(db, operaciones))).toEqual(["Interna"]);
 
-    const d = buildDashboard(db, vale, AHORA);
+    const d = buildDashboard(db, operaciones, AHORA);
     expect(d.blocked.map((b) => b.assignment.title)).toEqual(["Interna"]);
     expect(d.waitingOnFounder.map((a) => a.title)).toEqual(["Interna"]);
     expect(d.initiatives.some((b) => b.initiative?.id === c)).toBe(false);
     expect(d.initiatives.find((b) => b.initiative === null)!.open).toBe(1);
-    expect(d.load.people.find((x) => x.wallet === DAVID)!.open + d.load.people.find((x) => x.wallet === DAVID)!.blocked).toBe(0);
+    expect(d.load.people.find((x) => x.wallet === PRODUCTO)!.open + d.load.people.find((x) => x.wallet === PRODUCTO)!.blocked).toBe(0);
     expect(d.load.totalOpen).toBe(1); // "Interna suelta" (la de ANA está bloqueada)
     expect(d.epoch.blockedNow).toBe(1);
 
-    const digest = dailyDigestFor(db, vale, DIA);
+    const digest = dailyDigestFor(db, operaciones, DIA);
     expect(digest.blocked.map((e) => e.title)).toEqual(["Interna"]);
   });
 
   it("un core no ve en «Sin proyecto» las piezas sueltas de un cliente donde no participa", () => {
-    const fausto = equipo(db, FAUSTO);
-    const sueltas = () => assignmentsByInitiative(db, { actor: fausto }).find((s) => s.initiative === null)!;
+    const plataforma = equipo(db, PLATAFORMA);
+    const sueltas = () => assignmentsByInitiative(db, { actor: plataforma }).find((s) => s.initiative === null)!;
     expect(titulos(sueltas().open)).toEqual(["Interna suelta"]);
-    addMember(db, cliente, FAUSTO, "lectura");
+    addMember(db, cliente, PLATAFORMA, "lectura");
     expect(titulos(sueltas().open)).toEqual(["Interna suelta", "Secreta suelta"]);
   });
 
   it("quien participa sí las ve; el founder, todo", () => {
-    agregarMiembro(db, actor(JOHN), { initiativeId: c, wallet: VALE, rol: "revisa" });
-    const vale = equipo(db, VALE);
-    expect(secretas(titulos(visibleAssignments(db, vale)))).toEqual(["Secreta abierta", "Secreta bloqueada"]);
-    const john = equipo(db, JOHN);
-    expect(secretas(titulos(visibleAssignments(db, john)))).toEqual(["Secreta abierta", "Secreta bloqueada", "Secreta suelta"]);
-    expect(buildDashboard(db, john, AHORA).blocked).toHaveLength(2);
-    expect(dailyDigestFor(db, john, DIA).blocked).toHaveLength(2);
+    agregarMiembro(db, actor(FUNDADOR), { initiativeId: c, wallet: OPERACIONES, rol: "revisa" });
+    const operaciones = equipo(db, OPERACIONES);
+    expect(secretas(titulos(visibleAssignments(db, operaciones)))).toEqual(["Secreta abierta", "Secreta bloqueada"]);
+    const fundador = equipo(db, FUNDADOR);
+    expect(secretas(titulos(visibleAssignments(db, fundador)))).toEqual(["Secreta abierta", "Secreta bloqueada", "Secreta suelta"]);
+    expect(buildDashboard(db, fundador, AHORA).blocked).toHaveLength(2);
+    expect(dailyDigestFor(db, fundador, DIA).blocked).toHaveLength(2);
     // Sin actor, las funciones de siempre no cambian (las usan el bot y los tests de WP14/WP15).
     expect(listBlocked(db)).toHaveLength(2);
     expect(listNeedsFounder(db)).toHaveLength(3);
@@ -637,12 +637,12 @@ describe("A6 · editarAsignacion: permisos por clase de campo, reasignar, Backlo
     expect(fallo(() => editarAsignacion(db, actor(EST), { assignmentId: id, initiativeId: q }))?.status).toBe(403);
     expect(fallo(() => editarAsignacion(db, actor(EST), { assignmentId: id, initiativeId: null }))?.status).toBe(403);
     // El founder sí, pero ANA no es miembro de Q ni del equipo interno: hay que sumarla antes.
-    expect(fallo(() => editarAsignacion(db, actor(JOHN), { assignmentId: id, initiativeId: q }))).toEqual({
+    expect(fallo(() => editarAsignacion(db, actor(FUNDADOR), { assignmentId: id, initiativeId: q }))).toEqual({
       status: 400,
       message: "Primero súmale al proyecto.",
     });
-    agregarMiembro(db, actor(JOHN), { initiativeId: q, wallet: ANA, rol: "ejecuta" });
-    expect(fallo(() => editarAsignacion(db, actor(JOHN), { assignmentId: id, initiativeId: q }))).toBeNull();
+    agregarMiembro(db, actor(FUNDADOR), { initiativeId: q, wallet: ANA, rol: "ejecuta" });
+    expect(fallo(() => editarAsignacion(db, actor(FUNDADOR), { assignmentId: id, initiativeId: q }))).toBeNull();
     expect(getAssignment(db, id)!.initiative_id).toBe(q);
   });
 
@@ -682,8 +682,8 @@ describe("A6b · En revisión: lo que define la entrega queda fijo (409); el con
   });
 
   it("tampoco se muda de proyecto (cambiaría quién la revisa) → 409", () => {
-    agregarMiembro(db, actor(JOHN), { initiativeId: q, wallet: ANA, rol: "ejecuta" });
-    expect(fallo(() => editarAsignacion(db, actor(JOHN), { assignmentId: id, initiativeId: q }))).toEqual({
+    agregarMiembro(db, actor(FUNDADOR), { initiativeId: q, wallet: ANA, rol: "ejecuta" });
+    expect(fallo(() => editarAsignacion(db, actor(FUNDADOR), { assignmentId: id, initiativeId: q }))).toEqual({
       status: 409,
       message: COPY_EN_REVISION,
     });
@@ -691,7 +691,7 @@ describe("A6b · En revisión: lo que define la entrega queda fijo (409); el con
   });
 
   it("una revisión se devuelve, no se bloquea (409), ni quien planifica ni el dueño", () => {
-    for (const quien of [EST, ANA, JOHN]) {
+    for (const quien of [EST, ANA, FUNDADOR]) {
       expect(
         fallo(() => applyAssignmentAction(db, { assignmentId: id, action: "bloquear", reason: "pausa", actor: actor(quien) }))
       ).toEqual({ status: 409, message: COPY_REVISION_NO_SE_BLOQUEA });
@@ -725,17 +725,17 @@ describe("A7 · proyectos y miembros con sus permisos", () => {
   });
 
   it("crearProyecto: founder o supervisor; nombre 2–80; slug único (409)", () => {
-    expect(fallo(() => crearProyecto(db, actor(FAUSTO), { name: "Mío" }))?.status).toBe(403);
+    expect(fallo(() => crearProyecto(db, actor(PLATAFORMA), { name: "Mío" }))?.status).toBe(403);
     expect(fallo(() => crearProyecto(db, actor(EST), { name: "Mío" }))?.status).toBe(403);
-    const r = crearProyecto(db, actor(VALE), { name: "Nuevo Frente", horizon: "Siguiente", notes: "  para probar  " });
+    const r = crearProyecto(db, actor(OPERACIONES), { name: "Nuevo Frente", horizon: "Siguiente", notes: "  para probar  " });
     expect(r.slug).toBe("nuevo-frente");
     expect(r.notes).toBe("para probar");
-    expect(fallo(() => crearProyecto(db, actor(VALE), { name: "nuevo frente" }))).toEqual({
+    expect(fallo(() => crearProyecto(db, actor(OPERACIONES), { name: "nuevo frente" }))).toEqual({
       status: 409,
       message: "Ya existe un proyecto con ese nombre.",
     });
-    expect(fallo(() => crearProyecto(db, actor(VALE), { name: "X" }))?.status).toBe(400);
-    expect(fallo(() => crearProyecto(db, actor(VALE), { name: "y".repeat(81) }))?.status).toBe(400);
+    expect(fallo(() => crearProyecto(db, actor(OPERACIONES), { name: "X" }))?.status).toBe(400);
+    expect(fallo(() => crearProyecto(db, actor(OPERACIONES), { name: "y".repeat(81) }))?.status).toBe(400);
   });
 
   it("editarProyecto: estructura edita nombre y descripción; el slug no cambia; el cliente, solo F/S", () => {
@@ -748,9 +748,9 @@ describe("A7 · proyectos y miembros con sus permisos", () => {
       status: 403,
       message: "El cliente del proyecto lo cambian el founder o un supervisor.",
     });
-    expect(editarProyecto(db, actor(VALE), { initiativeId: p, clientId: cliente }).client_id).toBe(cliente);
+    expect(editarProyecto(db, actor(OPERACIONES), { initiativeId: p, clientId: cliente }).client_id).toBe(cliente);
     expect(fallo(() => editarProyecto(db, actor(RITA), { initiativeId: p, name: "No" }))?.status).toBe(403);
-    expect(fallo(() => editarProyecto(db, actor(FAUSTO), { initiativeId: p, name: "No" }))?.status).toBe(403);
+    expect(fallo(() => editarProyecto(db, actor(PLATAFORMA), { initiativeId: p, name: "No" }))?.status).toBe(403);
   });
 
   it("estructura no concede ni quita revisa/estructura (403); sí ejecuta y vende", () => {
@@ -772,33 +772,33 @@ describe("A7 · proyectos y miembros con sus permisos", () => {
       status: 403,
       message: "Tus propios roles los cambia otra persona.",
     });
-    expect(fallo(() => agregarMiembro(db, actor(JOHN), { initiativeId: p, wallet: JOHN, rol: "revisa" }))?.status).toBe(403);
+    expect(fallo(() => agregarMiembro(db, actor(FUNDADOR), { initiativeId: p, wallet: FUNDADOR, rol: "revisa" }))?.status).toBe(403);
     usuario(db, SESION_FOUNDER, { role: "founder" });
-    const founderSesion: TeamActor = { wallet: SESION_FOUNDER, name: "John", role: "founder", isSupervisor: true };
-    expect(fallo(() => agregarMiembro(db, founderSesion, { initiativeId: p, wallet: JOHN, rol: "revisa" }))).toEqual({
+    const founderSesion: TeamActor = { wallet: SESION_FOUNDER, name: "Founder", role: "founder", isSupervisor: true };
+    expect(fallo(() => agregarMiembro(db, founderSesion, { initiativeId: p, wallet: FUNDADOR, rol: "revisa" }))).toEqual({
       status: 403,
       message: "Tus propios roles los cambia otra persona.",
     });
   });
 
   it("409 de duplicado y de entregas abiertas al quitar", () => {
-    expect(fallo(() => agregarMiembro(db, actor(JOHN), { initiativeId: p, wallet: ANA, rol: "ejecuta" }))?.status).toBe(409);
+    expect(fallo(() => agregarMiembro(db, actor(FUNDADOR), { initiativeId: p, wallet: ANA, rol: "ejecuta" }))?.status).toBe(409);
     createAssignment(db, { title: "Abierta", initiativeId: p, ownerWallet: ANA, status: "En curso" });
-    expect(fallo(() => quitarMiembro(db, actor(JOHN), { initiativeId: p, wallet: ANA, rol: "ejecuta" }))).toEqual({
+    expect(fallo(() => quitarMiembro(db, actor(FUNDADOR), { initiativeId: p, wallet: ANA, rol: "ejecuta" }))).toEqual({
       status: 409,
       message: "Primero reasigna sus entregas abiertas en este proyecto.",
     });
     // Con otro rol que la mantiene dentro, sí se le puede quitar este.
-    agregarMiembro(db, actor(JOHN), { initiativeId: p, wallet: ANA, rol: "vende" });
-    quitarMiembro(db, actor(JOHN), { initiativeId: p, wallet: ANA, rol: "ejecuta" });
+    agregarMiembro(db, actor(FUNDADOR), { initiativeId: p, wallet: ANA, rol: "vende" });
+    quitarMiembro(db, actor(FUNDADOR), { initiativeId: p, wallet: ANA, rol: "ejecuta" });
     expect(rolesEnProyecto(db, ANA, p)).toEqual(["vende"]);
-    expect(fallo(() => quitarMiembro(db, actor(JOHN), { initiativeId: p, wallet: ANA, rol: "ejecuta" }))?.status).toBe(404);
+    expect(fallo(() => quitarMiembro(db, actor(FUNDADOR), { initiativeId: p, wallet: ANA, rol: "ejecuta" }))?.status).toBe(404);
   });
 
   it("cada operación deja su línea en talent_events, sin juzgar a nadie", () => {
-    editarProyecto(db, actor(JOHN), { initiativeId: p, horizon: "Siguiente" });
-    agregarMiembro(db, actor(JOHN), { initiativeId: p, wallet: ANA, rol: "vende" });
-    quitarMiembro(db, actor(JOHN), { initiativeId: p, wallet: ANA, rol: "vende" });
+    editarProyecto(db, actor(FUNDADOR), { initiativeId: p, horizon: "Siguiente" });
+    agregarMiembro(db, actor(FUNDADOR), { initiativeId: p, wallet: ANA, rol: "vende" });
+    quitarMiembro(db, actor(FUNDADOR), { initiativeId: p, wallet: ANA, rol: "vende" });
     const acciones = (
       db.prepare(`SELECT action FROM talent_events WHERE initiative_id = ? ORDER BY id`).all(p) as Array<{ action: string }>
     ).map((r) => r.action);
@@ -811,16 +811,16 @@ describe("A7 · proyectos y miembros con sus permisos", () => {
   });
 
   it("candidatosParaProyecto: F/S ven internos + contributors con CLA; estructura, internos + miembros; el resto, nadie", () => {
-    const deJohn = candidatosParaProyecto(db, actor(JOHN), p).map((c) => c.wallet);
-    expect(deJohn).toContain(FAUSTO);
+    const deJohn = candidatosParaProyecto(db, actor(FUNDADOR), p).map((c) => c.wallet);
+    expect(deJohn).toContain(PLATAFORMA);
     expect(deJohn).toContain(OTRO); // contributor con CLA aunque no sea miembro
     expect(deJohn).not.toContain(CARLA); // sin acuerdo
     expect(deJohn).not.toContain(DEMO);
     const deEst = candidatosParaProyecto(db, actor(EST), p);
-    expect(deEst.map((c) => c.wallet)).toContain(FAUSTO);
+    expect(deEst.map((c) => c.wallet)).toContain(PLATAFORMA);
     expect(deEst.map((c) => c.wallet)).toContain(ANA);
     expect(deEst.map((c) => c.wallet)).not.toContain(OTRO); // a un externo lo suma por su wallet exacta
-    expect(deEst.find((c) => c.wallet === FAUSTO)!.interno).toBe(true);
+    expect(deEst.find((c) => c.wallet === PLATAFORMA)!.interno).toBe(true);
     expect(deEst.find((c) => c.wallet === ANA)!.interno).toBe(false);
     expect(candidatosParaProyecto(db, actor(ANA), p)).toEqual([]);
   });
@@ -828,8 +828,8 @@ describe("A7 · proyectos y miembros con sus permisos", () => {
   it("supervisoresDeProyecto: quien estructura; si no hay, los supervisores globales activos", () => {
     const { q } = { q: getProyectoPorSlug(db, "otro-proyecto")!.id };
     expect(supervisoresDeProyecto(db, p)).toEqual([EST]);
-    expect(supervisoresDeProyecto(db, q).sort()).toEqual([JOHN, VALE].sort());
-    expect(supervisoresDeProyecto(db, null).sort()).toEqual([JOHN, VALE].sort());
+    expect(supervisoresDeProyecto(db, q).sort()).toEqual([FUNDADOR, OPERACIONES].sort());
+    expect(supervisoresDeProyecto(db, null).sort()).toEqual([FUNDADOR, OPERACIONES].sort());
   });
 });
 
@@ -844,7 +844,7 @@ describe("A8 · ataques", () => {
     // Un externo con `estructura` (EST) invita a una segunda wallet suya.
     usuario(db, SEGUNDA, { invitedBy: EST });
     // Su propia entrega, en revisión.
-    agregarMiembro(db, actor(JOHN), { initiativeId: p, wallet: EST, rol: "ejecuta" });
+    agregarMiembro(db, actor(FUNDADOR), { initiativeId: p, wallet: EST, rol: "ejecuta" });
     pieza = enRevision(db, p, EST);
   });
 
@@ -867,7 +867,7 @@ describe("A8 · ataques", () => {
 
   it("(3) mover la fecha de una entrega En revisión → 409", () => {
     expect(fallo(() => editarAsignacion(db, actor(EST), { assignmentId: pieza, dueDate: "2026-12-31" }))?.status).toBe(409);
-    expect(fallo(() => editarAsignacion(db, actor(JOHN), { assignmentId: pieza, size: "L" }))?.status).toBe(409);
+    expect(fallo(() => editarAsignacion(db, actor(FUNDADOR), { assignmentId: pieza, size: "L" }))?.status).toBe(409);
     expect(getAssignment(db, pieza)!.due_date).toBeNull();
     expect(ledgers(db)).toBe(0);
   });
@@ -933,14 +933,14 @@ describe("A8b · ataques con una segunda cuenta que invitó un tercero (sin rela
   });
 
   it("aunque la haya sumado el founder, quien le asignó la pieza no la aprueba", () => {
-    agregarMiembro(db, actor(JOHN), { initiativeId: p, wallet: TITERE, rol: "ejecuta" });
+    agregarMiembro(db, actor(FUNDADOR), { initiativeId: p, wallet: TITERE, rol: "ejecuta" });
     const creada = createAssignmentAs(db, actor(EST), { title: "Creada para ella", initiativeId: p, ownerWallet: TITERE, size: "L" }, AHORA);
     entrega(creada, TITERE);
     expect(fallo(() => applyAssignmentAction(db, { assignmentId: creada, action: "aprobar", actor: actor(EST) }))?.message).toBe(
       MOTIVO_TRANSICION.asignacion
     );
     // Reasignada por quien estructura: el último que le dio la pieza es quien no la aprueba.
-    const reasignada = createAssignmentAs(db, actor(JOHN), { title: "De Ana", initiativeId: p, ownerWallet: ANA }, AHORA);
+    const reasignada = createAssignmentAs(db, actor(FUNDADOR), { title: "De Ana", initiativeId: p, ownerWallet: ANA }, AHORA);
     editarAsignacion(db, actor(EST), { assignmentId: reasignada, ownerWallet: TITERE }, AHORA);
     entrega(reasignada, TITERE);
     expect(
@@ -950,8 +950,8 @@ describe("A8b · ataques con una segunda cuenta que invitó un tercero (sin rela
   });
 
   it("si la planificó otra persona, quien estructura sí la revisa (cuatro ojos: planifica uno, revisa otro)", () => {
-    agregarMiembro(db, actor(JOHN), { initiativeId: p, wallet: TITERE, rol: "ejecuta" });
-    const id = createAssignmentAs(db, actor(JOHN), { title: "Planificada por el founder", initiativeId: p, ownerWallet: TITERE }, AHORA);
+    agregarMiembro(db, actor(FUNDADOR), { initiativeId: p, wallet: TITERE, rol: "ejecuta" });
+    const id = createAssignmentAs(db, actor(FUNDADOR), { title: "Planificada por el founder", initiativeId: p, ownerWallet: TITERE }, AHORA);
     entrega(id, TITERE);
     expect(applyAssignmentAction(db, { assignmentId: id, action: "aprobar", actor: actor(EST), now: AHORA }).status).toBe("Hecha");
     // Y una pieza del Backlog que la persona toma por su cuenta tampoco ata a quien la creó.
@@ -967,16 +967,16 @@ describe("A8b · ataques con una segunda cuenta que invitó un tercero (sin rela
     const id = createAssignment(db, {
       title: "Importada",
       initiativeId: p,
-      ownerWallet: FAUSTO,
+      ownerWallet: PLATAFORMA,
       status: "En revisión",
       size: "L",
-      createdBy: VALE,
+      createdBy: OPERACIONES,
       importKey: "csv:proyecto-piloto:importada",
     });
-    expect(fallo(() => applyAssignmentAction(db, { assignmentId: id, action: "aprobar", actor: actor(VALE) }))?.message).toBe(
+    expect(fallo(() => applyAssignmentAction(db, { assignmentId: id, action: "aprobar", actor: actor(OPERACIONES) }))?.message).toBe(
       MOTIVO_TRANSICION.asignacion
     );
-    expect(applyAssignmentAction(db, { assignmentId: id, action: "aprobar", actor: actor(JOHN), now: AHORA }).status).toBe(
+    expect(applyAssignmentAction(db, { assignmentId: id, action: "aprobar", actor: actor(FUNDADOR), now: AHORA }).status).toBe(
       "Hecha"
     );
   });

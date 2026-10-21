@@ -89,8 +89,8 @@ describe("cohortStats: el roster interno no infla la cohorte pública", () => {
 });
 
 // Con la base REAL de producción (seed completo + roster) había dos filas de founder
-// para el mismo humano: `pending:john` y la wallet demo del seed. `listTeamMembers`
-// devolvía 7, lo que duplicaba a John en los desplegables de responsable y ponía el
+// para el mismo humano: `pending:founder` y la wallet demo del seed. `listTeamMembers`
+// devolvía 7, lo que duplicaba a Founder en los desplegables de responsable y ponía el
 // denominador de la salud de ritos en 7 en vez de 6.
 describe("listTeamMembers sobre la base real: el equipo son 6, sin duplicados", () => {
   let db: DB;
@@ -104,7 +104,7 @@ describe("listTeamMembers sobre la base real: el equipo son 6, sin duplicados", 
     expect(m.every((x) => x.wallet.startsWith(PENDING_PREFIX))).toBe(true);
   });
 
-  it("hay UN solo founder y John no aparece dos veces", () => {
+  it("hay UN solo founder y Founder no aparece dos veces", () => {
     const m = listTeamMembers(db);
     expect(m.filter((x) => x.role === "founder")).toHaveLength(1);
     const nombres = m.map((x) => x.display_name);

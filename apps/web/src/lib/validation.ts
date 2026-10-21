@@ -17,7 +17,7 @@ export const inviteVerifySchema = z.object({
 
 /**
  * Nombres reservados: sin esto, cualquiera puede registrarse como
- * "John (Founder)" y aparecer junto al fundador en las listas públicas.
+ * "Founder (demo)" y aparecer junto al fundador en las listas públicas.
  */
 const RESERVADOS = ["founder", "fundador", "zelena", "admin", "guardian", "guardián", "soporte", "oficial"];
 

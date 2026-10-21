@@ -126,11 +126,13 @@ describe("E2-1 · el repo público no nombra la estructura societaria", () => {
 });
 
 /**
- * Nombres de clientes y ventures que no pueden aparecer en lo versionado (salvo
- * `seed.ts` y `__fixtures__/`, spec E2-1). La lista NO se versiona: aquí solo viven
- * sus sha256 con prefijo, sobre el nombre en minúsculas y sin tildes. Se comparan
- * contra cada palabra y cada grupo de hasta tres palabras seguidas del texto.
- * `ZELENA_NOMBRES_VETADOS` (separados por comas) añade nombres sin versionarlos.
+ * Nombres que no pueden aparecer en NADA de lo versionado (spec E2-1 y hallazgo A8 de
+ * la auditoría del 2026-10-21): clientes, ventures con datos comerciales y personas del
+ * equipo. Sin excepciones: `seed.ts` y `__fixtures__/` también se barren. La lista NO
+ * se versiona: aquí solo viven sus sha256 con prefijo, sobre el nombre en minúsculas y
+ * sin tildes. Se comparan contra cada palabra y cada grupo de hasta tres palabras
+ * seguidas del texto. `ZELENA_NOMBRES_VETADOS` (separados por comas) añade nombres sin
+ * versionarlos.
  */
 const PREFIJO_VETADO = "zelena:nombre-vetado:";
 const NOMBRES_VETADOS_SHA256: readonly string[] = [
@@ -143,6 +145,23 @@ const NOMBRES_VETADOS_SHA256: readonly string[] = [
   "0a0e2c9cfbcdf6a99bfa8ecfcddc3c4fc08ef8dd38593bd415ffd6fdc9ef328e",
   "be1fa38ce4386fe4d2594befbb852094adc5983bef8cb12c293b9a8396b64084",
   "9977fd2393f4540c15a8b17715e8eaa90254ec3f4bf422fe8e2926aa9938bf1c",
+  // A8: una venture más y las personas del equipo (también como `pending:<slug>`).
+  "6e0deba30a8752d8b719a43b2f6bda109a8e553604c7a57cac47a8f0b7e5b69c",
+  "982827a93beab47491b99fdea9c4e0ab843841a77e9b830ecbf0f043c7a150f4",
+  "732b1e0aa656ccc2309326114fe2cfc4c73186baf3fe0bb0d393f52d0e226a1e",
+  "cf1a1477bcb4fc76e0bf7f6457fd253ad5e40760d9efdb7bafb088f704102446",
+  "4bbf651033fc4cd11ccaa6d4c58706dfec0165cc81c7f3b1fd48c39995283073",
+  "57e5f4fce0dec00ef2d7bfd1966366187fb04fa9e3a70a9cc080320d7675f739",
+  "32c5c80c39389057a10d120e2d370f4eb6b5756fd5dd793f0a711e84a84a292d",
+];
+/**
+ * Nombres que en minúscula son también una palabra común del español (un verbo): se
+ * vigilan solo con sus mayúsculas exactas (sin tildes), con su propio prefijo.
+ */
+const PREFIJO_VETADO_EXACTO = "zelena:nombre-vetado-exacto:";
+const NOMBRES_VETADOS_EXACTOS_SHA256: readonly string[] = [
+  "a3a6bf26db9b869ef93d559c7f958a67402458b722ea7ae2d215368e2949b696",
+  "ca5e8e3cae761158923e899a88324a4abc5c9b4f246c53e35d803d7603c1acc9",
 ];
 const MAX_PALABRAS_NOMBRE = 3;
 
@@ -155,6 +174,16 @@ const palabras = (s: string) =>
     .filter(Boolean);
 const hashVetado = (nombreNormalizado: string) =>
   createHash("sha256").update(PREFIJO_VETADO + nombreNormalizado).digest("hex");
+/** Palabras con sus mayúsculas (sin tildes), para la lista exacta. */
+const palabrasExactas = (s: string) =>
+  s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .split(/[^A-Za-z0-9]+/)
+    .filter(Boolean);
+const hashVetadoExacto = (palabra: string) =>
+  createHash("sha256").update(PREFIJO_VETADO_EXACTO + palabra).digest("hex");
+const HASHES_EXACTOS = new Set(NOMBRES_VETADOS_EXACTOS_SHA256);
 
 function hashesVetados(): Set<string> {
   const extra = (process.env.ZELENA_NOMBRES_VETADOS ?? "")
@@ -166,12 +195,13 @@ function hashesVetados(): Set<string> {
 }
 
 /** Líneas (1-based) donde empieza una aparición de un nombre vetado. Nunca devuelve el nombre. */
-function lineasConNombreVetado(texto: string, hashes: Set<string>): number[] {
+function lineasConNombreVetado(texto: string, hashes: Set<string>, exactos: Set<string> = HASHES_EXACTOS): number[] {
   const fichas: Array<{ palabra: string; linea: number }> = [];
+  const lineas = new Set<number>();
   texto.split("\n").forEach((l, i) => {
     for (const p of palabras(l)) fichas.push({ palabra: p, linea: i + 1 });
+    for (const p of palabrasExactas(l)) if (exactos.has(hashVetadoExacto(p))) lineas.add(i + 1);
   });
-  const lineas = new Set<number>();
   for (let i = 0; i < fichas.length; i++) {
     let grupo = "";
     for (let k = 0; k < MAX_PALABRAS_NOMBRE && i + k < fichas.length; k++) {
@@ -193,14 +223,10 @@ function archivosBajo(dir: string): string[] {
   return out;
 }
 
-const EXENTOS_DE_NOMBRES = (rel: string) =>
-  rel === "apps/web/src/lib/seed.ts" || rel.startsWith("apps/web/src/lib/__fixtures__/");
-
 function hallazgosDeNombres(rels: readonly string[]): string[] {
   const hashes = hashesVetados();
   const hallazgos: string[] = [];
   for (const rel of rels) {
-    if (EXENTOS_DE_NOMBRES(rel)) continue;
     const buf = fs.readFileSync(path.join(RAIZ, rel));
     if (buf.includes(0)) continue; // binario
     for (const n of lineasConNombreVetado(buf.toString("utf8"), hashes)) hallazgos.push(`${rel}:${n}`);
@@ -208,7 +234,7 @@ function hallazgosDeNombres(rels: readonly string[]): string[] {
   return hallazgos;
 }
 
-describe("E2-1 · ningún nombre de cliente ni de venture en lo público", () => {
+describe("E2-1 y A8 · ningún cliente, venture ni persona del equipo en lo versionado", () => {
   it("el detector encuentra un nombre por su hash (sin versionarlo) y en grupos de palabras", () => {
     const hashes = new Set([hashVetado("cliente de prueba")]);
     expect(lineasConNombreVetado("uno\nhola, Cliente\nde Prueba.\n", hashes)).toEqual([2]);
@@ -216,6 +242,13 @@ describe("E2-1 · ningún nombre de cliente ni de venture en lo público", () =>
     expect(lineasConNombreVetado("cliente de pruebas", hashes)).toEqual([]);
     // Normaliza tildes y mayúsculas igual que los hashes versionados.
     expect(lineasConNombreVetado("CLIÉNTE DE PRUEBA", hashes)).toEqual([1]);
+  });
+
+  it("la lista exacta distingue el nombre (con mayúscula) de la palabra común (en minúscula)", () => {
+    const exactos = new Set([hashVetadoExacto("Persona"), hashVetadoExacto("PERSONA")]);
+    const sin = new Set<string>();
+    expect(lineasConNombreVetado("hola Persona\nla persona llega\nconst PERSONA_REAL = 1", sin, exactos)).toEqual([1, 3]);
+    expect(lineasConNombreVetado("pérsona y personas", sin, exactos)).toEqual([]);
   });
 
   it("docs/, los archivos de la raíz, el smoke y este módulo están limpios", () => {
@@ -234,14 +267,19 @@ describe("E2-1 · ningún nombre de cliente ni de venture en lo público", () =>
     expect(hallazgosDeNombres(rels)).toEqual([]);
   });
 
-  // Barrido de TODO lo versionado (spec E2-1). Lo corre el líder antes de desplegar:
-  //   ZELENA_BARRIDO_NOMBRES=1 npx vitest run src/lib/contenido-publico.test.ts
-  // Va aparte porque otros paquetes limpian sus propios archivos (A, C2, B, el líder).
-  it.skipIf(process.env.ZELENA_BARRIDO_NOMBRES !== "1")("barrido completo de lo versionado", () => {
-    const versionados = execFileSync("git", ["ls-files", "-z"], { cwd: RAIZ, encoding: "utf8" })
+  // Barrido de TODO lo versionado y de lo nuevo sin versionar (lo que git no ignora), en
+  // cada corrida (hallazgo A8): un nombre que entre en cualquier archivo pone la suite en rojo.
+  it("barrido completo de lo versionado y de lo nuevo", () => {
+    const versionados = execFileSync("git", ["ls-files", "-z", "--cached", "--others", "--exclude-standard"], {
+      cwd: RAIZ,
+      encoding: "utf8",
+    })
       .split("\0")
       .filter(Boolean)
       .filter((rel) => fs.existsSync(path.join(RAIZ, rel)));
+    expect(versionados.length).toBeGreaterThan(300);
+    expect(versionados).toContain("apps/web/src/lib/seed.ts");
+    expect(versionados).toContain("apps/web/src/lib/__fixtures__/schema-58ee2fd.sql");
     expect(hallazgosDeNombres(versionados)).toEqual([]);
   });
 });

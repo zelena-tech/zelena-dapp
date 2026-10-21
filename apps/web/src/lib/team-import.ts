@@ -1,5 +1,5 @@
 /**
- * Importador de los CSV de tareas de John → iniciativas + asignaciones (WP14).
+ * Importador de los CSV de tareas del equipo → iniciativas + asignaciones (WP14).
  *
  * Columnas (el nombre de la cabecera se reconoce sin mayúsculas ni acentos, en
  * español o en inglés):
@@ -7,7 +7,7 @@
  *   opcionales:   Description, Status, Priority, Assignee, Horizonte,
  *                 Criterio de aceptación, Size (S|M|L), Due (AAAA-MM-DD)
  *
- * Detalles REALES de los archivos de John que este parser tiene que aguantar:
+ * Detalles REALES de los archivos del equipo que este parser tiene que aguantar:
  *  - `Zelena_Tareas_Import.csv` empieza con BOM UTF-8 (EF BB BF);
  *  - hay comas dentro de campos entrecomillados;
  *  - los saltos de línea son CRLF.
@@ -55,7 +55,7 @@ import {
   type Priority,
   type Size,
 } from "./team.ts";
-import { walletDeRoster } from "./talento.ts";
+import { slugDelEquipo, walletDeRoster } from "./talento.ts";
 
 // ---------------------------------------------------------------------------
 // Parser CSV (propio; sin dependencias)
@@ -151,7 +151,7 @@ export const PRIORITY_MAP: Record<string, Priority> = {
 export const SIZE_MAP: Record<string, Size> = { s: "S", m: "M", l: "L" };
 
 /**
- * Columnas reconocidas: nombre canónico (el de los CSV de John) y sus alias. La
+ * Columnas reconocidas: nombre canónico (el de los CSV del equipo) y sus alias. La
  * cabecera se compara con `normalizeName` (sin acentos, sin mayúsculas).
  */
 const COLUMNAS: ReadonlyArray<{ canon: string; alias: readonly string[]; obligatoria: boolean }> = [
@@ -350,10 +350,11 @@ function resolver(db: DB, nombre: string): Resolucion {
   const n = normalizeName(crudo);
   if (!n) return { motivo: "falta el Assignee" };
 
-  // 1. Alias del roster → su cuenta vinculada o su fila `pending:<slug>`.
-  const member = findRosterMember(crudo);
-  if (member) {
-    const w = walletDeRoster(db, member.slug);
+  // 1. Fila del roster POR DATOS (alias del roster configurado o slug que existe en la
+  //    base) → su cuenta vinculada o su fila `pending:<slug>` (hallazgo A8).
+  const slug = slugDelEquipo(db, crudo);
+  if (slug) {
+    const w = walletDeRoster(db, slug);
     if (w) return { wallet: w };
   }
 

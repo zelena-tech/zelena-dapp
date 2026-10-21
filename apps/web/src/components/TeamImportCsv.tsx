@@ -80,7 +80,7 @@ export default function TeamImportCsv() {
           onChange={(e) => setCsv(e.target.value)}
           rows={8}
           spellCheck={false}
-          placeholder={"Initiative,Title,Assignee,Status,Priority,Size,Due\nHuerto Demo,Regar el huerto,Vale,Asignada,Normal,S,2026-10-09"}
+          placeholder={"Initiative,Title,Assignee,Status,Priority,Size,Due\nHuerto Demo,Regar el huerto,Operaciones,Asignada,Normal,S,2026-10-09"}
           className="input font-mono text-sm"
         />
       </div>

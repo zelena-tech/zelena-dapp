@@ -18,7 +18,7 @@
  * Por eso al entrar por Entra NO se crea una fila nueva ni se reescribe la PK: se
  * VINCULA la identidad corporativa a la fila que ya existe (se escriben `entra_oid`,
  * `auth_provider`, `role`, `is_supervisor` y el correo en `user_emails`). El
- * principal sigue siendo `pending:fausto` — un identificador estable y opaco, no un
+ * principal sigue siendo `pending:<slug>` — un identificador estable y opaco, no un
  * dato personal. Renombrar la PK a `entra:<oid>` rompería en silencio todas esas
  * referencias: eso es exactamente lo que este módulo existe para evitar, y es lo
  * que hace verdadero el criterio 5 ("un mismo humano = UN registro, no dos").
@@ -159,7 +159,7 @@ export function validateEntraToken(
       ok: false,
       reason: "no_token",
       message:
-        "Microsoft no entregó una sesión válida. Si tu cuenta fue desactivada, habla con John.",
+        "Microsoft no entregó una sesión válida. Si tu cuenta fue desactivada, habla con el founder.",
     };
   }
 
@@ -193,7 +193,7 @@ export function validateEntraToken(
     return {
       ok: false,
       reason: "missing_email",
-      message: "El token de Microsoft no trae un correo. Pídele a John que revise el app registration.",
+      message: "El token de Microsoft no trae un correo. Pídele al founder que revise el app registration.",
     };
   }
   if (email.includes("#ext#")) {
@@ -347,7 +347,7 @@ function upsertCorporateEmail(db: DB, wallet: string, email: string): void {
     // fusionaría dos humanos en silencio. Se falla fuerte y lo resuelve una persona.
     throw new EntraLinkError(
       "email_conflict",
-      `El correo ${email} ya está vinculado a otro registro. Habla con John para unificarlos.`
+      `El correo ${email} ya está vinculado a otro registro. Habla con el founder para unificarlos.`
     );
   }
   db.prepare(
@@ -374,7 +374,7 @@ function linkEntraIdentity(
     if (other && other.wallet !== wallet) {
       throw new EntraLinkError(
         "oid_conflict",
-        "Esa cuenta de Microsoft ya está vinculada a otro registro. Habla con John."
+        "Esa cuenta de Microsoft ya está vinculada a otro registro. Habla con el founder."
       );
     }
     if (desired) {
@@ -401,7 +401,7 @@ function createEntraUser(db: DB, identity: EntraIdentity): string {
     if (other && other.wallet !== wallet) {
       throw new EntraLinkError(
         "oid_conflict",
-        "Esa cuenta de Microsoft ya está vinculada a otro registro. Habla con John."
+        "Esa cuenta de Microsoft ya está vinculada a otro registro. Habla con el founder."
       );
     }
     db.prepare(
@@ -462,7 +462,7 @@ export function resolveEntraLogin(db: DB, identity: EntraIdentity): EntraLoginRe
     if (!row) {
       throw new EntraLinkError(
         "email_conflict",
-        `El correo ${identity.email} apunta a un registro que no existe. Habla con John.`
+        `El correo ${identity.email} apunta a un registro que no existe. Habla con el founder.`
       );
     }
     if (row.status !== "active") return alumniRejection();
@@ -471,7 +471,7 @@ export function resolveEntraLogin(db: DB, identity: EntraIdentity): EntraLoginRe
     if (row.entra_oid && row.entra_oid !== identity.oid) {
       throw new EntraLinkError(
         "oid_conflict",
-        "Ese correo ya está vinculado a otra cuenta de Microsoft. Habla con John."
+        "Ese correo ya está vinculado a otra cuenta de Microsoft. Habla con el founder."
       );
     }
     linkEntraIdentity(db, row.wallet, identity, null);
@@ -554,7 +554,7 @@ export function linkRecoveryEmail(
   if (owner && owner !== wallet) {
     return {
       ok: false,
-      message: "Ese correo ya está vinculado a otro registro. Usa otro o habla con John.",
+      message: "Ese correo ya está vinculado a otro registro. Usa otro o habla con el founder.",
     };
   }
   const tx = db.transaction(() => {

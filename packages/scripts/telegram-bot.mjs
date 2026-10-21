@@ -114,7 +114,7 @@ function horaDeLosFocos(db) {
   }
 }
 
-/** El destinatario autorizado (v1: solo John). */
+/** El destinatario autorizado (v1: solo el founder). */
 function destinatarioAutorizado(db) {
   if (!db) return null;
   try {

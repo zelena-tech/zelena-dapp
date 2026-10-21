@@ -446,7 +446,7 @@ describe("arranque resistente (WP31, B13)", () => {
     expect(filasDe(fresh, "genome_versions")).toBe(1);
     expect(fresh.prepare(`SELECT COUNT(*) AS n FROM decision_log WHERE title LIKE 'Genoma v2:%'`).get()).toEqual({ n: 0 });
     // El resto del arranque siguió: el roster del equipo existe.
-    expect(fresh.prepare(`SELECT COUNT(*) AS n FROM users WHERE wallet = 'pending:john'`).get()).toEqual({ n: 1 });
+    expect(fresh.prepare(`SELECT COUNT(*) AS n FROM users WHERE wallet = 'pending:founder'`).get()).toEqual({ n: 1 });
 
     // Se reintenta en el siguiente arranque.
     fresh.exec(`DROP TRIGGER falla_genoma_v2`);

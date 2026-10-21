@@ -14,7 +14,7 @@ import { avisosDe, contarNoLeidos, crearAviso, enlacesDeAvisos, marcarLeidos } f
 const ANA = "GANAEJECUTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 const RITA = "GRITAREVISAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 const SESION_FOUNDER = "GFOUNDERSESIONAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-const JOHN = pendingPrincipal("john");
+const FUNDADOR = pendingPrincipal("founder");
 
 const AHORA = new Date("2026-10-05T15:00:00.000Z");
 
@@ -88,12 +88,12 @@ describe("C1-10 · cada persona ve y marca solo lo suyo", () => {
   });
 
   it("suma todas las identidades: el founder ve y marca los de su fila de equipo", () => {
-    aviso(db, JOHN, "equipo"); // avisos del principal de equipo (pending:john)
+    aviso(db, FUNDADOR, "equipo"); // avisos del principal de equipo (pending:founder)
     aviso(db, SESION_FOUNDER, "sesion");
     expect(avisosDe(db, SESION_FOUNDER).map((a) => a.clave).sort()).toEqual(["equipo", "sesion"]);
     expect(contarNoLeidos(db, SESION_FOUNDER)).toBe(2);
     expect(marcarLeidos(db, SESION_FOUNDER)).toBe(2);
-    expect(contarNoLeidos(db, JOHN)).toBe(0);
+    expect(contarNoLeidos(db, FUNDADOR)).toBe(0);
   });
 
   it("los no leídos van primero y se respeta el límite", () => {

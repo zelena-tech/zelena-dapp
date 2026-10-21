@@ -88,6 +88,6 @@ intransferibles y sin valor monetario (mismas reglas de Génesis).
   con 2 orgs cerrando épocas distintas el mismo día).
 - [ ] El importador del grafo (WP20) y los clientes (WP17) quedan scoped por org.
 
-OWNER — Fausto (modelo/migración) · John (decisión de gates) · Vale (valida gates)
+OWNER — Plataforma (modelo/migración) · John (decisión de gates) · Operaciones (valida gates)
 TAMAÑO — XL · Depende: v1 completo + 3 épocas + H001. Referencias:
 `investigacion/modelos/MODELO-001` §5, `investigacion/hipotesis/H005`.

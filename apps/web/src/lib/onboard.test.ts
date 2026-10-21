@@ -159,7 +159,7 @@ describe("escotilla de arranque: el código de founder concede administración",
 
   it("entrar con el código de arranque crea un FOUNDER supervisor", () => {
     seedInvite(db, BOOT, "ISSUER");
-    performOnboard(db, { code: BOOT, wallet, name: "John", isDemo: true, claHash: hash, signature: goodSig });
+    performOnboard(db, { code: BOOT, wallet, name: "Founder", isDemo: true, claHash: hash, signature: goodSig });
     const r = rolDe(wallet);
     expect(r.role).toBe("founder");
     expect(r.is_supervisor).toBe(1);
@@ -194,18 +194,18 @@ describe("escotilla de arranque: el código de founder concede administración",
     expect(rolDe(wallet).role).toBe("contributor");
   });
 
-  // Hallazgo de verificación (2026-09-30): si la wallet de John ya estaba registrada
+  // Hallazgo de verificación (2026-09-30): si la wallet de Founder ya estaba registrada
   // (entró con la cohorte o con una invitación), la escotilla respondía 409
   // `wallet_registrada` ANTES de mirar el código, así que no servía justo para el
   // caso en que hace falta: una wallet real que nació contributor.
   it("la escotilla también promueve una wallet YA registrada (entró antes con otro código)", () => {
     seedInvite(db, "COHORTE-UNO", "ISSUER");
     seedInvite(db, BOOT, "ISSUER");
-    performOnboard(db, { code: "COHORTE-UNO", wallet, name: "John", isDemo: false, claHash: hash, signature: goodSig });
+    performOnboard(db, { code: "COHORTE-UNO", wallet, name: "Founder", isDemo: false, claHash: hash, signature: goodSig });
     expect(rolDe(wallet)).toEqual({ role: "contributor", is_supervisor: 0 });
 
     const r = performOnboard(db, { code: BOOT, wallet, name: "Otro", isDemo: true, claHash: hash, signature: goodSig });
-    expect(r).toMatchObject({ wallet, name: "John", isDemo: false, role: "founder", isSupervisor: true });
+    expect(r).toMatchObject({ wallet, name: "Founder", isDemo: false, role: "founder", isSupervisor: true });
     expect(rolDe(wallet)).toEqual({ role: "founder", is_supervisor: 1 });
     expect(inviteUsedBy(db, BOOT)).toBe(wallet);
     // No reescribe la fila ni duplica la firma del CLA ni su anclaje.
@@ -213,7 +213,7 @@ describe("escotilla de arranque: el código de founder concede administración",
     expect(n(`SELECT COUNT(*) AS n FROM cla_signatures WHERE wallet = ?`)).toBe(1);
     expect(n(`SELECT COUNT(*) AS n FROM anchor_queue WHERE ref = ?`)).toBe(1);
     expect(db.prepare(`SELECT display_name, is_demo FROM users WHERE wallet = ?`).get(wallet)).toEqual({
-      display_name: "John",
+      display_name: "Founder",
       is_demo: 0,
     });
   });
@@ -255,7 +255,7 @@ describe("escotilla de arranque: el código de founder concede administración",
     seedBootstrapInvite(db);
     const enviado = "ZELENA-ARRANQUE-2026-ABC";
     expect(db.prepare(`SELECT code FROM invites WHERE code = ?`).get(enviado)).toEqual({ code: enviado });
-    performOnboard(db, { code: enviado, wallet, name: "John", isDemo: true, claHash: hash, signature: goodSig });
+    performOnboard(db, { code: enviado, wallet, name: "Founder", isDemo: true, claHash: hash, signature: goodSig });
     expect(rolDe(wallet)).toEqual({ role: "founder", is_supervisor: 1 });
   });
 

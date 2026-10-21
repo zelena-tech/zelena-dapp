@@ -61,7 +61,7 @@ describe("apps/web/.env.example", () => {
   it("no documenta variables que nadie lee (STELLAR_NETWORK salió)", () => {
     const delCodigo = variablesDelCodigo();
     const documentadas = [...ejemplo.matchAll(/^# ([A-Z][A-Z0-9_]+)=$/gm)].map((m) => m[1]);
-    const soloPruebas = ["ZELENA_NOMBRES_PRIVADOS", "ZELENA_NOMBRES_VETADOS", "ZELENA_BARRIDO_NOMBRES"];
+    const soloPruebas = ["ZELENA_NOMBRES_PRIVADOS", "ZELENA_NOMBRES_VETADOS", "ZELENA_GRAFO_PRIVADO"];
     expect(documentadas.filter((v) => !delCodigo.has(v) && !soloPruebas.includes(v))).toEqual([]);
     expect(ejemplo).not.toContain("STELLAR_NETWORK");
   });

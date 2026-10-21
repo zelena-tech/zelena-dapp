@@ -6,7 +6,7 @@
  * dos problemas:
  *
  *  1. **Rompía al encender WP13.** Quien entra por la puerta corporativa llega con
- *     el principal de su fila del roster (`pending:john`), que NUNCA es igual a
+ *     el principal de su fila del roster (`pending:<slug>`), que NUNCA es igual a
  *     `FOUNDER_WALLET` (la wallet demo del seed). El founder perdía su propio panel.
  *  2. **Un segundo administrador era imposible sin deploy**, porque el permiso no
  *     era un dato del registro sino una constante del entorno.

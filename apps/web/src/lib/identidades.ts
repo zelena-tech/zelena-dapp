@@ -16,11 +16,29 @@
  *    sufijo `.ts`, sintaxis borrable).
  */
 import type { DB } from "./db";
-import { PENDING_PREFIX, TEAM_ROSTER, isPendingPrincipal, pendingPrincipal } from "./roles.ts";
+import { PENDING_PREFIX, isPendingPrincipal, pendingPrincipal } from "./roles.ts";
 
-/** Slugs del roster con rol founder (hoy, uno). Dato del roster, no una wallet. */
-function slugsFounder(): string[] {
-  return TEAM_ROSTER.filter((m) => m.role === "founder").map((m) => m.slug);
+/**
+ * Slugs del roster que son del founder, por DATOS de la base (hallazgo A8: el roster
+ * ya no vive en el código): una fila `pending:<slug>` con `role='founder'`, o un slug
+ * de `roster_links` cuya cuenta vinculada tiene `role='founder'` (vincular la fila del
+ * founder exige una cuenta que ya lo es). Así una base con el roster viejo (slugs que
+ * ya no están en la plantilla) sigue reconociendo a su founder. Orden estable.
+ */
+export function slugsFounder(db: DB): string[] {
+  const out: string[] = [];
+  const pendientes = db
+    .prepare(`SELECT wallet FROM users WHERE wallet LIKE 'pending:%' AND role = 'founder' ORDER BY created_at, wallet`)
+    .all() as Array<{ wallet: string }>;
+  for (const p of pendientes) out.push(p.wallet.slice(PENDING_PREFIX.length));
+  const vinculados = db
+    .prepare(
+      `SELECT rl.slug AS slug FROM roster_links rl JOIN users u ON u.wallet = rl.wallet
+        WHERE u.role = 'founder' ORDER BY rl.created_at, rl.slug`
+    )
+    .all() as Array<{ slug: string }>;
+  for (const v of vinculados) if (!out.includes(v.slug)) out.push(v.slug);
+  return out;
 }
 
 function walletVinculada(db: DB, slug: string): string | null {
@@ -47,7 +65,7 @@ function esFounderEnBase(db: DB, wallet: string): boolean {
  * (`roster_links`) o `pending:<slug>` si aún existe; null si no hay ninguno.
  */
 export function principalFounder(db: DB): string | null {
-  for (const slug of slugsFounder()) {
+  for (const slug of slugsFounder(db)) {
     const vinculada = walletVinculada(db, slug);
     if (vinculada) return vinculada;
     const pendiente = pendingPrincipal(slug);

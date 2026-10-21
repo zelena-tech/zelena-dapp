@@ -3,8 +3,9 @@
  * que WP15 (dashboard) y WP19 (bot) deben consumir tal cual.
  *
  * El punto fino que este test protege: supervisor NO es un valor de `role`.
- * Plano 07 §5 — John `founder`; Vale, Juan, David, Fausto y Angela `core`;
- * supervisores del dashboard = John + Vale. Vale es `core` Y supervisora.
+ * Plano 07 §5 (plantilla de roles, hallazgo A8): la fila Founder es `founder`; Operaciones,
+ * Finanzas, Producto, Plataforma y Contenido son `core`; supervisores del dashboard = Founder +
+ * Operaciones. Operaciones es `core` Y supervisora.
  */
 import { describe, it, expect } from "vitest";
 import {
@@ -40,28 +41,28 @@ describe("roles y roster del equipo (WP14 / plano 07)", () => {
     expect(Object.keys(ROLE_LABEL).sort()).toEqual(["contributor", "core", "founder"]);
   });
 
-  it("el roster es el del plano 07 §5: 6 personas, John founder, el resto core", () => {
+  it("la plantilla es la del plano 07 §5: 6 filas de rol, la del founder y el resto core", () => {
     expect(TEAM_ROSTER).toHaveLength(6);
-    expect(TEAM_ROSTER.map((m) => m.slug)).toEqual(["john", "vale", "juan", "david", "fausto", "angela"]);
-    const john = TEAM_ROSTER.find((m) => m.slug === "john")!;
-    expect(john.role).toBe("founder");
-    for (const slug of ["vale", "juan", "david", "fausto", "angela"]) {
+    expect(TEAM_ROSTER.map((m) => m.slug)).toEqual(["founder", "operaciones", "finanzas", "producto", "plataforma", "contenido"]);
+    const fundador = TEAM_ROSTER.find((m) => m.slug === "founder")!;
+    expect(fundador.role).toBe("founder");
+    for (const slug of ["operaciones", "finanzas", "producto", "plataforma", "contenido"]) {
       expect(TEAM_ROSTER.find((m) => m.slug === slug)!.role).toBe("core");
     }
   });
 
-  it("los supervisores del dashboard son John y Vale — y Vale sigue siendo `core`", () => {
+  it("los supervisores del dashboard son Founder y Operaciones — y Operaciones sigue siendo `core`", () => {
     const supervisores = TEAM_ROSTER.filter((m) => m.isSupervisor).map((m) => m.slug);
-    expect(supervisores).toEqual(["john", "vale"]);
-    const vale = TEAM_ROSTER.find((m) => m.slug === "vale")!;
-    expect(vale.role).toBe("core");
-    expect(vale.isSupervisor).toBe(true);
+    expect(supervisores).toEqual(["founder", "operaciones"]);
+    const operaciones = TEAM_ROSTER.find((m) => m.slug === "operaciones")!;
+    expect(operaciones.role).toBe("core");
+    expect(operaciones.isSupervisor).toBe(true);
   });
 
   it("el principal placeholder es determinista y no contiene datos personales", () => {
-    expect(pendingPrincipal("fausto")).toBe("pending:fausto");
-    expect(pendingPrincipal("fausto")).toBe(pendingPrincipal("fausto"));
-    expect(isPendingPrincipal("pending:fausto")).toBe(true);
+    expect(pendingPrincipal("plataforma")).toBe("pending:plataforma");
+    expect(pendingPrincipal("plataforma")).toBe(pendingPrincipal("plataforma"));
+    expect(isPendingPrincipal("pending:plataforma")).toBe(true);
     expect(isPendingPrincipal("GA7ZELENAFOUNDER")).toBe(false);
     expect(isPendingPrincipal(null)).toBe(false);
     // Ni correos ni apellidos en ningún campo del roster.
@@ -69,18 +70,18 @@ describe("roles y roster del equipo (WP14 / plano 07)", () => {
     expect(dump).not.toMatch(/@/);
   });
 
-  it("resuelve los Assignee de los CSV reales (incluido 'Ángela' con acento)", () => {
-    expect(findRosterMember("Fausto")!.slug).toBe("fausto");
-    expect(findRosterMember("  john  ")!.slug).toBe("john");
-    expect(findRosterMember("DAVID")!.slug).toBe("david");
-    expect(findRosterMember("Ángela")!.slug).toBe("angela");
-    expect(findRosterMember("Angela")!.slug).toBe("angela");
+  it("resuelve los Assignee del CSV por slug o alias, sin tildes ni mayúsculas", () => {
+    expect(findRosterMember("Plataforma")!.slug).toBe("plataforma");
+    expect(findRosterMember("  fundador  ")!.slug).toBe("founder");
+    expect(findRosterMember("PRODUCTO")!.slug).toBe("producto");
+    expect(findRosterMember("Contenido")!.slug).toBe("contenido");
+    expect(findRosterMember("Prodúcto")!.slug).toBe("producto");
     expect(findRosterMember("Delina")).toBeUndefined(); // cohorte demo, no es del equipo
     expect(findRosterMember("")).toBeUndefined();
   });
 
   it("rosterByPrincipal invierte el mapeo", () => {
-    expect(rosterByPrincipal("pending:vale")!.name).toBe("Vale");
+    expect(rosterByPrincipal("pending:operaciones")!.name).toBe("Operaciones");
     expect(rosterByPrincipal("pending:nadie")).toBeUndefined();
     expect(rosterByPrincipal("GWALLET")).toBeUndefined();
   });
@@ -99,8 +100,8 @@ describe("roles y roster del equipo (WP14 / plano 07)", () => {
 
   it("puedeVerTodoElEquipo: founder y supervisores sí; core y contributor no", () => {
     expect(puedeVerTodoElEquipo({ role: "founder", isSupervisor: false })).toBe(true);
-    expect(puedeVerTodoElEquipo({ role: "core", isSupervisor: true })).toBe(true); // Vale
-    expect(puedeVerTodoElEquipo({ role: "core", isSupervisor: false })).toBe(false); // Fausto
+    expect(puedeVerTodoElEquipo({ role: "core", isSupervisor: true })).toBe(true); // Operaciones
+    expect(puedeVerTodoElEquipo({ role: "core", isSupervisor: false })).toBe(false); // Plataforma
     expect(puedeVerTodoElEquipo({ role: "contributor", isSupervisor: false })).toBe(false);
     // Sesión vieja sin claims: solo el founder ve todo.
     expect(puedeVerTodoElEquipo({ isFounder: true })).toBe(true);
@@ -110,7 +111,7 @@ describe("roles y roster del equipo (WP14 / plano 07)", () => {
 
   it("el roster completo se clasifica correctamente por la regla de visibilidad", () => {
     const veTodo = TEAM_ROSTER.filter((m) => puedeVerTodoElEquipo(m)).map((m) => m.slug);
-    expect(veTodo).toEqual(["john", "vale"]);
+    expect(veTodo).toEqual(["founder", "operaciones"]);
   });
 });
 
