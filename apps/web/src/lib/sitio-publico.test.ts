@@ -334,7 +334,9 @@ describe("lenguaje editorial en lo público", () => {
     expect(gob).toContain("Cada decisión se registra aquí con su razón y su huella, para que cualquiera pueda revisarla.");
     expect(gob).toContain("Lo que aprendimos de cada regla");
     expect(gob).toContain("huella:");
-    expect(gob).toContain("Reemplazada por:");
+    // Solo la versión vigente de una decisión reemplazada (decisión del founder, 2026-10-21).
+    expect(gob).toContain("decisionesVigentes(db)");
+    expect(gob).not.toContain("Reemplazada por:");
     expect(gob).toContain("esActaDeRito(");
     const aca = leer("app/academia/page.tsx");
     expect(aca).toContain("Se premia aprender, no acumular sin aprender.");

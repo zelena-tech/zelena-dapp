@@ -30,7 +30,8 @@ import { currentEpoch, getActiveGenome, GENOME_DEFAULTS, type Genome, type RiteK
 import { identidadesDe, mismaPersona } from "./identidades";
 import { effectiveRole, isPendingPrincipal, isRole, puedeVerTodoElEquipo, type TeamActor } from "./roles";
 import { equipoActor } from "./authz";
-import { esActaDeRito, esDecisionReemplazada } from "./agora-labels";
+import { esActaDeRito } from "./agora-labels";
+import { decisionesVigentes } from "./decisiones";
 import { txVerificable } from "./pruebas-testnet";
 import { diaLocal, instanteDb, parseInstanteDb } from "./zona-horaria";
 import {
@@ -974,7 +975,8 @@ export function proximoRitoPreparado(db: DB, ahora: Date = new Date()): RitoProx
 
 /**
  * Las `n` decisiones más recientes para /comunidad: sin las actas de ritos ("Rito …",
- * que se ven en los pasados) ni la decisión reemplazada (la de las etiquetas viejas).
+ * que se ven en los pasados) y solo las VIGENTES: una decisión reemplazada no se muestra
+ * (ni su texto); el original sigue intacto en el registro (lib/decisiones.ts).
  */
 export function decisionesPublicas(
   db: DB,
@@ -982,14 +984,11 @@ export function decisionesPublicas(
 ): Array<{ id: number; date: string; title: string; reason: string; hash: string }> {
   const cuantas = Math.max(0, Math.floor(n) || 0);
   if (cuantas === 0) return [];
-  const filas = db.prepare(`SELECT id, date, title, reason, hash FROM decision_log ORDER BY id DESC`).all() as Array<{
-    id: number;
-    date: string;
-    title: string;
-    reason: string;
-    hash: string;
-  }>;
-  return filas.filter((d) => !esActaDeRito(d.title) && !esDecisionReemplazada(d.reason)).slice(0, cuantas);
+  return decisionesVigentes(db)
+    .reverse()
+    .filter((d) => !esActaDeRito(d.title))
+    .slice(0, cuantas)
+    .map(({ id, date, title, reason, hash }) => ({ id, date, title, reason, hash }));
 }
 
 // ---------------------------------------------------------------------------

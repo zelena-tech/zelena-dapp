@@ -177,15 +177,8 @@ export function getApplications(projectId: number) {
   }>;
 }
 
-export function listDecisions() {
-  return getDb().prepare(`SELECT * FROM decision_log ORDER BY id`).all() as Array<{
-    id: number;
-    date: string;
-    title: string;
-    reason: string;
-    hash: string;
-  }>;
-}
+// Las decisiones se leen con lib/decisiones.ts: en lo público solo las vigentes
+// (`decisionesVigentes`); las reemplazadas, completas, solo en /admin.
 
 export function getOpenProposal() {
   return getDb().prepare(`SELECT * FROM proposals WHERE status = 'open' ORDER BY id LIMIT 1`).get() as

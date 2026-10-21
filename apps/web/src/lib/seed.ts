@@ -12,6 +12,7 @@ import { seedTeam } from "./team";
 import { createCohortInvite } from "./invites";
 import { ACADEMIA_S1, aplicarContenidoPublico } from "./contenido-publico";
 import { ORIGEN_SEMBRADO, marcarSembradosComoBorrador } from "./agora-borradores";
+import { vincularReemplazosConocidos } from "./decisiones";
 
 const DELINA = "GDELINACONTRIBUTORDEMOAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 const MARCOS = "GMARCOSDEVDEMOBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB";
@@ -101,6 +102,11 @@ export function seedIfEmpty(db: DB, env: NodeJS.ProcessEnv = process.env): void 
   // Contenido público (WP31-E2): lleva una base con el contenido viejo a la forma que
   // `seed()` siembra hoy. Idempotente; si falla, el arranque sigue y se reintenta.
   try { aplicarContenidoPublico(db); } catch (e) { console.error("[seed] contenido público", e); }
+
+  // Decisiones (decisión del founder, 2026-10-21): registra que la decisión histórica de
+  // las etiquetas viejas la reemplaza la de S2. Solo inserta en decision_replacements; el
+  // original sigue intacto en decision_log. Idempotente; si falla, el arranque sigue.
+  try { vincularReemplazosConocidos(db); } catch (e) { console.error("[seed] reemplazos de decisiones", e); }
 
   // Ágora (decisión del founder, 2026-10-21): los proyectos sembrados de una base que ya
   // existía pasan a borrador. Idempotente; si falla, el arranque sigue y se reintenta.

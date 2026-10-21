@@ -200,6 +200,18 @@ CREATE TABLE IF NOT EXISTS decision_log (
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Reemplazos de decisiones (decisión del founder, 2026-10-21). Solo inserción: la
+-- decisión reemplazada sigue INTACTA en decision_log (con su huella) y en lo público se
+-- muestra solo la vigente; el original lo ve el founder en /admin (lib/decisiones.ts).
+CREATE TABLE IF NOT EXISTS decision_replacements (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  decision_id     INTEGER NOT NULL UNIQUE,   -- la reemplazada
+  replaced_by_id  INTEGER NOT NULL,          -- la vigente que la reemplaza
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (decision_id) REFERENCES decision_log(id),
+  FOREIGN KEY (replaced_by_id) REFERENCES decision_log(id)
+);
+
 -- Reporte de fitness por epoca (WP07). Append-only: una fila por calculo de cierre.
 -- El humano firma la recomendacion (keep/revert); la firma genera una entrada en
 -- decision_log referenciada por decision_log_id. components = JSON explicable.

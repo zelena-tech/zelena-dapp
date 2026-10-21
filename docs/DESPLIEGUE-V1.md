@@ -114,6 +114,11 @@ La app **sí migra** su base al arrancar (ruta SQLite de `lib/db.ts`), en este o
      Ágora, desde 1) y con supervisor `is_founder = 1`. No se ven en `/agora` (la ficha da 404), ni en
      las cifras de la landing, ni reciben aplicaciones. El founder los publica desde `/admin` →
      Proyectos → **Publicar**, y un proyecto publicado no vuelve a borrador al reiniciar.
+   - **Decisiones reemplazadas** (decisión del founder, 2026-10-21): registra en
+     `decision_replacements` (solo inserción) que la decisión histórica de las etiquetas viejas la
+     reemplaza "Las etiquetas de proyecto pasan a Cliente y Comunidad". `/gobernanza` y `/comunidad`
+     muestran solo la vigente, sin el texto original; el original sigue intacto en `decision_log`, con
+     su huella, y el founder lo ve completo en `/admin` → Decisiones reemplazadas.
 
 Es idempotente: el segundo arranque no cambia nada. En **desarrollo local** la base
 (`apps/web/data/zelena.db`) sigue siendo desechable si quieres empezar de cero, pero ya no hace
