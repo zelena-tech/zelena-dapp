@@ -48,9 +48,10 @@ CREATE TABLE IF NOT EXISTS users (
 -- ES el registro; los correos son credenciales vinculadas, no la identidad).
 --
 --  - `kind = 'primary'`   → con el que entra. El corporativo entra SIEMPRE como primary.
---  - `kind = 'recovery'`  → segundo correo personal. Obligatorio para core: si la
---    persona sale de la organizacion pierde la puerta corporativa pero NO su
---    progreso, y sigue entrando por la puerta de comunidad con este correo.
+--  - `kind = 'recovery'`  → segundo correo personal, de CONTACTO: si la persona sale
+--    de la organizacion pierde la puerta corporativa pero NO su progreso, y este
+--    correo es por donde se la ubica. NO es una puerta: ningun login lo lee (no hay
+--    login con correo personal; sin la cuenta corporativa se entra con una wallet).
 --  - `is_corporate = 1`   → es del dominio del tenant (@zelena.tech). Un correo
 --    corporativo NO puede ser recovery: moriria con la baja.
 --

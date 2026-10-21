@@ -27,7 +27,7 @@ import {
   cuentasParaCorreo,
   directorioTalento,
 } from "@/lib/talento";
-import { corporateDomain } from "@/lib/config";
+import { corporateDomain, isEntraEnabled } from "@/lib/config";
 import TeamTalentRow, { type PersonaTalento } from "@/components/TeamTalentRow";
 import CorreoCorporativoForm from "@/components/CorreoCorporativoForm";
 import TeamImportCsv from "@/components/TeamImportCsv";
@@ -153,6 +153,14 @@ export default async function EquipoTalentoPage({ searchParams }: { searchParams
       {esFounder ? (
         <section id="microsoft" className="scroll-mt-24 space-y-3">
           <h2 className="font-head text-2xl font-bold text-white">Entrar con Microsoft</h2>
+          {/* Con el interruptor apagado nadie puede entrar con Microsoft: se dice tal cual
+              para no prometer una puerta que no se ofrece (hallazgo M1). */}
+          {!isEntraEnabled() ? (
+            <p className="text-sm text-faint">
+              La entrada con Microsoft está apagada en este entorno (AUTH_ENTRA_ENABLED): hoy nadie entra así. Los
+              correos que vincules aquí se usarán cuando se encienda.
+            </p>
+          ) : null}
           <CorreoCorporativoForm
             cuentas={cuentasParaCorreo(db)}
             vinculados={correosCorporativos(db)}

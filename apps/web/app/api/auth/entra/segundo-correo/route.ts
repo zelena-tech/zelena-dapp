@@ -1,15 +1,18 @@
 /**
  * WP13 · Segundo correo personal (doc 15 §2).
  *
- * Obligatorio para el core, pero NO bloquea el trabajo diario: solo bloquea recibir
- * puntos/pagos. Por eso vive en su propio endpoint y no en el login — la persona
- * entra, ve su día, y vincula el correo cuando puede.
+ * Obligatorio para el core, pero NO bloquea el trabajo diario. Por eso vive en su
+ * propio endpoint y no en el login — la persona entra, ve su día, y vincula el correo
+ * cuando puede. Es un correo de CONTACTO: ningún login lo lee.
+ *
+ * Con la puerta de Microsoft apagada (`AUTH_ENTRA_ENABLED`) no se pide: el banner
+ * habla del acceso corporativo, y ese acceso no se ofrece.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/session";
-import { corporateDomain } from "@/lib/config";
+import { corporateDomain, isEntraEnabled } from "@/lib/config";
 import { hasRecoveryEmail, linkRecoveryEmail, listUserEmails, payoutBlockers } from "@/lib/entra";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 
@@ -22,7 +25,7 @@ export async function GET() {
   if (!session) return NextResponse.json({ error: "Sin sesión." }, { status: 401 });
   const db = getDb();
   return NextResponse.json({
-    needsRecoveryEmail: !hasRecoveryEmail(db, session.wallet),
+    needsRecoveryEmail: isEntraEnabled() && !hasRecoveryEmail(db, session.wallet),
     emails: listUserEmails(db, session.wallet),
     payoutBlockers: payoutBlockers(db, session.wallet),
   });

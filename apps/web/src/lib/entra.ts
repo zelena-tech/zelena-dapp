@@ -31,8 +31,9 @@
  * sincronización de bajas por Graph — está en el NO-ALCANCE de WP13 (fase
  * "automatizar"). Como segunda capa, un principal marcado `status='alumni'` en la
  * base tampoco puede abrir sesión NUEVA por la puerta corporativa; conserva su
- * progreso y su puerta de comunidad (plano 05: "pierde la puerta corporativa, no su
- * progreso"). La sesión ya emitida caduca a 24 h por el TTL de lib/jwt.ts.
+ * progreso y su puerta de comunidad, que es la WALLET (plano 05: "pierde la puerta
+ * corporativa, no su progreso"). No hay login con correo personal. La sesión ya
+ * emitida caduca a 24 h por el TTL de lib/jwt.ts.
  */
 import type { DB } from "./db";
 import { isRole, type Role } from "./roles";
@@ -491,7 +492,7 @@ function alumniRejection(): EntraRejection {
     reason: "account_disabled",
     message:
       "Tu acceso corporativo está cerrado. Tu historial y tus puntos siguen siendo tuyos: " +
-      "entra por la puerta de comunidad con tu correo personal.",
+      "entra con tu wallet.",
   };
 }
 
@@ -520,11 +521,12 @@ export type RecoveryEmailResult =
   | { ok: false; message: string };
 
 /**
- * Vincula el segundo correo PERSONAL (`recovery`).
+ * Vincula el segundo correo PERSONAL (`recovery`). Es un correo de CONTACTO, no una
+ * puerta: ningún login lo lee (no existe el login con correo personal).
  *
  * Se rechaza un correo del dominio corporativo: moriría con la baja y dejaría a la
- * persona sin manera de recuperar su registro — el escenario exacto que este correo
- * existe para evitar (plano 05: "pierde la puerta corporativa, no su progreso").
+ * persona sin un contacto fuera de la organización — el escenario exacto que este
+ * correo existe para cubrir (plano 05: "pierde la puerta corporativa, no su progreso").
  */
 export function linkRecoveryEmail(
   db: DB,
@@ -542,7 +544,7 @@ export function linkRecoveryEmail(
       ok: false,
       message:
         `El segundo correo tiene que ser personal, no @${corporateDomain}: ` +
-        "es el que te deja seguir entrando si algún día sales de la organización.",
+        "es el contacto que queda si algún día sales de la organización.",
     };
   }
   if (!userByWallet(db, wallet)) {

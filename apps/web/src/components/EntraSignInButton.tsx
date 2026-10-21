@@ -20,7 +20,7 @@ const ERROR_COPY: Record<string, string> = {
   foreign_domain:
     "Ese correo no es del dominio corporativo de Zelena. Entra con un código de invitación.",
   account_disabled:
-    "Tu acceso corporativo está cerrado. Tu historial y tus puntos siguen siendo tuyos: entra con tu correo personal.",
+    "Tu acceso corporativo está cerrado. Tu historial y tus puntos siguen siendo tuyos: entra con tu wallet.",
   no_token: "Microsoft no entregó una sesión válida. Vuelve a intentarlo.",
   missing_oid: "El token de Microsoft llegó incompleto. Avisa a John.",
   missing_email: "El token de Microsoft no trae correo. Avisa a John.",
@@ -69,7 +69,7 @@ export function EntraSignInButton() {
     <div className="card space-y-3 p-6">
       <h2 className="font-head text-xl font-bold text-white">Equipo de Zelena</h2>
       <p className="text-sm text-muted">
-        Si tienes correo corporativo, entra con un click. Sin código de invitación y sin wallet.
+        Si tienes correo corporativo de Zelena, entra con tu cuenta de Microsoft. No necesitas código de invitación.
       </p>
       <button
         className="btn btn-primary w-full justify-center"
@@ -84,7 +84,8 @@ export function EntraSignInButton() {
         {busy ? "Abriendo Microsoft…" : "Continuar con Microsoft"}
       </button>
       <p className="text-xs text-faint">
-        El CLA se firma después, cuando llegue tu primer bounty. Entrar no lo exige.
+        Entrar con Microsoft no firma el acuerdo de contribución. Para firmarlo, abrir tu perfil o ganar puntos se
+        entra con una wallet.
       </p>
     </div>
   );
