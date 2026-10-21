@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { SLUGS_INTERES } from "./servicios";
 import { NONCE_RE } from "./login-signing";
+import { MENSAJE_SIN_AUTORIZACION } from "./aviso-privacidad";
 
 // Stellar public key: 'G' + 55 base32 chars. Aceptamos también wallets demo del seed.
 const wallet = z
@@ -124,6 +125,18 @@ export type OnboardInput = z.infer<typeof onboardSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 
 /**
+ * Autorización de datos personales (Ley 1581, hallazgo A3). La casilla del formulario
+ * viaja como `acepto: true` y la API rechaza (400) lo que llegue sin ella: falta,
+ * `false` o cualquier otro valor. `aviso` es la versión del aviso de privacidad que
+ * tenía la página (`AVISO_PRIVACIDAD_VERSION`); la ruta la compara con la vigente.
+ * Va al FINAL de cada esquema: si falta un dato, el error que se ve es el del dato.
+ */
+const autorizacionDeDatos = {
+  acepto: z.literal(true, { errorMap: () => ({ message: MENSAJE_SIN_AUTORIZACION }) }),
+  aviso: z.string().trim().max(40).optional(),
+};
+
+/**
  * Formulario comercial de /empresas/contacto. Es público (no hay sesión), así
  * que la ruta limita por IP. `sitio` es un campo trampa oculto para personas:
  * se acepta cualquier valor aquí y la ruta descarta en silencio lo que llegue
@@ -136,6 +149,7 @@ export const leadSchema = z.object({
   interes: z.enum(SLUGS_INTERES, { errorMap: () => ({ message: "Elige qué te interesa." }) }),
   mensaje: z.string().trim().max(2000).optional().default(""),
   sitio: z.string().max(500).optional().default(""),
+  ...autorizacionDeDatos,
 });
 
 /**
@@ -148,4 +162,5 @@ export const avisoEncuentrosSchema = z.object({
   email: z.string().trim().email("Revisa el correo.").max(120),
   ciudad: z.string().trim().max(80).optional().default(""),
   sitio: z.string().max(500).optional().default(""),
+  ...autorizacionDeDatos,
 });

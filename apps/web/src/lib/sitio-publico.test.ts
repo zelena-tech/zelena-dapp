@@ -42,7 +42,7 @@ const COMPONENTES_PUBLICOS = [
   "ProximoEncuentro",
   "ui",
 ];
-const LIBS_PUBLICAS = ["menu", "metodo", "servicios", "encuentros"];
+const LIBS_PUBLICAS = ["menu", "metodo", "servicios", "encuentros", "aviso-privacidad"];
 
 /** Lista generada de archivos públicos (E1-1). */
 function archivosPublicos(): string[] {
@@ -244,9 +244,12 @@ describe("E1-8 · /metodo en lenguaje llano", () => {
 
 describe("E1-9 · aviso de privacidad y casilla de autorización", () => {
   it("/privacidad nombra los derechos y lee el responsable del entorno", () => {
+    // El texto vive en lib/aviso-privacidad.ts (versionado, hallazgo A3) y la página lo pinta.
     const src = leer("app/privacidad/page.tsx");
-    expect(src).toContain("conocer, actualizar, rectificar");
-    expect(src).toContain("revocar");
+    const aviso = leer("src/lib/aviso-privacidad.ts");
+    expect(aviso).toContain("conocer, actualizar, rectificar");
+    expect(aviso).toContain("revocar");
+    expect(src).toContain("AVISO_PRIVACIDAD.derechos");
     expect(src).toContain("responsableTratamiento()");
     expect(src).toContain('href="/empresas/contacto"');
   });
@@ -261,6 +264,9 @@ describe("E1-9 · aviso de privacidad y casilla de autorización", () => {
       expect(casillas[0]).toMatch(/\brequired\b/);
       expect(casillas[0]).not.toMatch(/defaultChecked|\bchecked\b/);
       expect(src).not.toContain("defaultChecked");
+      // La casilla viaja al servidor (hallazgo A3): sin ella la API responde 400.
+      expect(casillas[0]).toContain('name="acepto"');
+      expect(src).toMatch(/\bacepto, aviso: AVISO_PRIVACIDAD_VERSION\b/);
     });
   }
 

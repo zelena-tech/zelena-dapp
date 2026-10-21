@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { avisoEncuentrosSchema } from "@/lib/validation";
+import { MENSAJE_AVISO_CAMBIO, guardarSolicitudConAutorizacion, versionAceptadaEsVigente } from "@/lib/consentimiento";
 import { INTERES_ENCUENTROS } from "@/lib/servicios";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
 // Público, como /api/empresas/contacto: quien deja su correo todavía no tiene
-// cuenta. Mismo límite por IP y mismo trato al campo trampa.
+// cuenta. Mismo límite por IP, mismo trato al campo trampa y la misma autorización
+// de datos obligatoria (Ley 1581, hallazgo A3): sin ella, 400 y nada guardado.
 export async function POST(req: NextRequest) {
   if (!rateLimit(`aviso:${clientIp(req.headers)}`, 5, 10 * 60_000)) {
     return NextResponse.json(
@@ -28,12 +30,18 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { nombre, email, ciudad, sitio } = parsed.data;
+  const { nombre, email, ciudad, sitio, aviso } = parsed.data;
   if (sitio) return NextResponse.json({ ok: true });
 
-  getDb()
-    .prepare(`INSERT INTO leads (nombre, email, empresa, interes, mensaje) VALUES (?, ?, NULL, ?, ?)`)
-    .run(nombre, email, INTERES_ENCUENTROS, ciudad ? `Ciudad: ${ciudad}` : null);
+  if (!versionAceptadaEsVigente(aviso)) {
+    return NextResponse.json({ error: MENSAJE_AVISO_CAMBIO }, { status: 409 });
+  }
+
+  guardarSolicitudConAutorizacion(
+    getDb(),
+    { nombre, email, empresa: null, interes: INTERES_ENCUENTROS, mensaje: ciudad ? `Ciudad: ${ciudad}` : null },
+    "encuentros"
+  );
 
   return NextResponse.json({ ok: true });
 }

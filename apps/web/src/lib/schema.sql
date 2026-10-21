@@ -751,6 +751,24 @@ CREATE TABLE IF NOT EXISTS leads (
 
 CREATE INDEX IF NOT EXISTS idx_leads_creado ON leads(created_at);
 
+-- Prueba de la autorizacion de datos (Ley 1581, hallazgo A3): una fila por solicitud
+-- de `leads` que llego con la casilla del aviso marcada. Tabla NUEVA (no toca `leads`)
+-- y de SOLO INSERCION: guarda la version del aviso de /privacidad que se acepto, su
+-- huella (sha256 del texto canonico, lib/aviso-privacidad.ts) y el instante en UTC.
+-- No guarda la IP ni datos del navegador. La escribe lib/consentimiento.ts en la misma
+-- transaccion que la fila de `leads`.
+CREATE TABLE IF NOT EXISTS lead_consents (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  lead_id       INTEGER NOT NULL,
+  formulario    TEXT NOT NULL,            -- empresas/contacto | encuentros
+  aviso_version TEXT NOT NULL,            -- AVISO_PRIVACIDAD_VERSION aceptada
+  aviso_sha256  TEXT NOT NULL,            -- huella del texto aceptado
+  accepted_at   TEXT NOT NULL,            -- UTC, AAAA-MM-DD HH:MM:SS
+  FOREIGN KEY (lead_id) REFERENCES leads(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_lead_consents_lead ON lead_consents(lead_id);
+
 -- ============================================================================
 -- WP31 · RITOS — la cadencia vive en el genoma (RITES_CADENCE); aquí, lo que pasó.
 -- ============================================================================
