@@ -303,6 +303,8 @@ export const COLUMNAS_NUEVAS: ReadonlyArray<{ tabla: string; columna: string; dd
   // Ágora: borrador y origen de la fila (decisión del founder, 2026-10-21; ver agora-borradores.ts).
   { tabla: "projects", columna: "draft", ddl: "INTEGER NOT NULL DEFAULT 0" },
   { tabla: "projects", columna: "origin", ddl: "TEXT" },
+  // Cola de anclaje: reserva de la fila por una pasada (lib/anchor.ts, hallazgo M23).
+  { tabla: "anchor_queue", columna: "claimed_at", ddl: "TEXT" },
 ];
 
 /** Columnas de una tabla (vacío si no existe). */

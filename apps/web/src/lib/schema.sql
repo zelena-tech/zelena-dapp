@@ -102,11 +102,12 @@ CREATE TABLE IF NOT EXISTS anchor_queue (
   ref          TEXT NOT NULL,        -- clave logica (ej. wallet o period id)
   data_key     TEXT NOT NULL,        -- key para manageData (<= 64 bytes)
   payload_hash TEXT NOT NULL,        -- hash a anclar (hex)
-  status       TEXT NOT NULL DEFAULT 'pending', -- pending | anchored | failed
+  status       TEXT NOT NULL DEFAULT 'pending', -- pending | processing | anchored | failed (lib/anchor.ts)
   tx_id        TEXT,
-  attempts     INTEGER NOT NULL DEFAULT 0,
+  attempts     INTEGER NOT NULL DEFAULT 0,    -- envíos; al llegar a ANCLAJE_MAX_INTENTOS queda 'failed'
   last_error   TEXT,
-  created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+  claimed_at   TEXT                           -- cuándo la reservó una pasada ('processing'); NULL si no
 );
 
 CREATE TABLE IF NOT EXISTS projects (

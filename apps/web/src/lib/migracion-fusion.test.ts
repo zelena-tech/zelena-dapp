@@ -41,7 +41,9 @@ const HUELLA: Record<string, string> = {
     "SELECT wallet, display_name, tier, invited_by, status, is_demo, is_founder, cla_signed, email, recovery_email, created_at FROM users WHERE wallet NOT LIKE 'pending:%' ORDER BY wallet",
   invites: "SELECT code, issuer_wallet, used_by, expires_at, max_uses, uses, created_at FROM invites ORDER BY code",
   cla_signatures: "SELECT * FROM cla_signatures ORDER BY id",
-  anchor_queue: "SELECT * FROM anchor_queue ORDER BY id",
+  // Columnas originales: `claimed_at` es nueva (reserva de la cola de anclaje, 2026-10-21).
+  anchor_queue:
+    "SELECT id, kind, ref, data_key, payload_hash, status, tx_id, attempts, last_error, created_at FROM anchor_queue ORDER BY id",
   // Columnas originales: `draft` y `origin` son nuevas (borradores del Ágora, 2026-10-21) y el
   // fixture no tiene proyectos sembrados (sus hitos empiezan en 1), así que ninguna fila cambia.
   projects:
@@ -193,6 +195,7 @@ describe("migración de la base de producción (forma 58ee2fd → v1)", () => {
       "users.auth_provider",
       "projects.draft",
       "projects.origin",
+      "anchor_queue.claimed_at",
     ]);
     // El proyecto del fixture no es sembrado (hitos desde 1): sigue publicado.
     expect(db.prepare(`SELECT draft, origin FROM projects`).all()).toEqual([{ draft: 0, origin: null }]);

@@ -32,8 +32,11 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   if (!(await autorizado(req))) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
   try {
-    const limite = Number(new URL(req.url).searchParams.get("limite") ?? 8);
-    const res = await anclarPendientes(getDb(), Math.min(Math.max(limite, 1), 20));
+    // `?limite=` entero de 1 a 20; cualquier otra cosa, 8 (antes `?limite=abc` daba 500).
+    const pedido = Number(new URL(req.url).searchParams.get("limite") ?? 8);
+    const limite = Number.isInteger(pedido) ? Math.min(Math.max(pedido, 1), 20) : 8;
+    // Tope de intentos y reserva de filas en lib/anchor.ts: dos corridas a la vez no anclan dos veces.
+    const res = await anclarPendientes(getDb(), limite);
     return NextResponse.json(res);
   } catch (e) {
     return NextResponse.json({ error: String((e as { message?: string })?.message ?? e) }, { status: 500 });

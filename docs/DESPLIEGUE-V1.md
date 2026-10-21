@@ -136,7 +136,7 @@ La app **sí migra** su base al arrancar (ruta SQLite de `lib/db.ts`), en este o
    `VACUUM INTO '<base>.pre-fusion-<fechaISO>.db'` junto a la base. Si el respaldo falla,
    **no migra** y el arranque falla con un mensaje claro.
 2. `applyMigrations`: `ALTER TABLE ADD COLUMN` para `users.role/is_supervisor/entra_oid/auth_provider`,
-   `invites.max_uses/uses` y `projects.draft/origin`, solo si faltan.
+   `invites.max_uses/uses`, `projects.draft/origin` y `anchor_queue.claimed_at`, solo si faltan.
 3. Aparta las tablas legado del equipo (`_legado_*`), crea las de v1 con `schema.sql`, copia las
    filas con el mapeo de valores (prioridad, horizonte, acciones) conservando los ids y borra las
    `_legado_*`. Un valor desconocido **aborta** sin cambios.
