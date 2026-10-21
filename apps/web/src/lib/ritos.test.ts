@@ -45,6 +45,7 @@ import {
   participacionRitos,
   prepararRito,
   proximoRitoDeComunidad,
+  proximoRitoPreparado,
   puedePresentarRito,
   refRito,
   registrarAsistencia,
@@ -915,6 +916,21 @@ describe("corte 2 · gestión de ritos en /admin", () => {
     abrirRito(db, anfitrion, id, ABRE_DEMO);
     cerrarRito(db, anfitrion, { sessionId: id }, new Date("2026-10-09T21:20:00Z"));
     expect(proximoRitoDeComunidad(db, new Date("2026-10-09T21:25:00Z"))?.sessionId).not.toBe(id);
+  });
+
+  it("proximoRitoPreparado: salta las fechas de la cadencia sin preparar y no ve el sync", () => {
+    // Sin nada preparado: null (la llamada de la landing lleva al aviso de encuentros).
+    expect(proximoRitoPreparado(db, PREP)).toBeNull();
+    // La retro del 5 llega antes, pero no está preparada: manda la demo del 9, que sí.
+    const id = demoPreparada();
+    expect(proximoRitoDeComunidad(db, PREP)?.sessionId).toBeNull();
+    expect(proximoRitoPreparado(db, PREP)).toMatchObject({ kind: "demo", sessionId: id, lugar: "Sala abierta del piso 2" });
+    expect(JSON.stringify(proximoRitoPreparado(db, PREP))).not.toContain("meet.example.org");
+    // Cerrada, deja de ser la próxima.
+    asignarRolesRito(db, fundadora, { sessionId: id, hostWallet: anfitrion.wallet });
+    abrirRito(db, anfitrion, id, ABRE_DEMO);
+    cerrarRito(db, anfitrion, { sessionId: id }, new Date("2026-10-09T21:20:00Z"));
+    expect(proximoRitoPreparado(db, new Date("2026-10-09T21:25:00Z"))).toBeNull();
   });
 });
 

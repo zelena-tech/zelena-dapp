@@ -23,11 +23,13 @@ import {
   fechaLargaRito,
   fechaRito,
   horaRito,
+  llamadaParticipar,
   margenTexto,
   normalizarCodigo,
   personasRegistradas,
   proximasOcurrencias,
   proximoRitoTexto,
+  RUTA_AVISO_ENCUENTROS,
   ventanaRito,
   zonaTexto,
 } from "./ritos-labels";
@@ -232,6 +234,44 @@ describe("lo próximo en la landing (§8.1)", () => {
     expect(elegirProximo("2026-10-10", new Date("2026-10-10T02:30:00Z"), TZ)).toBe("rito");
     expect(elegirProximo("no-es-fecha", demo, TZ)).toBe("rito");
     expect(elegirProximo("2026-10-10", new Date("x"), TZ)).toBe("encuentro");
+  });
+});
+
+// Hallazgo de la verificación final: "ven a una demo abierta" (landing y /comunidad) no
+// llevaba a ninguna parte para quien llega nuevo. Solo lleva a algo concreto.
+describe("llamadaParticipar: la llamada lleva a un encuentro, a un rito preparado o al aviso", () => {
+  const demo = new Date("2026-10-09T21:00:00Z"); // viernes 9 en Bogotá
+
+  it("sin encuentro ni rito preparado: al aviso de encuentros", () => {
+    expect(llamadaParticipar(null, null, TZ)).toEqual({ href: "/encuentros#aviso", texto: "Te avisamos de la próxima fecha" });
+    expect(RUTA_AVISO_ENCUENTROS).toBe("/encuentros#aviso");
+  });
+
+  it("una fecha de la cadencia SIN preparar no cuenta: también al aviso", () => {
+    expect(llamadaParticipar(null, { kind: "demo", inicio: demo, sessionId: null }, TZ).href).toBe("/encuentros#aviso");
+  });
+
+  it("con un rito preparado: a su página, con el día", () => {
+    expect(llamadaParticipar(null, { kind: "demo", inicio: demo, sessionId: 7 }, TZ)).toEqual({
+      href: "/comunidad/ritos/7",
+      texto: "Ven a la demo del 9 de octubre",
+    });
+    expect(llamadaParticipar(null, { kind: "retro", inicio: demo, sessionId: 8 }, TZ).texto).toBe("Ven a la retro del 9 de octubre");
+  });
+
+  it("con un encuentro publicado: el que llegue antes (el mismo día gana el encuentro)", () => {
+    const preparada = { kind: "demo" as const, inicio: demo, sessionId: 7 };
+    expect(llamadaParticipar({ fecha: "2026-10-20" }, null, TZ)).toEqual({ href: "/encuentros#proximos", texto: "Ven a un encuentro" });
+    expect(llamadaParticipar({ fecha: "2026-10-09" }, preparada, TZ).href).toBe("/encuentros#proximos");
+    expect(llamadaParticipar({ fecha: "2026-10-20" }, preparada, TZ).href).toBe("/comunidad/ritos/7");
+    // Un rito sin preparar no le gana a un encuentro.
+    expect(llamadaParticipar({ fecha: "2026-10-20" }, { ...preparada, sessionId: null }, TZ).href).toBe("/encuentros#proximos");
+  });
+
+  it("nunca lleva a /comunidad#proximos (las fechas sin lugar)", () => {
+    for (const r of [null, { kind: "demo" as const, inicio: demo, sessionId: null }]) {
+      expect(llamadaParticipar(null, r, TZ).href).not.toContain("#proximos");
+    }
   });
 });
 

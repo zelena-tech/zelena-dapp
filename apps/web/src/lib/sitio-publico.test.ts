@@ -277,11 +277,22 @@ describe("E1-10 · la landing", () => {
     expect([...pos].sort((a, b) => a - b)).toEqual(pos);
   });
 
-  it("los 2 CTA del cierre: Entrar y, según haya encuentros, el encuentro o la próxima demo", () => {
+  it("los 2 CTA del cierre: Entrar y la llamada a un encuentro, a un rito preparado o al aviso", () => {
     expect(src).toContain("¿Construimos?");
     expect(src).toMatch(/href="\/entrar"[^>]*>\s*Entrar\s*</);
-    expect(src).toMatch(/href="\/encuentros"[^>]*>\s*Ven a un encuentro\s*</);
-    expect(src).toMatch(/href=\{`\$\{RUTA_COMUNIDAD\}#proximos`\}[^>]*>\s*Ven a la próxima demo\s*</);
+    // Hallazgo de la verificación final: "Ven a la próxima demo" llevaba a fechas de la
+    // cadencia sin lugar ni enlace. Ahora la decide llamadaParticipar (ritos-labels.ts).
+    expect(src).toMatch(/href=\{llamada\.href\}[^>]*>\s*\{llamada\.texto\}\s*</);
+    expect(src).toContain("llamadaParticipar(");
+    expect(src).toContain("proximoRitoPreparado(db)");
+    expect(src).not.toContain("#proximos`");
+  });
+
+  it("/comunidad: 'Cómo participar' lleva a la misma llamada, y /encuentros tiene el ancla del aviso", () => {
+    const comunidad = leer("app/comunidad/page.tsx");
+    expect(comunidad).toContain("llamadaParticipar(encuentros[0] ?? null, proximoRitoPreparado(db), tz)");
+    expect(comunidad).toMatch(/href=\{llamada\.href\}[^>]*>\s*\{llamada\.texto\}\s*</);
+    expect(leer("app/encuentros/page.tsx")).toMatch(/<div id="aviso" [^>]*>[\s\S]*<AvisoEncuentrosForm \/>/);
   });
 
   it("no importa Type ni lista proyectos", () => {

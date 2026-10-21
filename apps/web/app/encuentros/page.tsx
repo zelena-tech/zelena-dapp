@@ -85,7 +85,8 @@ export default function Encuentros() {
           </ol>
         ) : null}
 
-        <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
+        {/* Destino de "Te avisamos de la próxima fecha" (landing y /comunidad): RUTA_AVISO_ENCUENTROS. */}
+        <div id="aviso" className="grid scroll-mt-24 items-start gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
           <p className="max-w-md text-base leading-7 text-muted">
             {proximos.length === 0
               ? "Déjanos tu correo y te avisamos apenas la publiquemos. Si nos cuentas tu ciudad, nos ayudas a decidir dónde empezar."

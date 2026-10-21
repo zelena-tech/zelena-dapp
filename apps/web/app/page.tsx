@@ -3,6 +3,8 @@ import { getDb } from "@/lib/db";
 import { cifrasEnVivo } from "@/lib/prueba-en-vivo";
 import { proximosEncuentros } from "@/lib/encuentros";
 import { RUTA_COMUNIDAD } from "@/lib/menu";
+import { proximoRitoPreparado, zonaRitos, type RitoProximo } from "@/lib/ritos";
+import { llamadaParticipar } from "@/lib/ritos-labels";
 import PruebaEnVivo from "@/components/PruebaEnVivo";
 import PruebaTestnet from "@/components/PruebaTestnet";
 import ProximoEncuentro from "@/components/ProximoEncuentro";
@@ -24,9 +26,28 @@ const PUERTAS = [
   { n: "04", href: "/empresas", titulo: "Para empresas", texto: "Software para tu operación y un equipo que lo sostiene." },
 ];
 
+/**
+ * El segundo botón del cierre ("ven a una demo"): un encuentro, el próximo rito de
+ * comunidad ya preparado (con fecha y lugar) o el aviso de encuentros. Nunca una fecha
+ * de la cadencia sin preparar, que no lleva a ninguna parte. La landing no se cae por el
+ * calendario: si la base falla, lleva al aviso.
+ */
+function llamadaDelCierre(db: ReturnType<typeof getDb>) {
+  let rito: RitoProximo | null = null;
+  let tz = "";
+  try {
+    tz = zonaRitos(db);
+    rito = proximoRitoPreparado(db);
+  } catch (e) {
+    console.error("[landing] rito preparado", e);
+  }
+  return llamadaParticipar(proximosEncuentros()[0] ?? null, rito, tz);
+}
+
 export default function Landing() {
-  const cifras = cifrasEnVivo(getDb());
-  const hayEncuentros = proximosEncuentros().length > 0;
+  const db = getDb();
+  const cifras = cifrasEnVivo(db);
+  const llamada = llamadaDelCierre(db);
 
   return (
     <div className="space-y-24 md:space-y-32">
@@ -79,15 +100,9 @@ export default function Landing() {
             <Link href="/entrar" className="btn btn-primary normal-case tracking-normal">
               Entrar
             </Link>
-            {hayEncuentros ? (
-              <Link href="/encuentros" className="btn btn-ghost normal-case tracking-normal">
-                Ven a un encuentro
-              </Link>
-            ) : (
-              <Link href={`${RUTA_COMUNIDAD}#proximos`} className="btn btn-ghost normal-case tracking-normal">
-                Ven a la próxima demo
-              </Link>
-            )}
+            <Link href={llamada.href} className="btn btn-ghost normal-case tracking-normal">
+              {llamada.texto}
+            </Link>
           </div>
         </div>
       </section>

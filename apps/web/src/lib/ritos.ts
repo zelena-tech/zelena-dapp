@@ -964,6 +964,15 @@ export function proximoRitoDeComunidad(db: DB, ahora: Date = new Date()): RitoPr
 }
 
 /**
+ * El próximo rito de comunidad YA PREPARADO en /admin (tiene sesión: fecha, lugar y su
+ * página), o `null`. Es a donde lleva la llamada "ven a una demo" (`llamadaParticipar`):
+ * una fecha de la cadencia sin preparar no tiene nada a lo que ir.
+ */
+export function proximoRitoPreparado(db: DB, ahora: Date = new Date()): RitoProximo | null {
+  return ritosPublicos(db, ahora, 6).proximos.find((p) => p.sessionId !== null) ?? null;
+}
+
+/**
  * Las `n` decisiones más recientes para /comunidad: sin las actas de ritos ("Rito …",
  * que se ven en los pasados) ni la decisión reemplazada (la de las etiquetas viejas).
  */
