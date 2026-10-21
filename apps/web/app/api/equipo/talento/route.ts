@@ -4,6 +4,8 @@
  *   { action: 'supervisor', wallet, isSupervisor }    dar / quitar supervisión
  *   { action: 'vincular', slug, wallet, simular?, conservarSellado? }
  *                                                     fila del roster → cuenta real
+ *   { action: 'correo', wallet, email }               correo corporativo EXACTO para
+ *                                                     entrar con Microsoft (Entra)
  *
  * Puerta propia (el layout no es la puerta): `adminActor` lee el rol de la base,
  * nunca de la cookie, y `cuentaActiva` exige que la cuenta siga activa (`adminActor`
@@ -17,6 +19,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { adminActor } from "@/lib/authz";
+import { corporateDomain } from "@/lib/config";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { TeamError } from "@/lib/team";
 import {
@@ -26,6 +29,7 @@ import {
   cuentaActiva,
   describirVinculo,
   talentoAccionSchema,
+  vincularCorreoCorporativo,
   vincularPrincipal,
 } from "@/lib/talento";
 
@@ -73,6 +77,10 @@ export async function POST(req: NextRequest) {
     if (a.action === "supervisor") {
       cambiarSupervisor(db, actor, { wallet: a.wallet, isSupervisor: a.isSupervisor });
       return NextResponse.json({ ok: true });
+    }
+    if (a.action === "correo") {
+      const nuevo = vincularCorreoCorporativo(db, actor, { wallet: a.wallet, email: a.email, dominio: corporateDomain() });
+      return NextResponse.json({ ok: true, nuevo });
     }
     const r = vincularPrincipal(db, actor, {
       slug: a.slug,

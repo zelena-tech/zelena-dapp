@@ -35,12 +35,7 @@
  * progreso"). La sesión ya emitida caduca a 24 h por el TTL de lib/jwt.ts.
  */
 import type { DB } from "./db";
-import {
-  findRosterMember,
-  isRole,
-  pendingPrincipal,
-  type Role,
-} from "./roles";
+import { isRole, type Role } from "./roles";
 
 /**
  * Id del provider en NextAuth. Fija la URL de callback
@@ -90,7 +85,7 @@ export interface EntraIdentity {
   oid: string;
   /** Correo corporativo normalizado a minúsculas. */
   email: string;
-  /** Parte local del correo (antes de la @). Se usa para resolver el roster. */
+  /** Parte local del correo (antes de la @). Solo da el nombre de un alta nueva: NUNCA resuelve identidad. */
   localPart: string;
   /** Dominio del correo (ya validado contra el corporativo). */
   domain: string;
@@ -249,11 +244,13 @@ export class EntraLinkError extends Error {
 export type EntraLinkMode =
   /** Ya estaba vinculada: se encontró por `entra_oid`. */
   | "existing_oid"
-  /** El correo ya estaba en `user_emails` de un principal existente (comunidad → corporativo). */
+  /**
+   * El correo (UPN) EXACTO ya estaba vinculado en `user_emails` a un principal existente:
+   * lo vinculó el founder en /equipo/talento (filas del roster incluidas) o la persona ya
+   * había entrado por la puerta de comunidad con él.
+   */
   | "existing_email"
-  /** Persona del roster: se vinculó a su fila `pending:<slug>` sin tocar la PK. */
-  | "roster"
-  /** Del tenant pero fuera del roster: alta nueva `entra:<oid>` como `core`. */
+  /** Nadie tenía ese oid ni ese correo: alta nueva `entra:<oid>` como `core`. */
   | "created";
 
 export interface EntraLogin {
@@ -307,32 +304,6 @@ function walletByEmail(db: DB, email: string): string | undefined {
     | { wallet: string }
     | undefined;
   return row?.wallet;
-}
-
-/**
- * Resuelve a qué miembro del roster corresponde este correo corporativo.
- *
- * Dos vías, en este orden: la parte local del correo (`fausto@zelena.tech`) y el
- * nombre del token (incluido su primer token, porque `name` suele venir con
- * apellidos: "Fausto Pérez" → "Fausto"). `findRosterMember` ya normaliza acentos y
- * caso y conoce los alias del CSV (Ángela/Angela, Vale/Valentina).
- *
- * Ojo: solo se comparan nombres/alias del roster contra datos que la propia persona
- * acaba de autenticar. No se deduce identidad de nadie más.
- */
-export function rosterMemberForIdentity(identity: EntraIdentity) {
-  const byLocal = findRosterMember(identity.localPart);
-  if (byLocal) return byLocal;
-  // `juan.perez@zelena.tech` → prueba también con la primera partícula.
-  const localHead = identity.localPart.split(/[._-]/)[0] ?? "";
-  const byLocalHead = localHead ? findRosterMember(localHead) : undefined;
-  if (byLocalHead) return byLocalHead;
-  const name = identity.displayName;
-  if (!name) return undefined;
-  const byName = findRosterMember(name);
-  if (byName) return byName;
-  const first = name.split(/\s+/)[0] ?? "";
-  return first ? findRosterMember(first) : undefined;
 }
 
 /** ¿Este principal tiene ya un segundo correo personal vinculado? */
@@ -457,15 +428,20 @@ function loginFromRow(db: DB, row: UserRow, mode: EntraLinkMode): EntraLogin {
 }
 
 /**
- * Del token validado a la fila del registro. Cuatro caminos, en orden de certeza
- * decreciente — el primero que acierta manda:
+ * Del token validado a la fila del registro. SOLO por identificadores exactos, nunca
+ * por nombre ni por prefijo del correo (hallazgo de la auditoría y de la verificación
+ * final, 2026-10-21: antes una fila del roster, incluida la del founder, se asignaba
+ * por coincidencia de nombre o de la parte local del correo, así que alguien del tenant
+ * con un correo o un nombre parecido heredaba la fila y su rol). Tres caminos:
  *
- *  1. `entra_oid` ya vinculado → esa fila. (Login recurrente: el camino normal.)
- *  2. el correo ya está en `user_emails` → ese principal. (La persona ya entró por
- *     la puerta de comunidad: se vincula, no se duplica → criterio 5.)
- *  3. la persona está en el roster → su fila `pending:<slug>` (WP14), con el rol
- *     del plano 07 §5. La PK NO se toca: su trabajo ya cuelga de ese principal.
- *  4. nadie de lo anterior → alta nueva `entra:<oid>` como `core`.
+ *  1. `entra_oid` exacto ya vinculado → esa fila. (Login recurrente: el camino normal.)
+ *  2. el correo/UPN EXACTO ya está en `user_emails` → ese principal, sin cambiarle el
+ *     rol. Así entra una fila del roster (`pending:<slug>`) o la del founder: el founder
+ *     vincula antes el correo corporativo de la persona en /equipo/talento
+ *     (`vincularCorreoCorporativo`). También cubre a quien ya entró por la puerta de
+ *     comunidad con ese correo (se vincula, no se duplica → criterio 5). Si esa fila
+ *     ya está vinculada a OTRA cuenta de Microsoft (un UPN reciclado), no se reasigna.
+ *  3. nada de lo anterior → alta nueva `entra:<oid>` como `core` (nunca `founder`).
  */
 export function resolveEntraLogin(db: DB, identity: EntraIdentity): EntraLoginResult {
   // 1. Ya vinculada.
@@ -477,7 +453,8 @@ export function resolveEntraLogin(db: DB, identity: EntraIdentity): EntraLoginRe
     return { ok: true, login: loginFromRow(db, byOid, "existing_oid") };
   }
 
-  // 2. El correo ya pertenece a un principal (puerta de comunidad primero).
+  // 2. El correo EXACTO ya está vinculado a un principal (lo vinculó el founder, o la
+  // persona entró antes por la puerta de comunidad). Sin tocar su rol.
   const emailOwner = walletByEmail(db, identity.email);
   if (emailOwner) {
     const row = userByWallet(db, emailOwner);
@@ -488,50 +465,21 @@ export function resolveEntraLogin(db: DB, identity: EntraIdentity): EntraLoginRe
       );
     }
     if (row.status !== "active") return alumniRejection();
+    // GUARDA ANTI-FUSIÓN: la fila ya es de OTRA cuenta de Microsoft (un UPN reciclado en
+    // el tenant). Nunca se le pasa a otra persona: lo resuelve el founder.
+    if (row.entra_oid && row.entra_oid !== identity.oid) {
+      throw new EntraLinkError(
+        "oid_conflict",
+        "Ese correo ya está vinculado a otra cuenta de Microsoft. Habla con John."
+      );
+    }
     linkEntraIdentity(db, row.wallet, identity, null);
     const fresh = userByWallet(db, row.wallet)!;
     return { ok: true, login: loginFromRow(db, fresh, "existing_email") };
   }
 
-  // 3. Roster: vincular a `pending:<slug>` conservando la PK.
-  const member = rosterMemberForIdentity(identity);
-  if (member) {
-    const principal = pendingPrincipal(member.slug);
-    const row = userByWallet(db, principal);
-    // GUARDA ANTI-FUSIÓN: si esa fila del roster YA está vinculada a otra cuenta de
-    // Microsoft, esta persona no es quien creíamos (p. ej. una "Juana" nueva cuyo
-    // nombre empieza igual que el de alguien del roster). Nunca se le roba la
-    // identidad a nadie: se cae al camino 4 y se crea un registro propio.
-    const alreadyTaken = !!row && !!row.entra_oid && row.entra_oid !== identity.oid;
-    if (row && !alreadyTaken) {
-      if (row.status !== "active") return alumniRejection();
-      // El rol lo manda el plano 07 §5, no el token: John `founder` (+supervisor),
-      // Vale `core` Y supervisora, el resto `core`.
-      linkEntraIdentity(db, principal, identity, {
-        role: member.role,
-        isSupervisor: member.isSupervisor,
-      });
-      const fresh = userByWallet(db, principal)!;
-      return { ok: true, login: loginFromRow(db, fresh, "roster") };
-    }
-    if (!row) {
-      // El roster está en lib/roles.ts pero su fila no se sembró todavía: se crea con
-      // el principal `pending:<slug>` (NO `entra:<oid>`) para que el importador de CSV
-      // de WP14 siga resolviendo al mismo sitio.
-      const tx = db.transaction(() => {
-        db.prepare(
-          `INSERT INTO users (wallet, display_name, tier, invited_by, status, is_demo, is_founder, cla_signed, role, is_supervisor, entra_oid, auth_provider)
-           VALUES (?, ?, 'Bronze', NULL, 'active', 0, 0, 0, ?, ?, ?, 'entra')`
-        ).run(principal, member.name, member.role, member.isSupervisor ? 1 : 0, identity.oid);
-        upsertCorporateEmail(db, principal, identity.email);
-      });
-      tx();
-      const fresh = userByWallet(db, principal)!;
-      return { ok: true, login: loginFromRow(db, fresh, "roster") };
-    }
-  }
-
-  // 4. Del tenant, fuera del roster: alta `core` sin consumir invitación ni wallet.
+  // 3. Del tenant, sin oid ni correo vinculados: alta `core` propia, sin invitación ni
+  // wallet. Nunca hereda una fila existente (ni la del founder) por parecido.
   const wallet = createEntraUser(db, identity);
   const fresh = userByWallet(db, wallet)!;
   return { ok: true, login: loginFromRow(db, fresh, "created") };

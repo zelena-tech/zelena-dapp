@@ -7,18 +7,57 @@ Objetivo: el equipo abre la app con su correo @zelena.tech y ve sus asignaciones
 
 ## PARTE A · Lo que solo puede hacer John (bloquea el despliegue)
 
-### A1. Entra ID — registro de la aplicación (~20 min)
-En [portal.azure.com](https://portal.azure.com) → Microsoft Entra ID → App registrations → New registration:
+### A1. Entra ID — registro de la aplicación y encendido del login con Microsoft (~30 min)
+
+**1. Registrar la aplicación** en el tenant de **zelena.tech**: [portal.azure.com](https://portal.azure.com)
+(con una cuenta administradora de ese tenant) → Microsoft Entra ID → App registrations → New registration:
 
 - **Name:** Zelena Workspace
-- **Supported account types:** *Accounts in this organizational directory only (single tenant)*
-- **Redirect URI:** Web → `http://localhost:3000/api/auth/callback/microsoft-entra-id` (añadir la de producción después del A2)
-- Tras crear: copiar **Application (client) ID** y **Directory (tenant) ID**
-- Certificates & secrets → New client secret → copiar el **Value** (se muestra una sola vez)
-- API permissions: `User.Read` (delegado) basta para v1 — no hace falta consentimiento de admin adicional si eres admin del tenant
-- Generar además un **`NEXTAUTH_SECRET`** propio (32+ bytes aleatorios, distinto de `SESSION_SECRET`) y anotar el **`NEXTAUTH_URL`** (la URL pública de la app). Sin esos dos, la puerta corporativa no arranca aunque tengas las credenciales de Entra.
+- **Supported account types:** *Accounts in this organizational directory only (single tenant)*. La app
+  además compara el `tid` del token con `AZURE_AD_TENANT_ID` y rechaza invitados B2B (`#EXT#`).
+- **Redirect URI:** plataforma **Web** → `https://www.zelena.tech/api/auth/callback/microsoft-entra-id`
+  (exacta: `microsoft-entra-id` es el id del provider en el código). Para probar en local, añadir también
+  `http://localhost:3000/api/auth/callback/microsoft-entra-id` en Authentication → Web → Redirect URIs.
+- **Authentication:** no hace falta *implicit grant* ni *ID tokens* del flujo implícito: la app usa el
+  flujo de código con secreto de cliente.
+- **Overview:** copiar **Application (client) ID** (`AZURE_AD_CLIENT_ID`) y **Directory (tenant) ID**
+  (`AZURE_AD_TENANT_ID`).
+- **Certificates & secrets** → New client secret → copiar el **Value** (`AZURE_AD_CLIENT_SECRET`; se muestra
+  una sola vez). Anotar su fecha de vencimiento: al vencer, el login con Microsoft deja de funcionar
+  hasta poner uno nuevo.
+- **API permissions:** Microsoft Graph → *Delegated* → `openid`, `profile` y `email` (son los únicos scopes
+  que pide la app: no llama a Graph). Como administrador del tenant, *Grant admin consent*. El
+  `User.Read` que el portal añade por defecto no se usa y se puede quitar.
 
-**Entregar al equipo (por gestor de secretos, nunca por chat):** `AZURE_AD_CLIENT_ID`, `AZURE_AD_CLIENT_SECRET`, `AZURE_AD_TENANT_ID`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, y `AUTH_ENTRA_ENABLED=1` para encender.
+**2. App Settings de `zelena-dao`** (por gestor de secretos, nunca por chat ni en el repo):
+
+| Variable | Valor |
+|---|---|
+| `AUTH_ENTRA_ENABLED` | `1` (encender); vacío o `0` lo apaga sin desplegar |
+| `AZURE_AD_CLIENT_ID` | Application (client) ID |
+| `AZURE_AD_CLIENT_SECRET` | el Value del secreto de cliente |
+| `AZURE_AD_TENANT_ID` | Directory (tenant) ID de zelena.tech |
+| `NEXTAUTH_SECRET` | 32+ bytes aleatorios, distinto de `SESSION_SECRET` (`node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"`) |
+| `NEXTAUTH_URL` | `https://www.zelena.tech` (sin barra ni ruta al final) |
+| `ZELENA_CORPORATE_DOMAIN` | `zelena.tech` |
+
+**Detrás de Azure Front Door:** `NEXTAUTH_URL` es obligatorio y debe ser el host público. NextAuth arma
+con él la Redirect URI y el nombre seguro de sus cookies, y el intercambio
+(`/api/auth/entra/exchange`) redirige con él a `/equipo/hoy` o a `/entrar`: en App Service la app ve
+su host interno (`0.0.0.0:8080`), así que sin esa variable la redirección sacaría a la persona del
+sitio. Front Door no necesita reglas especiales (reenvía las cookies tal cual).
+
+**3. Antes de que alguien entre con Microsoft:** la app reconoce a cada persona SOLO por su cuenta de
+Microsoft ya vinculada (`oid`) o por su **correo exacto ya vinculado**; nunca por su nombre ni por un
+correo parecido. Por eso el founder, entrando con su wallet (Freighter), va a `/equipo/talento` →
+**Entrar con Microsoft** y escribe el correo @zelena.tech de cada fila: primero el suyo en su propia
+fila (la de una cuenta founder solo la vincula su dueño) y luego el de cada persona del equipo en su
+fila del roster. Quien entre con Microsoft sin correo vinculado recibe una cuenta propia nueva
+(`entra:<oid>`, rol `core`), nunca la fila de otra persona ni la del founder.
+
+**4. Comprobar:** `GET https://www.zelena.tech/api/auth/entra/status` responde `available: true`; el
+founder entra con "Continuar con Microsoft" y llega a `/equipo/hoy` con su rol; una cuenta del tenant
+sin correo vinculado entra como `core` con una fila nueva. Para apagar: `AUTH_ENTRA_ENABLED=0`.
 
 ### A2. Azure — recursos (~30 min, o delegar a Dev 2 con permisos)
 - Resource group `rg-zelena-workspace`
@@ -296,7 +335,7 @@ Cifras de referencia para presupuestar; confirmar en la calculadora de Azure con
 
 | Riesgo | Respuesta |
 |---|---|
-| Consentimiento de admin en Entra se traba | John es admin del tenant; `User.Read` no requiere permisos elevados. Si se traba: flag apagado y v1 arranca con la puerta de invitación mientras se resuelve. |
+| Consentimiento de admin en Entra se traba | John es admin del tenant; `openid`, `profile` y `email` no requieren permisos elevados. Si se traba: flag apagado y v1 arranca con la puerta de invitación mientras se resuelve. |
 | Migración SQLite→Azure SQL rompe algo | La capa `lib/db.ts` aísla y el traductor de dialecto tiene 38 tests. **Ojo (hallazgo D3-03): correr la suite completa contra Azure SQL NO es posible hoy** — los tests abren SQLite `:memory:` hardcodeado. Escribir ese harness es **WP36** y es prerequisito de confiar en la instancia. Foco en las diferencias ya listadas en WP16 (fechas, JSON, paginación) y en el test de carrera del consumo de invitaciones. Azure SQL aún no tiene datos reales; la SQLite de producción sí (ver "Producción real hoy"). |
 | El equipo no adopta la herramienta | Riesgo #1 y es social, no técnico. Mitigación: importar el trabajo REAL (no ejemplos), check-in de 30 segundos, y John lo usa primero. Si en 2 semanas los check-ins bajan del 50%, el problema es el diseño, no la gente. |
 | Rate limit con múltiples instancias | v1 corre en una instancia. Documentado en WP16; si se escala, mover a Redis. |

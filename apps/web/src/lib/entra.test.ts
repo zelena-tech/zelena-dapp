@@ -6,6 +6,10 @@
  * registration de John. Lo que se prueba es TODO lo nuestro: la restricción de
  * tenant, la resolución de identidad contra el registro y las escrituras en DB.
  * Ninguna de estas pruebas hace una petición de red.
+ *
+ * Resolución de identidad (hallazgo de la auditoría, 2026-10-21): SOLO por `oid` exacto
+ * o por correo/UPN exacto ya vinculado; nunca por nombre ni por prefijo del correo. Los
+ * tests no escriben nombres de personas: las filas del roster se toman de TEAM_ROSTER.
  */
 import { describe, it, expect, beforeEach } from "vitest";
 import fs from "node:fs";
@@ -14,6 +18,7 @@ import { openDb, type DB } from "./db";
 import { seedIfEmpty } from "./seed";
 import {
   ENTRA_PROVIDER_ID,
+  EntraLinkError,
   entraLogin,
   entraPrincipal,
   hasRecoveryEmail,
@@ -22,14 +27,13 @@ import {
   listUserEmails,
   payoutBlockers,
   resolveEntraLogin,
-  rosterMemberForIdentity,
   validateEntraToken,
-  type EntraIdentity,
   type EntraTokenClaims,
   type EntraValidationOptions,
 } from "./entra";
-import { pendingPrincipal, TEAM_ROSTER } from "./roles";
+import { pendingPrincipal, TEAM_ROSTER, type TeamActor } from "./roles";
 import { createAssignment, upsertInitiative } from "./team";
+import { vincularCorreoCorporativo } from "./talento";
 
 const TENANT = "11111111-2222-3333-4444-555555555555";
 const OTHER_TENANT = "99999999-8888-7777-6666-555555555555";
@@ -37,6 +41,12 @@ const DOMAIN = "zelena.tech";
 
 const ON: EntraValidationOptions = { enabled: true, tenantId: TENANT, corporateDomain: DOMAIN };
 const OFF: EntraValidationOptions = { ...ON, enabled: false };
+
+/** Filas del roster por su papel, sin escribir el nombre de nadie. */
+const FOUNDER = TEAM_ROSTER.find((m) => m.role === "founder")!;
+const SUPERVISORA = TEAM_ROSTER.find((m) => m.role === "core" && m.isSupervisor)!;
+const MIEMBRO = TEAM_ROSTER.find((m) => m.role === "core" && !m.isSupervisor)!;
+const correoDe = (slug: string) => `${slug}@${DOMAIN}`;
 
 function seededDb(): DB {
   const db = openDb(":memory:");
@@ -46,21 +56,27 @@ function seededDb(): DB {
   return db;
 }
 
+/** El founder que opera /equipo/talento (la fila founder del seed). */
+function founderActor(db: DB): TeamActor {
+  const w = (db.prepare(`SELECT wallet FROM users WHERE is_founder = 1 ORDER BY wallet LIMIT 1`).get() as { wallet: string })
+    .wallet;
+  return { wallet: w, name: "Founder", role: "founder", isSupervisor: true };
+}
+
+/** El founder vincula el correo corporativo EXACTO a la fila del roster de `slug`. */
+function vincular(db: DB, slug: string, email = correoDe(slug)): void {
+  vincularCorreoCorporativo(db, founderActor(db), { wallet: pendingPrincipal(slug), email, dominio: DOMAIN });
+}
+
 /** Claims que Entra emitiría para una cuenta del tenant de Zelena. */
 function claims(over: Partial<EntraTokenClaims> = {}): EntraTokenClaims {
   return {
     tid: TENANT,
-    oid: "oid-fausto-0001",
-    preferred_username: "fausto@zelena.tech",
-    name: "Fausto Pérez",
+    oid: "oid-persona-0001",
+    preferred_username: "persona@zelena.tech",
+    name: "Persona del Equipo",
     ...over,
   };
-}
-
-function identity(over: Partial<EntraIdentity> = {}): EntraIdentity {
-  const v = validateEntraToken(claims(), ON);
-  if (!v.ok) throw new Error("fixture inválido");
-  return { ...v.identity, ...over };
 }
 
 // ---------------------------------------------------------------------------
@@ -70,9 +86,9 @@ describe("validateEntraToken: restricción de tenant y flag (criterios 2 y 3)", 
     const r = validateEntraToken(claims(), ON);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.identity.oid).toBe("oid-fausto-0001");
-    expect(r.identity.email).toBe("fausto@zelena.tech");
-    expect(r.identity.localPart).toBe("fausto");
+    expect(r.identity.oid).toBe("oid-persona-0001");
+    expect(r.identity.email).toBe("persona@zelena.tech");
+    expect(r.identity.localPart).toBe("persona");
     expect(r.identity.tenantId).toBe(TENANT);
   });
 
@@ -108,7 +124,7 @@ describe("validateEntraToken: restricción de tenant y flag (criterios 2 y 3)", 
   });
 
   it("rechaza un correo del tenant que no es del dominio corporativo", () => {
-    const r = validateEntraToken(claims({ preferred_username: "john@otrodominio.com" }), ON);
+    const r = validateEntraToken(claims({ preferred_username: "persona@otrodominio.com" }), ON);
     expect(r.ok).toBe(false);
     if (r.ok) return;
     expect(r.reason).toBe("foreign_domain");
@@ -156,50 +172,14 @@ describe("validateEntraToken: restricción de tenant y flag (criterios 2 y 3)", 
   });
 
   it("normaliza el correo a minúsculas y tolera espacios del claim", () => {
-    const r = validateEntraToken(claims({ preferred_username: "  Fausto@Zelena.Tech " }), ON);
+    const r = validateEntraToken(claims({ preferred_username: "  Persona@Zelena.Tech " }), ON);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.identity.email).toBe("fausto@zelena.tech");
+    expect(r.identity.email).toBe("persona@zelena.tech");
   });
 
   it("el id del provider fija la Redirect URI del app registration (paso A1)", () => {
     expect(ENTRA_PROVIDER_ID).toBe("microsoft-entra-id");
-  });
-});
-
-// ---------------------------------------------------------------------------
-
-describe("rosterMemberForIdentity: resolución del roster real (plano 07 §5)", () => {
-  it("resuelve por la parte local del correo", () => {
-    expect(rosterMemberForIdentity(identity())!.slug).toBe("fausto");
-  });
-
-  it("resuelve por la primera partícula de un correo con punto", () => {
-    const m = rosterMemberForIdentity(
-      identity({ localPart: "juan.perez", email: "juan.perez@zelena.tech", displayName: "" })
-    );
-    expect(m!.slug).toBe("juan");
-  });
-
-  it("resuelve por nombre del token cuando el correo no dice nada", () => {
-    const m = rosterMemberForIdentity(
-      identity({ localPart: "vp2026", email: "vp2026@zelena.tech", displayName: "Valentina" })
-    );
-    expect(m!.slug).toBe("vale");
-  });
-
-  it("resuelve acentos: Ángela → angela", () => {
-    const m = rosterMemberForIdentity(
-      identity({ localPart: "acomms", email: "acomms@zelena.tech", displayName: "Ángela Ruiz" })
-    );
-    expect(m!.slug).toBe("angela");
-  });
-
-  it("no inventa: alguien fuera del roster no resuelve a nadie", () => {
-    const m = rosterMemberForIdentity(
-      identity({ localPart: "contabilidad", email: "contabilidad@zelena.tech", displayName: "Área Contable" })
-    );
-    expect(m).toBeUndefined();
   });
 });
 
@@ -211,17 +191,18 @@ describe("resolveEntraLogin: alta y vinculación (criterios 1 y 5)", () => {
     db = seededDb();
   });
 
-  it("CRITERIO 1 · un @zelena.tech del roster entra como core, sin invitación ni wallet", () => {
+  it("CRITERIO 1 · con su correo vinculado, una persona del roster entra a SU fila, sin invitación ni wallet", () => {
+    vincular(db, MIEMBRO.slug);
     const invitesBefore = db.prepare(`SELECT COUNT(*) AS n FROM invites WHERE used_by IS NOT NULL`).get() as { n: number };
-    const r = entraLogin(db, claims(), ON);
+    const r = entraLogin(db, claims({ oid: "oid-miembro", preferred_username: correoDe(MIEMBRO.slug) }), ON);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
+    expect(r.login.mode).toBe("existing_email");
+    expect(r.login.wallet).toBe(pendingPrincipal(MIEMBRO.slug));
     expect(r.login.role).toBe("core");
-    expect(r.login.mode).toBe("roster");
     // Ninguna invitación se consumió y no se pidió wallet Stellar en ningún momento.
     const invitesAfter = db.prepare(`SELECT COUNT(*) AS n FROM invites WHERE used_by IS NOT NULL`).get() as { n: number };
     expect(invitesAfter.n).toBe(invitesBefore.n);
-    expect(r.login.wallet).toBe(pendingPrincipal("fausto"));
   });
 
   it("el CLA NO es requisito de login: se entra con claSigned=false y se firma después", () => {
@@ -234,32 +215,31 @@ describe("resolveEntraLogin: alta y vinculación (criterios 1 y 5)", () => {
   });
 
   it("CRITERIO 5 · NUNCA muta la PK: el trabajo que colgaba de `pending:<slug>` sobrevive", () => {
-    // El importador de WP14 ya le asignó trabajo a `pending:fausto` ANTES del login.
+    // El importador de WP14 ya le asignó trabajo a la fila del roster ANTES del login.
     const initiative = upsertInitiative(db, "WMS", "Ahora");
     const assignmentId = createAssignment(db, {
       initiativeId: initiative,
       title: "Migrar el esquema a Azure SQL",
-      ownerWallet: pendingPrincipal("fausto"),
+      ownerWallet: pendingPrincipal(MIEMBRO.slug),
       priority: "High",
-      createdBy: pendingPrincipal("john"),
+      createdBy: pendingPrincipal(FOUNDER.slug),
     });
+    vincular(db, MIEMBRO.slug);
 
-    const r = entraLogin(db, claims(), ON);
+    const r = entraLogin(db, claims({ oid: "oid-miembro", preferred_username: correoDe(MIEMBRO.slug) }), ON);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
 
     // El principal es EL MISMO, así que la asignación sigue apuntando a su dueño.
-    expect(r.login.wallet).toBe(pendingPrincipal("fausto"));
+    expect(r.login.wallet).toBe(pendingPrincipal(MIEMBRO.slug));
     const owner = db
       .prepare(`SELECT owner_wallet FROM assignments WHERE id = ?`)
       .get(assignmentId) as { owner_wallet: string };
-    expect(owner.owner_wallet).toBe(pendingPrincipal("fausto"));
+    expect(owner.owner_wallet).toBe(pendingPrincipal(MIEMBRO.slug));
     // Y no apareció un segundo registro para el mismo humano.
-    const rows = db
-      .prepare(`SELECT wallet FROM users WHERE entra_oid = ?`)
-      .all("oid-fausto-0001") as Array<{ wallet: string }>;
+    const rows = db.prepare(`SELECT wallet FROM users WHERE entra_oid = ?`).all("oid-miembro") as Array<{ wallet: string }>;
     expect(rows).toHaveLength(1);
-    expect(db.prepare(`SELECT COUNT(*) AS n FROM users WHERE wallet = ?`).get(entraPrincipal("oid-fausto-0001")) as { n: number }).toEqual({ n: 0 });
+    expect(db.prepare(`SELECT COUNT(*) AS n FROM users WHERE wallet = ?`).get(entraPrincipal("oid-miembro"))).toEqual({ n: 0 });
   });
 
   it("CRITERIO 5 · dos logins seguidos son UN registro (idempotente, modo existing_oid)", () => {
@@ -296,15 +276,14 @@ describe("resolveEntraLogin: alta y vinculación (criterios 1 y 5)", () => {
     // Vincular el corporativo NO auto-promueve a core: el rol no cambia solo por esto.
     expect(r.login.role).toBe("contributor");
     // Y el correo corporativo pasó a ser el primary de tipo corporativo.
-    const emails = listUserEmails(db, wallet);
-    expect(emails).toEqual([
+    expect(listUserEmails(db, wallet)).toEqual([
       { email: "contabilidad@zelena.tech", kind: "primary", is_corporate: 1, is_verified: 1 },
     ]);
     const total = db.prepare(`SELECT COUNT(*) AS n FROM users WHERE entra_oid = 'oid-conta'`).get() as { n: number };
     expect(total.n).toBe(1);
   });
 
-  it("alguien del tenant fuera del roster: alta nueva `entra:<oid>` como core", () => {
+  it("alguien del tenant sin oid ni correo vinculados: alta nueva `entra:<oid>` como core", () => {
     const r = entraLogin(
       db,
       claims({ oid: "oid-nuevo", preferred_username: "soporte@zelena.tech", name: "Mesa de Soporte" }),
@@ -318,46 +297,23 @@ describe("resolveEntraLogin: alta y vinculación (criterios 1 y 5)", () => {
     expect(r.login.isSupervisor).toBe(false);
   });
 
-  it("roles del plano 07 §5: John founder+supervisor, Vale core Y supervisora", () => {
-    const john = entraLogin(db, claims({ oid: "oid-john", preferred_username: "john@zelena.tech", name: "John" }), ON);
-    const vale = entraLogin(db, claims({ oid: "oid-vale", preferred_username: "vale@zelena.tech", name: "Vale" }), ON);
-    const david = entraLogin(db, claims({ oid: "oid-david", preferred_username: "david@zelena.tech", name: "David" }), ON);
-    expect(john.ok && vale.ok && david.ok).toBe(true);
-    if (!john.ok || !vale.ok || !david.ok) return;
-    expect(john.login.role).toBe("founder");
-    expect(john.login.isSupervisor).toBe(true);
-    expect(vale.login.role).toBe("core");
-    expect(vale.login.isSupervisor).toBe(true);
-    expect(david.login.role).toBe("core");
-    expect(david.login.isSupervisor).toBe(false);
-  });
-
-  it("GUARDA ANTI-FUSIÓN: un homónimo nuevo no se apropia de la fila del roster", () => {
-    const juan = entraLogin(db, claims({ oid: "oid-juan", preferred_username: "juan@zelena.tech", name: "Juan" }), ON);
-    expect(juan.ok).toBe(true);
-    if (!juan.ok) return;
-    expect(juan.login.wallet).toBe(pendingPrincipal("juan"));
-
-    // Otra persona, mismo nombre de pila, correo distinto.
-    const otro = entraLogin(
-      db,
-      claims({ oid: "oid-juanjo", preferred_username: "juanjo@zelena.tech", name: "Juan José Otro" }),
-      ON
-    );
-    expect(otro.ok).toBe(true);
-    if (!otro.ok) return;
-    expect(otro.login.wallet).toBe(entraPrincipal("oid-juanjo"));
-    expect(otro.login.mode).toBe("created");
-    // La fila de Juan sigue siendo de Juan.
-    const row = db
-      .prepare(`SELECT entra_oid FROM users WHERE wallet = ?`)
-      .get(pendingPrincipal("juan")) as { entra_oid: string };
-    expect(row.entra_oid).toBe("oid-juan");
+  it("el rol sale de la FILA vinculada, nunca del token: founder, supervisora y core", () => {
+    vincular(db, FOUNDER.slug);
+    vincular(db, SUPERVISORA.slug);
+    vincular(db, MIEMBRO.slug);
+    const f = entraLogin(db, claims({ oid: "oid-f", preferred_username: correoDe(FOUNDER.slug), name: "x" }), ON);
+    const s = entraLogin(db, claims({ oid: "oid-s", preferred_username: correoDe(SUPERVISORA.slug), name: "x" }), ON);
+    const m = entraLogin(db, claims({ oid: "oid-m", preferred_username: correoDe(MIEMBRO.slug), name: "x" }), ON);
+    expect(f.ok && s.ok && m.ok).toBe(true);
+    if (!f.ok || !s.ok || !m.ok) return;
+    expect([f.login.role, f.login.isSupervisor, f.login.wallet]).toEqual(["founder", true, pendingPrincipal(FOUNDER.slug)]);
+    expect([s.login.role, s.login.isSupervisor]).toEqual(["core", true]);
+    expect([m.login.role, m.login.isSupervisor]).toEqual(["core", false]);
   });
 
   it("entra_oid es único de hecho: ningún oid aparece en dos principales", () => {
     for (const m of TEAM_ROSTER) {
-      entraLogin(db, claims({ oid: "oid-" + m.slug, preferred_username: m.slug + "@zelena.tech", name: m.name }), ON);
+      entraLogin(db, claims({ oid: "oid-" + m.slug, preferred_username: correoDe(m.slug), name: m.name }), ON);
     }
     const dupes = db
       .prepare(
@@ -403,24 +359,126 @@ describe("resolveEntraLogin: alta y vinculación (criterios 1 y 5)", () => {
     if (!r.ok) return;
     const emails = listUserEmails(db, r.login.wallet);
     expect(emails).toHaveLength(1);
-    expect(emails[0]).toEqual({
-      email: "fausto@zelena.tech",
-      kind: "primary",
-      is_corporate: 1,
-      is_verified: 1,
-    });
+    expect(emails[0]).toEqual({ email: "persona@zelena.tech", kind: "primary", is_corporate: 1, is_verified: 1 });
   });
 
   it("la vinculación marca auth_provider='entra' sin tocar a los demás usuarios", () => {
     entraLogin(db, claims(), ON);
     const row = db
       .prepare(`SELECT auth_provider FROM users WHERE wallet = ?`)
-      .get(pendingPrincipal("fausto")) as { auth_provider: string };
+      .get(entraPrincipal("oid-persona-0001")) as { auth_provider: string };
     expect(row.auth_provider).toBe("entra");
-    const invited = db
-      .prepare(`SELECT COUNT(*) AS n FROM users WHERE auth_provider = 'invite'`)
-      .get() as { n: number };
+    const invited = db.prepare(`SELECT COUNT(*) AS n FROM users WHERE auth_provider = 'invite'`).get() as { n: number };
     expect(invited.n).toBeGreaterThan(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+
+describe("ATAQUES · nadie hereda la fila del founder (ni otra) por parecido", () => {
+  let db: DB;
+  const filaFounder = () => pendingPrincipal(FOUNDER.slug);
+  const founders = () =>
+    (db.prepare(`SELECT wallet FROM users WHERE role = 'founder' ORDER BY wallet`).all() as Array<{ wallet: string }>).map(
+      (r) => r.wallet
+    );
+  beforeEach(() => {
+    db = seededDb();
+  });
+
+  /** Entra con estos claims y comprueba que NO acabó en la fila del founder ni con su rol. */
+  function noHereda(c: Partial<EntraTokenClaims>): void {
+    const antes = founders();
+    const r = entraLogin(db, claims(c), ON);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.login.wallet).not.toBe(filaFounder());
+    expect(r.login.role).toBe("core");
+    expect(r.login.mode).toBe("created");
+    expect(founders()).toEqual(antes);
+  }
+
+  it("el correo con el slug del founder, SIN vincular, crea una cuenta propia (no su fila)", () => {
+    noHereda({ oid: "oid-atacante-1", preferred_username: correoDe(FOUNDER.slug) });
+    expect(db.prepare(`SELECT entra_oid FROM users WHERE wallet = ?`).get(filaFounder())).toEqual({ entra_oid: null });
+  });
+
+  it("el nombre del founder en el token no sirve de nada", () => {
+    vincular(db, FOUNDER.slug);
+    noHereda({ oid: "oid-atacante-2", preferred_username: "alguien@zelena.tech", name: FOUNDER.name });
+    noHereda({ oid: "oid-atacante-3", preferred_username: "otra@zelena.tech", name: `${FOUNDER.name} Apellido` });
+  });
+
+  it("un prefijo o una variante del correo del founder no sirve, aunque el suyo esté vinculado", () => {
+    vincular(db, FOUNDER.slug);
+    noHereda({ oid: "oid-atacante-4", preferred_username: `${FOUNDER.slug}.otro@zelena.tech` });
+    noHereda({ oid: "oid-atacante-5", preferred_username: `${FOUNDER.slug}2@zelena.tech` });
+    noHereda({ oid: "oid-atacante-6", preferred_username: `${FOUNDER.slug}-x@zelena.tech` });
+    // La fila sigue sin cuenta de Microsoft: solo su correo exacto la abre.
+    expect(db.prepare(`SELECT entra_oid FROM users WHERE wallet = ?`).get(filaFounder())).toEqual({ entra_oid: null });
+  });
+
+  it("solo el correo exacto vinculado abre la fila del founder", () => {
+    vincular(db, FOUNDER.slug);
+    const r = entraLogin(db, claims({ oid: "oid-founder", preferred_username: correoDe(FOUNDER.slug).toUpperCase() }), ON);
+    expect(r.ok && r.login.wallet).toBe(filaFounder());
+    expect(r.ok && r.login.role).toBe("founder");
+  });
+
+  it("un UPN reciclado (otro oid con el mismo correo) no hereda la fila ya vinculada", () => {
+    vincular(db, FOUNDER.slug);
+    const r = entraLogin(db, claims({ oid: "oid-founder", preferred_username: correoDe(FOUNDER.slug) }), ON);
+    expect(r.ok).toBe(true);
+    expect(() =>
+      entraLogin(db, claims({ oid: "oid-reciclado", preferred_username: correoDe(FOUNDER.slug) }), ON)
+    ).toThrow(EntraLinkError);
+    expect(db.prepare(`SELECT entra_oid FROM users WHERE wallet = ?`).get(filaFounder())).toEqual({
+      entra_oid: "oid-founder",
+    });
+  });
+
+  it("el código ya no resuelve por nombre: no queda ninguna búsqueda en el roster", () => {
+    const src = fs.readFileSync(path.join(process.cwd(), "src", "lib", "entra.ts"), "utf8");
+    expect(src).not.toMatch(/findRosterMember|rosterMemberForIdentity|pendingPrincipal/);
+  });
+});
+
+describe("vincularCorreoCorporativo: lo hace el founder, exacto y sin quitarle nada a nadie", () => {
+  let db: DB;
+  beforeEach(() => {
+    db = seededDb();
+  });
+
+  it("solo el founder, solo el dominio corporativo y sin choques", () => {
+    const actor = founderActor(db);
+    const core: TeamActor = { ...actor, wallet: pendingPrincipal(MIEMBRO.slug), role: "core" };
+    const w = pendingPrincipal(MIEMBRO.slug);
+    expect(() => vincularCorreoCorporativo(db, core, { wallet: w, email: correoDe(MIEMBRO.slug), dominio: DOMAIN })).toThrow(
+      /Solo el founder/
+    );
+    expect(() => vincularCorreoCorporativo(db, actor, { wallet: w, email: "alguien@gmail.com", dominio: DOMAIN })).toThrow(
+      /corporativo/
+    );
+    expect(vincularCorreoCorporativo(db, actor, { wallet: w, email: correoDe(MIEMBRO.slug), dominio: DOMAIN })).toBe(true);
+    expect(vincularCorreoCorporativo(db, actor, { wallet: w, email: correoDe(MIEMBRO.slug), dominio: DOMAIN })).toBe(false);
+    // El mismo correo en otra fila: 409. Otra dirección para la misma fila: 409.
+    expect(() =>
+      vincularCorreoCorporativo(db, actor, { wallet: pendingPrincipal(SUPERVISORA.slug), email: correoDe(MIEMBRO.slug), dominio: DOMAIN })
+    ).toThrow(/otra persona/);
+    expect(() => vincularCorreoCorporativo(db, actor, { wallet: w, email: "otra@zelena.tech", dominio: DOMAIN })).toThrow(
+      /ya tiene un correo/
+    );
+    // Deja rastro sin el correo.
+    const ev = db.prepare(`SELECT action, detail FROM talent_events WHERE action = 'correo_corporativo'`).all();
+    expect(ev).toEqual([{ action: "correo_corporativo", detail: JSON.stringify({ dominio: DOMAIN }) }]);
+  });
+
+  it("las cuentas de demostración no reciben correo corporativo", () => {
+    const demo = (db.prepare(`SELECT wallet FROM users WHERE is_demo = 1 AND is_founder = 0 LIMIT 1`).get() as { wallet: string })
+      .wallet;
+    expect(() => vincularCorreoCorporativo(db, founderActor(db), { wallet: demo, email: "demo@zelena.tech", dominio: DOMAIN })).toThrow(
+      /demostración/
+    );
   });
 });
 
@@ -443,17 +501,17 @@ describe("segundo correo personal (doc 15 §2)", () => {
   });
 
   it("vincular un correo personal apaga el banner", () => {
-    const res = linkRecoveryEmail(db, wallet, "  Fausto.Personal@Gmail.com ", DOMAIN);
+    const res = linkRecoveryEmail(db, wallet, "  Persona.Personal@Gmail.com ", DOMAIN);
     expect(res.ok).toBe(true);
     if (!res.ok) return;
-    expect(res.email).toBe("fausto.personal@gmail.com");
+    expect(res.email).toBe("persona.personal@gmail.com");
     expect(hasRecoveryEmail(db, wallet)).toBe(true);
     const r = entraLogin(db, claims(), ON);
     expect(r.ok && r.login.needsRecoveryEmail).toBe(false);
   });
 
   it("rechaza un segundo correo del dominio corporativo (moriría con la baja)", () => {
-    const res = linkRecoveryEmail(db, wallet, "fausto.alt@zelena.tech", DOMAIN);
+    const res = linkRecoveryEmail(db, wallet, "persona.alt@zelena.tech", DOMAIN);
     expect(res.ok).toBe(false);
     if (res.ok) return;
     expect(res.message).toContain("personal");
@@ -468,11 +526,7 @@ describe("segundo correo personal (doc 15 §2)", () => {
   });
 
   it("no roba un correo ya vinculado a otro registro", () => {
-    const otro = entraLogin(
-      db,
-      claims({ oid: "oid-david", preferred_username: "david@zelena.tech", name: "David" }),
-      ON
-    );
+    const otro = entraLogin(db, claims({ oid: "oid-otro", preferred_username: "otro@zelena.tech", name: "Otro" }), ON);
     expect(otro.ok).toBe(true);
     if (!otro.ok) return;
     linkRecoveryEmail(db, otro.login.wallet, "compartido@gmail.com", DOMAIN);
@@ -491,7 +545,7 @@ describe("segundo correo personal (doc 15 §2)", () => {
       title: "Trabajo del día sin segundo correo",
       ownerWallet: wallet,
       priority: "Normal",
-      createdBy: pendingPrincipal("john"),
+      createdBy: pendingPrincipal(FOUNDER.slug),
     });
     expect(assignmentId).toBeGreaterThan(0);
   });

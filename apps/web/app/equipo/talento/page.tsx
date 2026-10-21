@@ -20,8 +20,16 @@ import { getSession } from "@/lib/session";
 import { equipoInternoActor, rolPuedeAdministrar } from "@/lib/authz";
 import { PENDING_PREFIX, ROLE_LABEL, puedeVerTodoElEquipo } from "@/lib/roles";
 import { mismaPersona } from "@/lib/identidades";
-import { candidatosAVincular, cuentaActiva, directorioTalento } from "@/lib/talento";
+import {
+  candidatosAVincular,
+  correosCorporativos,
+  cuentaActiva,
+  cuentasParaCorreo,
+  directorioTalento,
+} from "@/lib/talento";
+import { corporateDomain } from "@/lib/config";
 import TeamTalentRow, { type PersonaTalento } from "@/components/TeamTalentRow";
+import CorreoCorporativoForm from "@/components/CorreoCorporativoForm";
 import TeamImportCsv from "@/components/TeamImportCsv";
 import { EmptyState } from "@/components/ui";
 
@@ -140,6 +148,18 @@ export default async function EquipoTalentoPage({ searchParams }: { searchParams
           ))}
         </ul>
       )}
+
+      {/* Entrar con Microsoft: el correo corporativo EXACTO de cada fila (solo founder). */}
+      {esFounder ? (
+        <section id="microsoft" className="scroll-mt-24 space-y-3">
+          <h2 className="font-head text-2xl font-bold text-white">Entrar con Microsoft</h2>
+          <CorreoCorporativoForm
+            cuentas={cuentasParaCorreo(db)}
+            vinculados={correosCorporativos(db)}
+            dominio={corporateDomain()}
+          />
+        </section>
+      ) : null}
 
       {/* Importar backlog (founder y supervisores; la página ya lo exige). /equipo/proyectos lo enlaza. */}
       <section id="importar" className="scroll-mt-24 space-y-3">
