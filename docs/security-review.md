@@ -217,6 +217,13 @@ confiable (lo setea el edge); si se despliega detrás de un proxy propio mal con
 sobreescriba el header en vez de reenviar el del cliente. Considerar subir la entropía del código
 a 4-5 bytes sin costo real de UX. **Esfuerzo: S.**
 
+**Estado (2026-10-21):** `clientIp()` ya no confía en el primer valor de `x-forwarded-for`.
+Detrás de Azure Front Door toma `X-Azure-ClientIP` (la escribe Front Door) y, si no está, el
+**último** valor de `x-forwarded-for` (el del último proxy), sin el puerto que agrega App Service.
+Para que `X-Azure-ClientIP` sea fiable, App Service debe aceptar solo tráfico de Front Door
+(restricción de acceso por la etiqueta `AzureFrontDoor.Backend` y la cabecera `X-Azure-FDID`). El
+mapa en memoria se poda de entradas vencidas al pasar de 10.000 claves.
+
 ---
 
 ## 3. Academia anti-bot
