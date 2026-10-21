@@ -66,6 +66,27 @@ sin correo vinculado entra como `core` con una fila nueva. Para apagar: `AUTH_EN
 - Regla de firewall "Allow Azure services" (o private endpoint). **Nunca** abrir a 0.0.0.0.
 - Recomendado: activar **managed identity** en el App Service y darle acceso a la base → sin contraseña de DB en la configuración.
 - Añadir la URL pública como Redirect URI en el registro de A1
+- **Obligatorio con Azure Front Door delante: App Service solo acepta tráfico de NUESTRO Front Door.**
+  El límite de intentos (`clientIp`, `src/lib/rate-limit.ts`) cuenta por la IP que escribe Front Door
+  en `X-Azure-ClientIP`. Si se le puede hablar directo a App Service (`<app>.azurewebsites.net`), el
+  cliente pone en esa cabecera lo que quiera y el límite desaparece. Dos cosas, las dos:
+  1. **Restricción de acceso.** Front Door → Overview → copiar el **Front Door ID** (un GUID). App
+     Service → Networking → Access restriction → sitio principal → Add rule: *Allow*, prioridad 100,
+     tipo **Service Tag** `AzureFrontDoor.Backend`, filtro de cabecera HTTP **`X-Azure-FDID`** = ese
+     ID; *Unmatched rule action*: **Deny**. La etiqueta sola no basta: deja pasar el Front Door de
+     cualquiera; la cabecera lo ata al nuestro. El sitio `scm` (Kudu) conserva sus propias reglas (no
+     marcar "usar las reglas del sitio principal": por ahí van el despliegue y el SSH). Por CLI:
+     `az webapp config access-restriction add -g <grupo> -n <app> --rule-name front-door --action Allow --priority 100 --service-tag AzureFrontDoor.Backend --http-header x-azure-fdid=<FRONT_DOOR_ID>`.
+  2. **App Setting `AZURE_FRONT_DOOR_ID`** = el mismo ID. La app solo cree `X-Azure-ClientIP` si la
+     petición trae `X-Azure-FDID` igual a ese valor; si no, usa el último valor de `X-Forwarded-For`
+     (el del frontal de App Service). Sin la variable, detrás de Front Door ese valor es la IP del
+     borde y el límite agruparía a quienes la comparten: el log de la app lo avisa una vez, con la
+     primera petición que llega por Front Door (`[rate-limit] … AZURE_FRONT_DOOR_ID no está configurada`).
+
+  **Comprobar:** `curl -s -o /dev/null -w "%{http_code}" https://<app>.azurewebsites.net/` responde
+  **403**; `https://www.zelena.tech/` responde 200; y 25 peticiones seguidas a
+  `https://www.zelena.tech/api/login/reto` con `X-Azure-ClientIP` distinta en cada una terminan en
+  **429** a partir de la 21. Sin Front Door delante no hace falta nada de esto.
 
 ### A3. Bot de Telegram + API key (~5 min)
 - En Telegram: **@BotFather** → `/newbot` → nombre y usuario del bot → copiar el **token**.
@@ -198,6 +219,9 @@ La ruta Azure SQL (`mssql`) **no migra** todavía: una base Azure SQL nueva se c
   real de John **ya registrada**: cada arranque la promueve a `founder`; ver "Acceso del founder", que
   se comprueba ANTES de desplegar). `SEED_COHORT=1` solo si se quiere sembrar o alargar el código de
   cohorte `ESPECIALIZACION-2026` (ver "Invitaciones vivas en producción").
+- Con Azure Front Door delante: **restricción de acceso** de App Service (`AzureFrontDoor.Backend` +
+  `X-Azure-FDID`) y **`AZURE_FRONT_DOOR_ID`** en App Settings (A2, obligatorio): sin ellas, el límite
+  de intentos se esquiva hablándole directo a App Service.
 - **Arranque probado hoy:** `apps/web/start-azure.sh` (`node node_modules/next/dist/bin/next start`
   sobre `.next` + `node_modules`). Se conserva; ahora verifica el paquete antes de arrancar (ver
   "Paquete del despliegue").

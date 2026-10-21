@@ -218,11 +218,15 @@ sobreescriba el header en vez de reenviar el del cliente. Considerar subir la en
 a 4-5 bytes sin costo real de UX. **Esfuerzo: S.**
 
 **Estado (2026-10-21):** `clientIp()` ya no confía en el primer valor de `x-forwarded-for`.
-Detrás de Azure Front Door toma `X-Azure-ClientIP` (la escribe Front Door) y, si no está, el
+Detrás de Azure Front Door toma `X-Azure-ClientIP` (la escribe Front Door) **solo si** la petición
+trae `X-Azure-FDID` igual a `AZURE_FRONT_DOOR_ID` (el ID de nuestro perfil de Front Door); si no, el
 **último** valor de `x-forwarded-for` (el del último proxy), sin el puerto que agrega App Service.
-Para que `X-Azure-ClientIP` sea fiable, App Service debe aceptar solo tráfico de Front Door
-(restricción de acceso por la etiqueta `AzureFrontDoor.Backend` y la cabecera `X-Azure-FDID`). El
-mapa en memoria se poda de entradas vencidas al pasar de 10.000 claves.
+Antes la creía sin condición: hablándole directo a App Service (`*.azurewebsites.net`) con una
+`X-Azure-ClientIP` distinta en cada petición, el límite no cortaba nunca (revisión del release:
+25 peticiones a `/api/login/reto`, 0 respuestas 429). Además, App Service debe aceptar solo tráfico
+de nuestro Front Door (restricción de acceso por la etiqueta `AzureFrontDoor.Backend` y la cabecera
+`X-Azure-FDID`): es paso obligatorio de `docs/DESPLIEGUE-V1.md`, A2. El mapa en memoria se poda de
+entradas vencidas al pasar de 10.000 claves.
 
 ---
 
