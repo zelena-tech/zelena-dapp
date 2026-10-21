@@ -1,33 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/session";
-import { timingSafeEqual } from "node:crypto";
 import { adminActor } from "@/lib/authz";
-import { anclarPendientes, contarPendientes } from "@/lib/anchor";
+import { anchorRunSecret } from "@/lib/config";
+import { anclarPendientes, autorizarAnclaje, contarPendientes } from "@/lib/anchor";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /**
  * Dispara una pasada de anclaje en testnet. Dos formas de autorizarla:
- *  - sesión con rol founder leído de la base (botón en /admin), o
- *  - cabecera `x-anchor-secret` con el valor de ANCHOR_RUN_SECRET (para un cron
- *    externo, sin necesidad de sesión).
+ *  - sesión con rol founder leído de la base, o
+ *  - cabecera `x-anchor-secret` con el valor de ANCHOR_RUN_SECRET (32 caracteres o más).
+ *    La manda el workflow programado `.github/workflows/anclaje.yml` cada 15 minutos, así
+ *    que las firmas del acuerdo, las raíces de cada época y las huellas de los ritos se
+ *    anclan solas. La comparación es en tiempo constante (`autorizarAnclaje`).
  *
  * Sin esta ruta la cola de anclaje nunca se procesaba en el despliegue.
  */
 async function autorizado(req: NextRequest): Promise<boolean> {
-  const secretoEsperado = process.env.ANCHOR_RUN_SECRET;
-  const recibido = req.headers.get("x-anchor-secret");
-  if (secretoEsperado && recibido && igualEnTiempoConstante(recibido, secretoEsperado)) return true;
+  if (autorizarAnclaje(req.headers.get("x-anchor-secret"), anchorRunSecret()) === "ok") return true;
   const session = await getSession();
   return adminActor(session, getDb()) !== null;
-}
-
-function igualEnTiempoConstante(a: string, b: string): boolean {
-  const x = Buffer.from(a, "utf8");
-  const y = Buffer.from(b, "utf8");
-  return x.length === y.length && timingSafeEqual(x, y);
 }
 
 export async function GET(req: NextRequest) {

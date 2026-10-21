@@ -262,6 +262,20 @@ export function cronSecret(env: NodeJS.ProcessEnv = process.env): string | null 
   return v.length >= CRON_SECRET_MIN ? v : null;
 }
 
+/** Largo mínimo del secreto del anclaje programado (`ANCHOR_RUN_SECRET`), igual que el del cron. */
+export const ANCHOR_RUN_SECRET_MIN = 32;
+
+/**
+ * Secreto que el workflow programado `anclaje.yml` manda en `x-anchor-secret` a
+ * `POST /api/anchor/run`. `null` si falta o tiene menos de `ANCHOR_RUN_SECRET_MIN`
+ * caracteres: entonces solo el founder con sesión puede disparar el anclaje. Nunca se
+ * registra en logs ni se devuelve.
+ */
+export function anchorRunSecret(env: NodeJS.ProcessEnv = process.env): string | null {
+  const v = (env.ANCHOR_RUN_SECRET ?? "").trim();
+  return v.length >= ANCHOR_RUN_SECRET_MIN ? v : null;
+}
+
 /** Host canónico de los enlaces de los mensajes (`ZELENA_APP_URL`), sin barra final. */
 export const APP_URL_DEFAULT = "https://www.zelena.tech";
 

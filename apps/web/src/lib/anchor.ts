@@ -11,6 +11,7 @@
  * que lo anclado sea verificable igual por terceros. La lógica de datos vive
  * aquí y la ruta solo la invoca (ver CLAUDE.md).
  */
+import { createHash, timingSafeEqual } from "node:crypto";
 import type { DB } from "./db";
 
 const HORIZON = "https://horizon-testnet.stellar.org";
@@ -30,6 +31,24 @@ export interface AnchorResultado {
   fallidos: number;
   cuenta: string | null;
   detalle: Array<{ id: number; kind: string; tx?: string; error?: string }>;
+}
+
+/**
+ * ¿La cabecera `x-anchor-secret` trae el secreto del anclaje programado? Comparación en
+ * tiempo constante y SIN filtrar el largo: se comparan los sha256 de los dos valores
+ * (siempre 32 bytes) con `timingSafeEqual`, haya cabecera o no.
+ *  - sin secreto configurado (o corto, ver `anchorRunSecret`) → `sin_configurar`;
+ *  - cabecera ausente o distinta → `rechazado`.
+ * La ruta, con cualquier cosa distinta de `ok`, cae a la sesión del founder.
+ */
+export function autorizarAnclaje(header: string | null, esperado: string | null): "ok" | "sin_configurar" | "rechazado" {
+  const secreto = typeof esperado === "string" ? esperado.trim() : "";
+  if (!secreto) return "sin_configurar";
+  const dado = typeof header === "string" ? header.trim() : "";
+  const a = createHash("sha256").update(dado, "utf8").digest();
+  const b = createHash("sha256").update(secreto, "utf8").digest();
+  const igual = timingSafeEqual(a, b); // mismo trabajo con o sin cabecera
+  return dado.length > 0 && igual ? "ok" : "rechazado";
 }
 
 /** Cuántas quedan sin anclar (para mostrarlo en el panel sin ejecutar nada). */
@@ -72,7 +91,11 @@ export async function anclarPendientes(db: DB, limite = 8): Promise<AnchorResult
   }
 
   const filas = db
-    .prepare(`SELECT id, kind, ref, data_key, payload_hash FROM anchor_queue WHERE status = 'pending' ORDER BY id LIMIT ?`)
+    // Primero las que menos intentos llevan: con el anclaje programado (anclaje.yml) una
+    // fila que falla siempre no puede tapar a las nuevas en cada corrida.
+    .prepare(
+      `SELECT id, kind, ref, data_key, payload_hash FROM anchor_queue WHERE status = 'pending' ORDER BY attempts, id LIMIT ?`
+    )
     .all(limite) as AnchorRow[];
 
   for (const fila of filas) {

@@ -257,7 +257,9 @@ export default async function PerfilPage() {
                   Esta firma es de prueba: no tiene una transacción pública que se pueda abrir en el explorador.
                 </p>
               ) : (
-                <p className="text-xs text-faint">El anclaje en la red de pruebas se confirma en unos minutos.</p>
+                <p className="text-xs text-faint">
+                  Tu firma está en la cola de anclaje: se ancla sola en la red de pruebas, en menos de una hora.
+                </p>
               )}
             </div>
           ) : (

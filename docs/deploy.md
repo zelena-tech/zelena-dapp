@@ -155,7 +155,8 @@ SQLite local en producción es el fallo exacto que esto existe para evitar.
 | `SEED_COHORT` | no | `1` siembra el código de cohorte `ESPECIALIZACION-2026` y alarga su plazo en cada arranque. |
 | `ZELENA_OMITIR_VERIFICACION` | no | `1` hace que `start-azure.sh` arranque sin `scripts/verificar-paquete.mjs`. Solo para una emergencia consciente. |
 | `STELLAR_NETWORK` | sí | `testnet`. **Nunca** mainnet en v1. |
-| `SERVICE_ACCOUNT_SECRET` | worker | cuenta de **testnet** del anclaje. Vive SOLO donde corre el worker, jamás en el frontend. |
+| `SERVICE_ACCOUNT_SECRET` | worker / anclaje | cuenta de **testnet** del anclaje. Vive SOLO en el servidor (App Settings o donde corre el worker), jamás en el frontend. Sin ella, `POST /api/anchor/run` responde 500 y el workflow `anclaje.yml` falla a la vista. |
+| `ANCHOR_RUN_SECRET` | anclaje programado | 32 caracteres o más (`openssl rand -hex 32`). El mismo valor va en **App Settings** y en los **secrets del repo** de GitHub: `.github/workflows/anclaje.yml` lo manda en `x-anchor-secret` cada 15 minutos a `POST /api/anchor/run` (comparación en tiempo constante). Más corto o ausente, solo el founder con sesión puede disparar el anclaje. El workflow corre desde la rama por defecto: hay que llevarlo allí. |
 | `ZELENA_DB_WORKER` | no | ruta alternativa al worker del puente (por defecto `src/lib/db-query.worker.mjs`). |
 
 ### Puerta corporativa Entra ID (WP13)
