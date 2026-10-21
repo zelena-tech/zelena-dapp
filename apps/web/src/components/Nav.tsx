@@ -57,10 +57,17 @@ export default function Nav({ session }: { session: SessionData | null }) {
   const puedeVerTodo = !!session && puedeVerTodoElEquipo(session);
   const conClientes = esInterno && hayClientes(session);
 
+  // Botón de perfil en una sola línea y con el nombre recortado: con el menú completo del
+  // founder (Seguimiento y Clientes incluidos) se partía en dos a 1280 px. El nombre
+  // entero va en el title.
   const accesoDao = session ? (
-    <Link href="/perfil" className="btn btn-ghost py-1.5" title={session.wallet}>
-      <span className="h-2 w-2 rounded-full bg-primary" />
-      {session.name || shortWallet(session.wallet)}
+    <Link
+      href="/perfil"
+      className="btn btn-ghost whitespace-nowrap px-3 py-1.5"
+      title={session.name ? `${session.name} · ${session.wallet}` : session.wallet}
+    >
+      <span className="h-2 w-2 shrink-0 rounded-full bg-primary" />
+      <span className="max-w-[7rem] truncate">{session.name || shortWallet(session.wallet)}</span>
     </Link>
   ) : (
     <Link href="/entrar" className="btn btn-primary py-1.5">
