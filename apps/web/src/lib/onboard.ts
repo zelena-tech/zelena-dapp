@@ -13,7 +13,7 @@ import { claSigningPayload } from "./cla-signing";
 import { loginSigningPayload } from "./login-signing";
 import { almacenRetos, type AlmacenRetos } from "./login-reto";
 import { verifyWalletSignature } from "./crypto";
-import { CLA_VERSION, isBootstrapCode } from "./config";
+import { CLA_VERSION, esCodigoDemo, isBootstrapCode } from "./config";
 import { effectiveRole, isRole, type Role } from "./roles";
 
 export class OnboardError extends Error {
@@ -37,7 +37,12 @@ export interface OnboardInput {
   code: string;
   wallet: string;
   name: string;
-  isDemo: boolean;
+  /**
+   * Lo que declara el navegador. Se IGNORA: si la cuenta es de demostración lo decide el
+   * servidor por el código de invitación (`esCodigoDemo`). Se acepta para no romper un
+   * cliente viejo que todavía lo mande.
+   */
+  isDemo?: boolean;
   claHash: string;
   signature: string;
 }
@@ -70,7 +75,12 @@ function consumirCupo(db: DB, code: string, wallet: string): string {
 }
 
 export function performOnboard(db: DB, input: OnboardInput): OnboardResult {
-  const { code, wallet, name, isDemo, claHash, signature } = input;
+  const { code, wallet, name, claHash, signature } = input;
+  // Cuenta REAL o de demostración (decisión del founder, 2026-10-21). La decide el código,
+  // nunca el navegador: quien entra con una invitación válida y firma el acuerdo con la
+  // wallet que creó en su navegador tiene una cuenta real (se suma a proyectos y registra
+  // asistencia). `is_demo` queda para las cuentas sembradas y los códigos de demostración.
+  const isDemo = esCodigoDemo(code);
 
   // 1. El hash recibido debe coincidir con el texto canónico del servidor.
   if (claHash !== claCanonicalHash()) {

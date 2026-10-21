@@ -55,7 +55,7 @@ const SEP53_PREFIX = "Stellar Signed Message:" + String.fromCharCode(10);
 /**
  * Preimágenes aceptadas para una misma firma del CLA, en orden de preferencia:
  *
- *   1. los bytes UTF-8 del payload — lo que firma la wallet de prueba del navegador;
+ *   1. los bytes UTF-8 del payload — lo que firma la wallet creada en el navegador;
  *   2. su SHA-256 — wallets que hashean antes de firmar;
  *   3. SEP-53: SHA-256 del payload con el prefijo "Stellar Signed Message:
 " —

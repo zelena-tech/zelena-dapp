@@ -1,11 +1,13 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { CLAVE_WALLET_NAVEGADOR } from "./AvisoLlaveNavegador";
 
 /**
- * Cierra la sesión. Además ofrece borrar la wallet de prueba guardada en este
- * navegador: en un teléfono prestado o un equipo compartido, dejarla es dejar
- * la identidad puesta para el siguiente que entre.
+ * Cierra la sesión. A una cuenta de DEMOSTRACIÓN le ofrece además borrar la wallet
+ * guardada en este navegador: en un teléfono prestado o un equipo compartido, dejarla es
+ * dejar la identidad puesta para el siguiente que entre. A una cuenta real no se le
+ * ofrece: borrar su llave sería perder el acceso (ver AvisoLlaveNavegador).
  */
 export default function SalirButton({ esDemo }: { esDemo?: boolean }) {
   const router = useRouter();
@@ -16,7 +18,7 @@ export default function SalirButton({ esDemo }: { esDemo?: boolean }) {
     try {
       if (borrarWallet) {
         try {
-          localStorage.removeItem("zelena_demo_wallet");
+          localStorage.removeItem(CLAVE_WALLET_NAVEGADOR);
         } catch {
           /* almacenamiento bloqueado: nada que borrar */
         }

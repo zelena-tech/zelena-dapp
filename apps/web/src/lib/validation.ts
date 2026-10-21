@@ -33,7 +33,8 @@ export const onboardSchema = z.object({
   code: z.string().trim().min(3).max(40),
   wallet,
   name: nombreVisible,
-  isDemo: z.boolean(),
+  // Ignorado por el servidor (lo decide el código de invitación, ver performOnboard).
+  isDemo: z.boolean().optional(),
   claHash: z.string().trim().length(64),
   signature: z.string().trim().min(4).max(400),
 });

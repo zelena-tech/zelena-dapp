@@ -6,13 +6,14 @@
  */
 import type { DB } from "./db"; // solo tipo: sin ciclo en runtime
 import { sha256Hex } from "./crypto";
-import { FOUNDER_WALLET, BOOTSTRAP_CODE_MAX, BOOTSTRAP_CODE_MIN, bootstrapInviteCode } from "./config";
+import { FOUNDER_WALLET, BOOTSTRAP_CODE_MAX, BOOTSTRAP_CODE_MIN, DEMO_INVITE_CODES, bootstrapInviteCode } from "./config";
 import { GENOME_V1, seedGenomeV1, seedGenomeV2 } from "./genome";
 import { seedTeam } from "./team";
 import { createCohortInvite } from "./invites";
 import { ACADEMIA_S1, aplicarContenidoPublico } from "./contenido-publico";
 import { ORIGEN_SEMBRADO, marcarSembradosComoBorrador } from "./agora-borradores";
 import { vincularReemplazosConocidos } from "./decisiones";
+import { marcarCuentasDeNavegadorComoReales } from "./cuentas-reales";
 
 const DELINA = "GDELINACONTRIBUTORDEMOAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 const MARCOS = "GMARCOSDEVDEMOBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB";
@@ -40,11 +41,8 @@ export function demoInvitesAllowed(env: NodeJS.ProcessEnv = process.env): boolea
 // rol de founder. Se re-exporta aquí para no romper importaciones existentes.
 export { bootstrapInviteCode };
 
-/** Las 6 invitaciones demo del seed. Exactas: /admin genera códigos reales con el MISMO prefijo. */
-export const DEMO_INVITE_CODES: readonly string[] = Array.from(
-  { length: 6 },
-  (_, i) => "GENESIS-" + String(i + 1).padStart(4, "0")
-);
+/** Las 6 invitaciones demo del seed (viven en config.ts; se re-exportan por compatibilidad). */
+export { DEMO_INVITE_CODES };
 
 /**
  * Vence las invitaciones demo `GENESIS-0001..0006` que sigan sin usar cuando el
@@ -111,6 +109,10 @@ export function seedIfEmpty(db: DB, env: NodeJS.ProcessEnv = process.env): void 
   // Ágora (decisión del founder, 2026-10-21): los proyectos sembrados de una base que ya
   // existía pasan a borrador. Idempotente; si falla, el arranque sigue y se reintenta.
   try { marcarSembradosComoBorrador(db); } catch (e) { console.error("[seed] borradores del Ágora", e); }
+
+  // Cuentas (decisión del founder, 2026-10-21): quien entró con una invitación válida y la
+  // wallet de su navegador tiene una cuenta real. Solo promueve; si falla, el arranque sigue.
+  try { marcarCuentasDeNavegadorComoReales(db); } catch (e) { console.error("[seed] cuentas reales", e); }
 }
 
 /**

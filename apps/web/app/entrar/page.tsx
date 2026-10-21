@@ -8,6 +8,7 @@ import { loginSigningPayload } from "@/lib/login-signing";
 import { EntraSignInButton, EntraSignInError } from "@/components/EntraSignInButton";
 import { EntraSecondEmailBanner } from "@/components/EntraSecondEmailBanner";
 import IntroEcosistema from "@/components/IntroEcosistema";
+import AvisoLlaveNavegador, { CLAVE_WALLET_NAVEGADOR } from "@/components/AvisoLlaveNavegador";
 
 async function sha256Hex(str: string): Promise<string> {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
@@ -69,13 +70,15 @@ export default function Entrar() {
   // Paso 2
   const [wallet, setWallet] = useState("");
   const [secret, setSecret] = useState("");
-  const [isDemo, setIsDemo] = useState(false);
+  // La wallet se creó en este navegador: firma aquí mismo, sin extensión. Es una cuenta
+  // REAL (decisión del founder, 2026-10-21); lo único distinto es dónde vive la llave.
+  const [walletLocal, setWalletLocal] = useState(false);
   const [name, setName] = useState("");
   const [walletMsg, setWalletMsg] = useState("");
   // Trabajo en curso: sin esto se puede pulsar "crear wallet" cinco veces mientras
   // se descarga el SDK (casi 900 KB) y no pasa nada visible.
   const [ocupado, setOcupado] = useState<"" | "demo" | "freighter">("");
-  // Wallet de prueba ya guardada en este navegador, pendiente de que la persona
+  // Wallet ya guardada en este navegador, pendiente de que la persona
   // confirme que es suya (en un teléfono prestado o un PC compartido, no lo es).
   const [walletGuardada, setWalletGuardada] = useState<{ public: string; secret: string } | null>(null);
   // El navegador impide guardar (modo privado de iOS, almacenamiento bloqueado).
@@ -147,7 +150,7 @@ export default function Entrar() {
 
   function leerGuardada(): { public: string; secret: string } | null {
     try {
-      const raw = localStorage.getItem("zelena_demo_wallet");
+      const raw = localStorage.getItem(CLAVE_WALLET_NAVEGADOR);
       if (!raw) return null;
       const p = JSON.parse(raw);
       return typeof p?.public === "string" && typeof p?.secret === "string" ? p : null;
@@ -157,7 +160,7 @@ export default function Entrar() {
   }
 
   /** Genera un par de claves nuevo. `guardar` en false = wallet solo en memoria. */
-  async function crearWalletDemo(guardar: boolean) {
+  async function crearWalletNavegador(guardar: boolean) {
     setOcupado("demo");
     setWalletMsg("");
     try {
@@ -168,7 +171,7 @@ export default function Entrar() {
       let persistida = false;
       if (guardar) {
         try {
-          localStorage.setItem("zelena_demo_wallet", JSON.stringify({ public: pub, secret: sec }));
+          localStorage.setItem(CLAVE_WALLET_NAVEGADOR, JSON.stringify({ public: pub, secret: sec }));
           persistida = true;
         } catch {
           // Modo privado de iOS y navegadores con almacenamiento bloqueado: la
@@ -178,22 +181,22 @@ export default function Entrar() {
       }
       setWallet(pub);
       setSecret(sec);
-      setIsDemo(true);
+      setWalletLocal(true);
       setWalletGuardada(null);
       setName((n) => n.trim() || `${pub.slice(0, 4)}…${pub.slice(-4)}`);
       setWalletMsg(
         persistida
-          ? "Wallet de prueba creada y guardada en este navegador."
-          : "Wallet de prueba creada. Este navegador no permite guardarla, así que termina el registro sin cerrar la pestaña."
+          ? "Wallet creada y guardada en este navegador."
+          : "Wallet creada, pero este navegador no permite guardarla: al cerrar la pestaña perderías el acceso. Mejor usa Freighter o una ventana normal."
       );
     } catch {
-      setWalletMsg("No se pudo generar la wallet de prueba. Revisa tu conexión y reintenta.");
+      setWalletMsg("No se pudo crear la wallet. Revisa tu conexión y reintenta.");
     } finally {
       setOcupado("");
     }
   }
 
-  async function elegirWalletDemo() {
+  async function elegirWalletNavegador() {
     // Si ya hay una guardada, NO se reutiliza en silencio: en un teléfono
     // prestado o un computador compartido, esa wallet es de otra persona y
     // cargarla sin preguntar equivale a entrar con su identidad.
@@ -203,27 +206,27 @@ export default function Entrar() {
       setWalletMsg("");
       return;
     }
-    await crearWalletDemo(true);
+    await crearWalletNavegador(true);
   }
 
   function usarGuardada() {
     if (!walletGuardada) return;
     setWallet(walletGuardada.public);
     setSecret(walletGuardada.secret);
-    setIsDemo(true);
+    setWalletLocal(true);
     setName((n) => n.trim() || `${walletGuardada.public.slice(0, 4)}…${walletGuardada.public.slice(-4)}`);
-    setWalletMsg("Usando la wallet de prueba guardada en este navegador.");
+    setWalletMsg("Usando la wallet guardada en este navegador.");
     setWalletGuardada(null);
   }
 
   async function descartarGuardada() {
     try {
-      localStorage.removeItem("zelena_demo_wallet");
+      localStorage.removeItem(CLAVE_WALLET_NAVEGADOR);
     } catch {
       /* nada que borrar */
     }
     setWalletGuardada(null);
-    await crearWalletDemo(true);
+    await crearWalletNavegador(true);
   }
 
   async function connectFreighter() {
@@ -234,7 +237,7 @@ export default function Entrar() {
       const conn = await freighter.isConnected?.();
       const instalada = typeof conn === "object" ? conn.isConnected : conn;
       if (!instalada) {
-        setWalletMsg("No se detecta Freighter en este navegador. Instálalo desde freighter.app o usa la wallet de prueba.");
+        setWalletMsg("No se detecta Freighter en este navegador. Instálalo desde freighter.app o crea una wallet en este navegador.");
         return;
       }
       // PERMISO EXPLÍCITO: sin requestAccess, getAddress devuelve vacío en una
@@ -268,13 +271,13 @@ export default function Entrar() {
       const nombreRed = typeof red === "object" ? red?.network : red;
       setWallet(addr);
       setSecret("");
-      setIsDemo(false);
+      setWalletLocal(false);
       setName((n) => n.trim() || `${addr.slice(0, 4)}…${addr.slice(-4)}`);
       setWalletMsg(
         "Freighter conectado" + (nombreRed ? ` (red ${String(nombreRed).toLowerCase()})` : "") + "."
       );
     } catch {
-      setWalletMsg("Freighter no disponible en este navegador. Usa la wallet de prueba.");
+      setWalletMsg("Freighter no disponible en este navegador. Puedes crear una wallet aquí mismo.");
     } finally {
       setOcupado("");
     }
@@ -310,11 +313,11 @@ export default function Entrar() {
   }
 
   /**
-   * Firma `mensaje` con la wallet elegida: la de prueba firma aquí mismo; Freighter con
+   * Firma `mensaje` con la wallet elegida: la del navegador firma aquí mismo; Freighter con
    * `signMessage` (SEP-53). Devuelve la firma en base64, o null tras dejar el error a la vista.
    */
   async function firmarMensaje(mensaje: string): Promise<string | null> {
-    if (isDemo) {
+    if (walletLocal) {
       const { Keypair } = await import("@stellar/stellar-sdk");
       const kp = Keypair.fromSecret(secret);
       const sig = kp.sign(new TextEncoder().encode(mensaje) as unknown as Buffer);
@@ -325,7 +328,7 @@ export default function Entrar() {
       // Sin signMessage no hay firma real; NO enviar un placeholder (se anclaría
       // en la red sin valor probatorio — hallazgo H3). Bloquear el registro.
       setError(
-        "Esta versión de Freighter no permite firmar mensajes. Usa la wallet de prueba para completar el registro."
+        "Esta versión de Freighter no permite firmar mensajes. Actualízala o crea una wallet en este navegador."
       );
       return null;
     }
@@ -337,7 +340,7 @@ export default function Entrar() {
     }
     const firma = normalizarFirma(r?.signedMessage ?? r);
     if (!firma) {
-      setError("No se pudo leer la firma devuelta por Freighter. Reintenta o usa la wallet de prueba.");
+      setError("No se pudo leer la firma devuelta por Freighter. Reintenta o crea una wallet en este navegador.");
       return null;
     }
     setDetalle(`Firma recibida (${firma.length} caracteres base64) · wallet ${wallet.slice(0, 6)}…`);
@@ -396,7 +399,8 @@ export default function Entrar() {
       const res = await fetch("/api/onboard", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: code.trim(), wallet, name: name.trim(), isDemo, claHash, signature }),
+        // Si la cuenta es de demostración lo decide el servidor por el código, no el navegador.
+        body: JSON.stringify({ code: code.trim(), wallet, name: name.trim(), claHash, signature }),
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
@@ -571,10 +575,10 @@ export default function Entrar() {
             </p>
           </div>
 
-          {/* El camino principal es la wallet propia: la de prueba se registra como
-              cuenta de prueba (is_demo = 1), que no cuenta en las cifras públicas ni en
-              el equipo, y su clave vive solo en este navegador. Por eso va segunda y lo
-              dice. El nombre de la extensión queda tras "Ver detalle". */}
+          {/* El camino principal es la wallet propia (Freighter). La wallet creada en el
+              navegador es una cuenta REAL (decisión del founder, 2026-10-21: is_demo solo
+              para los códigos de demostración), pero su llave vive solo en este navegador:
+              por eso va segunda y lo avisa con claridad. */}
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-md border border-line-strong bg-surface-2 p-4">
               <p className="label">Tu propia wallet</p>
@@ -591,31 +595,36 @@ export default function Entrar() {
               <details className="mt-3 text-xs text-faint">
                 <summary className="cursor-pointer text-muted hover:text-primary">Ver detalle</summary>
                 <p className="mt-2 leading-6">
-                  Funciona con Freighter, la extensión de Stellar para el navegador (freighter.app). Es la opción para
-                  entrar como fundador o con tu wallet de siempre.
+                  Funciona con Freighter, la extensión de Stellar para el navegador (
+                  <a href="https://www.freighter.app/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                    freighter.app
+                  </a>
+                  ). Es la opción para entrar como fundador o con tu wallet de siempre.
                 </p>
               </details>
             </div>
             <div className="rounded-md border border-line bg-surface-2 p-4">
-              <p className="label">Wallet de prueba</p>
+              <p className="label">Wallet en este navegador</p>
               <p className="mt-1 text-xs text-muted">
-                Para mirar por dentro sin instalar nada. Es una cuenta de prueba: vive solo en este navegador y no
-                cuenta en las cifras públicas. Para trabajar en proyectos, usa tu propia wallet.
+                Si no tienes Freighter, creamos una aquí mismo, sin instalar nada. Es tu cuenta de verdad: con ella te
+                sumas a proyectos y registras tu asistencia.
               </p>
               <button
                 className="btn btn-ghost mt-3 w-full"
-                onClick={() => void elegirWalletDemo()}
+                onClick={() => void elegirWalletNavegador()}
                 disabled={ocupado !== ""}
               >
-                {ocupado === "demo" ? "Creando…" : "Crear wallet de prueba"}
+                {ocupado === "demo" ? "Creando…" : "Crear wallet en este navegador"}
               </button>
             </div>
           </div>
 
+          <AvisoLlaveNavegador />
+
           {walletGuardada ? (
             <div className="border border-primary/40 bg-glow p-4">
               <p className="text-sm text-paper">
-                En este navegador ya hay una wallet de prueba guardada:
+                En este navegador ya hay una wallet guardada:
               </p>
               <p className="mt-1 break-all font-mono text-sm text-primary">{walletGuardada.public}</p>
               <p className="mt-2 text-xs text-muted">
@@ -639,9 +648,9 @@ export default function Entrar() {
 
           {sinAlmacenamiento ? (
             <p className="border-l-2 border-primary-dim bg-surface-2 py-2 pl-3 text-xs leading-6 text-muted">
-              Tu navegador no permite guardar datos (suele pasar en modo privado). Tu wallet funciona igual para
-              firmar ahora, pero <span className="text-paper">no cierres esta pestaña</span> hasta terminar el
-              registro.
+              Tu navegador no permite guardar datos (suele pasar en modo privado). La wallet sirve para firmar
+              ahora, pero <span className="text-paper">al cerrar esta pestaña perderías el acceso a tu cuenta</span>.
+              Te recomendamos Freighter o abrir Zelena en una ventana normal.
             </p>
           ) : null}
 
@@ -649,7 +658,7 @@ export default function Entrar() {
           {wallet ? (
             <div className="rounded-md border border-primary/40 bg-glow p-3">
               <p className="text-xs text-faint">
-                {isDemo ? "Wallet de prueba, solo en este navegador" : "Tu wallet, conectada"}
+                {walletLocal ? "Tu wallet, guardada en este navegador" : "Tu wallet, conectada"}
               </p>
               <p className="break-all font-mono text-sm text-white">{wallet}</p>
             </div>

@@ -1390,13 +1390,13 @@ function autorizarCambioDeRol(db: DB, actor: TeamActor, initiativeId: number, wa
  * Vínculo por defecto: `externo` si `users.role = 'contributor'`, si no `interno`.
  */
 /**
- * Por qué no se suma (ni recibe trabajo) una cuenta de prueba. Antes salía "no está
- * activa en el registro", que era falso: la persona está activa, solo entró con la wallet
- * de prueba del navegador (hallazgo de la verificación final). Si una cuenta así debe
- * poder pasar a una wallet real es decisión del founder; aquí solo se dice la verdad.
+ * Por qué no se suma (ni recibe trabajo) una cuenta de demostración. Desde la decisión del
+ * founder (2026-10-21) solo lo son las cuentas sembradas y quien entró con un código de
+ * demostración: la wallet creada en el navegador con una invitación válida es una cuenta
+ * real (performOnboard).
  */
 export const COPY_CUENTA_DE_PRUEBA =
-  "Esa persona entró con una wallet de prueba: para trabajar en un proyecto tiene que entrar con su propia wallet.";
+  "Esa es una cuenta de demostración (entró con un código de demostración): para trabajar en un proyecto necesita una invitación real.";
 
 const COPY_NO_ACTIVA = "Esa persona no está activa en el registro.";
 

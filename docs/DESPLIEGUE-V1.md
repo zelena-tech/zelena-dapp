@@ -119,6 +119,13 @@ La app **sí migra** su base al arrancar (ruta SQLite de `lib/db.ts`), en este o
      reemplaza "Las etiquetas de proyecto pasan a Cliente y Comunidad". `/gobernanza` y `/comunidad`
      muestran solo la vigente, sin el texto original; el original sigue intacto en `decision_log`, con
      su huella, y el founder lo ve completo en `/admin` → Decisiones reemplazadas.
+   - **Cuentas con la wallet del navegador** (decisión del founder, 2026-10-21): desde ahora
+     `is_demo` lo decide el servidor por el código (solo los `GENESIS-0001…0006` de demostración dan
+     cuenta de demostración). La migración pasa a reales (`is_demo` 1 → 0, nunca al revés) las cuentas
+     ya registradas así si cumplen las cuatro: `is_founder = 0`; firmaron el acuerdo con una firma
+     que no es del seed (`seed-sig-…`); su wallet es una llave Stellar válida (las wallets del seed
+     son marcadores con la suma de verificación inválida); y no consumieron un código de
+     demostración. Deja una fila `cuenta_real` en `talent_events` (actor `migracion`) por cuenta.
 
 Es idempotente: el segundo arranque no cambia nada. En **desarrollo local** la base
 (`apps/web/data/zelena.db`) sigue siendo desechable si quieres empezar de cero, pero ya no hace

@@ -355,13 +355,12 @@ describe("lenguaje editorial en lo público", () => {
 });
 
 /**
- * La wallet de prueba se registra con `is_demo = 1`: no cuenta en las cifras de la
- * landing ("sin cuentas de prueba"), ni en el equipo ni en el dashboard, y su clave
- * vive solo en el navegador. Si fuera el botón principal, los invitados reales
- * quedarían como cuentas de prueba sin saberlo. El camino principal es la wallet
- * propia; la de prueba es la opción secundaria y lo dice.
+ * La wallet creada en el navegador es una cuenta REAL (decisión del founder, 2026-10-21:
+ * `is_demo` lo decide el servidor por el código de invitación), pero su llave vive solo
+ * en el navegador. El camino principal sigue siendo la wallet propia (Freighter); la del
+ * navegador es la opción secundaria y avisa, con claridad, de dónde vive la llave.
  */
-describe("/entrar · el camino principal es una cuenta real, no una de prueba", () => {
+describe("/entrar · el camino principal es la wallet propia; la del navegador avisa", () => {
   const src = leer("app/entrar/page.tsx");
 
   /** Etiqueta de apertura del botón que dispara `accion` (desde `<button` hasta el onClick). */
@@ -379,24 +378,39 @@ describe("/entrar · el camino principal es una cuenta real, no una de prueba", 
   }
 
   const CONECTAR = "onClick={connectFreighter}";
-  const PRUEBA = "onClick={() => void elegirWalletDemo()}";
+  const PRUEBA = "onClick={() => void elegirWalletNavegador()}";
 
   it("conectar tu propia wallet es el botón principal y está a la vista", () => {
     expect(boton(CONECTAR)).toContain("btn-primary");
     expect(trasVerDetalle(CONECTAR)).toBe(false);
   });
 
-  it("la wallet de prueba es la opción secundaria y avisa de lo que implica", () => {
+  it("la wallet del navegador es la opción secundaria, es una cuenta real y avisa de dónde vive la llave", () => {
     expect(boton(PRUEBA)).not.toContain("btn-primary");
     expect(src.indexOf(CONECTAR)).toBeLessThan(src.indexOf(PRUEBA));
     expect(src.replace(/\s+/g, " ")).toContain(
-      "Es una cuenta de prueba: vive solo en este navegador y no cuenta en las cifras públicas."
+      "Es tu cuenta de verdad: con ella te sumas a proyectos y registras tu asistencia."
     );
+    expect(src).toContain("<AvisoLlaveNavegador />");
+    const aviso = leer("src/components/AvisoLlaveNavegador.tsx").replace(/\s+/g, " ");
+    expect(aviso).toContain("la llave de esta wallet vive solo en este navegador");
+    expect(aviso).toContain("pierdes el acceso a tu cuenta");
+    expect(aviso).toContain("Freighter (freighter.app)");
+    expect(aviso).toContain("href={FREIGHTER_URL}");
+    expect(aviso).toContain('FREIGHTER_URL = "https://www.freighter.app/"');
   });
 
-  it("solo la wallet de prueba se registra como cuenta de prueba", () => {
-    expect(src.match(/setIsDemo\(true\)/g) ?? []).toHaveLength(2); // crear una nueva o usar la guardada
-    expect(src).toMatch(/async function connectFreighter\(\)[\s\S]*?setIsDemo\(false\)/);
+  it("el navegador ya no declara si la cuenta es de demostración: lo decide el servidor", () => {
+    expect(src).not.toMatch(/isDemo/);
+    expect(src.match(/setWalletLocal\(true\)/g) ?? []).toHaveLength(2); // crear una nueva o usar la guardada
+    expect(src).toMatch(/async function connectFreighter\(\)[\s\S]*?setWalletLocal\(false\)/);
+  });
+
+  it("/perfil avisa de la llave del navegador y lee is_demo de la base", () => {
+    const perfil = leer("app/perfil/page.tsx");
+    expect(perfil).toContain("<AvisoLlaveNavegador wallet={wallet} />");
+    expect(perfil).toContain("user.is_demo === 1");
+    expect(perfil).not.toMatch(/\{session\.isDemo \?/);
   });
 
   it("no le pone la etiqueta '(demo)' a nadie", () => {

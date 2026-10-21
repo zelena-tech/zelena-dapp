@@ -24,8 +24,12 @@ wallet → CLA anclado → Ágora → reputación → puntos ZWORK → decision 
 - **F2 (sin Postgres/Docker):** SQLite para dev. En Vercel NO persiste → migrar a
   Postgres/Turso (ver `deploy.md`); toda la DB está detrás de `lib/db.ts` para swap fácil.
 - **F3 (firma de mensajes Freighter):** el onboarding intenta Freighter y, si no expone
-  firma o no está instalado, ofrece una **wallet de prueba** (keypair generado client-side,
-  `is_demo=true`) que firma el hash del CLA localmente. Nada custodial.
+  firma o no está instalado, ofrece crear una **wallet en el navegador** (keypair generado
+  client-side, guardado solo en ese navegador) que firma el hash del CLA localmente. Nada
+  custodial. Desde la decisión del founder del 2026-10-21 es una cuenta **real**: `is_demo` lo
+  decide el servidor por el código de invitación (solo los `GENESIS-0001…0006` de demostración
+  y las cuentas sembradas son de demostración), y /entrar y /perfil avisan que la llave vive solo
+  en ese navegador y recomiendan Freighter.
 
 ## Modelo de datos (append-only donde importa)
 

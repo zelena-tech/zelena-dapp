@@ -14,6 +14,23 @@ export const FOUNDER_WALLET = founderWallet();
 // CLA_VERSION es legal, no evolutivo: NO va en el genoma (WP02).
 export const CLA_VERSION = 1;
 
+/**
+ * Las 6 invitaciones de demostración del seed (`GENESIS-0001..0006`). Exactas: /admin
+ * genera códigos reales con el MISMO prefijo. Viven aquí (módulo hoja) porque las usan el
+ * seed, que las siembra o las vence, y `performOnboard`, que decide con ellas si una cuenta
+ * nueva es de demostración (decisión del founder, 2026-10-21: `is_demo` queda SOLO para
+ * las cuentas sembradas y para quien entra con uno de estos códigos).
+ */
+export const DEMO_INVITE_CODES: readonly string[] = Array.from(
+  { length: 6 },
+  (_, i) => "GENESIS-" + String(i + 1).padStart(4, "0")
+);
+
+/** ¿Este código de invitación es uno de los de demostración? (Mayúsculas, como lo manda /entrar.) */
+export function esCodigoDemo(code: string): boolean {
+  return DEMO_INVITE_CODES.includes(code.trim().toUpperCase());
+}
+
 // NOTA (WP02): los parámetros EVOLUTIVOS del sistema (EPOCH_BUDGET, ACADEMIA_*,
 // TIER_INVITE_CAPS) ya NO viven aquí. Son configuración versionada en DB: léelos
 // SIEMPRE vía getActiveGenome() de lib/genome.ts. Nunca hardcodees valores nuevos.

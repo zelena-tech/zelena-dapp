@@ -286,7 +286,7 @@ function comprobarPersona(db: DB, wallet: string): void {
   const u = usuario(db, wallet);
   if (!u) throw new RitoError(401, COPY_ASISTENCIA.sinSesion, "sin_cuenta");
   if (u.status !== "active") throw new RitoError(403, "Esta cuenta no está activa.", "inactiva");
-  if (u.is_demo) throw new RitoError(403, "Las cuentas de prueba no registran asistencia.", "demo");
+  if (u.is_demo) throw new RitoError(403, "Las cuentas de demostración no registran asistencia.", "demo");
   if (!u.cla_signed) throw new RitoError(403, COPY_ASISTENCIA.sinAcuerdo, "sin_acuerdo");
 }
 
