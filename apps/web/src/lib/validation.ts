@@ -96,6 +96,7 @@ export const adminActionSchema = z.object({
     "revertGenome",
     "recordNoMutation",
     "createLatentAudit",
+    "publishProject",
   ]),
   applicationId: z.number().int().positive().optional(),
   projectId: z.number().int().positive().optional(),

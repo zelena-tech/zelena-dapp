@@ -300,6 +300,9 @@ export const COLUMNAS_NUEVAS: ReadonlyArray<{ tabla: string; columna: string; dd
   // Codigo de cohorte multiuso: NULL en max_uses = un solo uso (semantica original).
   { tabla: "invites", columna: "max_uses", ddl: "INTEGER" },
   { tabla: "invites", columna: "uses", ddl: "INTEGER NOT NULL DEFAULT 0" },
+  // Ágora: borrador y origen de la fila (decisión del founder, 2026-10-21; ver agora-borradores.ts).
+  { tabla: "projects", columna: "draft", ddl: "INTEGER NOT NULL DEFAULT 0" },
+  { tabla: "projects", columna: "origin", ddl: "TEXT" },
 ];
 
 /** Columnas de una tabla (vacío si no existe). */

@@ -122,7 +122,13 @@ CREATE TABLE IF NOT EXISTS projects (
   summary       TEXT NOT NULL,
   description   TEXT NOT NULL,
   acceptance    TEXT NOT NULL,        -- criterios de aceptacion (texto)
-  created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  -- Borrador (decisión del founder, 2026-10-21): 1 = no se ve en público ni recibe
+  -- aplicaciones; su estado del ciclo (`state`) no cambia. Se publica desde /admin.
+  draft         INTEGER NOT NULL DEFAULT 0,
+  -- De dónde salió la fila: 'seed' (proyecto sembrado), 'agora' (puente desde el
+  -- tablero) o NULL (sin clasificar). Solo lo usa la migración de borradores.
+  origin        TEXT
 );
 
 CREATE TABLE IF NOT EXISTS milestones (

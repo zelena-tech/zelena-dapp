@@ -5,7 +5,7 @@ import { adminActor } from "@/lib/authz";
 import { getDb } from "@/lib/db";
 import { listAcademia, listProjects, getMilestones } from "@/lib/repo";
 import { Tag, StateBadge, shortWallet, EmptyState } from "@/components/ui";
-import { nextAction, type ProjectState } from "@/lib/state-machine";
+import { esBorrador, nextAction, type ProjectState } from "@/lib/state-machine";
 import { currentEpoch, getActiveGenome } from "@/lib/genome";
 import { latestEpochFitness } from "@/lib/epochs";
 import { genomeLineage, pendingMutation } from "@/lib/mutation";
@@ -46,7 +46,8 @@ export default async function AdminPage() {
     status: string;
     project_title: string;
   }>;
-  const projects = listProjects();
+  // Con los borradores: aquí el founder los ve y los publica.
+  const projects = listProjects({ incluirBorradores: true });
   const academia = listAcademia(true);
   const epoch = currentEpoch(db);
   const fitness = latestEpochFitness(db);
@@ -392,8 +393,17 @@ export default async function AdminPage() {
                     <span className="text-sm font-semibold text-white">{p.title}</span>
                     <Tag type={p.type} />
                     <StateBadge state={p.state} />
+                    {esBorrador(p) ? <span className="tag border-amber-700/50 text-amber-300">borrador</span> : null}
                   </div>
                   <div className="flex items-center gap-2">
+                    {esBorrador(p) ? (
+                      <AdminAction
+                        action="publishProject"
+                        payload={{ projectId: p.id }}
+                        label="Publicar"
+                        variant="primary"
+                      />
+                    ) : null}
                     {p.assignee_wallet ? (
                       <span className="text-xs text-faint">ejecutor: {shortWallet(p.assignee_wallet)}</span>
                     ) : null}

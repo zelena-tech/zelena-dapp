@@ -92,17 +92,23 @@ export function cohortStats(db: DB = getDb()) {
   const contributors = (
     db.prepare(`SELECT COUNT(*) AS n FROM users WHERE role = 'contributor'`).get() as { n: number }
   ).n;
-  const bounties = (db.prepare(`SELECT COUNT(*) AS n FROM projects`).get() as { n: number }).n;
+  // Los borradores del Ágora no son públicos: no se cuentan.
+  const bounties = (db.prepare(`SELECT COUNT(*) AS n FROM projects WHERE draft = 0`).get() as { n: number }).n;
   const points = (db.prepare(`SELECT COALESCE(SUM(points),0) AS n FROM points_ledger`).get() as { n: number }).n;
   const clas = (db.prepare(`SELECT COUNT(*) AS n FROM cla_signatures`).get() as { n: number }).n;
   const genome = getActiveGenome(db);
   return { contributors, bounties, points, clas, epochBudget: genome.EPOCH_BUDGET, academiaBudget: genome.ACADEMIA_BUDGET };
 }
 
-export function listProjects(filters?: { type?: string; state?: string }) {
+/**
+ * Proyectos del Ágora. Por defecto SOLO los publicados: un borrador (`draft = 1`) no
+ * existe para el público. `/admin` pide `incluirBorradores` para poder publicarlos.
+ */
+export function listProjects(filters?: { type?: string; state?: string; incluirBorradores?: boolean }) {
   const db = getDb();
   const clauses: string[] = [];
   const params: string[] = [];
+  if (!filters?.incluirBorradores) clauses.push("draft = 0");
   if (filters?.type && (filters.type === "SAS" || filters.type === "DAO")) {
     clauses.push("type = ?");
     params.push(filters.type);
@@ -129,10 +135,16 @@ export interface ProjectRow {
   description: string;
   acceptance: string;
   created_at: string;
+  /** 1 = borrador: no se ve en público ni recibe aplicaciones (state-machine.ts). */
+  draft: number;
+  /** 'seed' | 'agora' | null (ver agora-borradores.ts). */
+  origin: string | null;
 }
 
-export function getProject(id: number): ProjectRow | undefined {
-  return getDb().prepare(`SELECT * FROM projects WHERE id = ?`).get(id) as ProjectRow | undefined;
+/** Un proyecto del Ágora. Un borrador no existe para el público (`/agora/[id]` → 404). */
+export function getProject(id: number, opts?: { incluirBorradores?: boolean }): ProjectRow | undefined {
+  const borrador = opts?.incluirBorradores ? "" : " AND draft = 0";
+  return getDb().prepare(`SELECT * FROM projects WHERE id = ?${borrador}`).get(id) as ProjectRow | undefined;
 }
 
 export function getMilestones(projectId: number) {

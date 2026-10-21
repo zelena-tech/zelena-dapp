@@ -11,6 +11,7 @@ import { GENOME_V1, seedGenomeV1, seedGenomeV2 } from "./genome";
 import { seedTeam } from "./team";
 import { createCohortInvite } from "./invites";
 import { ACADEMIA_S1, aplicarContenidoPublico } from "./contenido-publico";
+import { ORIGEN_SEMBRADO, marcarSembradosComoBorrador } from "./agora-borradores";
 
 const DELINA = "GDELINACONTRIBUTORDEMOAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 const MARCOS = "GMARCOSDEVDEMOBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB";
@@ -100,6 +101,10 @@ export function seedIfEmpty(db: DB, env: NodeJS.ProcessEnv = process.env): void 
   // Contenido público (WP31-E2): lleva una base con el contenido viejo a la forma que
   // `seed()` siembra hoy. Idempotente; si falla, el arranque sigue y se reintenta.
   try { aplicarContenidoPublico(db); } catch (e) { console.error("[seed] contenido público", e); }
+
+  // Ágora (decisión del founder, 2026-10-21): los proyectos sembrados de una base que ya
+  // existía pasan a borrador. Idempotente; si falla, el arranque sigue y se reintenta.
+  try { marcarSembradosComoBorrador(db); } catch (e) { console.error("[seed] borradores del Ágora", e); }
 }
 
 /**
@@ -213,9 +218,12 @@ function seed(db: DB, env: NodeJS.ProcessEnv = process.env): void {
   ).run(MARCOS, "cla:v1:" + MARCOS.slice(0, 12), sha256Hex(claText + MARCOS));
 
   // ---- Proyectos + hitos ----
+  // Nacen en BORRADOR y con `origin = 'seed'` (decisión del founder, 2026-10-21): son
+  // ejemplos y no se muestran en público hasta que el founder los publique desde
+  // /admin. Una base que ya los tenía los pasa a borrador `marcarSembradosComoBorrador`.
   const insProject = db.prepare(
-    `INSERT INTO projects (campaign, title, type, budget_usd, weeks, state, supervisor_wallet, summary, description, acceptance)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO projects (campaign, title, type, budget_usd, weeks, state, supervisor_wallet, summary, description, acceptance, draft, origin)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`
   );
   const insMs = db.prepare(
     `INSERT INTO milestones (project_id, ord, code, name, week, pct, amount_usd) VALUES (?, ?, ?, ?, ?, ?, ?)`
@@ -244,7 +252,8 @@ function seed(db: DB, env: NodeJS.ProcessEnv = process.env): void {
       FOUNDER_WALLET,
       p.summary,
       p.description,
-      p.acceptance
+      p.acceptance,
+      ORIGEN_SEMBRADO
     );
     const pid = info.lastInsertRowid as number;
     ms.forEach((m, i) => insMs.run(pid, i, m[0], m[1], m[2], m[3], m[4]));

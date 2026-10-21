@@ -4,7 +4,7 @@ import { getProject, getMilestones } from "@/lib/repo";
 import { getSession } from "@/lib/session";
 import { Tag, StateBadge, shortWallet } from "@/components/ui";
 import ApplyForm from "@/components/ApplyForm";
-import { PROJECT_STATES, type ProjectState } from "@/lib/state-machine";
+import { PROJECT_STATES, recibeAplicaciones, type ProjectState } from "@/lib/state-machine";
 import { etiquetaEstado } from "@/lib/agora-labels";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +12,7 @@ export const dynamic = "force-dynamic";
 export default async function ProjectDetail({ params }: { params: { id: string } }) {
   const id = Number(params.id);
   if (!Number.isInteger(id)) notFound();
+  // Un borrador no existe para el público: getProject no lo devuelve y la ficha es 404.
   const project = getProject(id);
   if (!project) notFound();
   const milestones = getMilestones(id);
@@ -139,7 +140,7 @@ export default async function ProjectDetail({ params }: { params: { id: string }
             </div>
           </div>
 
-          {project.state === "Open" ? (
+          {recibeAplicaciones(project) ? (
             session ? (
               <ApplyForm projectId={project.id} />
             ) : (

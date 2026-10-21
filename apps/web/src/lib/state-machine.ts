@@ -42,6 +42,28 @@ export function canTransition(current: ProjectState, action: ProjectAction): boo
   return !!rule && rule.from === current;
 }
 
+/**
+ * Borrador (decisión del founder, 2026-10-21). Es una marca APARTE del ciclo: un
+ * proyecto en borrador conserva su estado (`Open`, `Assigned`…) y, al publicarlo,
+ * sigue exactamente donde estaba. Mientras está en borrador no se ve en público
+ * (`/agora`, `/agora/[id]` responde 404, la landing no lo cuenta), no recibe
+ * aplicaciones y no se asigna. Publicarlo es del founder, desde /admin.
+ */
+export interface VisibilidadProyecto {
+  state: string;
+  /** `projects.draft`: 1 = borrador. */
+  draft: number | boolean | null | undefined;
+}
+
+export function esBorrador(p: Pick<VisibilidadProyecto, "draft">): boolean {
+  return Number(p.draft ?? 0) === 1;
+}
+
+/** ¿Recibe aplicaciones? Solo un proyecto publicado (no borrador) y `Open`. */
+export function recibeAplicaciones(p: VisibilidadProyecto): boolean {
+  return !esBorrador(p) && p.state === "Open";
+}
+
 export function nextAction(current: ProjectState): ProjectAction | null {
   switch (current) {
     case "Open":

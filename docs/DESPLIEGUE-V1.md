@@ -96,8 +96,8 @@ La app **sí migra** su base al arrancar (ruta SQLite de `lib/db.ts`), en este o
    forma legado de la línea desplegada), hace un **respaldo automático**
    `VACUUM INTO '<base>.pre-fusion-<fechaISO>.db'` junto a la base. Si el respaldo falla,
    **no migra** y el arranque falla con un mensaje claro.
-2. `applyMigrations`: `ALTER TABLE ADD COLUMN` para `users.role/is_supervisor/entra_oid/auth_provider`
-   e `invites.max_uses/uses`, solo si faltan.
+2. `applyMigrations`: `ALTER TABLE ADD COLUMN` para `users.role/is_supervisor/entra_oid/auth_provider`,
+   `invites.max_uses/uses` y `projects.draft/origin`, solo si faltan.
 3. Aparta las tablas legado del equipo (`_legado_*`), crea las de v1 con `schema.sql`, copia las
    filas con el mapeo de valores (prioridad, horizonte, acciones) conservando los ids y borra las
    `_legado_*`. Un valor desconocido **aborta** sin cambios.
@@ -106,6 +106,14 @@ La app **sí migra** su base al arrancar (ruta SQLite de `lib/db.ts`), en este o
    la fila `is_founder=1` o `wallet = FOUNDER_WALLET` (el gate de antes queda como **dato** de la base,
    no como regla de código). Este paso corre en **cada** arranque, no solo en el que migra: ver
    "Acceso del founder".
+5. Migraciones de datos, cada una en su propio `try/catch` (si una falla, el arranque sigue y se
+   reintenta en el siguiente), idempotentes y sin borrar nada:
+   - **Borradores del Ágora** (decisión del founder, 2026-10-21): los proyectos sembrados pasan a
+     borrador (`projects.draft = 1`, `origin = 'seed'`). Se reconocen por su origen, no por su nombre:
+     sin entrega del tablero enlazada, con un hito `ord = 0` (el seed numera desde 0; el puente del
+     Ágora, desde 1) y con supervisor `is_founder = 1`. No se ven en `/agora` (la ficha da 404), ni en
+     las cifras de la landing, ni reciben aplicaciones. El founder los publica desde `/admin` →
+     Proyectos → **Publicar**, y un proyecto publicado no vuelve a borrador al reiniciar.
 
 Es idempotente: el segundo arranque no cambia nada. En **desarrollo local** la base
 (`apps/web/data/zelena.db`) sigue siendo desechable si quieres empezar de cero, pero ya no hace

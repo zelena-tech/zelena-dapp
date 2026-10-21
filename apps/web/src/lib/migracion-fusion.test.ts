@@ -42,7 +42,10 @@ const HUELLA: Record<string, string> = {
   invites: "SELECT code, issuer_wallet, used_by, expires_at, max_uses, uses, created_at FROM invites ORDER BY code",
   cla_signatures: "SELECT * FROM cla_signatures ORDER BY id",
   anchor_queue: "SELECT * FROM anchor_queue ORDER BY id",
-  projects: "SELECT * FROM projects ORDER BY id",
+  // Columnas originales: `draft` y `origin` son nuevas (borradores del Ágora, 2026-10-21) y el
+  // fixture no tiene proyectos sembrados (sus hitos empiezan en 1), así que ninguna fila cambia.
+  projects:
+    "SELECT id, campaign, title, type, budget_usd, weeks, state, supervisor_wallet, assignee_wallet, summary, description, acceptance, created_at FROM projects ORDER BY id",
   milestones: "SELECT * FROM milestones ORDER BY id",
   applications: "SELECT * FROM applications ORDER BY id",
   reputation_events: "SELECT * FROM reputation_events ORDER BY id",
@@ -184,7 +187,15 @@ describe("migración de la base de producción (forma 58ee2fd → v1)", () => {
     const inf = prepararSqlite(db, { archivo: file, founderWallet: JOHN_REAL, ahora: AHORA });
 
     expect(inf.migro).toBe(true);
-    expect(inf.preColumnas).toEqual(["users.role", "users.entra_oid", "users.auth_provider"]);
+    expect(inf.preColumnas).toEqual([
+      "users.role",
+      "users.entra_oid",
+      "users.auth_provider",
+      "projects.draft",
+      "projects.origin",
+    ]);
+    // El proyecto del fixture no es sembrado (hitos desde 1): sigue publicado.
+    expect(db.prepare(`SELECT draft, origin FROM projects`).all()).toEqual([{ draft: 0, origin: null }]);
     expect(inf.apartado).toBe(true);
     expect(inf.copiado).toEqual({ assignment_events: 5, checkins: 1, assignments: 3, initiatives: 2 });
     // decision_log y genome_versions como prefijo: lo previo, idéntico…

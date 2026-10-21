@@ -1,6 +1,6 @@
 /** Operaciones de administración (solo founder). Mutan estado con guardas. */
 import { getDb, type DB } from "./db";
-import { transition, nextAction, type ProjectState } from "./state-machine";
+import { transition, nextAction, esBorrador, type ProjectState } from "./state-machine";
 import { violatesB8, withinEpochBudget } from "./rules";
 import { FOUNDER_WALLET } from "./config";
 import { getActiveGenome, currentEpoch } from "./genome";
@@ -13,9 +13,11 @@ export function approveApplication(appId: number): void {
     | undefined;
   if (!app) throw new Error("Aplicación no encontrada.");
   const project = db.prepare(`SELECT * FROM projects WHERE id = ?`).get(app.project_id) as
-    | { id: number; state: ProjectState }
+    | { id: number; state: ProjectState; draft: number }
     | undefined;
   if (!project) throw new Error("Proyecto no encontrado.");
+  // Un borrador no recibe aplicaciones ni se asigna (state-machine.ts): primero se publica.
+  if (esBorrador(project)) throw new Error("El proyecto está en borrador: publícalo antes de asignarlo.");
   const tx = db.transaction(() => {
     db.prepare(`UPDATE applications SET status = 'approved' WHERE id = ?`).run(appId);
     // Asigna el proyecto: Open → Assigned
