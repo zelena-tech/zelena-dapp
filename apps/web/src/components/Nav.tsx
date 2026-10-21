@@ -3,6 +3,7 @@ import { getDb } from "@/lib/db";
 import { accesoEquipo as tieneAccesoEquipo, claimsPuedenAdministrar, clientActor } from "@/lib/authz";
 import { listClientsFor } from "@/lib/clients";
 import { esEquipoInterno, puedeVerTodoElEquipo } from "@/lib/roles";
+import { esDemoSegunBase } from "@/lib/salir";
 import type { SessionData } from "@/lib/jwt";
 import { Logo, shortWallet } from "./ui";
 import SalirButton from "./SalirButton";
@@ -42,6 +43,22 @@ function hayClientes(session: SessionData | null): boolean {
     return !!actor && listClientsFor(db, actor).length > 0;
   } catch (e) {
     console.error("[nav] clientes", e);
+    return false;
+  }
+}
+
+/**
+ * ¿Se ofrece "Salir y borrar mi wallet de este equipo"? Solo a una cuenta de demostración
+ * SEGÚN LA BASE, nunca según la cookie: la migración del arranque pasa a reales las cuentas
+ * con la wallet del navegador y su cookie conserva `isDemo` hasta 24 h; a una cuenta real,
+ * borrar esa llave le quita el acceso para siempre (lib/salir.ts). Si la base no responde,
+ * no se ofrece.
+ */
+function cuentaDemo(session: SessionData): boolean {
+  try {
+    return esDemoSegunBase(getDb(), session.wallet);
+  } catch (e) {
+    console.error("[nav] cuenta de demostración", e);
     return false;
   }
 }
@@ -89,7 +106,7 @@ export default function Nav({ session }: { session: SessionData | null }) {
           puedeVerTodo={puedeVerTodo}
           conClientes={conClientes}
           accesoDao={accesoDao}
-          salir={session ? <SalirButton esDemo={session.isDemo} /> : null}
+          salir={session ? <SalirButton esDemo={cuentaDemo(session)} /> : null}
         />
       </nav>
     </header>
