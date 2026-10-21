@@ -1,0 +1,174 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2300 2830" width="2300" height="2830" font-family="Segoe UI, Arial, sans-serif" font-size="13">
+<title>Telegram: vinculación, webhook, comandos y focos del día</title>
+<defs><marker id="punta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker></defs>
+<rect width="2300" height="2830" fill="#ffffff"/>
+<rect x="50" y="45" width="180" height="195" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="58" y="63" fill="#c0392b">Internet: navegador de la persona</text>
+<rect x="1370" y="315" width="510" height="195" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="1378" y="333" fill="#c0392b">Tercero: Telegram (app y Bot API)</text>
+<rect x="1370" y="585" width="180" height="195" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="1378" y="603" fill="#c0392b">Tercero: Anthropic</text>
+<rect x="380" y="855" width="1500" height="765" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="388" y="873" fill="#c0392b">Azure App Service: proceso Next.js</text>
+<rect x="710" y="1965" width="1500" height="765" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="718" y="1983" fill="#c0392b">Datos y configuración del servidor (SQLite / Azure SQL y App Settings)</text>
+<rect x="1700" y="1695" width="180" height="195" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="1708" y="1713" fill="#c0392b">Máquina de desarrollo (solo local)</text>
+<path d="M185,150 Q251,571 425,960" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="278" y="563" text-anchor="middle" font-size="11" fill="#b03a2e">f1 Abrir /equipo/telegram *</text>
+<path d="M185,150 Q251,664 425,1150" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="278" y="657" text-anchor="middle" font-size="11" fill="#b03a2e">f2 Generar código / desvincular *</text>
+<path d="M1745,2070 Q1679,1503 1505,960" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1652" y="1509" text-anchor="middle" font-size="11" fill="#555">f3 ¿Entra a /equipo?</text>
+<path d="M515,1150 Q669,1099 755,960" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="652" y="1077" text-anchor="middle" font-size="11" fill="#555">f4 Emitir para su wallet</text>
+<path d="M800,1005 Q744,1515 800,2025" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="772" y="1515" text-anchor="middle" font-size="11" fill="#b03a2e">f5 Guardar hash del código *</text>
+<path d="M425,1150 Q359,636 185,150" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="332" y="643" text-anchor="middle" font-size="11" fill="#b03a2e">f6 Código en claro (una sola vez) *</text>
+<path d="M1745,420 Q1625,364 1505,420" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1625" y="392" text-anchor="middle" font-size="11" fill="#b03a2e">f7 «/start CÓDIGO» y comandos *</text>
+<path d="M1460,465 Q1404,785 1460,1105" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1432" y="785" text-anchor="middle" font-size="11" fill="#b03a2e">f8 Update *</text>
+<path d="M1745,2640 Q1681,1887 1505,1150" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1653" y="1891" text-anchor="middle" font-size="11" fill="#b03a2e">f9 Flag y secretos *</text>
+<path d="M1415,1150 Q1329,1011 1175,960" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1312" y="1033" text-anchor="middle" font-size="11" fill="#555">f10 Atender</text>
+<path d="M1130,1005 Q1074,1055 1130,1105" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1102" y="1055" text-anchor="middle" font-size="11" fill="#b03a2e">f11 Alta con código *</text>
+<path d="M1085,1150 Q911,1596 845,2070" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="1603" text-anchor="middle" font-size="11" fill="#b03a2e">f12 Completar vínculo *</text>
+<path d="M845,2070 Q1019,1527 1085,960" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="992" y="1521" text-anchor="middle" font-size="11" fill="#b03a2e">f13 ¿Quién escribe? *</text>
+<path d="M1175,960 Q1295,1016 1415,960" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1295" y="988" text-anchor="middle" font-size="11" fill="#555">f14 Puerta en cada mensaje</text>
+<path d="M1175,960 Q1247,1180 1415,1340" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1271" y="1165" text-anchor="middle" font-size="11" fill="#555">f15 Comando o herramienta</text>
+<path d="M1175,960 Q1243,1267 1415,1530" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1269" y="1256" text-anchor="middle" font-size="11" fill="#555">f16 /focos</text>
+<path d="M1745,2260 Q1679,1786 1505,1340" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1652" y="1793" text-anchor="middle" font-size="11" fill="#555">f17 Tablero</text>
+<path d="M1745,2260 Q1679,1877 1505,1530" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1652" y="1886" text-anchor="middle" font-size="11" fill="#555">f18 Candidatas</text>
+<path d="M1505,1340 Q1571,1907 1745,2450" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1598" y="1901" text-anchor="middle" font-size="11" fill="#555">f19 Borrador / nota</text>
+<path d="M1505,1340 Q1571,1814 1745,2260" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1598" y="1807" text-anchor="middle" font-size="11" fill="#555">f20 Escritura confirmada (solo founder)</text>
+<path d="M1175,960 Q1337,863 1415,690" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1316" y="844" text-anchor="middle" font-size="11" fill="#b03a2e">f21 Clasificar texto libre *</text>
+<path d="M1415,690 Q1253,787 1175,960" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1274" y="806" text-anchor="middle" font-size="11" fill="#555">f22 Decisión</text>
+<path d="M1175,960 Q1241,1527 1415,2070" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1268" y="1521" text-anchor="middle" font-size="11" fill="#b03a2e">f23 Log de cada acción *</text>
+<path d="M1175,960 Q1347,712 1415,420" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1321" y="701" text-anchor="middle" font-size="11" fill="#b03a2e">f24 Respuesta *</text>
+<path d="M1505,420 Q1625,476 1745,420" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1625" y="448" text-anchor="middle" font-size="11" fill="#555">f25 Mensaje entregado</text>
+<path d="M1505,2070 Q1679,1527 1745,960" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1652" y="1521" text-anchor="middle" font-size="11" fill="#b03a2e">f26 Log del bot *</text>
+<path d="M1745,1800 Q1681,1100 1505,420" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1653" y="1105" text-anchor="middle" font-size="11" fill="#b03a2e">f27 getUpdates (local) *</text>
+<path d="M1745,1800 Q1677,1455 1505,1150" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1651" y="1465" text-anchor="middle" font-size="11" fill="#b03a2e">f28 Reenvío al mismo handler (local) *</text>
+<path d="M2075,2070 Q1997,1897 1835,1800" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1976" y="1916" text-anchor="middle" font-size="11" fill="#b03a2e">f29 Hora de los focos *</text>
+<path d="M755,2070 Q689,1503 515,960" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="662" y="1509" text-anchor="middle" font-size="11" fill="#555">f30 ¿Ya vinculado?</text>
+<path d="M425,960 Q359,539 185,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="332" y="547" text-anchor="middle" font-size="11" fill="#555">f31 Estado del vínculo</text>
+<rect x="90" y="100" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="140" y="138" text-anchor="middle" fill="#222">Persona del</text>
+<text x="140" y="154" text-anchor="middle" fill="#222">equipo</text>
+<text x="140" y="170" text-anchor="middle" fill="#222">(navegador)</text>
+<rect x="1740" y="370" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1790" y="408" text-anchor="middle" fill="#222">Persona en la</text>
+<text x="1790" y="424" text-anchor="middle" fill="#222">app de</text>
+<text x="1790" y="440" text-anchor="middle" fill="#222">Telegram</text>
+<rect x="1410" y="370" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="416" text-anchor="middle" fill="#222">Bot API de</text>
+<text x="1460" y="432" text-anchor="middle" fill="#222">Telegram</text>
+<rect x="1410" y="640" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="670" text-anchor="middle" fill="#222">API de</text>
+<text x="1460" y="686" text-anchor="middle" fill="#222">Anthropic</text>
+<text x="1460" y="702" text-anchor="middle" fill="#222">(texto libre,</text>
+<text x="1460" y="718" text-anchor="middle" fill="#222">opcional)</text>
+<circle cx="470" cy="960" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="956" text-anchor="middle" fill="#222">Página</text>
+<text x="470" y="972" text-anchor="middle" fill="#222">/equipo/telegram</text>
+<circle cx="470" cy="1150" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="1138" text-anchor="middle" fill="#222">API</text>
+<text x="470" y="1154" text-anchor="middle" fill="#222">/api/telegram/vincular</text>
+<text x="470" y="1170" text-anchor="middle" fill="#222">(GET y POST)</text>
+<circle cx="1460" cy="960" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="956" text-anchor="middle" fill="#222">Puerta de</text>
+<text x="1460" y="972" text-anchor="middle" fill="#222">/equipo</text>
+<circle cx="800" cy="960" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="956" text-anchor="middle" fill="#222">Emitir código</text>
+<text x="800" y="972" text-anchor="middle" fill="#222">de un solo uso</text>
+<circle cx="1460" cy="1150" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="1146" text-anchor="middle" fill="#222">Webhook</text>
+<text x="1460" y="1162" text-anchor="middle" fill="#222">/api/telegram/webhook</text>
+<circle cx="1130" cy="960" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="956" text-anchor="middle" fill="#222">Orquestador</text>
+<text x="1130" y="972" text-anchor="middle" fill="#222">del bot</text>
+<circle cx="1130" cy="1150" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="1138" text-anchor="middle" fill="#222">Consumir</text>
+<text x="1130" y="1154" text-anchor="middle" fill="#222">código y</text>
+<text x="1130" y="1170" text-anchor="middle" fill="#222">vincular chat</text>
+<circle cx="1460" cy="1340" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="1328" text-anchor="middle" fill="#222">Herramientas y</text>
+<text x="1460" y="1344" text-anchor="middle" fill="#222">comandos del</text>
+<text x="1460" y="1360" text-anchor="middle" fill="#222">bot</text>
+<circle cx="1460" cy="1530" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="1526" text-anchor="middle" fill="#222">Los 3 focos</text>
+<text x="1460" y="1542" text-anchor="middle" fill="#222">del día</text>
+<circle cx="1790" cy="960" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1790" y="940" text-anchor="middle" fill="#222">Panel /admin</text>
+<text x="1790" y="956" text-anchor="middle" fill="#222">(alta del</text>
+<text x="1790" y="972" text-anchor="middle" fill="#222">founder y log</text>
+<text x="1790" y="988" text-anchor="middle" fill="#222">del bot)</text>
+<circle cx="1790" cy="1800" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1790" y="1772" text-anchor="middle" fill="#222">Puente de</text>
+<text x="1790" y="1788" text-anchor="middle" fill="#222">polling local</text>
+<text x="1790" y="1804" text-anchor="middle" fill="#222">y envío de</text>
+<text x="1790" y="1820" text-anchor="middle" fill="#222">focos (solo</text>
+<rect x="750" y="2040" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="750" y1="2040" x2="850" y2="2040" stroke="#222" stroke-width="1.5"/>
+<line x1="750" y1="2100" x2="850" y2="2100" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="2074" text-anchor="middle" fill="#222">telegram_links</text>
+<rect x="1740" y="2040" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1740" y1="2040" x2="1840" y2="2040" stroke="#222" stroke-width="1.5"/>
+<line x1="1740" y1="2100" x2="1840" y2="2100" stroke="#222" stroke-width="1.5"/>
+<text x="1790" y="2066" text-anchor="middle" fill="#222">users +</text>
+<text x="1790" y="2082" text-anchor="middle" fill="#222">project_members</text>
+<rect x="1740" y="2230" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1740" y1="2230" x2="1840" y2="2230" stroke="#222" stroke-width="1.5"/>
+<line x1="1740" y1="2290" x2="1840" y2="2290" stroke="#222" stroke-width="1.5"/>
+<text x="1790" y="2240" text-anchor="middle" fill="#222">assignments +</text>
+<text x="1790" y="2256" text-anchor="middle" fill="#222">assignment_events</text>
+<text x="1790" y="2272" text-anchor="middle" fill="#222">+ checkins +</text>
+<text x="1790" y="2288" text-anchor="middle" fill="#222">initiatives</text>
+<rect x="1740" y="2420" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1740" y1="2420" x2="1840" y2="2420" stroke="#222" stroke-width="1.5"/>
+<line x1="1740" y1="2480" x2="1840" y2="2480" stroke="#222" stroke-width="1.5"/>
+<text x="1790" y="2446" text-anchor="middle" fill="#222">bot_drafts +</text>
+<text x="1790" y="2462" text-anchor="middle" fill="#222">notes</text>
+<rect x="1410" y="2040" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1410" y1="2040" x2="1510" y2="2040" stroke="#222" stroke-width="1.5"/>
+<line x1="1410" y1="2100" x2="1510" y2="2100" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="2074" text-anchor="middle" fill="#222">bot_actions</text>
+<rect x="2070" y="2040" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="2070" y1="2040" x2="2170" y2="2040" stroke="#222" stroke-width="1.5"/>
+<line x1="2070" y1="2100" x2="2170" y2="2100" stroke="#222" stroke-width="1.5"/>
+<text x="2120" y="2058" text-anchor="middle" fill="#222">genome_versions</text>
+<text x="2120" y="2074" text-anchor="middle" fill="#222">(DAILY_FOCUS_HOUR,</text>
+<text x="2120" y="2090" text-anchor="middle" fill="#222">BUSINESS_TZ)</text>
+<rect x="1740" y="2610" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1740" y1="2610" x2="1840" y2="2610" stroke="#222" stroke-width="1.5"/>
+<line x1="1740" y1="2670" x2="1840" y2="2670" stroke="#222" stroke-width="1.5"/>
+<text x="1790" y="2596" text-anchor="middle" fill="#222">Variables de</text>
+<text x="1790" y="2612" text-anchor="middle" fill="#222">entorno</text>
+<text x="1790" y="2628" text-anchor="middle" fill="#222">(TELEGRAM_ENABLED,</text>
+<text x="1790" y="2644" text-anchor="middle" fill="#222">TELEGRAM_BOT_TOKEN,</text>
+<text x="90" y="2810" font-size="11" fill="#777">Telegram: vinculación, webhook, comandos y focos del día · docs/dfd/telegram.json · commit 0e07d8f · * = flujo con datos sensibles</text>
+</svg>

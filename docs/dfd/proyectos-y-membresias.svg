@@ -1,0 +1,204 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1310 3160" width="1310" height="3160" font-family="Segoe UI, Arial, sans-serif" font-size="13">
+<title>Proyectos (iniciativas), membresías con rol, permisos por proyecto y tablero</title>
+<defs><marker id="punta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker></defs>
+<rect width="1310" height="3160" fill="#ffffff"/>
+<rect x="50" y="45" width="510" height="385" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="58" y="63" fill="#c0392b">Navegador (fuera de nuestro control)</text>
+<rect x="380" y="505" width="840" height="1335" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="388" y="523" fill="#c0392b">Servidor Next.js (Azure App Service)</text>
+<rect x="1040" y="1915" width="180" height="1145" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="1048" y="1933" fill="#c0392b">Base de datos SQLite de la app</text>
+<path d="M185,150 Q255,406 425,610" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="280" y="393" text-anchor="middle" font-size="11" fill="#b03a2e">f1 Abrir proyectos o un tablero *</text>
+<path d="M470,655 Q414,705 470,755" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="442" y="705" text-anchor="middle" font-size="11" fill="#b03a2e">f2 Lista con sesión válida *</text>
+<path d="M470,655 Q414,800 470,945" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="442" y="800" text-anchor="middle" font-size="11" fill="#b03a2e">f3 Tablero con sesión válida *</text>
+<path d="M515,800 Q601,939 755,990" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="618" y="917" text-anchor="middle" font-size="11" fill="#b03a2e">f4 Puerta de la lista *</text>
+<path d="M515,990 Q635,1046 755,990" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="635" y="1018" text-anchor="middle" font-size="11" fill="#b03a2e">f5 Puerta del tablero *</text>
+<path d="M845,990 Q911,1517 1085,2020" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="1511" text-anchor="middle" font-size="11" fill="#b03a2e">f6 Leer rol, estado y acuerdo *</text>
+<path d="M845,990 Q911,1610 1085,2210" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="1605" text-anchor="middle" font-size="11" fill="#555">f7 Leer membresías</text>
+<path d="M515,800 Q587,1020 755,1180" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="611" y="1005" text-anchor="middle" font-size="11" fill="#555">f8 Proyectos que ve</text>
+<path d="M515,990 Q601,1129 755,1180" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="618" y="1107" text-anchor="middle" font-size="11" fill="#555">f9 ¿Ve el proyecto? ¿Qué puede hacer?</text>
+<path d="M845,1180 Q1017,917 1085,610" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="991" y="906" text-anchor="middle" font-size="11" fill="#555">f10 Permisos según rol global y roles del proyecto</text>
+<path d="M845,1180 Q911,1707 1085,2210" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="1701" text-anchor="middle" font-size="11" fill="#555">f11 Leer proyecto y roles</text>
+<path d="M845,1180 Q911,1800 1085,2400" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="1795" text-anchor="middle" font-size="11" fill="#555">f12 ¿Participa en el cliente?</text>
+<path d="M515,990 Q583,1297 755,1560" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="609" y="1286" text-anchor="middle" font-size="11" fill="#555">f13 Armar columnas con filtros</text>
+<path d="M845,1560 Q911,2087 1085,2590" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="2081" text-anchor="middle" font-size="11" fill="#555">f14 Leer las piezas del proyecto</text>
+<path d="M845,1560 Q909,2275 1085,2970" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="937" y="2270" text-anchor="middle" font-size="11" fill="#555">f15 Zona horaria del negocio</text>
+<path d="M515,800 Q581,1196 755,1560" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="608" y="1188" text-anchor="middle" font-size="11" fill="#555">f16 Resumen por proyecto</text>
+<path d="M515,990 Q587,1210 755,1370" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="611" y="1195" text-anchor="middle" font-size="11" fill="#555">f17 Miembros y candidatos</text>
+<path d="M515,990 Q581,1386 755,1750" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="608" y="1378" text-anchor="middle" font-size="11" fill="#555">f18 Clientes elegibles (founder o supervisión)</text>
+<path d="M845,1750 Q913,2095 1085,2400" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="939" y="2085" text-anchor="middle" font-size="11" fill="#555">f19 Leer clientes</text>
+<path d="M425,990 Q359,554 185,150" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="332" y="562" text-anchor="middle" font-size="11" fill="#b03a2e">f20 HTML del tablero *</text>
+<path d="M425,800 Q357,455 185,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="331" y="465" text-anchor="middle" font-size="11" fill="#555">f21 HTML de la lista</text>
+<path d="M185,150 Q305,206 425,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="305" y="178" text-anchor="middle" font-size="11" fill="#555">f22 Crear o editar un proyecto</text>
+<path d="M515,150 Q585,406 755,610" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="610" y="393" text-anchor="middle" font-size="11" fill="#b03a2e">f23 Guardar el proyecto *</text>
+<path d="M185,150 Q271,289 425,340" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="288" y="267" text-anchor="middle" font-size="11" fill="#b03a2e">f24 Sumar o quitar a alguien *</text>
+<path d="M515,340 Q585,596 755,800" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="610" y="583" text-anchor="middle" font-size="11" fill="#b03a2e">f25 Cambiar un rol *</text>
+<path d="M800,655 Q744,800 800,945" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="772" y="800" text-anchor="middle" font-size="11" fill="#b03a2e">f26 Puerta de la ruta *</text>
+<path d="M800,845 Q744,895 800,945" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="772" y="895" text-anchor="middle" font-size="11" fill="#b03a2e">f27 Puerta de la ruta *</text>
+<path d="M845,610 Q917,830 1085,990" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="941" y="815" text-anchor="middle" font-size="11" fill="#b03a2e">f28 Contar la solicitud *</text>
+<path d="M845,800 Q931,939 1085,990" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="948" y="917" text-anchor="middle" font-size="11" fill="#b03a2e">f29 Contar la solicitud *</text>
+<path d="M845,610 Q931,749 1085,800" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="948" y="727" text-anchor="middle" font-size="11" fill="#555">f30 Crear o editar validado</text>
+<path d="M800,845 Q744,1085 800,1325" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="772" y="1085" text-anchor="middle" font-size="11" fill="#555">f31 Alta o baja validada</text>
+<path d="M1085,800 Q917,960 845,1180" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="941" y="975" text-anchor="middle" font-size="11" fill="#555">f32 ¿Planifica este proyecto?</text>
+<path d="M1130,845 Q1074,1505 1130,2165" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1102" y="1505" text-anchor="middle" font-size="11" fill="#555">f33 Guardar el proyecto</text>
+<path d="M1130,845 Q1074,1600 1130,2355" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1102" y="1600" text-anchor="middle" font-size="11" fill="#555">f34 ¿Existe el cliente?</text>
+<path d="M800,1325 Q856,1275 800,1225" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="828" y="1275" text-anchor="middle" font-size="11" fill="#555">f35 ¿Planifica? ¿Qué roles concede?</text>
+<path d="M845,1370 Q913,1715 1085,2020" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="939" y="1705" text-anchor="middle" font-size="11" fill="#b03a2e">f36 ¿Activa y con acuerdo? *</text>
+<path d="M845,1370 Q911,1806 1085,2210" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="1798" text-anchor="middle" font-size="11" fill="#555">f37 Guardar o borrar la membresía</text>
+<path d="M845,1370 Q911,1990 1085,2590" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="1985" text-anchor="middle" font-size="11" fill="#555">f38 ¿Le quedan entregas abiertas?</text>
+<path d="M1130,845 Q1074,1790 1130,2735" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1102" y="1790" text-anchor="middle" font-size="11" fill="#555">f39 Registrar el cambio de proyecto</text>
+<path d="M845,1370 Q909,2085 1085,2780" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="937" y="2080" text-anchor="middle" font-size="11" fill="#b03a2e">f40 Registrar el cambio de rol *</text>
+<path d="M755,610 Q685,354 515,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="660" y="367" text-anchor="middle" font-size="11" fill="#555">f41 Resultado</text>
+<path d="M755,800 Q685,544 515,340" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="660" y="557" text-anchor="middle" font-size="11" fill="#555">f42 Resultado</text>
+<rect x="90" y="100" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="140" y="114" text-anchor="middle" fill="#222">Founder,</text>
+<text x="140" y="130" text-anchor="middle" fill="#222">supervisión o</text>
+<text x="140" y="146" text-anchor="middle" fill="#222">persona con</text>
+<text x="140" y="162" text-anchor="middle" fill="#222">rol en el</text>
+<circle cx="470" cy="150" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="138" text-anchor="middle" fill="#222">Formulario de</text>
+<text x="470" y="154" text-anchor="middle" fill="#222">proyecto</text>
+<text x="470" y="170" text-anchor="middle" fill="#222">(TeamProjectForm)</text>
+<circle cx="470" cy="340" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="328" text-anchor="middle" fill="#222">Panel de</text>
+<text x="470" y="344" text-anchor="middle" fill="#222">miembros</text>
+<text x="470" y="360" text-anchor="middle" fill="#222">(TeamMembersPanel)</text>
+<circle cx="470" cy="610" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="590" text-anchor="middle" fill="#222">Middleware de</text>
+<text x="470" y="606" text-anchor="middle" fill="#222">sesión</text>
+<text x="470" y="622" text-anchor="middle" fill="#222">(verifica el</text>
+<text x="470" y="638" text-anchor="middle" fill="#222">JWT)</text>
+<circle cx="470" cy="800" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="780" text-anchor="middle" fill="#222">Página</text>
+<text x="470" y="796" text-anchor="middle" fill="#222">/equipo/proyectos</text>
+<text x="470" y="812" text-anchor="middle" fill="#222">(server</text>
+<text x="470" y="828" text-anchor="middle" fill="#222">component)</text>
+<circle cx="470" cy="990" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="970" text-anchor="middle" fill="#222">Página</text>
+<text x="470" y="986" text-anchor="middle" fill="#222">/equipo/proyectos/[slug]</text>
+<text x="470" y="1002" text-anchor="middle" fill="#222">(server</text>
+<text x="470" y="1018" text-anchor="middle" fill="#222">component)</text>
+<circle cx="800" cy="610" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="598" text-anchor="middle" fill="#222">POST y PATCH</text>
+<text x="800" y="614" text-anchor="middle" fill="#222">/api/equipo/proyectos</text>
+<text x="800" y="630" text-anchor="middle" fill="#222">(route.ts)</text>
+<circle cx="800" cy="800" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="788" text-anchor="middle" fill="#222">POST</text>
+<text x="800" y="804" text-anchor="middle" fill="#222">/api/equipo/miembros</text>
+<text x="800" y="820" text-anchor="middle" fill="#222">(route.ts)</text>
+<circle cx="800" cy="990" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="970" text-anchor="middle" fill="#222">Puerta de</text>
+<text x="800" y="986" text-anchor="middle" fill="#222">/equipo</text>
+<text x="800" y="1002" text-anchor="middle" fill="#222">(equipoActor,</text>
+<text x="800" y="1018" text-anchor="middle" fill="#222">lee la base)</text>
+<circle cx="800" cy="1180" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="1160" text-anchor="middle" fill="#222">Visibilidad y</text>
+<text x="800" y="1176" text-anchor="middle" fill="#222">permisos por</text>
+<text x="800" y="1192" text-anchor="middle" fill="#222">proyecto</text>
+<text x="800" y="1208" text-anchor="middle" fill="#222">(team.ts)</text>
+<circle cx="1130" cy="610" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="598" text-anchor="middle" fill="#222">Tabla de</text>
+<text x="1130" y="614" text-anchor="middle" fill="#222">permisos por</text>
+<text x="1130" y="630" text-anchor="middle" fill="#222">rol (roles.ts)</text>
+<circle cx="1130" cy="800" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="796" text-anchor="middle" fill="#222">Crear y editar</text>
+<text x="1130" y="812" text-anchor="middle" fill="#222">proyectos</text>
+<circle cx="800" cy="1370" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="1358" text-anchor="middle" fill="#222">Sumar y quitar</text>
+<text x="800" y="1374" text-anchor="middle" fill="#222">roles de</text>
+<text x="800" y="1390" text-anchor="middle" fill="#222">proyecto</text>
+<circle cx="800" cy="1560" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="1548" text-anchor="middle" fill="#222">Columnas y</text>
+<text x="800" y="1564" text-anchor="middle" fill="#222">filtros del</text>
+<text x="800" y="1580" text-anchor="middle" fill="#222">tablero</text>
+<circle cx="800" cy="1750" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="1738" text-anchor="middle" fill="#222">Clientes que</text>
+<text x="800" y="1754" text-anchor="middle" fill="#222">el actor puede</text>
+<text x="800" y="1770" text-anchor="middle" fill="#222">elegir</text>
+<rect x="1080" y="960" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="960" x2="1180" y2="960" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="1020" x2="1180" y2="1020" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="970" text-anchor="middle" fill="#222">Límite de</text>
+<text x="1130" y="986" text-anchor="middle" fill="#222">solicitudes en</text>
+<text x="1130" y="1002" text-anchor="middle" fill="#222">memoria del</text>
+<text x="1130" y="1018" text-anchor="middle" fill="#222">proceso</text>
+<rect x="1080" y="1990" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="1990" x2="1180" y2="1990" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="2050" x2="1180" y2="2050" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="2016" text-anchor="middle" fill="#222">SQLite · users</text>
+<text x="1130" y="2032" text-anchor="middle" fill="#222">+ roster_links</text>
+<rect x="1080" y="2180" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="2180" x2="1180" y2="2180" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="2240" x2="1180" y2="2240" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="2198" text-anchor="middle" fill="#222">SQLite ·</text>
+<text x="1130" y="2214" text-anchor="middle" fill="#222">initiatives +</text>
+<text x="1130" y="2230" text-anchor="middle" fill="#222">project_members</text>
+<rect x="1080" y="2370" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="2370" x2="1180" y2="2370" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="2430" x2="1180" y2="2430" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="2388" text-anchor="middle" fill="#222">SQLite ·</text>
+<text x="1130" y="2404" text-anchor="middle" fill="#222">clients +</text>
+<text x="1130" y="2420" text-anchor="middle" fill="#222">client_members</text>
+<rect x="1080" y="2560" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="2560" x2="1180" y2="2560" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="2620" x2="1180" y2="2620" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="2578" text-anchor="middle" fill="#222">SQLite ·</text>
+<text x="1130" y="2594" text-anchor="middle" fill="#222">assignments +</text>
+<text x="1130" y="2610" text-anchor="middle" fill="#222">assignment_events</text>
+<rect x="1080" y="2750" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="2750" x2="1180" y2="2750" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="2810" x2="1180" y2="2810" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="2760" text-anchor="middle" fill="#222">SQLite ·</text>
+<text x="1130" y="2776" text-anchor="middle" fill="#222">talent_events</text>
+<text x="1130" y="2792" text-anchor="middle" fill="#222">(bitácora</text>
+<text x="1130" y="2808" text-anchor="middle" fill="#222">append-only)</text>
+<rect x="1080" y="2940" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="2940" x2="1180" y2="2940" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="3000" x2="1180" y2="3000" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="2958" text-anchor="middle" fill="#222">SQLite ·</text>
+<text x="1130" y="2974" text-anchor="middle" fill="#222">genome_versions</text>
+<text x="1130" y="2990" text-anchor="middle" fill="#222">(BUSINESS_TZ)</text>
+<text x="90" y="3140" font-size="11" fill="#777">Proyectos (iniciativas), membresías con rol, permisos por proyecto y tablero · docs/dfd/proyectos-y-membresias.json · commit 0e07d8f · * = flujo con datos sensibles</text>
+</svg>

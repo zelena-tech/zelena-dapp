@@ -1,0 +1,195 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2300 2860" width="2300" height="2860" font-family="Segoe UI, Arial, sans-serif" font-size="13">
+<title>Talento e importador: directorio /equipo/talento, rol y supervisión, roster como dato, vincularPrincipal e importador CSV (web y consola)</title>
+<defs><marker id="punta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker></defs>
+<rect width="2300" height="2860" fill="#ffffff"/>
+<rect x="50" y="45" width="1500" height="195" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="58" y="63" fill="#c0392b">Navegador (Internet)</text>
+<rect x="1700" y="315" width="510" height="195" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="1708" y="333" fill="#c0392b">Consola del servidor (SSH / Kudu)</text>
+<rect x="380" y="585" width="1500" height="765" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="388" y="603" fill="#c0392b">Proceso Next.js en App Service</text>
+<rect x="1040" y="1425" width="180" height="1335" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="1048" y="1443" fill="#c0392b">Base SQLite (/home/data)</text>
+<path d="M185,150 Q253,442 425,690" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="279" y="431" text-anchor="middle" font-size="11" fill="#b03a2e">f1 Abrir el directorio *</text>
+<path d="M515,690 Q635,746 755,690" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="635" y="718" text-anchor="middle" font-size="11" fill="#b03a2e">f2 ¿Quién es y qué rol tiene? *</text>
+<path d="M845,690 Q911,1126 1085,1530" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="1118" text-anchor="middle" font-size="11" fill="#555">f3 Leer rol y estado</text>
+<path d="M515,690 Q601,829 755,880" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="618" y="807" text-anchor="middle" font-size="11" fill="#555">f4 Pedir directorio y candidatos</text>
+<path d="M845,880 Q913,1225 1085,1530" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="939" y="1215" text-anchor="middle" font-size="11" fill="#b03a2e">f5 Leer personas *</text>
+<path d="M845,880 Q911,1500 1085,2100" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="1495" text-anchor="middle" font-size="11" fill="#555">f6 Contar carga abierta</text>
+<path d="M845,880 Q909,1595 1085,2290" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="937" y="1590" text-anchor="middle" font-size="11" fill="#555">f7 Leer membresías</text>
+<path d="M425,690 Q357,398 185,150" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="331" y="409" text-anchor="middle" font-size="11" fill="#b03a2e">f8 Directorio *</text>
+<path d="M185,150 Q251,533 425,880" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="278" y="524" text-anchor="middle" font-size="11" fill="#b03a2e">f9 Cambiar rol, supervisión o vincular *</text>
+<path d="M515,880 Q669,829 755,690" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="652" y="807" text-anchor="middle" font-size="11" fill="#b03a2e">f10 Exigir founder activo *</text>
+<path d="M515,880 Q601,1019 755,1070" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="618" y="997" text-anchor="middle" font-size="11" fill="#555">f11 Cambiar rol o supervisión</text>
+<path d="M845,1070 Q915,1326 1085,1530" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="940" y="1313" text-anchor="middle" font-size="11" fill="#b03a2e">f12 Guardar privilegio *</text>
+<path d="M845,1070 Q911,1506 1085,1910" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="1498" text-anchor="middle" font-size="11" fill="#555">f13 Registrar cambio</text>
+<path d="M515,880 Q587,1100 755,1260" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="611" y="1085" text-anchor="middle" font-size="11" fill="#555">f14 Vincular o simular</text>
+<path d="M845,1260 Q909,1975 1085,2670" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="937" y="1970" text-anchor="middle" font-size="11" fill="#555">f15 Comprobar historia sellada</text>
+<path d="M845,1260 Q911,1880 1085,2480" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="1875" text-anchor="middle" font-size="11" fill="#b03a2e">f16 Mover referencias *</text>
+<path d="M845,1260 Q923,1433 1085,1530" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="944" y="1414" text-anchor="middle" font-size="11" fill="#b03a2e">f17 Fusionar cuentas *</text>
+<path d="M845,1260 Q915,1516 1085,1720" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="940" y="1503" text-anchor="middle" font-size="11" fill="#555">f18 Unir slug y cuenta</text>
+<path d="M845,1260 Q913,1605 1085,1910" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="939" y="1595" text-anchor="middle" font-size="11" fill="#555">f19 Registrar vinculación</text>
+<path d="M425,880 Q359,497 185,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="332" y="506" text-anchor="middle" font-size="11" fill="#555">f20 Resultado</text>
+<path d="M1415,150 Q1243,398 1175,690" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1269" y="409" text-anchor="middle" font-size="11" fill="#b03a2e">f21 Importar CSV *</text>
+<path d="M1085,690 Q965,634 845,690" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="965" y="662" text-anchor="middle" font-size="11" fill="#b03a2e">f22 Exigir founder o supervisor activo *</text>
+<path d="M1175,690 Q1295,746 1415,690" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1295" y="718" text-anchor="middle" font-size="11" fill="#b03a2e">f23 Importar *</text>
+<path d="M2075,420 Q1955,364 1835,420" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1955" y="392" text-anchor="middle" font-size="11" fill="#b03a2e">f24 Ejecutar import-tareas *</text>
+<path d="M1745,420 Q1583,517 1505,690" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1604" y="536" text-anchor="middle" font-size="11" fill="#b03a2e">f25 Importar sin sesión *</text>
+<path d="M1460,735 Q1404,880 1460,1025" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1432" y="880" text-anchor="middle" font-size="11" fill="#555">f26 Asegurar el roster</text>
+<path d="M1505,1070 Q1673,910 1745,690" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1649" y="895" text-anchor="middle" font-size="11" fill="#555">f27 Leer el roster</text>
+<path d="M1415,1070 Q1245,1274 1175,1530" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1270" y="1287" text-anchor="middle" font-size="11" fill="#555">f28 Insertar filas que falten</text>
+<path d="M1460,735 Q1404,785 1460,835" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1432" y="785" text-anchor="middle" font-size="11" fill="#b03a2e">f29 Resolver responsable *</text>
+<path d="M1505,880 Q1659,829 1745,690" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1642" y="807" text-anchor="middle" font-size="11" fill="#555">f30 Buscar alias</text>
+<path d="M1415,880 Q1241,1284 1175,1720" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1268" y="1292" text-anchor="middle" font-size="11" fill="#555">f31 Cuenta vinculada del slug</text>
+<path d="M1415,880 Q1243,1185 1175,1530" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1269" y="1195" text-anchor="middle" font-size="11" fill="#b03a2e">f32 Coincidencia única por nombre *</text>
+<path d="M1415,690 Q1239,1482 1175,2290" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1267" y="1486" text-anchor="middle" font-size="11" fill="#555">f33 Comprobar membresía</text>
+<path d="M1415,690 Q1239,1385 1175,2100" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1267" y="1390" text-anchor="middle" font-size="11" fill="#b03a2e">f34 Crear o actualizar piezas *</text>
+<path d="M1415,690 Q1241,1290 1175,1910" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1268" y="1295" text-anchor="middle" font-size="11" fill="#555">f35 Registrar importación</text>
+<path d="M1175,690 Q1347,442 1415,150" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1321" y="431" text-anchor="middle" font-size="11" fill="#b03a2e">f36 Resumen *</text>
+<rect x="90" y="100" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="140" y="138" text-anchor="middle" fill="#222">Founder</text>
+<text x="140" y="154" text-anchor="middle" fill="#222">(navegador,</text>
+<text x="140" y="170" text-anchor="middle" fill="#222">/equipo/talento)</text>
+<rect x="1410" y="100" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="130" text-anchor="middle" fill="#222">Founder o</text>
+<text x="1460" y="146" text-anchor="middle" fill="#222">supervisor que</text>
+<text x="1460" y="162" text-anchor="middle" fill="#222">importa</text>
+<text x="1460" y="178" text-anchor="middle" fill="#222">(navegador)</text>
+<rect x="2070" y="370" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="2120" y="408" text-anchor="middle" fill="#222">Operador con</text>
+<text x="2120" y="424" text-anchor="middle" fill="#222">consola del</text>
+<text x="2120" y="440" text-anchor="middle" fill="#222">servidor</text>
+<circle cx="470" cy="690" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="670" text-anchor="middle" fill="#222">Página</text>
+<text x="470" y="686" text-anchor="middle" fill="#222">/equipo/talento</text>
+<text x="470" y="702" text-anchor="middle" fill="#222">(puerta</text>
+<text x="470" y="718" text-anchor="middle" fill="#222">propia)</text>
+<circle cx="470" cy="880" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="852" text-anchor="middle" fill="#222">POST</text>
+<text x="470" y="868" text-anchor="middle" fill="#222">/api/equipo/talento</text>
+<text x="470" y="884" text-anchor="middle" fill="#222">(rol,</text>
+<text x="470" y="900" text-anchor="middle" fill="#222">supervisión,</text>
+<circle cx="1130" cy="690" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="678" text-anchor="middle" fill="#222">POST</text>
+<text x="1130" y="694" text-anchor="middle" fill="#222">/api/equipo/importar</text>
+<text x="1130" y="710" text-anchor="middle" fill="#222">(CSV ≤ 500 KB)</text>
+<circle cx="1790" cy="420" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1790" y="400" text-anchor="middle" fill="#222">CLI</text>
+<text x="1790" y="416" text-anchor="middle" fill="#222">import-tareas</text>
+<text x="1790" y="432" text-anchor="middle" fill="#222">(sin sesión,</text>
+<text x="1790" y="448" text-anchor="middle" fill="#222">actor 'cli')</text>
+<circle cx="800" cy="690" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="646" text-anchor="middle" fill="#222">Puerta por rol</text>
+<text x="800" y="662" text-anchor="middle" fill="#222">leído de la</text>
+<text x="800" y="678" text-anchor="middle" fill="#222">base</text>
+<text x="800" y="694" text-anchor="middle" fill="#222">(adminActor /</text>
+<circle cx="800" cy="880" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="860" text-anchor="middle" fill="#222">Directorio de</text>
+<text x="800" y="876" text-anchor="middle" fill="#222">talento y</text>
+<text x="800" y="892" text-anchor="middle" fill="#222">candidatos a</text>
+<text x="800" y="908" text-anchor="middle" fill="#222">vincular</text>
+<circle cx="800" cy="1070" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="1050" text-anchor="middle" fill="#222">Cambiar rol</text>
+<text x="800" y="1066" text-anchor="middle" fill="#222">(core ↔</text>
+<text x="800" y="1082" text-anchor="middle" fill="#222">contributor) o</text>
+<text x="800" y="1098" text-anchor="middle" fill="#222">supervisión</text>
+<circle cx="800" cy="1260" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="1240" text-anchor="middle" fill="#222">Vincular fila</text>
+<text x="800" y="1256" text-anchor="middle" fill="#222">del roster con</text>
+<text x="800" y="1272" text-anchor="middle" fill="#222">la cuenta real</text>
+<text x="800" y="1288" text-anchor="middle" fill="#222">(o simular)</text>
+<circle cx="1460" cy="690" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="678" text-anchor="middle" fill="#222">Importador CSV</text>
+<text x="1460" y="694" text-anchor="middle" fill="#222">idempotente</text>
+<text x="1460" y="710" text-anchor="middle" fill="#222">(sin puntos)</text>
+<circle cx="1460" cy="880" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="868" text-anchor="middle" fill="#222">Resolver el</text>
+<text x="1460" y="884" text-anchor="middle" fill="#222">Assignee por</text>
+<text x="1460" y="900" text-anchor="middle" fill="#222">datos</text>
+<circle cx="1460" cy="1070" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="1042" text-anchor="middle" fill="#222">Sembrar el</text>
+<text x="1460" y="1058" text-anchor="middle" fill="#222">roster (cada</text>
+<text x="1460" y="1074" text-anchor="middle" fill="#222">arranque y</text>
+<text x="1460" y="1090" text-anchor="middle" fill="#222">cada</text>
+<rect x="1740" y="660" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1740" y1="660" x2="1840" y2="660" stroke="#222" stroke-width="1.5"/>
+<line x1="1740" y1="720" x2="1840" y2="720" stroke="#222" stroke-width="1.5"/>
+<text x="1790" y="662" text-anchor="middle" fill="#222">TEAM_ROSTER</text>
+<text x="1790" y="678" text-anchor="middle" fill="#222">(roster en el</text>
+<text x="1790" y="694" text-anchor="middle" fill="#222">código: slug,</text>
+<text x="1790" y="710" text-anchor="middle" fill="#222">nombre, rol,</text>
+<rect x="1080" y="1500" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="1500" x2="1180" y2="1500" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="1560" x2="1180" y2="1560" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="1534" text-anchor="middle" fill="#222">users</text>
+<rect x="1080" y="1690" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="1690" x2="1180" y2="1690" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="1750" x2="1180" y2="1750" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="1724" text-anchor="middle" fill="#222">roster_links</text>
+<rect x="1080" y="1880" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="1880" x2="1180" y2="1880" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="1940" x2="1180" y2="1940" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="1906" text-anchor="middle" fill="#222">talent_events</text>
+<text x="1130" y="1922" text-anchor="middle" fill="#222">(append-only)</text>
+<rect x="1080" y="2070" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="2070" x2="1180" y2="2070" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="2130" x2="1180" y2="2130" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="2088" text-anchor="middle" fill="#222">initiatives,</text>
+<text x="1130" y="2104" text-anchor="middle" fill="#222">assignments y</text>
+<text x="1130" y="2120" text-anchor="middle" fill="#222">assignment_events</text>
+<rect x="1080" y="2260" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="2260" x2="1180" y2="2260" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="2320" x2="1180" y2="2320" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="2294" text-anchor="middle" fill="#222">project_members</text>
+<rect x="1080" y="2450" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="2450" x2="1180" y2="2450" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="2510" x2="1180" y2="2510" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="2436" text-anchor="middle" fill="#222">Tablas con</text>
+<text x="1130" y="2452" text-anchor="middle" fill="#222">wallet</text>
+<text x="1130" y="2468" text-anchor="middle" fill="#222">(REFERENCIAS_WALLET:</text>
+<text x="1130" y="2484" text-anchor="middle" fill="#222">ledgers,</text>
+<rect x="1080" y="2640" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="2640" x2="1180" y2="2640" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="2700" x2="1180" y2="2700" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="2650" text-anchor="middle" fill="#222">periods y</text>
+<text x="1130" y="2666" text-anchor="middle" fill="#222">rite_sessions</text>
+<text x="1130" y="2682" text-anchor="middle" fill="#222">(historia</text>
+<text x="1130" y="2698" text-anchor="middle" fill="#222">sellada)</text>
+<text x="90" y="2840" font-size="11" fill="#777">Talento e importador: directorio /equipo/talento, rol y supervisión, roster como dato, vincularPrincipal e importador CSV (web y consola) · docs/dfd/talento-e-importador.json · commit 0e07d8f · * = flujo con datos sensibles</text>
+</svg>

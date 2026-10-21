@@ -1,0 +1,231 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2300 2940" width="2300" height="2940" font-family="Segoe UI, Arial, sans-serif" font-size="13">
+<title>Ritos y comunidad: código rotativo, asistencia, /comunidad y aviso de encuentros</title>
+<defs><marker id="punta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker></defs>
+<rect width="2300" height="2940" fill="#ffffff"/>
+<rect x="50" y="45" width="1500" height="195" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="58" y="63" fill="#c0392b">Internet: navegadores (founder, anfitrión, asistente, visitante)</text>
+<rect x="1700" y="315" width="180" height="195" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="1708" y="333" fill="#c0392b">Tercero: red de pruebas de Stellar</text>
+<rect x="380" y="585" width="1830" height="955" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="388" y="603" fill="#c0392b">Azure App Service: proceso Next.js</text>
+<rect x="710" y="1615" width="1170" height="955" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="718" y="1633" fill="#c0392b">Datos y configuración del servidor (SQLite / Azure SQL y App Settings)</text>
+<rect x="2030" y="2645" width="180" height="195" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="2038" y="2663" fill="#c0392b">Código desplegado (dato versionado en el repo)</text>
+<path d="M185,150 Q253,442 425,690" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="279" y="431" text-anchor="middle" font-size="11" fill="#b03a2e">f1 Preparar y asignar *</text>
+<path d="M1085,2480 Q1021,1577 845,690" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="993" y="1581" text-anchor="middle" font-size="11" fill="#555">f2 Actor y presentadores válidos</text>
+<path d="M1415,1720 Q1347,1375 1175,1070" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1321" y="1385" text-anchor="middle" font-size="11" fill="#555">f3 Cadencia y parámetros</text>
+<path d="M515,690 Q635,746 755,690" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="635" y="718" text-anchor="middle" font-size="11" fill="#555">f4 Acción validada</text>
+<path d="M845,690 Q911,1217 1085,1720" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="1211" text-anchor="middle" font-size="11" fill="#555">f5 Escribir la sesión</text>
+<path d="M755,150 Q583,398 515,690" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="609" y="409" text-anchor="middle" font-size="11" fill="#b03a2e">f6 Abrir y cerrar *</text>
+<path d="M845,150 Q913,442 1085,690" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="939" y="431" text-anchor="middle" font-size="11" fill="#b03a2e">f7 Pedir el código (cada 15 s) *</text>
+<path d="M1415,1910 Q1349,1383 1175,880" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1322" y="1389" text-anchor="middle" font-size="11" fill="#b03a2e">f8 Secreto de los ritos *</text>
+<path d="M1085,690 Q1017,398 845,150" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="991" y="409" text-anchor="middle" font-size="11" fill="#b03a2e">f9 Código vigente *</text>
+<path d="M845,150 Q965,206 1085,150" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="965" y="178" text-anchor="middle" font-size="11" fill="#b03a2e">f10 Mostrar el código en pantalla *</text>
+<path d="M1175,150 Q1243,442 1415,690" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1269" y="431" text-anchor="middle" font-size="11" fill="#b03a2e">f11 Registrar asistencia *</text>
+<path d="M1505,690 Q1577,910 1745,1070" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1601" y="895" text-anchor="middle" font-size="11" fill="#555">f12 Límites</text>
+<path d="M1415,880 Q1295,824 1175,880" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1295" y="852" text-anchor="middle" font-size="11" fill="#b03a2e">f13 Verificar código *</text>
+<path d="M1505,880 Q1571,1316 1745,1720" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1598" y="1308" text-anchor="middle" font-size="11" fill="#b03a2e">f14 Asistencia *</text>
+<path d="M1415,880 Q1241,1383 1175,1910" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1268" y="1389" text-anchor="middle" font-size="11" fill="#b03a2e">f15 +2 comunidad *</text>
+<path d="M845,690 Q911,1310 1085,1910" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="1305" text-anchor="middle" font-size="11" fill="#b03a2e">f16 Anfitrión y relator al cerrar *</text>
+<path d="M845,690 Q909,1405 1085,2100" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="937" y="1400" text-anchor="middle" font-size="11" fill="#555">f17 Acta del cierre</text>
+<path d="M845,690 Q909,1498 1085,2290" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="937" y="1494" text-anchor="middle" font-size="11" fill="#555">f18 Encolar la huella</text>
+<path d="M1175,2290 Q1349,1886 1415,1450" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1322" y="1878" text-anchor="middle" font-size="11" fill="#555">f19 Pendientes</text>
+<path d="M1505,1450 Q1679,947 1745,420" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1652" y="941" text-anchor="middle" font-size="11" fill="#b03a2e">f20 manageData firmado *</text>
+<path d="M1505,150 Q1573,442 1745,690" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1599" y="431" text-anchor="middle" font-size="11" fill="#555">f21 Ver la comunidad</text>
+<path d="M1175,1720 Q1345,1516 1415,1260" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1320" y="1503" text-anchor="middle" font-size="11" fill="#555">f22 Ritos y decisiones</text>
+<path d="M1505,1260 Q1677,997 1745,690" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1651" y="986" text-anchor="middle" font-size="11" fill="#555">f23 Datos públicos</text>
+<path d="M1745,690 Q1677,398 1505,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1651" y="409" text-anchor="middle" font-size="11" fill="#555">f24 Página</text>
+<path d="M1175,150 Q1241,624 1415,1070" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1268" y="617" text-anchor="middle" font-size="11" fill="#b03a2e">f25 Ver el rito *</text>
+<path d="M1415,1070 Q1349,596 1175,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1322" y="603" text-anchor="middle" font-size="11" fill="#555">f26 Detalle</text>
+<path d="M2075,2750 Q2011,1807 1835,880" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1983" y="1811" text-anchor="middle" font-size="11" fill="#555">f27 Encuentros publicados</text>
+<path d="M1415,150 Q1241,693 1175,1260" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1268" y="699" text-anchor="middle" font-size="11" fill="#b03a2e">f28 Avísame *</text>
+<path d="M1085,1260 Q915,1464 845,1720" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="940" y="1477" text-anchor="middle" font-size="11" fill="#b03a2e">f29 Guardar el aviso *</text>
+<path d="M755,1720 Q689,1284 515,880" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="662" y="1292" text-anchor="middle" font-size="11" fill="#b03a2e">f30 Avisos de encuentros *</text>
+<path d="M425,880 Q359,497 185,150" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="332" y="506" text-anchor="middle" font-size="11" fill="#b03a2e">f31 Panel *</text>
+<path d="M1835,1720 Q2009,1217 2075,690" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1982" y="1211" text-anchor="middle" font-size="11" fill="#555">f32 Participación de la época</text>
+<path d="M1460,735 Q1404,785 1460,835" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1432" y="785" text-anchor="middle" font-size="11" fill="#555">f33 Asistencia validada</text>
+<path d="M1130,735 Q1074,785 1130,835" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1102" y="785" text-anchor="middle" font-size="11" fill="#b03a2e">f34 Código del tramo *</text>
+<path d="M845,690 Q931,829 1085,880" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="948" y="807" text-anchor="middle" font-size="11" fill="#b03a2e">f35 Huella del cierre *</text>
+<path d="M1085,1070 Q1013,850 845,690" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="989" y="865" text-anchor="middle" font-size="11" fill="#555">f36 Fecha válida y ventana</text>
+<path d="M1415,690 Q1347,398 1175,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1321" y="409" text-anchor="middle" font-size="11" fill="#555">f37 Resultado de la asistencia</text>
+<path d="M515,690 Q687,442 755,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="661" y="431" text-anchor="middle" font-size="11" fill="#555">f38 Estado de la sesión</text>
+<path d="M1745,880 Q1679,497 1505,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1652" y="506" text-anchor="middle" font-size="11" fill="#555">f39 Página /encuentros</text>
+<rect x="90" y="100" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="140" y="130" text-anchor="middle" fill="#222">Founder o</text>
+<text x="140" y="146" text-anchor="middle" fill="#222">supervisor</text>
+<text x="140" y="162" text-anchor="middle" fill="#222">(navegador,</text>
+<text x="140" y="178" text-anchor="middle" fill="#222">/admin)</text>
+<rect x="750" y="100" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="138" text-anchor="middle" fill="#222">Anfitrión del</text>
+<text x="800" y="154" text-anchor="middle" fill="#222">rito</text>
+<text x="800" y="170" text-anchor="middle" fill="#222">(navegador)</text>
+<rect x="1080" y="100" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="138" text-anchor="middle" fill="#222">Asistente con</text>
+<text x="1130" y="154" text-anchor="middle" fill="#222">cuenta</text>
+<text x="1130" y="170" text-anchor="middle" fill="#222">(navegador)</text>
+<rect x="1410" y="100" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="138" text-anchor="middle" fill="#222">Visitante sin</text>
+<text x="1460" y="154" text-anchor="middle" fill="#222">cuenta</text>
+<text x="1460" y="170" text-anchor="middle" fill="#222">(navegador)</text>
+<rect x="1740" y="370" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1790" y="408" text-anchor="middle" fill="#222">Stellar</text>
+<text x="1790" y="424" text-anchor="middle" fill="#222">testnet</text>
+<text x="1790" y="440" text-anchor="middle" fill="#222">(Horizon)</text>
+<circle cx="470" cy="690" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="670" text-anchor="middle" fill="#222">API /api/ritos</text>
+<text x="470" y="686" text-anchor="middle" fill="#222">(preparar,</text>
+<text x="470" y="702" text-anchor="middle" fill="#222">asignar,</text>
+<text x="470" y="718" text-anchor="middle" fill="#222">abrir, cerrar)</text>
+<circle cx="1130" cy="690" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="686" text-anchor="middle" fill="#222">API</text>
+<text x="1130" y="702" text-anchor="middle" fill="#222">/api/ritos/codigo</text>
+<circle cx="1460" cy="690" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="686" text-anchor="middle" fill="#222">API</text>
+<text x="1460" y="702" text-anchor="middle" fill="#222">/api/ritos/asistir</text>
+<circle cx="800" cy="690" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="662" text-anchor="middle" fill="#222">Gestión de la</text>
+<text x="800" y="678" text-anchor="middle" fill="#222">sesión</text>
+<text x="800" y="694" text-anchor="middle" fill="#222">(preparar,</text>
+<text x="800" y="710" text-anchor="middle" fill="#222">asignar,</text>
+<circle cx="1460" cy="880" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="876" text-anchor="middle" fill="#222">Registrar</text>
+<text x="1460" y="892" text-anchor="middle" fill="#222">asistencia</text>
+<circle cx="1130" cy="880" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="860" text-anchor="middle" fill="#222">Código</text>
+<text x="1130" y="876" text-anchor="middle" fill="#222">rotativo y</text>
+<text x="1130" y="892" text-anchor="middle" fill="#222">huella del</text>
+<text x="1130" y="908" text-anchor="middle" fill="#222">cierre (HMAC)</text>
+<circle cx="1130" cy="1070" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="1058" text-anchor="middle" fill="#222">Cadencia,</text>
+<text x="1130" y="1074" text-anchor="middle" fill="#222">ocurrencias y</text>
+<text x="1130" y="1090" text-anchor="middle" fill="#222">ventana (puro)</text>
+<circle cx="1460" cy="1070" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="1066" text-anchor="middle" fill="#222">Página</text>
+<text x="1460" y="1082" text-anchor="middle" fill="#222">/comunidad/ritos/[id]</text>
+<circle cx="1790" cy="690" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1790" y="686" text-anchor="middle" fill="#222">Página</text>
+<text x="1790" y="702" text-anchor="middle" fill="#222">/comunidad</text>
+<circle cx="1460" cy="1260" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="1248" text-anchor="middle" fill="#222">Lecturas</text>
+<text x="1460" y="1264" text-anchor="middle" fill="#222">públicas sin</text>
+<text x="1460" y="1280" text-anchor="middle" fill="#222">wallets</text>
+<circle cx="470" cy="880" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="860" text-anchor="middle" fill="#222">Panel de ritos</text>
+<text x="470" y="876" text-anchor="middle" fill="#222">y avisos de</text>
+<text x="470" y="892" text-anchor="middle" fill="#222">encuentros en</text>
+<text x="470" y="908" text-anchor="middle" fill="#222">/admin</text>
+<circle cx="1790" cy="880" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1790" y="876" text-anchor="middle" fill="#222">Página</text>
+<text x="1790" y="892" text-anchor="middle" fill="#222">/encuentros</text>
+<circle cx="1130" cy="1260" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="1256" text-anchor="middle" fill="#222">API</text>
+<text x="1130" y="1272" text-anchor="middle" fill="#222">/api/encuentros/aviso</text>
+<circle cx="1460" cy="1450" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="1430" text-anchor="middle" fill="#222">Pasada de</text>
+<text x="1460" y="1446" text-anchor="middle" fill="#222">anclaje (botón</text>
+<text x="1460" y="1462" text-anchor="middle" fill="#222">de /admin o</text>
+<text x="1460" y="1478" text-anchor="middle" fill="#222">cron externo)</text>
+<circle cx="2120" cy="690" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="2120" y="670" text-anchor="middle" fill="#222">Participación</text>
+<text x="2120" y="686" text-anchor="middle" fill="#222">para el</text>
+<text x="2120" y="702" text-anchor="middle" fill="#222">fitness de la</text>
+<text x="2120" y="718" text-anchor="middle" fill="#222">época</text>
+<rect x="1080" y="1690" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="1690" x2="1180" y2="1690" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="1750" x2="1180" y2="1750" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="1724" text-anchor="middle" fill="#222">rite_sessions</text>
+<rect x="1740" y="1690" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1740" y1="1690" x2="1840" y2="1690" stroke="#222" stroke-width="1.5"/>
+<line x1="1740" y1="1750" x2="1840" y2="1750" stroke="#222" stroke-width="1.5"/>
+<text x="1790" y="1724" text-anchor="middle" fill="#222">rite_attendance</text>
+<rect x="1080" y="1880" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="1880" x2="1180" y2="1880" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="1940" x2="1180" y2="1940" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="1914" text-anchor="middle" fill="#222">reputation_events</text>
+<rect x="1080" y="2070" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="2070" x2="1180" y2="2070" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="2130" x2="1180" y2="2130" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="2104" text-anchor="middle" fill="#222">decision_log</text>
+<rect x="1080" y="2260" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="2260" x2="1180" y2="2260" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="2320" x2="1180" y2="2320" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="2294" text-anchor="middle" fill="#222">anchor_queue</text>
+<rect x="1080" y="2450" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="2450" x2="1180" y2="2450" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="2510" x2="1180" y2="2510" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="2476" text-anchor="middle" fill="#222">users +</text>
+<text x="1130" y="2492" text-anchor="middle" fill="#222">project_members</text>
+<rect x="1410" y="1690" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1410" y1="1690" x2="1510" y2="1690" stroke="#222" stroke-width="1.5"/>
+<line x1="1410" y1="1750" x2="1510" y2="1750" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="1708" text-anchor="middle" fill="#222">genome_versions</text>
+<text x="1460" y="1724" text-anchor="middle" fill="#222">(RITES_CADENCE,</text>
+<text x="1460" y="1740" text-anchor="middle" fill="#222">RITE_*)</text>
+<rect x="750" y="1690" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="750" y1="1690" x2="850" y2="1690" stroke="#222" stroke-width="1.5"/>
+<line x1="750" y1="1750" x2="850" y2="1750" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="1708" text-anchor="middle" fill="#222">leads (interes</text>
+<text x="800" y="1724" text-anchor="middle" fill="#222">=</text>
+<text x="800" y="1740" text-anchor="middle" fill="#222">'encuentros')</text>
+<rect x="2070" y="2720" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="2070" y1="2720" x2="2170" y2="2720" stroke="#222" stroke-width="1.5"/>
+<line x1="2070" y1="2780" x2="2170" y2="2780" stroke="#222" stroke-width="1.5"/>
+<text x="2120" y="2738" text-anchor="middle" fill="#222">Lista de</text>
+<text x="2120" y="2754" text-anchor="middle" fill="#222">encuentros en</text>
+<text x="2120" y="2770" text-anchor="middle" fill="#222">código</text>
+<rect x="1740" y="1040" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1740" y1="1040" x2="1840" y2="1040" stroke="#222" stroke-width="1.5"/>
+<line x1="1740" y1="1100" x2="1840" y2="1100" stroke="#222" stroke-width="1.5"/>
+<text x="1790" y="1042" text-anchor="middle" fill="#222">Memoria del</text>
+<text x="1790" y="1058" text-anchor="middle" fill="#222">proceso</text>
+<text x="1790" y="1074" text-anchor="middle" fill="#222">(límites de</text>
+<text x="1790" y="1090" text-anchor="middle" fill="#222">tasa y fallos</text>
+<rect x="1410" y="1880" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1410" y1="1880" x2="1510" y2="1880" stroke="#222" stroke-width="1.5"/>
+<line x1="1410" y1="1940" x2="1510" y2="1940" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="1882" text-anchor="middle" fill="#222">Variables de</text>
+<text x="1460" y="1898" text-anchor="middle" fill="#222">entorno</text>
+<text x="1460" y="1914" text-anchor="middle" fill="#222">(RITES_SECRET</text>
+<text x="1460" y="1930" text-anchor="middle" fill="#222">o</text>
+<text x="90" y="2920" font-size="11" fill="#777">Ritos y comunidad: código rotativo, asistencia, /comunidad y aviso de encuentros · docs/dfd/ritos-y-comunidad.json · commit 0e07d8f · * = flujo con datos sensibles</text>
+</svg>

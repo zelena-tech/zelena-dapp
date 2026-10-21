@@ -1,0 +1,231 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1970 3160" width="1970" height="3160" font-family="Segoe UI, Arial, sans-serif" font-size="13">
+<title>Genoma y gobernanza: genoma versionado, mutaciones, fitness de la época, votos, decision log, auditorías latentes y /gobernanza</title>
+<defs><marker id="punta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker></defs>
+<rect width="1970" height="3160" fill="#ffffff"/>
+<rect x="50" y="45" width="1830" height="195" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="58" y="63" fill="#c0392b">Navegador (Internet)</text>
+<rect x="380" y="315" width="1170" height="1145" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="388" y="333" fill="#c0392b">Proceso Next.js en App Service</text>
+<rect x="1040" y="1535" width="840" height="1525" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="1048" y="1553" fill="#c0392b">Base SQLite (/home/data)</text>
+<path d="M185,150 Q263,323 425,420" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="284" y="304" text-anchor="middle" font-size="11" fill="#b03a2e">h1 Abrir /admin *</text>
+<path d="M515,420 Q635,476 755,420" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="635" y="448" text-anchor="middle" font-size="11" fill="#b03a2e">h2 Exigir founder *</text>
+<path d="M845,420 Q911,1040 1085,1640" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="1035" text-anchor="middle" font-size="11" fill="#555">h3 Leer rol</text>
+<path d="M515,420 Q587,640 755,800" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="611" y="625" text-anchor="middle" font-size="11" fill="#555">h4 Genoma activo, linaje y mutación pendiente</text>
+<path d="M425,420 Q347,247 185,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="326" y="266" text-anchor="middle" font-size="11" fill="#555">h5 Panel de administración</text>
+<path d="M185,150 Q255,406 425,610" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="280" y="393" text-anchor="middle" font-size="11" fill="#b03a2e">h6 Mutar, calcular o firmar fitness, auditar *</text>
+<path d="M515,610 Q669,559 755,420" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="652" y="537" text-anchor="middle" font-size="11" fill="#b03a2e">h7 Exigir founder *</text>
+<path d="M515,610 Q635,666 755,610" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="635" y="638" text-anchor="middle" font-size="11" fill="#555">h8 Mutación</text>
+<path d="M845,610 Q999,559 1085,420" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="982" y="537" text-anchor="middle" font-size="11" fill="#555">h9 Validar</text>
+<path d="M800,655 Q744,705 800,755" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="772" y="705" text-anchor="middle" font-size="11" fill="#555">h10 Genoma de la época actual</text>
+<path d="M845,800 Q909,1796 1085,2780" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="937" y="1793" text-anchor="middle" font-size="11" fill="#555">h11 Época actual</text>
+<path d="M845,800 Q911,1327 1085,1830" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="1321" text-anchor="middle" font-size="11" fill="#555">h12 Versión vigente</text>
+<path d="M845,800 Q931,939 1085,990" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="948" y="917" text-anchor="middle" font-size="11" fill="#555">h13 Rellenar claves que faltan</text>
+<path d="M845,610 Q909,1418 1085,2210" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="937" y="1414" text-anchor="middle" font-size="11" fill="#555">h14 Acta de la mutación</text>
+<path d="M845,610 Q911,1230 1085,1830" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="1225" text-anchor="middle" font-size="11" fill="#555">h15 Versión nueva</text>
+<path d="M845,610 Q909,1325 1085,2020" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="937" y="1320" text-anchor="middle" font-size="11" fill="#555">h16 Decisión de la época siguiente</text>
+<path d="M1415,420 Q1239,1115 1175,1830" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1267" y="1120" text-anchor="middle" font-size="11" fill="#555">h17 Versión v2 al arrancar</text>
+<path d="M1415,420 Q1239,1307 1175,2210" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1267" y="1311" text-anchor="middle" font-size="11" fill="#555">h18 Acta de la v2</text>
+<path d="M515,610 Q587,830 755,990" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="611" y="815" text-anchor="middle" font-size="11" fill="#555">h19 Calcular fitness</text>
+<path d="M845,990 Q909,1798 1085,2590" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="937" y="1794" text-anchor="middle" font-size="11" fill="#555">h20 Reunir señales</text>
+<path d="M845,990 Q1013,830 1085,610" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="989" y="815" text-anchor="middle" font-size="11" fill="#555">h21 Puntuar</text>
+<path d="M845,990 Q909,1705 1085,2400" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="937" y="1700" text-anchor="middle" font-size="11" fill="#555">h22 Guardar reporte</text>
+<path d="M515,610 Q583,917 755,1180" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="609" y="906" text-anchor="middle" font-size="11" fill="#555">h23 Firmar keep o revert</text>
+<path d="M845,1180 Q911,1616 1085,2020" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="1608" text-anchor="middle" font-size="11" fill="#555">h24 ¿Mutación decidida?</text>
+<path d="M845,1180 Q911,1707 1085,2210" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="1701" text-anchor="middle" font-size="11" fill="#555">h25 Acta de la firma</text>
+<path d="M845,1180 Q911,1800 1085,2400" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="1795" text-anchor="middle" font-size="11" fill="#555">h26 Marcar firmado</text>
+<path d="M515,610 Q581,1006 755,1370" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="608" y="998" text-anchor="middle" font-size="11" fill="#555">h27 Registrar auditoría</text>
+<path d="M845,1370 Q909,2178 1085,2970" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="937" y="2174" text-anchor="middle" font-size="11" fill="#555">h28 Guardar o leer auditorías</text>
+<path d="M425,610 Q355,354 185,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="330" y="367" text-anchor="middle" font-size="11" fill="#555">h29 Resultado</text>
+<path d="M1415,150 Q1243,455 1175,800" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1269" y="465" text-anchor="middle" font-size="11" fill="#555">h30 Ver decisiones</text>
+<path d="M1175,800 Q1329,749 1415,610" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1312" y="727" text-anchor="middle" font-size="11" fill="#555">h31 Decisiones y votación</text>
+<path d="M1415,610 Q1239,1402 1175,2210" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1267" y="1406" text-anchor="middle" font-size="11" fill="#555">h32 Leer decisiones</text>
+<path d="M1505,610 Q1571,1230 1745,1830" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1598" y="1225" text-anchor="middle" font-size="11" fill="#555">h33 Propuesta, conteo y mi voto</text>
+<path d="M1085,800 Q913,1063 845,1370" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="939" y="1074" text-anchor="middle" font-size="11" fill="#555">h34 Auditorías públicas</text>
+<path d="M1175,800 Q1347,495 1415,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1321" y="485" text-anchor="middle" font-size="11" fill="#555">h35 Página pública</text>
+<path d="M1745,150 Q1573,455 1505,800" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1599" y="465" text-anchor="middle" font-size="11" fill="#b03a2e">h36 Votar *</text>
+<path d="M1505,800 Q1571,1327 1745,1830" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1598" y="1321" text-anchor="middle" font-size="11" fill="#b03a2e">h37 Guardar voto *</text>
+<path d="M1415,800 Q1239,1784 1175,2780" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1267" y="1787" text-anchor="middle" font-size="11" fill="#555">h38 Época actual</text>
+<path d="M1505,800 Q1571,1236 1745,1640" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1598" y="1228" text-anchor="middle" font-size="11" fill="#b03a2e">h39 Reputación de gobernanza *</text>
+<path d="M1505,800 Q1677,495 1745,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1651" y="485" text-anchor="middle" font-size="11" fill="#555">h40 Resultado</text>
+<path d="M1415,990 Q1241,1394 1175,1830" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1268" y="1402" text-anchor="middle" font-size="11" fill="#555">h41 Mutación anunciada</text>
+<path d="M1460,945 Q1516,570 1460,195" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1488" y="570" text-anchor="middle" font-size="11" fill="#555">h42 Aviso público</text>
+<rect x="90" y="100" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="140" y="138" text-anchor="middle" fill="#222">Founder</text>
+<text x="140" y="154" text-anchor="middle" fill="#222">(navegador,</text>
+<text x="140" y="170" text-anchor="middle" fill="#222">/admin)</text>
+<rect x="1740" y="100" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1790" y="122" text-anchor="middle" fill="#222">Persona con</text>
+<text x="1790" y="138" text-anchor="middle" fill="#222">sesión y</text>
+<text x="1790" y="154" text-anchor="middle" fill="#222">acuerdo</text>
+<text x="1790" y="170" text-anchor="middle" fill="#222">firmado</text>
+<rect x="1410" y="100" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="130" text-anchor="middle" fill="#222">Visitante</text>
+<text x="1460" y="146" text-anchor="middle" fill="#222">público</text>
+<text x="1460" y="162" text-anchor="middle" fill="#222">(navegador,</text>
+<text x="1460" y="178" text-anchor="middle" fill="#222">sin sesión)</text>
+<circle cx="470" cy="420" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="400" text-anchor="middle" fill="#222">Página /admin</text>
+<text x="470" y="416" text-anchor="middle" fill="#222">(genoma,</text>
+<text x="470" y="432" text-anchor="middle" fill="#222">fitness,</text>
+<text x="470" y="448" text-anchor="middle" fill="#222">auditorías)</text>
+<circle cx="470" cy="610" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="606" text-anchor="middle" fill="#222">POST</text>
+<text x="470" y="622" text-anchor="middle" fill="#222">/api/admin</text>
+<circle cx="800" cy="420" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="400" text-anchor="middle" fill="#222">Puerta de</text>
+<text x="800" y="416" text-anchor="middle" fill="#222">administración</text>
+<text x="800" y="432" text-anchor="middle" fill="#222">por rol leído</text>
+<text x="800" y="448" text-anchor="middle" fill="#222">de la base</text>
+<circle cx="800" cy="610" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="590" text-anchor="middle" fill="#222">Proponer,</text>
+<text x="800" y="606" text-anchor="middle" fill="#222">revertir o</text>
+<text x="800" y="622" text-anchor="middle" fill="#222">registrar «sin</text>
+<text x="800" y="638" text-anchor="middle" fill="#222">cambios»</text>
+<circle cx="1130" cy="420" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="400" text-anchor="middle" fill="#222">Reglas duras:</text>
+<text x="1130" y="416" text-anchor="middle" fill="#222">≤ 2 genes, ≤</text>
+<text x="1130" y="432" text-anchor="middle" fill="#222">15 %,</text>
+<text x="1130" y="448" text-anchor="middle" fill="#222">justificación</text>
+<circle cx="800" cy="800" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="772" text-anchor="middle" fill="#222">Genoma activo</text>
+<text x="800" y="788" text-anchor="middle" fill="#222">por época</text>
+<text x="800" y="804" text-anchor="middle" fill="#222">(caché y</text>
+<text x="800" y="820" text-anchor="middle" fill="#222">mezcla con</text>
+<circle cx="1460" cy="420" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="408" text-anchor="middle" fill="#222">Migración de</text>
+<text x="1460" y="424" text-anchor="middle" fill="#222">arranque del</text>
+<text x="1460" y="440" text-anchor="middle" fill="#222">genoma v2</text>
+<circle cx="800" cy="990" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="970" text-anchor="middle" fill="#222">Calcular y</text>
+<text x="800" y="986" text-anchor="middle" fill="#222">guardar el</text>
+<text x="800" y="1002" text-anchor="middle" fill="#222">fitness de la</text>
+<text x="800" y="1018" text-anchor="middle" fill="#222">época</text>
+<circle cx="1130" cy="610" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="598" text-anchor="middle" fill="#222">Motor puro de</text>
+<text x="1130" y="614" text-anchor="middle" fill="#222">fitness y</text>
+<text x="1130" y="630" text-anchor="middle" fill="#222">recomendación</text>
+<circle cx="800" cy="1180" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="1160" text-anchor="middle" fill="#222">Firmar la</text>
+<text x="800" y="1176" text-anchor="middle" fill="#222">recomendación</text>
+<text x="800" y="1192" text-anchor="middle" fill="#222">(keep /</text>
+<text x="800" y="1208" text-anchor="middle" fill="#222">revert)</text>
+<circle cx="800" cy="1370" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="1350" text-anchor="middle" fill="#222">Registrar y</text>
+<text x="800" y="1366" text-anchor="middle" fill="#222">listar</text>
+<text x="800" y="1382" text-anchor="middle" fill="#222">auditorías</text>
+<text x="800" y="1398" text-anchor="middle" fill="#222">latentes</text>
+<circle cx="1130" cy="800" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="796" text-anchor="middle" fill="#222">Página pública</text>
+<text x="1130" y="812" text-anchor="middle" fill="#222">/gobernanza</text>
+<circle cx="1460" cy="610" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="598" text-anchor="middle" fill="#222">Lecturas de</text>
+<text x="1460" y="614" text-anchor="middle" fill="#222">decisiones y</text>
+<text x="1460" y="630" text-anchor="middle" fill="#222">votación</text>
+<circle cx="1460" cy="800" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="796" text-anchor="middle" fill="#222">POST</text>
+<text x="1460" y="812" text-anchor="middle" fill="#222">/api/governance/vote</text>
+<circle cx="1460" cy="990" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="962" text-anchor="middle" fill="#222">Banner de</text>
+<text x="1460" y="978" text-anchor="middle" fill="#222">mutación</text>
+<text x="1460" y="994" text-anchor="middle" fill="#222">anunciada</text>
+<text x="1460" y="1010" text-anchor="middle" fill="#222">(todas las</text>
+<rect x="1080" y="960" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="960" x2="1180" y2="960" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="1020" x2="1180" y2="1020" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="978" text-anchor="middle" fill="#222">GENOME_DEFAULTS</text>
+<text x="1130" y="994" text-anchor="middle" fill="#222">(valores en el</text>
+<text x="1130" y="1010" text-anchor="middle" fill="#222">código)</text>
+<rect x="1080" y="1610" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="1610" x2="1180" y2="1610" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="1670" x2="1180" y2="1670" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="1644" text-anchor="middle" fill="#222">users (rol)</text>
+<rect x="1080" y="1800" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="1800" x2="1180" y2="1800" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="1860" x2="1180" y2="1860" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="1826" text-anchor="middle" fill="#222">genome_versions</text>
+<text x="1130" y="1842" text-anchor="middle" fill="#222">(append-only)</text>
+<rect x="1080" y="1990" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="1990" x2="1180" y2="1990" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="2050" x2="1180" y2="2050" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="2008" text-anchor="middle" fill="#222">mutation_decisions</text>
+<text x="1130" y="2024" text-anchor="middle" fill="#222">(una por</text>
+<text x="1130" y="2040" text-anchor="middle" fill="#222">época)</text>
+<rect x="1080" y="2180" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="2180" x2="1180" y2="2180" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="2240" x2="1180" y2="2240" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="2214" text-anchor="middle" fill="#222">decision_log</text>
+<rect x="1080" y="2370" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="2370" x2="1180" y2="2370" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="2430" x2="1180" y2="2430" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="2404" text-anchor="middle" fill="#222">epoch_fitness</text>
+<rect x="1080" y="2560" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="2560" x2="1180" y2="2560" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="2620" x2="1180" y2="2620" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="2562" text-anchor="middle" fill="#222">Señales del</text>
+<text x="1130" y="2578" text-anchor="middle" fill="#222">fitness:</text>
+<text x="1130" y="2594" text-anchor="middle" fill="#222">points_ledger,</text>
+<text x="1130" y="2610" text-anchor="middle" fill="#222">milestones,</text>
+<rect x="1740" y="1610" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1740" y1="1610" x2="1840" y2="1610" stroke="#222" stroke-width="1.5"/>
+<line x1="1740" y1="1670" x2="1840" y2="1670" stroke="#222" stroke-width="1.5"/>
+<text x="1790" y="1636" text-anchor="middle" fill="#222">reputation_events</text>
+<text x="1790" y="1652" text-anchor="middle" fill="#222">(append-only)</text>
+<rect x="1080" y="2750" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="2750" x2="1180" y2="2750" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="2810" x2="1180" y2="2810" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="2776" text-anchor="middle" fill="#222">periods (época</text>
+<text x="1130" y="2792" text-anchor="middle" fill="#222">actual)</text>
+<rect x="1080" y="2940" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="2940" x2="1180" y2="2940" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="3000" x2="1180" y2="3000" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="2974" text-anchor="middle" fill="#222">latent_audits</text>
+<rect x="1740" y="1800" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1740" y1="1800" x2="1840" y2="1800" stroke="#222" stroke-width="1.5"/>
+<line x1="1740" y1="1860" x2="1840" y2="1860" stroke="#222" stroke-width="1.5"/>
+<text x="1790" y="1826" text-anchor="middle" fill="#222">proposals y</text>
+<text x="1790" y="1842" text-anchor="middle" fill="#222">votes</text>
+<text x="90" y="3140" font-size="11" fill="#777">Genoma y gobernanza: genoma versionado, mutaciones, fitness de la época, votos, decision log, auditorías latentes y /gobernanza · docs/dfd/genoma-y-gobernanza.json · commit 0e07d8f · * = flujo con datos sensibles</text>
+</svg>
