@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { almacenRetos } from "@/lib/login-reto";
+import { sitioDeEntrada } from "@/lib/onboard";
 import { loginSigningPayload } from "@/lib/login-signing";
 import { loginRetoSchema } from "@/lib/validation";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
@@ -11,8 +12,9 @@ const SIN_CACHE = { "Cache-Control": "no-store" };
 /**
  * `GET` o `POST /api/login/reto` — emite un reto de entrada de un solo uso (lib/login-reto.ts).
  *
- * Responde `{ nonce, mensaje, expiraEn }`: la wallet firma `mensaje`
- * (`zelena-login-testnet-v1:<nonce>`) y lo manda a `POST /api/login` con el `nonce`.
+ * Responde `{ nonce, sitio, mensaje, expiraEn }`: la wallet firma `mensaje`
+ * (`zelena-login-testnet-v1:<sitio>:<nonce>`, con el sitio para que la persona vea en su
+ * wallet dónde entra) y lo manda a `POST /api/login` con el `nonce`.
  * Con `POST { wallet }` el reto queda atado a esa wallet. El reto no se guarda en claro
  * (solo su sha256), caduca en minutos y se gasta en el primer intento.
  *
@@ -24,8 +26,14 @@ function emitir(req: NextRequest, wallet: string | null): NextResponse {
     return NextResponse.json({ error: "Demasiados intentos." }, { status: 429, headers: SIN_CACHE });
   }
   const reto = almacenRetos().emitir(wallet);
+  const sitio = sitioDeEntrada();
   return NextResponse.json(
-    { nonce: reto.nonce, mensaje: loginSigningPayload(reto.nonce), expiraEn: new Date(reto.expiraEn).toISOString() },
+    {
+      nonce: reto.nonce,
+      sitio,
+      mensaje: loginSigningPayload(sitio, reto.nonce),
+      expiraEn: new Date(reto.expiraEn).toISOString(),
+    },
     { headers: SIN_CACHE }
   );
 }

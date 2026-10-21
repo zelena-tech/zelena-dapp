@@ -6,7 +6,7 @@ import { openDb, type DB } from "./db";
 import { performOnboard, OnboardError } from "./onboard";
 import { claCanonicalHash } from "./cla";
 import { claSigningPayload } from "./cla-signing";
-import { loginSigningPayload } from "./login-signing";
+import { SITIO_ENTRADA_DEFAULT, loginSigningPayload } from "./login-signing";
 import { AlmacenRetos } from "./login-reto";
 import { bootstrapInviteCode } from "./config";
 import { seedBootstrapInvite } from "./seed";
@@ -328,7 +328,7 @@ describe("performLogin — devuelve rol y supervisión de la fila", () => {
   /** Reingreso por reto: un reto nuevo y la firma de la wallet sobre él. */
   function entrada(kp: Keypair, retos: AlmacenRetos) {
     const { nonce } = retos.emitir(kp.publicKey());
-    return { wallet: kp.publicKey(), nonce, signature: b64(kp.sign(Buffer.from(loginSigningPayload(nonce), "utf8"))) };
+    return { wallet: kp.publicKey(), nonce, signature: b64(kp.sign(Buffer.from(loginSigningPayload(SITIO_ENTRADA_DEFAULT, nonce), "utf8"))) };
   }
 
   it("contributor por invitación y founder por dato de la base", async () => {

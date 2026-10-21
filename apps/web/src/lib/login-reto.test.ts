@@ -17,7 +17,7 @@ import { Keypair } from "@stellar/stellar-sdk";
 import { openDb, type DB } from "./db";
 import { claCanonicalHash } from "./cla";
 import { claSigningPayload } from "./cla-signing";
-import { LOGIN_DOMAIN_SEPARATOR, NONCE_RE, loginSigningPayload } from "./login-signing";
+import { LOGIN_DOMAIN_SEPARATOR, NONCE_RE, SITIO_ENTRADA_DEFAULT, loginSigningPayload, sitioDesdeUrl } from "./login-signing";
 import { AlmacenRetos, RETO_TTL_MS, almacenRetos } from "./login-reto";
 import { OnboardError, performLogin, performOnboard } from "./onboard";
 import { loginRetoSchema, loginSchema } from "./validation";
@@ -66,14 +66,14 @@ describe("login por reto: una firma vieja o repetida ya no entra", () => {
 
   it("firma sobre un reto vigente de esa wallet: entra", () => {
     const { nonce } = retos.emitir(wallet);
-    const r = performLogin(db, { wallet, nonce, signature: firmar(kp, loginSigningPayload(nonce)) }, retos);
+    const r = performLogin(db, { wallet, nonce, signature: firmar(kp, loginSigningPayload(SITIO_ENTRADA_DEFAULT, nonce)) }, retos);
     expect(r.wallet).toBe(wallet);
     expect(r.role).toBe("contributor");
   });
 
   it("la misma firma repetida (replay) ya no entra: el reto se gastó", () => {
     const { nonce } = retos.emitir(wallet);
-    const entrada = { wallet, nonce, signature: firmar(kp, loginSigningPayload(nonce)) };
+    const entrada = { wallet, nonce, signature: firmar(kp, loginSigningPayload(SITIO_ENTRADA_DEFAULT, nonce)) };
     expect(motivo(() => performLogin(db, entrada, retos))).toBe("ok");
     expect(motivo(() => performLogin(db, entrada, retos))).toBe("401:reto_invalido");
     expect(motivo(() => performLogin(db, entrada, retos))).toBe("401:reto_invalido");
@@ -97,7 +97,7 @@ describe("login por reto: una firma vieja o repetida ya no entra", () => {
 
   it("una firma de un login anterior no vale con un reto nuevo", () => {
     const primero = retos.emitir(wallet).nonce;
-    const firmaVieja = firmar(kp, loginSigningPayload(primero));
+    const firmaVieja = firmar(kp, loginSigningPayload(SITIO_ENTRADA_DEFAULT, primero));
     expect(motivo(() => performLogin(db, { wallet, nonce: primero, signature: firmaVieja }, retos))).toBe("ok");
     const segundo = retos.emitir(wallet).nonce;
     expect(motivo(() => performLogin(db, { wallet, nonce: segundo, signature: firmaVieja }, retos))).toBe("401:firma_invalida");
@@ -106,36 +106,36 @@ describe("login por reto: una firma vieja o repetida ya no entra", () => {
   it("un reto caducado no entra, aunque la firma sea buena", () => {
     const cortos = new AlmacenRetos(1_000);
     const { nonce } = cortos.emitir(wallet, Date.now() - 5_000); // caducó hace 4 s
-    const entrada = { wallet, nonce, signature: firmar(kp, loginSigningPayload(nonce)) };
+    const entrada = { wallet, nonce, signature: firmar(kp, loginSigningPayload(SITIO_ENTRADA_DEFAULT, nonce)) };
     expect(motivo(() => performLogin(db, entrada, cortos))).toBe("401:reto_invalido");
   });
 
   it("un reto que el servidor no emitió no entra", () => {
     const inventado = Buffer.alloc(32, 7).toString("base64url");
     expect(NONCE_RE.test(inventado)).toBe(true);
-    const entrada = { wallet, nonce: inventado, signature: firmar(kp, loginSigningPayload(inventado)) };
+    const entrada = { wallet, nonce: inventado, signature: firmar(kp, loginSigningPayload(SITIO_ENTRADA_DEFAULT, inventado)) };
     expect(motivo(() => performLogin(db, entrada, retos))).toBe("401:reto_invalido");
   });
 
   it("un reto pedido para otra wallet no sirve, y queda gastado", () => {
     const otra = Keypair.random().publicKey();
     const { nonce } = retos.emitir(otra);
-    const entrada = { wallet, nonce, signature: firmar(kp, loginSigningPayload(nonce)) };
+    const entrada = { wallet, nonce, signature: firmar(kp, loginSigningPayload(SITIO_ENTRADA_DEFAULT, nonce)) };
     expect(motivo(() => performLogin(db, entrada, retos))).toBe("401:reto_invalido");
     expect(retos.consumir(nonce, otra)).toBe("inexistente");
   });
 
   it("un intento con firma inválida también gasta el reto (un solo intento por reto)", () => {
     const { nonce } = retos.emitir(wallet);
-    const mala = firmar(Keypair.random(), loginSigningPayload(nonce));
+    const mala = firmar(Keypair.random(), loginSigningPayload(SITIO_ENTRADA_DEFAULT, nonce));
     expect(motivo(() => performLogin(db, { wallet, nonce, signature: mala }, retos))).toBe("401:firma_invalida");
-    const buena = firmar(kp, loginSigningPayload(nonce));
+    const buena = firmar(kp, loginSigningPayload(SITIO_ENTRADA_DEFAULT, nonce));
     expect(motivo(() => performLogin(db, { wallet, nonce, signature: buena }, retos))).toBe("401:reto_invalido");
   });
 
   it("acepta la firma SEP-53 de Freighter sobre el reto", () => {
     const { nonce } = retos.emitir(wallet);
-    const prefijado = Buffer.from("Stellar Signed Message:\n" + loginSigningPayload(nonce), "utf8");
+    const prefijado = Buffer.from("Stellar Signed Message:\n" + loginSigningPayload(SITIO_ENTRADA_DEFAULT, nonce), "utf8");
     const sep53 = b64(kp.sign(createHash("sha256").update(prefijado).digest()));
     expect(motivo(() => performLogin(db, { wallet, nonce, signature: sep53 }, retos))).toBe("ok");
   });
@@ -143,7 +143,7 @@ describe("login por reto: una firma vieja o repetida ya no entra", () => {
   it("una wallet sin registrar con firma válida sigue siendo 404", () => {
     const ajena = Keypair.random();
     const { nonce } = retos.emitir(ajena.publicKey());
-    const entrada = { wallet: ajena.publicKey(), nonce, signature: firmar(ajena, loginSigningPayload(nonce)) };
+    const entrada = { wallet: ajena.publicKey(), nonce, signature: firmar(ajena, loginSigningPayload(SITIO_ENTRADA_DEFAULT, nonce)) };
     expect(motivo(() => performLogin(db, entrada, retos))).toBe("404:no_registrada");
   });
 });
@@ -206,8 +206,51 @@ describe("el mensaje de entrada", () => {
   it("es distinto del que se firma en el alta (otro separador de dominio)", () => {
     expect(LOGIN_DOMAIN_SEPARATOR).toBe("zelena-login-testnet-v1");
     const n = "a".repeat(43);
-    expect(loginSigningPayload(n)).toBe(`zelena-login-testnet-v1:${n}`);
-    expect(loginSigningPayload(n).startsWith("zelena-cla-")).toBe(false);
+    expect(loginSigningPayload(SITIO_ENTRADA_DEFAULT, n).startsWith("zelena-cla-")).toBe(false);
+  });
+
+  it("nombra el sitio, para que la persona vea en Freighter dónde entra (decisión del founder)", () => {
+    const n = "a".repeat(43);
+    expect(SITIO_ENTRADA_DEFAULT).toBe("www.zelena.tech");
+    expect(loginSigningPayload(SITIO_ENTRADA_DEFAULT, n)).toBe(`zelena-login-testnet-v1:www.zelena.tech:${n}`);
+  });
+
+  it("el sitio es el host de SITE_URL; sin él o con un valor raro, www.zelena.tech", () => {
+    expect(sitioDesdeUrl("https://www.zelena.tech")).toBe("www.zelena.tech");
+    expect(sitioDesdeUrl("https://staging.zelena.tech/")).toBe("staging.zelena.tech");
+    expect(sitioDesdeUrl("http://localhost:3000")).toBe("localhost:3000");
+    expect(sitioDesdeUrl(undefined)).toBe("www.zelena.tech");
+    expect(sitioDesdeUrl("")).toBe("www.zelena.tech");
+    expect(sitioDesdeUrl("javascript:alert(1)")).toBe("www.zelena.tech");
+    expect(sitioDesdeUrl("no es una url")).toBe("www.zelena.tech");
+  });
+
+  it("una firma para OTRO sitio (o la forma vieja, sin sitio) no entra", () => {
+    const db = openDb(":memory:");
+    db.exec(fs.readFileSync(path.join(WEB, "src", "lib", "schema.sql"), "utf8"));
+    const kp = Keypair.random();
+    const wallet = kp.publicKey();
+    db.prepare(`INSERT INTO users (wallet, display_name, cla_signed) VALUES (?, 'Ada', 1)`).run(wallet);
+    const retos = new AlmacenRetos();
+    const firmar = (texto: string) => Buffer.from(kp.sign(Buffer.from(texto, "utf8"))).toString("base64");
+
+    const r1 = retos.emitir(wallet).nonce;
+    const otroSitio = firmar(loginSigningPayload("sitio-falso.example", r1));
+    expect(() => performLogin(db, { wallet, nonce: r1, signature: otroSitio }, retos)).toThrow(/Firma inválida/);
+
+    const r2 = retos.emitir(wallet).nonce;
+    const sinSitio = firmar(`${LOGIN_DOMAIN_SEPARATOR}:${r2}`);
+    expect(() => performLogin(db, { wallet, nonce: r2, signature: sinSitio }, retos)).toThrow(/Firma inválida/);
+
+    // Con SITE_URL de staging, el servidor espera ese sitio y no el de producción.
+    const r3 = retos.emitir(wallet).nonce;
+    const prod = firmar(loginSigningPayload(SITIO_ENTRADA_DEFAULT, r3));
+    expect(() => performLogin(db, { wallet, nonce: r3, signature: prod }, retos, "staging.zelena.tech")).toThrow(
+      /Firma inválida/
+    );
+    const r4 = retos.emitir(wallet).nonce;
+    const staging = firmar(loginSigningPayload("staging.zelena.tech", r4));
+    expect(performLogin(db, { wallet, nonce: r4, signature: staging }, retos, "staging.zelena.tech").wallet).toBe(wallet);
   });
 
   it("pedir un reto acepta una wallet opcional y nada más", () => {
@@ -239,7 +282,11 @@ describe("rutas y cliente (estático)", () => {
   it("/entrar pide un reto, firma el mensaje de entrada y no manda claHash a /api/login", () => {
     const src = leer("app/entrar/page.tsx");
     expect(src).toContain('fetch("/api/login/reto"');
-    expect(src).toContain("loginSigningPayload(");
+    expect(src).toContain("loginSigningPayload(sitio, nonce)");
+    expect(src).toContain("SITIO_RE.test(sitio)");
+    const reto = leer("app/api/login/reto/route.ts");
+    expect(reto).toContain("const sitio = sitioDeEntrada();");
+    expect(reto).toContain("mensaje: loginSigningPayload(sitio, reto.nonce)");
     const login = src.slice(src.indexOf('fetch("/api/login",'));
     expect(login.slice(0, 300)).toMatch(/JSON\.stringify\(\{ wallet, nonce[^}]*signature/);
     expect(login.slice(0, 300)).not.toContain("claHash");

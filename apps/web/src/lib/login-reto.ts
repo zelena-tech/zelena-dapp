@@ -5,7 +5,7 @@
  * Flujo:
  *   1. `POST /api/login/reto` (o `GET`) → el servidor emite un reto aleatorio de 32 bytes
  *      con caducidad corta (`RETO_TTL_MS`) y guarda SOLO su sha256.
- *   2. La wallet firma `zelena-login-testnet-v1:<reto>` (lib/login-signing.ts).
+ *   2. La wallet firma `zelena-login-testnet-v1:<sitio>:<reto>` (lib/login-signing.ts).
  *   3. `POST /api/login` → `performLogin` consume el reto (un solo intento, salga bien o
  *      mal) y después verifica la firma. Un reto caducado, usado o de otra wallet no entra.
  *

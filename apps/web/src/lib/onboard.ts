@@ -10,7 +10,7 @@ import type { DB } from "./db";
 import { consumeInvite, InviteConsumeError } from "./invites";
 import { claCanonicalHash } from "./cla";
 import { claSigningPayload } from "./cla-signing";
-import { loginSigningPayload } from "./login-signing";
+import { loginSigningPayload, sitioDesdeUrl } from "./login-signing";
 import { almacenRetos, type AlmacenRetos } from "./login-reto";
 import { verifyWalletSignature } from "./crypto";
 import { CLA_VERSION, esCodigoDemo, isBootstrapCode } from "./config";
@@ -156,11 +156,20 @@ export function performOnboard(db: DB, input: OnboardInput): OnboardResult {
   return tx();
 }
 
+/**
+ * Sitio que nombra el mensaje de entrada: el host de `SITE_URL` o `www.zelena.tech`
+ * (lib/login-signing.ts). Lo usan `/api/login/reto` (lo manda con el reto) y
+ * `performLogin` (verifica la firma sobre ese mismo texto).
+ */
+export function sitioDeEntrada(env: NodeJS.ProcessEnv = process.env): string {
+  return sitioDesdeUrl(env.SITE_URL);
+}
+
 export interface LoginInput {
   wallet: string;
   /** Reto de un solo uso emitido por `/api/login/reto` (lib/login-reto.ts). */
   nonce: string;
-  /** Firma ed25519 (base64) de `loginSigningPayload(nonce)`. */
+  /** Firma ed25519 (base64) de `loginSigningPayload(sitio, nonce)`. */
   signature: string;
 }
 
@@ -188,7 +197,7 @@ export interface LoginResult {
  * founder). Ahora:
  *   1. el reto se CONSUME antes de mirar la firma: un solo intento por reto, así una
  *      firma vieja o repetida ya no entra;
- *   2. la firma tiene que ser sobre `zelena-login-testnet-v1:<reto>`; una firma del
+ *   2. la firma tiene que ser sobre `zelena-login-testnet-v1:<sitio>:<reto>`; una firma del
  *      CLA (`zelena-cla-testnet-v1:…`) no sirve aquí por su separador de dominio;
  *   3. un reto pedido para otra wallet tampoco sirve.
  * La firma del CLA en el alta (`performOnboard`) sigue igual: es legal y está anclada.
@@ -197,7 +206,12 @@ export interface LoginResult {
  * nadie podía volver a entrar tras perder la cookie — en un despliegue nuevo,
  * ni el propio fundador.
  */
-export function performLogin(db: DB, input: LoginInput, retos: AlmacenRetos = almacenRetos()): LoginResult {
+export function performLogin(
+  db: DB,
+  input: LoginInput,
+  retos: AlmacenRetos = almacenRetos(),
+  sitio: string = sitioDeEntrada()
+): LoginResult {
   const { wallet, nonce, signature } = input;
 
   if (retos.consumir(nonce, wallet) !== "ok") {
@@ -207,7 +221,7 @@ export function performLogin(db: DB, input: LoginInput, retos: AlmacenRetos = al
       "reto_invalido"
     );
   }
-  if (!verifyWalletSignature(wallet, loginSigningPayload(nonce), signature)) {
+  if (!verifyWalletSignature(wallet, loginSigningPayload(sitio, nonce), signature)) {
     throw new OnboardError(401, "Firma inválida: no corresponde a la wallet declarada.", "firma_invalida");
   }
   const user = db

@@ -141,7 +141,7 @@ producción si falta. **Esfuerzo: S.**
   founder.
 - **Arreglo:** reto-respuesta. `GET`/`POST /api/login/reto` emite 32 bytes aleatorios
   (base64url) que caducan en 5 minutos; el servidor guarda solo su sha256
-  (`lib/login-reto.ts`). La wallet firma `zelena-login-testnet-v1:<reto>`
+  (`lib/login-reto.ts`). La wallet firma `zelena-login-testnet-v1:<sitio>:<reto>` (el host de `SITE_URL` o `www.zelena.tech`, para que la persona vea en su wallet dónde entra)
   (`lib/login-signing.ts`; Freighter con `signMessage`/SEP-53, la de prueba en el navegador) y
   `performLogin` consume el reto ANTES de mirar la firma (un intento por reto), exige que sea de
   esa wallet si se pidió con ella y verifica la firma. El separador de dominio es distinto del

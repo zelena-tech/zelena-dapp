@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Markdown } from "@/components/Markdown";
 import { shortWallet } from "@/components/ui";
 import { claSigningPayload } from "@/lib/cla-signing";
-import { loginSigningPayload } from "@/lib/login-signing";
+import { SITIO_RE, loginSigningPayload } from "@/lib/login-signing";
 import { EntraSignInButton, EntraSignInError } from "@/components/EntraSignInButton";
 import { EntraSecondEmailBanner } from "@/components/EntraSecondEmailBanner";
 import IntroEcosistema from "@/components/IntroEcosistema";
@@ -348,10 +348,11 @@ export default function Entrar() {
   }
 
   /**
-   * Reingreso por reto: el servidor emite un reto de un solo uso, la wallet firma
-   * `zelena-login-testnet-v1:<reto>` y /api/login lo verifica y lo gasta. El mensaje se
-   * arma AQUÍ con el reto (no se firma lo que mande el servidor): la wallet solo firma
-   * mensajes de entrada de Zelena. La firma del acuerdo ya no sirve para entrar.
+   * Reingreso por reto: el servidor emite un reto de un solo uso y el sitio, la wallet
+   * firma `zelena-login-testnet-v1:<sitio>:<reto>` (así se ve en Freighter dónde se entra)
+   * y /api/login lo verifica y lo gasta. El mensaje se arma AQUÍ (no se firma un texto
+   * libre del servidor): la wallet solo firma mensajes de entrada de Zelena, con un sitio
+   * que es un host válido. La firma del acuerdo ya no sirve para entrar.
    */
   async function entrarConReto(): Promise<boolean> {
     const resReto = await fetch("/api/login/reto", {
@@ -365,7 +366,12 @@ export default function Entrar() {
       return false;
     }
     const nonce: string = dataReto.nonce;
-    const signature = await firmarMensaje(loginSigningPayload(nonce));
+    const sitio = typeof dataReto.sitio === "string" ? dataReto.sitio : "";
+    if (!SITIO_RE.test(sitio)) {
+      setError("No se pudo preparar la entrada. Intenta de nuevo.");
+      return false;
+    }
+    const signature = await firmarMensaje(loginSigningPayload(sitio, nonce));
     if (!signature) return false;
     const resLogin = await fetch("/api/login", {
       method: "POST",

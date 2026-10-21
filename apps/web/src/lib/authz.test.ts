@@ -30,7 +30,7 @@ import { FOUNDER_WALLET } from "./config";
 import { Keypair } from "@stellar/stellar-sdk";
 import { claCanonicalHash } from "./cla";
 import { claSigningPayload } from "./cla-signing";
-import { loginSigningPayload } from "./login-signing";
+import { SITIO_ENTRADA_DEFAULT, loginSigningPayload } from "./login-signing";
 import { AlmacenRetos } from "./login-reto";
 import { performLogin, performOnboard } from "./onboard";
 import { agregarMiembro, crearProyecto, seedTeam } from "./team";
@@ -308,7 +308,7 @@ describe("WP31 · A11 · reingreso: un contributor miembro vuelve a entrar y lle
     // Reingreso por reto (lib/login-reto.ts): la firma del CLA ya no sirve para entrar.
     const retos = new AlmacenRetos();
     const { nonce } = retos.emitir(wallet);
-    const firmaEntrada = Buffer.from(kp.sign(Buffer.from(loginSigningPayload(nonce), "utf8"))).toString("base64");
+    const firmaEntrada = Buffer.from(kp.sign(Buffer.from(loginSigningPayload(SITIO_ENTRADA_DEFAULT, nonce), "utf8"))).toString("base64");
     const login = performLogin(db, { wallet, nonce, signature: firmaEntrada }, retos);
     expect(login.role).toBe("contributor");
     // La cookie se firma con lo que devuelve el login; la puerta relee la base.
