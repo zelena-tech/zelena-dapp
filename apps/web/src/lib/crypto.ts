@@ -9,8 +9,9 @@ export function sha256Hex(input: string): string {
  * Verifica criptográficamente (ed25519, vía StrKey de Stellar) que `signatureB64`
  * (base64) sobre el `payload` (UTF-8) corresponde a la clave pública `pubkey`.
  *
- * `payload` debe construirse SIEMPRE con `claSigningPayload()` (incluye el domain
- * separator anti-replay). Devuelve `false` — nunca lanza — ante cualquier entrada
+ * `payload` debe construirse SIEMPRE con `claSigningPayload()` (alta) o con
+ * `loginSigningPayload()` (reingreso por reto): los dos llevan su domain separator
+ * anti-replay, distinto entre sí. Devuelve `false` — nunca lanza — ante cualquier entrada
  * inválida: pubkey mal formada, firma no decodificable, o longitud distinta de los
  * 64 bytes de una firma ed25519 (esto último rechaza placeholders como el literal
  * "freighter-no-signMessage" del hallazgo H3, que jamás debe anclarse on-chain).

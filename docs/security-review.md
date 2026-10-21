@@ -133,6 +133,28 @@ producción si falta. **Esfuerzo: S.**
   pre-autenticación reutilizada); la sesión se crea de cero en `onboard`. No se identificó un
   vector de fijación de sesión distinto de H1/H2.
 
+### Reingreso por reto de un solo uso (corregido en la versión que quitó el whitepaper)
+- **Hallazgo (verificación final, importante):** `/api/login` aceptaba siempre la MISMA firma
+  ed25519 sobre un texto fijo (`zelena-cla-testnet-v1:<hash del CLA>`), sin reto, sin caducidad
+  y sin un solo uso. Esa firma además se guarda en claro en `cla_signatures.signature`: quien
+  leyera una copia de la base tenía una sesión permanente de cualquier wallet, también la del
+  founder.
+- **Arreglo:** reto-respuesta. `GET`/`POST /api/login/reto` emite 32 bytes aleatorios
+  (base64url) que caducan en 5 minutos; el servidor guarda solo su sha256
+  (`lib/login-reto.ts`). La wallet firma `zelena-login-testnet-v1:<reto>`
+  (`lib/login-signing.ts`; Freighter con `signMessage`/SEP-53, la de prueba en el navegador) y
+  `performLogin` consume el reto ANTES de mirar la firma (un intento por reto), exige que sea de
+  esa wallet si se pidió con ella y verifica la firma. El separador de dominio es distinto del
+  del CLA: una firma del acuerdo nunca vale para entrar. El cliente arma el mensaje con el reto
+  (no firma lo que diga el servidor). `loginSchema` es `.strict()`: el cuerpo viejo con
+  `claHash` se rechaza. Tests en `src/lib/login-reto.test.ts` (firma del CLA, replay, reto
+  caducado, ajeno, inventado y gastado por un intento fallido).
+- **Sin cambio:** la firma del CLA en el alta (`performOnboard`) sigue igual: es el acto legal
+  y se ancla en testnet.
+- **Límite:** los retos viven en memoria del proceso; vale con UNA instancia (la de v1). Antes
+  de escalar, pasarlos a una tabla. Las cookies emitidas antes del cambio duran hasta 24 h:
+  rotar `SESSION_SECRET` al desplegar las corta todas.
+
 ---
 
 ## 2. Onboarding e invitaciones

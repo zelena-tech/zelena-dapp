@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Markdown } from "@/components/Markdown";
 import { shortWallet } from "@/components/ui";
 import { claSigningPayload } from "@/lib/cla-signing";
+import { loginSigningPayload } from "@/lib/login-signing";
 import { EntraSignInButton, EntraSignInError } from "@/components/EntraSignInButton";
 import { EntraSecondEmailBanner } from "@/components/EntraSecondEmailBanner";
 import IntroEcosistema from "@/components/IntroEcosistema";
@@ -63,7 +64,8 @@ export default function Entrar() {
   const [detalle, setDetalle] = useState("");
 
   useEffect(() => {
-    if (step === 3 && !claText) {
+    // Quien ya está registrado no vuelve a firmar el acuerdo: firma un reto de entrada.
+    if (step === 3 && !returning && !claText) {
       fetch("/api/cla")
         .then((r) => r.json())
         .then(async (d) => {
@@ -72,7 +74,7 @@ export default function Entrar() {
         })
         .catch(() => setError("No se pudo cargar el acuerdo."));
     }
-  }, [step, claText]);
+  }, [step, returning, claText]);
 
   // Prellenado desde el QR proyectado: /entrar?code=ESPECIALIZACION-2026.
   // Se lee de window.location.search (no useSearchParams) para no forzar el
@@ -281,76 +283,113 @@ export default function Entrar() {
     return "";
   }
 
+  /**
+   * Firma `mensaje` con la wallet elegida: la de prueba firma aquí mismo; Freighter con
+   * `signMessage` (SEP-53). Devuelve la firma en base64, o null tras dejar el error a la vista.
+   */
+  async function firmarMensaje(mensaje: string): Promise<string | null> {
+    if (isDemo) {
+      const { Keypair } = await import("@stellar/stellar-sdk");
+      const kp = Keypair.fromSecret(secret);
+      const sig = kp.sign(new TextEncoder().encode(mensaje) as unknown as Buffer);
+      return bytesToBase64(new Uint8Array(sig));
+    }
+    const freighter: any = await import("@stellar/freighter-api");
+    if (!freighter.signMessage) {
+      // Sin signMessage no hay firma real; NO enviar un placeholder (se anclaría
+      // en la red sin valor probatorio — hallazgo H3). Bloquear el registro.
+      setError(
+        "Esta versión de Freighter no permite firmar mensajes. Usa la wallet de prueba para completar el registro."
+      );
+      return null;
+    }
+    const r = await freighter.signMessage(mensaje, { address: wallet });
+    setDetalle("Freighter devolvió: " + describir(r));
+    if (r?.error) {
+      setError("Freighter no firmó: " + describir(r.error));
+      return null;
+    }
+    const firma = normalizarFirma(r?.signedMessage ?? r);
+    if (!firma) {
+      setError("No se pudo leer la firma devuelta por Freighter. Reintenta o usa la wallet de prueba.");
+      return null;
+    }
+    setDetalle(`Firma recibida (${firma.length} caracteres base64) · wallet ${wallet.slice(0, 6)}…`);
+    return firma;
+  }
+
+  /**
+   * Reingreso por reto: el servidor emite un reto de un solo uso, la wallet firma
+   * `zelena-login-testnet-v1:<reto>` y /api/login lo verifica y lo gasta. El mensaje se
+   * arma AQUÍ con el reto (no se firma lo que mande el servidor): la wallet solo firma
+   * mensajes de entrada de Zelena. La firma del acuerdo ya no sirve para entrar.
+   */
+  async function entrarConReto(): Promise<boolean> {
+    const resReto = await fetch("/api/login/reto", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ wallet }),
+    });
+    const dataReto = await resReto.json().catch(() => ({}));
+    if (!resReto.ok || typeof dataReto.nonce !== "string") {
+      setError(dataReto.error ?? "No se pudo preparar la entrada. Intenta de nuevo.");
+      return false;
+    }
+    const nonce: string = dataReto.nonce;
+    const signature = await firmarMensaje(loginSigningPayload(nonce));
+    if (!signature) return false;
+    const resLogin = await fetch("/api/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ wallet, nonce, signature }),
+    });
+    const dataLogin = await resLogin.json().catch(() => ({}));
+    if (!resLogin.ok) {
+      setError(dataLogin.error ?? "No se pudo iniciar sesión con esta wallet.");
+      return false;
+    }
+    return true;
+  }
+
   async function signAndFinish() {
     setSigning(true);
     setError("");
     setDetalle("");
     try {
-      // El servidor verifica ed25519 sobre ESTE mismo payload (hash + domain separator).
-      const payload = claSigningPayload(claHash);
-      let signature = "";
-      if (isDemo) {
-        const { Keypair } = await import("@stellar/stellar-sdk");
-        const kp = Keypair.fromSecret(secret);
-        const sig = kp.sign(new TextEncoder().encode(payload) as unknown as Buffer);
-        signature = bytesToBase64(new Uint8Array(sig));
-      } else {
-        const freighter: any = await import("@stellar/freighter-api");
-        if (!freighter.signMessage) {
-          // Sin signMessage no hay firma real; NO enviar un placeholder (se anclaría
-          // en la red sin valor probatorio — hallazgo H3). Bloquear el registro.
-          setError(
-            "Esta versión de Freighter no permite firmar mensajes. Usa la wallet de prueba para completar el registro."
-          );
-          return;
-        }
-        const r = await freighter.signMessage(payload, { address: wallet });
-        setDetalle("Freighter devolvió: " + describir(r));
-        if (r?.error) {
-          setError("Freighter no firmó: " + describir(r.error));
-          return;
-        }
-        signature = normalizarFirma(r?.signedMessage ?? r);
-        if (!signature) {
-          setError("No se pudo leer la firma devuelta por Freighter. Reintenta o usa la wallet de prueba.");
-          return;
-        }
-        setDetalle(`Firma recibida (${signature.length} caracteres base64) · wallet ${wallet.slice(0, 6)}…`);
-      }
-
-      // Wallet ya registrada (o reingreso explícito): sesión por firma, sin gastar invitación.
-      const soloEntrar = returning || !code.trim();
-      if (!soloEntrar) {
-        const res = await fetch("/api/onboard", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ code: code.trim(), wallet, name: name.trim(), isDemo, claHash, signature }),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (res.ok) {
+      // Reingreso: no se vuelve a firmar el acuerdo, se firma un reto de entrada.
+      if (returning || !code.trim()) {
+        if (await entrarConReto()) {
           router.push("/perfil");
           router.refresh();
-          return;
         }
-        // Un 409 puede ser "wallet ya registrada" (entonces sí toca reingresar)
-        // o "cupos agotados" / "código expirado" (entonces NO: hay que decirlo).
-        if (res.status !== 409 || data.reason !== "wallet_registrada") {
-          setError(data.error ?? "No se pudo completar el registro.");
-          return;
-        }
-      }
-      const resLogin = await fetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ wallet, claHash, signature }),
-      });
-      const dataLogin = await resLogin.json().catch(() => ({}));
-      if (!resLogin.ok) {
-        setError(dataLogin.error ?? "No se pudo iniciar sesión con esta wallet.");
         return;
       }
-      router.push("/perfil");
-      router.refresh();
+
+      // Alta: el servidor verifica ed25519 sobre ESTE mismo payload (hash + domain separator).
+      const signature = await firmarMensaje(claSigningPayload(claHash));
+      if (!signature) return;
+      const res = await fetch("/api/onboard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: code.trim(), wallet, name: name.trim(), isDemo, claHash, signature }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        router.push("/perfil");
+        router.refresh();
+        return;
+      }
+      // Un 409 puede ser "wallet ya registrada" (entonces sí toca reingresar)
+      // o "cupos agotados" / "código expirado" (entonces NO: hay que decirlo).
+      if (res.status !== 409 || data.reason !== "wallet_registrada") {
+        setError(data.error ?? "No se pudo completar el registro.");
+        return;
+      }
+      // Ya estaba registrada: se entra con un reto (una firma más; la invitación no se gasta).
+      if (await entrarConReto()) {
+        router.push("/perfil");
+        router.refresh();
+      }
     } catch {
       setError("Error al firmar o registrar.");
     } finally {
@@ -481,7 +520,7 @@ export default function Entrar() {
           <div className="border-t border-line pt-4">
             <p className="text-xs text-faint">
               ¿Tu wallet ya está registrada (por ejemplo la del fundador o la de una entrada anterior)? No necesitas
-              código: entra firmando el acuerdo con tu wallet.
+              código: entra firmando con tu wallet un reto de un solo uso.
             </p>
             <button
               className="btn btn-ghost mt-2"
@@ -632,8 +671,30 @@ export default function Entrar() {
         </div>
       )}
 
-      {/* Paso 3 */}
-      {step === 3 && (
+      {/* Paso 3 · reingreso: un reto de un solo uso, sin volver a firmar el acuerdo */}
+      {step === 3 && returning && (
+        <div className="card space-y-4 p-6">
+          <h2 className="font-head text-xl font-bold text-white">Firma para entrar</h2>
+          <p className="text-sm text-muted">
+            Tu wallet firma un reto que vale una sola vez y caduca en minutos. Así nadie puede reutilizar una firma
+            tuya para entrar. No vuelves a firmar el acuerdo: ya lo firmaste al registrarte.
+          </p>
+          <div className="text-xs text-faint">
+            Entrando con <span className="text-white">{shortWallet(wallet)}</span>
+          </div>
+          {error ? <p className="text-sm text-red-400">{error}</p> : null}
+          {detalle ? <p className="break-all font-mono text-[10px] text-faint">{detalle}</p> : null}
+          <div className="flex justify-between">
+            <button className="btn btn-ghost" onClick={() => setStep(2)}>Atrás</button>
+            <button className="btn btn-primary" onClick={() => void signAndFinish()} disabled={signing || !wallet}>
+              {signing ? "Firmando…" : "Firmar y entrar con mi wallet"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Paso 3 · alta: firma del acuerdo de contribución */}
+      {step === 3 && !returning && (
         <div className="card space-y-4 p-6">
           <h2 className="font-head text-xl font-bold text-white">Firma el acuerdo de contribución</h2>
           <p className="text-sm text-muted">
@@ -667,7 +728,7 @@ export default function Entrar() {
           <div className="flex justify-between">
             <button className="btn btn-ghost" onClick={() => setStep(2)}>Atrás</button>
             <button className="btn btn-primary" onClick={() => void signAndFinish()} disabled={!claHash || signing}>
-              {signing ? "Firmando…" : returning ? "Firmar y entrar con mi wallet" : "Firmar y entrar"}
+              {signing ? "Firmando…" : "Firmar y entrar"}
             </button>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { SLUGS_INTERES } from "./servicios";
+import { NONCE_RE } from "./login-signing";
 
 // Stellar public key: 'G' + 55 base32 chars. Aceptamos también wallets demo del seed.
 const wallet = z
@@ -39,14 +40,21 @@ export const onboardSchema = z.object({
 
 /**
  * Reingreso de una wallet YA registrada: no consume invitación, no crea usuario.
- * La autenticación es la firma ed25519 sobre el payload del CLA (solo el titular
- * de la llave puede producirla), así que no hay código de invitación involucrado.
+ * La autenticación es la firma ed25519 sobre un RETO de un solo uso que emite
+ * `/api/login/reto` (lib/login-reto.ts), nunca la firma fija del CLA: esa se guarda
+ * en la base y quien la leyera entraría para siempre. `.strict()`: un cuerpo con
+ * la forma vieja (`claHash`) se rechaza en vez de ignorar el campo.
  */
-export const loginSchema = z.object({
-  wallet,
-  claHash: z.string().trim().length(64),
-  signature: z.string().trim().min(4).max(400),
-});
+export const loginSchema = z
+  .object({
+    wallet,
+    nonce: z.string().trim().regex(NONCE_RE, "Reto inválido."),
+    signature: z.string().trim().min(4).max(400),
+  })
+  .strict();
+
+/** Pedir un reto de entrada. Con `wallet`, el reto solo sirve para esa wallet. */
+export const loginRetoSchema = z.object({ wallet: wallet.optional() }).strict();
 
 export const applySchema = z.object({
   projectId: z.number().int().positive(),
