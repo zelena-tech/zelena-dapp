@@ -25,6 +25,7 @@ export default function NavContextual({
   accesoEquipo,
   esInterno,
   puedeVerTodo,
+  conClientes,
   accesoDao,
   salir,
 }: {
@@ -35,8 +36,10 @@ export default function NavContextual({
   accesoEquipo: boolean;
   /** Equipo interno (founder, core o supervisor): ve Clientes. */
   esInterno: boolean;
-  /** Founder o supervisor: ve Talento. */
+  /** Founder o supervisor: ve Seguimiento y Talento. */
   puedeVerTodo: boolean;
+  /** Hay algún cliente que pueda ver: sin clientes, "Clientes" no se dibuja. */
+  conClientes: boolean;
   /** Botón de sesión (Entrar o el perfil), renderizado en el servidor. */
   accesoDao: ReactNode;
   /** Botón de salir, solo si hay sesión. */
@@ -44,10 +47,10 @@ export default function NavContextual({
 }) {
   const ruta = usePathname() ?? "/";
   const enEmpresas = esRutaEmpresas(ruta);
-  const enlaces = menuPara({ ruta, conSesion, accesoEquipo, esInterno, puedeVerTodo });
+  const enlaces = menuPara({ ruta, conSesion, accesoEquipo, esInterno, puedeVerTodo, conClientes });
   const conAdmin = isFounder && !enEmpresas;
 
-  // Cuatro enlaces caben desde 1024 px; con la sesión del equipo (hasta siete y
+  // Cuatro enlaces caben desde 1024 px; con la sesión del equipo (hasta nueve y
   // "Admin") hace falta más ancho para que ninguno se parta en dos líneas.
   const muchos = enlaces.length + (conAdmin ? 1 : 0) > 5;
   const escritorio = muchos ? "hidden items-center gap-1 xl:flex" : "hidden items-center gap-1 lg:flex";

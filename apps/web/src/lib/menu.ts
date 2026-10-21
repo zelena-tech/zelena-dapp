@@ -3,8 +3,8 @@
  * que solo conoce la ruta en el navegador. Nada de base, sesión ni `node:` aquí.
  *
  * Regla: sin sesión, el sitio público tiene cuatro puertas y "Entrar". Las
- * herramientas internas (Mi día, Proyectos, Talento, Clientes) solo se dibujan con
- * sesión, y aun así el permiso real lo decide cada página en el servidor.
+ * herramientas internas (Mi día, Proyectos, Seguimiento, Talento, Clientes) solo se
+ * dibujan con sesión, y aun así el permiso real lo decide cada página en el servidor.
  */
 
 export interface EnlaceMenu {
@@ -56,6 +56,9 @@ const MENU_TRABAJO: readonly EnlaceMenu[] = [
   { href: "/equipo/proyectos", label: "Proyectos" },
 ];
 const ENLACE_AVISOS: EnlaceMenu = { href: RUTA_AVISOS, label: "Avisos" };
+/** El dashboard de seguimiento (WP15, plazos de WP31-I2): solo founder y supervisores. */
+export const RUTA_SEGUIMIENTO = "/equipo/dashboard";
+const ENLACE_SEGUIMIENTO: EnlaceMenu = { href: RUTA_SEGUIMIENTO, label: "Seguimiento" };
 const ENLACE_TALENTO: EnlaceMenu = { href: "/equipo/talento", label: "Talento" };
 const ENLACE_CLIENTES: EnlaceMenu = { href: "/clientes", label: "Clientes" };
 const MENU_COMUNIDAD: readonly EnlaceMenu[] = [
@@ -73,8 +76,11 @@ export function esRutaEmpresas(ruta: string): boolean {
  * Enlaces del menú para una ruta y una sesión.
  *  - /empresas* → MENU_EMPRESAS (con o sin sesión).
  *  - sin sesión → MENU_PUBLICO.
- *  - con sesión → [Mi día, Proyectos (, Avisos)] si tiene acceso al trabajo · [Talento]
- *    si ve todo el equipo · [Clientes] si es del equipo interno · [Ágora, Academia, Comunidad].
+ *  - con sesión → [Mi día, Proyectos (, Avisos)] si tiene acceso al trabajo ·
+ *    [Seguimiento, Talento] si ve todo el equipo (founder o supervisor) · [Clientes] si es
+ *    del equipo interno Y hay algún cliente que pueda ver (`conClientes`: mientras no haya
+ *    clientes, ni forma de crearlos desde la web, el enlace llevaría a una página vacía) ·
+ *    [Ágora, Academia, Comunidad].
  * "Acceso al trabajo" es `accesoEquipo` de lib/authz.ts (lo resuelve Nav en el servidor,
  * contra la base): el equipo interno y quien trabaja por proyecto (contributor con el
  * acuerdo firmado y al menos una membresía). "Avisos" sale solo si su página existe
@@ -88,6 +94,8 @@ export function menuPara(o: {
   esInterno: boolean;
   puedeVerTodo: boolean;
   conAvisos?: boolean;
+  /** Hay al menos un cliente que esta sesión puede ver (lo resuelve Nav contra la base). */
+  conClientes?: boolean;
 }): EnlaceMenu[] {
   if (esRutaEmpresas(o.ruta)) return [...MENU_EMPRESAS];
   if (!o.conSesion) return [...MENU_PUBLICO];
@@ -95,8 +103,8 @@ export function menuPara(o: {
   return [
     ...(o.accesoEquipo ? MENU_TRABAJO : []),
     ...(o.accesoEquipo && conAvisos ? [ENLACE_AVISOS] : []),
-    ...(o.puedeVerTodo ? [ENLACE_TALENTO] : []),
-    ...(o.esInterno ? [ENLACE_CLIENTES] : []),
+    ...(o.puedeVerTodo ? [ENLACE_SEGUIMIENTO, ENLACE_TALENTO] : []),
+    ...(o.esInterno && o.conClientes ? [ENLACE_CLIENTES] : []),
     ...MENU_COMUNIDAD,
   ];
 }

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getDb } from "@/lib/db";
-import { accesoEquipo as tieneAccesoEquipo, claimsPuedenAdministrar } from "@/lib/authz";
+import { accesoEquipo as tieneAccesoEquipo, claimsPuedenAdministrar, clientActor } from "@/lib/authz";
+import { listClientsFor } from "@/lib/clients";
 import { esEquipoInterno, puedeVerTodoElEquipo } from "@/lib/roles";
 import type { SessionData } from "@/lib/jwt";
 import { Logo, shortWallet } from "./ui";
@@ -27,6 +28,24 @@ function accesoAlTrabajo(session: SessionData | null): boolean {
   }
 }
 
+/**
+ * ¿Hay algún cliente que esta sesión pueda ver? Mientras no haya clientes (y hoy no se
+ * pueden crear desde la web), "Clientes" llevaría a una página vacía: no se dibuja. La
+ * regla es la de la propia página (`clientActor` + `listClientsFor`): el founder ve todos,
+ * el resto los clientes donde participa. Si la base no responde, no se dibuja.
+ */
+function hayClientes(session: SessionData | null): boolean {
+  if (!session) return false;
+  try {
+    const db = getDb();
+    const actor = clientActor(session, db);
+    return !!actor && listClientsFor(db, actor).length > 0;
+  } catch (e) {
+    console.error("[nav] clientes", e);
+    return false;
+  }
+}
+
 export default function Nav({ session }: { session: SessionData | null }) {
   // Por ROL, no por la wallet de una persona. Aquí basta con los claims de la
   // cookie: esto solo decide si se DIBUJA un enlace; la puerta real vive en cada
@@ -36,6 +55,7 @@ export default function Nav({ session }: { session: SessionData | null }) {
   // Acceso al trabajo (Mi día, Proyectos): por la base, no por la cookie (WP31).
   const accesoEquipo = accesoAlTrabajo(session);
   const puedeVerTodo = !!session && puedeVerTodoElEquipo(session);
+  const conClientes = esInterno && hayClientes(session);
 
   const accesoDao = session ? (
     <Link href="/perfil" className="btn btn-ghost py-1.5" title={session.wallet}>
@@ -60,6 +80,7 @@ export default function Nav({ session }: { session: SessionData | null }) {
           accesoEquipo={accesoEquipo}
           esInterno={esInterno}
           puedeVerTodo={puedeVerTodo}
+          conClientes={conClientes}
           accesoDao={accesoDao}
           salir={session ? <SalirButton esDemo={session.isDemo} /> : null}
         />
