@@ -31,7 +31,17 @@ function recorrer(dir: string, filtro: RegExp): string[] {
 
 /** Zonas de `app/` que no son sitio público (tienen su propia puerta). */
 const PRIVADAS = /^app\/(api|equipo|admin|clientes|perfil)\//;
-const COMPONENTES_PUBLICOS = ["Nav", "NavContextual", "Footer", "IntroEcosistema", "PruebaEnVivo", "PruebaTestnet", "ProximoEncuentro", "ui"];
+const COMPONENTES_PUBLICOS = [
+  "Nav",
+  "NavContextual",
+  "Footer",
+  "IntroEcosistema",
+  "PruebaEnVivo",
+  "PruebaTestnet",
+  "PruebasTestnetLista",
+  "ProximoEncuentro",
+  "ui",
+];
 const LIBS_PUBLICAS = ["menu", "metodo", "servicios", "encuentros"];
 
 /** Lista generada de archivos públicos (E1-1). */

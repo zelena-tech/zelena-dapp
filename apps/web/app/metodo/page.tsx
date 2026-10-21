@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PASOS_METODO } from "@/lib/metodo";
+import PruebasTestnetLista from "@/components/PruebasTestnetLista";
 
 export const metadata: Metadata = {
   title: "Método", // el layout le añade "· Zelena"
@@ -12,7 +13,8 @@ const TITULAR_H2 =
   "font-serif text-3xl font-normal normal-case leading-[1.15] tracking-normal text-paper sm:text-4xl sm:leading-[1.15] lg:text-[52px]";
 
 // Reemplaza a /ecosistema (redirección 308 en next.config.mjs). Una idea por
-// bloque: los ocho pasos, cómo se reparte el pago y lo que sí prometemos.
+// bloque: los ocho pasos, cómo se reparte el pago, la evidencia en la red de pruebas
+// (todas las transacciones y contratos, #compruebalo) y lo que sí prometemos.
 export default function Metodo() {
   return (
     <div className="space-y-24 md:space-y-32">
@@ -73,6 +75,9 @@ export default function Metodo() {
           </div>
         </div>
       </section>
+
+      {/* ===== COMPRUÉBALO TÚ MISMO: todas las pruebas de la red de pruebas ===== */}
+      <PruebasTestnetLista />
 
       {/* ===== LO QUE SÍ PROMETEMOS ===== */}
       <section className="border-t border-primary pt-10 md:pt-14">
