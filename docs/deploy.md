@@ -11,7 +11,7 @@
 ```bash
 # Desde la raíz del monorepo (zelena-dapp/)
 npm install
-cp apps/web/.env.example apps/web/.env.local   # ajusta SESSION_SECRET
+cp apps/web/.env.example apps/web/.env.local   # opcional: nombres y comentarios, sin valores
 npm run dev                                     # http://localhost:3000
 ```
 
@@ -19,7 +19,7 @@ La base SQLite se crea, migra y siembra sola en el primer arranque
 (`apps/web/data/zelena.db`, gitignored). Códigos de invitación seed, **solo fuera de
 producción**: `GENESIS-0001` … `GENESIS-0006` (en producción no se siembran y, si la base ya
 los tiene, cada arranque vence los que sigan sin usar). La wallet founder por defecto está en
-`.env.example`, pero es una wallet demo con la que nadie puede firmar. Para entrar como
+el código (sin `FOUNDER_WALLET`), pero es una wallet demo con la que nadie puede firmar. Para entrar como
 founder, cambia `FOUNDER_WALLET` a la public key de tu wallet de prueba tras onboardearte y
 **reinicia** la app: en cada arranque la fila de esa wallet queda `founder` (los gates leen
 `users.role`). O entra con `FOUNDER_BOOTSTRAP_CODE`.
