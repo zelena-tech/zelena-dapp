@@ -1306,7 +1306,7 @@ function participaEnCliente(db: DB, ids: string[], clientId: number): boolean {
     .get(clientId, ...ids);
 }
 
-export function puedeVerProyecto(db: DB, actor: EquipoActor, initiativeId: number): boolean {
+export function puedeVerProyecto(db: DB, actor: EquipoActor | TeamActor, initiativeId: number): boolean {
   const ini = getInitiative(db, initiativeId);
   return !!ini && veIniciativa(db, actor, ini);
 }

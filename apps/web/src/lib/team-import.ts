@@ -39,7 +39,7 @@
  * imports de valor con sufijo `.ts` y sintaxis borrable.
  */
 import type { DB } from "./db";
-import { findRosterMember, isPendingPrincipal, normalizeName, pendingPrincipal } from "./roles.ts";
+import { findRosterMember, isPendingPrincipal, normalizeName, pendingPrincipal, type TeamActor } from "./roles.ts";
 import { isTeamStatus, teamTransition, type TeamStatus } from "./team-state-machine.ts";
 import { getActiveGenome } from "./genome.ts";
 import { diaLocal, instanteDb } from "./zona-horaria.ts";
@@ -47,6 +47,7 @@ import {
   createAssignment,
   getAssignment,
   isHorizon,
+  puedeVerProyecto,
   seedTeamRoster,
   slugify,
   upsertInitiative,
@@ -458,12 +459,20 @@ function esFija(p: Pick<PiezaExistente, "status" | "status_before_block">): bool
  *
  * No emite puntos ni reputación. Deja una fila `importar` en `talent_events` con los
  * conteos (quién importó y cuánto, nunca el contenido).
+ *
+ * Aislamiento por cliente (§4.A.12, hallazgo de la verificación final). Con `actor` (la
+ * ruta web), cada fila solo toca proyectos que ese actor ve (`puedeVerProyecto`): un
+ * proyecto de cliente donde no participa no recibe piezas nuevas ni ve pisadas las que
+ * ya tiene, y su nombre no se puede "crear" encima. La fila sale con un error que no
+ * dice si la pieza existía (sin contadores de creada o actualizada que sirvan de
+ * oráculo). Sin `actor` (la consola, `cli`) no hay filtro: es el founder en su máquina.
  */
 export function importTasks(
   db: DB,
   csvText: string,
   createdBy: string | null = null,
-  now: Date = new Date()
+  now: Date = new Date(),
+  actor: TeamActor | null = null
 ): ImportSummary {
   const rows = parseCsv(csvText);
   if (rows.length === 0) throw new Error("El CSV está vacío.");
@@ -516,6 +525,12 @@ export function importTasks(
              FROM assignments WHERE import_key = ?`
         )
         .get(row.importKey) as PiezaExistente | undefined;
+
+      // Antes que nada (ni responsable ni contadores): ¿puede este actor tocar el proyecto?
+      if (actor && !puedeImportarEn(db, actor, row.initiativeName, existing?.initiative_id ?? null)) {
+        summary.errors.push({ line, title: row.title, reason: `no puedes importar en el proyecto «${row.initiativeName}»` });
+        continue;
+      }
 
       let ownerWallet: string | null = null;
       if (row.assignee) {
@@ -644,6 +659,19 @@ export function importTasks(
   });
   tx();
   return summary;
+}
+
+/**
+ * ¿Puede `actor` importar en el proyecto `nombre`? El founder, siempre. Los demás, solo
+ * si ven el proyecto que ya lleva ese nombre (si existe) y el proyecto donde está hoy la
+ * pieza (si ya existía). Un proyecto nuevo, que nadie ve aún, se puede crear.
+ */
+function puedeImportarEn(db: DB, actor: TeamActor, nombre: string, initiativeIdExistente: number | null): boolean {
+  if (actor.role === "founder") return true;
+  const fila = db.prepare(`SELECT id FROM initiatives WHERE slug = ?`).get(slugify(nombre)) as { id: number } | undefined;
+  if (fila && !puedeVerProyecto(db, actor, Number(fila.id))) return false;
+  if (initiativeIdExistente != null && !puedeVerProyecto(db, actor, initiativeIdExistente)) return false;
+  return true;
 }
 
 /** Utilidad para el CLI: comprueba que una asignación importada existe. */

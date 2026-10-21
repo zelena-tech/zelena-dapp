@@ -617,3 +617,73 @@ describe("importTasks — una fila rara no tumba la importación entera", () => 
     ]);
   });
 });
+
+// Hallazgo de la verificación final (§4.A.12): el importador web resolvía 'Iniciativa' por
+// nombre sin mirar si quien importa ve el proyecto. Una supervisora sin client_members
+// creaba piezas en un proyecto de cliente y pisaba las que ya había.
+describe("importTasks con actor: aislamiento por cliente", () => {
+  const SUPERVISORA: TeamActor = { wallet: pendingPrincipal("vale"), name: "Vale", role: "core", isSupervisor: true };
+  const FOUNDER: TeamActor = { wallet: pendingPrincipal("john"), name: "John", role: "founder", isSupervisor: true };
+  const CABECERA = "Task Name,Status,Iniciativa,Criterio de aceptación\n";
+  let db: DB;
+  let proyectoCliente: number;
+  let clienteId: number;
+
+  beforeEach(() => {
+    db = freshDb();
+    seedTeam(db);
+    clienteId = Number(db.prepare(`INSERT INTO clients (slug, name) VALUES ('cliente-x', 'Cliente X')`).run().lastInsertRowid);
+    proyectoCliente = Number(
+      db
+        .prepare(`INSERT INTO initiatives (slug, name, horizon, client_id) VALUES ('proyecto-cliente', 'Proyecto Cliente', 'Ahora', ?)`)
+        .run(clienteId).lastInsertRowid
+    );
+  });
+
+  const piezas = () => (db.prepare(`SELECT COUNT(*) AS n FROM assignments WHERE initiative_id = ?`).get(proyectoCliente) as { n: number }).n;
+
+  it("una supervisora sin participación no crea piezas en un proyecto de cliente", () => {
+    const s = importTasks(db, CABECERA + "Inyectada,Backlog,Proyecto Cliente,Algo verificable.\n", SUPERVISORA.wallet, new Date(), SUPERVISORA);
+    expect(s.created).toBe(0);
+    expect(s.updated).toBe(0);
+    expect(s.errors).toEqual([{ line: 2, title: "Inyectada", reason: "no puedes importar en el proyecto «Proyecto Cliente»" }]);
+    expect(piezas()).toBe(0);
+  });
+
+  it("ni pisa las piezas que ya tiene, y el error no distingue si existía (sin oráculo)", () => {
+    // El founder (o la consola) importa la pieza real del cliente.
+    importTasks(db, CABECERA + "Pieza real,Backlog,Proyecto Cliente,Criterio original.\n", FOUNDER.wallet, new Date(), FOUNDER);
+    expect(piezas()).toBe(1);
+    const antes = db.prepare(`SELECT title, acceptance_criteria FROM assignments WHERE initiative_id = ?`).get(proyectoCliente);
+    const existe = importTasks(db, CABECERA + "Pieza real,Backlog,Proyecto Cliente,Criterio pisado.\n", SUPERVISORA.wallet, new Date(), SUPERVISORA);
+    const noExiste = importTasks(db, CABECERA + "Otra cosa,Backlog,Proyecto Cliente,Algo.\n", SUPERVISORA.wallet, new Date(), SUPERVISORA);
+    expect(existe.updated).toBe(0);
+    expect(existe.errors[0].reason).toBe(noExiste.errors[0].reason);
+    expect([existe.created, existe.updated]).toEqual([noExiste.created, noExiste.updated]);
+    expect(db.prepare(`SELECT title, acceptance_criteria FROM assignments WHERE initiative_id = ?`).get(proyectoCliente)).toEqual(antes);
+  });
+
+  it("con participación en el cliente sí puede; y los proyectos internos siguen abiertos", () => {
+    db.prepare(`INSERT INTO client_members (client_id, wallet, access_level) VALUES (?, ?, 'colaborador')`).run(clienteId, SUPERVISORA.wallet);
+    const s = importTasks(
+      db,
+      CABECERA + "Del cliente,Backlog,Proyecto Cliente,Algo.\nInterna,Backlog,Proyecto Interno Nuevo,Algo.\n",
+      SUPERVISORA.wallet,
+      new Date(),
+      SUPERVISORA
+    );
+    expect(s.errors).toEqual([]);
+    expect(s.created).toBe(2);
+    expect(piezas()).toBe(1);
+  });
+
+  it("sin actor (la consola) no hay filtro, como hasta ahora", () => {
+    const s = importTasks(db, CABECERA + "Desde la consola,Backlog,Proyecto Cliente,Algo.\n");
+    expect(s.created).toBe(1);
+  });
+
+  it("la ruta web pasa el actor al importador", () => {
+    const src = fs.readFileSync(path.join(process.cwd(), "app", "api", "equipo", "importar", "route.ts"), "utf8");
+    expect(src).toContain("importTasks(db, parsed.data.csv, actor.wallet, new Date(), actor)");
+  });
+});
