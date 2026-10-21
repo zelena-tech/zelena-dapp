@@ -19,7 +19,7 @@ export type Encuentro = {
 
 export const ENCUENTROS: Encuentro[] = [];
 
-// Cómo queremos que sean. Salen del calendario ritual del whitepaper (demo
+// Cómo queremos que sean. Salen del calendario de ritos de la comunidad (demo
 // quincenal, retro mensual pública) más la jornada abierta para construir.
 export const FORMATOS = [
   {

@@ -30,11 +30,11 @@ SIN_COMUNIDAD="${SIN_COMUNIDAD:-0}"
 HASH_CLA="03293c9378146cbd7fcbd49a0df467134a118d7a7e0379664c5d069c0398edb9"
 
 # Rutas que deben responder 200.
-RUTAS_200="/ /metodo /comunidad /manifiesto /encuentros /empresas /privacidad /acuerdo /agora /academia /academia/construir-sin-riesgo /whitepaper /gobernanza"
+RUTAS_200="/ /metodo /comunidad /manifiesto /encuentros /empresas /privacidad /acuerdo /agora /academia /academia/construir-sin-riesgo /gobernanza"
 
 # Rutas públicas que no pueden nombrar la estructura societaria. Fuera de la lista, a
 # propósito, las excepciones legales (spec §2.5): /acuerdo, /entrar, /gobernanza y /privacidad.
-RUTAS_SIN_ESTRUCTURA="/ /metodo /comunidad /agora /academia /academia/construir-sin-riesgo /whitepaper /empresas /encuentros"
+RUTAS_SIN_ESTRUCTURA="/ /metodo /comunidad /agora /academia /academia/construir-sin-riesgo /empresas /encuentros"
 PATRON_ESTRUCTURA='\bSAS\b|S\.A\.S|societari|sociedad'
 
 # Prueba en vivo de la landing: un enlace a una transacción verificable de testnet.
@@ -81,7 +81,8 @@ for ruta in $RUTAS_200; do
 done
 
 echo "2. Redirecciones permanentes (308)"
-for par in "/ecosistema /metodo" "/academia/por-que-sas-dao /academia/construir-sin-riesgo"; do
+# /whitepaper salió del sitio: el manifiesto cumple la misma función.
+for par in "/ecosistema /metodo" "/academia/por-que-sas-dao /academia/construir-sin-riesgo" "/whitepaper /manifiesto"; do
   origen="${par%% *}"
   destino="${par##* }"
   resp="$(pedir "$origen" "$TMP/redir.html")"

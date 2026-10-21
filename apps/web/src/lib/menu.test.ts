@@ -169,13 +169,27 @@ describe("pie y aviso legal (E1-6)", () => {
     expect(URL_LICENCIA).not.toMatch(/\/blob\/(main|master|develop)\//);
   });
 
-  it("incluye Ágora, Academia, Decisiones, Whitepaper, Servicios y Contacto", () => {
-    for (const h of ["/agora", "/academia", "/gobernanza", "/whitepaper", "/empresas/servicios", "/empresas/contacto"]) {
+  it("incluye Ágora, Academia, Decisiones, Manifiesto, Servicios y Contacto", () => {
+    for (const h of ["/agora", "/academia", "/gobernanza", "/manifiesto", "/empresas/servicios", "/empresas/contacto"]) {
       expect(hrefs).toContain(h);
     }
     const etiquetas = FOOTER_GRUPOS.flatMap((g) => g.enlaces.map((e) => e.label));
     expect(etiquetas).toContain("Decisiones");
     expect(etiquetas).toContain("Proyectos abiertos");
+  });
+
+  // Decisión del founder: el manifiesto cumple la función del whitepaper y es más claro.
+  // /whitepaper solo existe como redirección 308 a /manifiesto (next.config.mjs).
+  it("ni el menú ni el pie enlazan el whitepaper", () => {
+    const todos = [
+      ...hrefs,
+      ...MENU_PUBLICO.map((e) => e.href),
+      ...MENU_EMPRESAS.map((e) => e.href),
+      ...menuPara({ ruta: "/", conSesion: true, accesoEquipo: true, esInterno: true, puedeVerTodo: true }).map((e) => e.href),
+    ];
+    expect(todos.filter((h) => /whitepaper/i.test(h))).toEqual([]);
+    const etiquetas = FOOTER_GRUPOS.flatMap((g) => g.enlaces.map((e) => e.label));
+    expect(etiquetas.filter((l) => /whitepaper/i.test(l))).toEqual([]);
   });
 
   it("AVISO_LEGAL es el texto nuevo y no dice 'sin dinero real'", () => {

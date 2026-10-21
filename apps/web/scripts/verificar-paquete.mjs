@@ -6,9 +6,8 @@
  * (OneDeploy sin limpiar) y reutilizó el node_modules que Oryx había construido en
  * producción con next 14.2.15. Con el código de v1 eso ya no sirve: package.json
  * pide next ^14.2.35 (parche de la vulnerabilidad crítica) y añade next-auth, así
- * que la .next nueva correría sobre otro Next y sin next-auth. Además el zip tomaba
- * docs/whitepaper.md de apps/web/docs/, que está en .gitignore y no existe en un
- * checkout limpio. Y ya pasó una vez (2026-09-04) que faltó CLA.md y dos altas
+ * que la .next nueva correría sobre otro Next y sin next-auth. Y ya pasó una vez
+ * (2026-09-04) que faltó CLA.md y dos altas
  * firmaron el texto de reserva. Nada de eso da un error claro al arrancar: la app
  * sube y falla después, o firma lo que no debe.
  *
@@ -17,9 +16,10 @@
  *   - node_modules: cada dependencia de package.json instalada y dentro de su rango,
  *     y next >= 14.2.35 pase lo que pase (en standalone solo next: el resto lo decide
  *     el trazado de Next);
- *   - src/lib/schema.sql (db.ts), CLA.md con el sha256 que firmaron las altas reales
- *     (cla.ts: primero cwd/../../CLA.md, luego cwd/CLA.md) y docs/whitepaper.md
- *     (app/whitepaper: cwd/../../docs y cwd/docs).
+ *   - src/lib/schema.sql (db.ts) y CLA.md con el sha256 que firmaron las altas reales
+ *     (cla.ts: primero cwd/../../CLA.md, luego cwd/CLA.md).
+ * docs/whitepaper.md ya no se exige: el sitio dejó de servirlo (/whitepaper redirige a
+ * /manifiesto) y queda en el repo como documento interno.
  *
  * Uso (en Kudu, o lo corre start-azure.sh antes de arrancar):
  *   node scripts/verificar-paquete.mjs [carpeta de la app]
@@ -199,19 +199,6 @@ export function verificarPaquete(dir) {
     } else {
       detalles.push(`CLA.md ${CLA_SHA256.slice(0, 8)}… (${path.relative(app, cla) || "CLA.md"})`);
     }
-  }
-
-  const whitepaper = primeraQueExiste([
-    path.join(app, "..", "..", "docs", "whitepaper.md"),
-    path.join(app, "docs", "whitepaper.md"),
-  ]);
-  if (!whitepaper) {
-    errores.push(
-      "falta docs/whitepaper.md: cópialo de docs/whitepaper.md de la RAÍZ del repo " +
-        "(apps/web/docs/ está en .gitignore y no existe en un checkout limpio)."
-    );
-  } else {
-    detalles.push(`docs/whitepaper.md (${path.relative(app, whitepaper)})`);
   }
 
   for (const worker of ["db-query.worker.mjs", "db-mssql-backend.mjs"]) {

@@ -145,8 +145,9 @@ La ruta Azure SQL (`mssql`) **no migra** todavía: una base Azure SQL nueva se c
 - **Build standalone (siguiente paso):** se compila en **Linux** (GitHub Actions, `npm ci` real, sin
   symlinks) con `NEXT_STANDALONE=1 npm --workspace apps/web run build`. Solo con esa variable
   `next.config.mjs` activa `output: "standalone"`; `outputFileTracingIncludes` mete en el paquete
-  `apps/web/src/lib/schema.sql`, los `.mjs` del worker de BD, `CLA.md` (raíz y `apps/web`) y
-  `docs/whitepaper.md`. Copiar `apps/web/.next/static` a `.next/standalone/apps/web/.next/static`
+  `apps/web/src/lib/schema.sql`, los `.mjs` del worker de BD y `CLA.md` (raíz y `apps/web`).
+  `docs/whitepaper.md` ya no va: el sitio no lo sirve (`/whitepaper` redirige con 308 a `/manifiesto`).
+  Copiar `apps/web/.next/static` a `.next/standalone/apps/web/.next/static`
   (y `apps/web/public` a `.next/standalone/apps/web/public`) y arrancar con `node apps/web/server.js`
   (`PORT`, `HOSTNAME=0.0.0.0`). Sin `CLA.md` en el paquete la app firma el texto de reserva (pasó el
   2026-09-04: dos firmas con `cla_hash = 54aecc56…`).
@@ -230,9 +231,8 @@ nadie pierde un acceso que tuviera.
 - **No repetir el paquete de la última vez** (zip de `apps/web` sin `node_modules`, OneDeploy sin
   limpiar, reutilizando el `node_modules` que Oryx construyó en prod con `next 14.2.15`). v1 pide
   `next ^14.2.35` y añade `next-auth` (y los opcionales `mssql` y `@azure/identity`): la `.next` nueva
-  correría sobre otro Next y sin `next-auth`. Ese zip además tomaba `docs/whitepaper.md` de
-  `apps/web/docs/`, que está en `.gitignore` y no existe en un checkout limpio; la app lo busca en
-  `cwd/../../docs` o `cwd/docs`, es decir, en `/home/site/wwwroot/docs/whitepaper.md`.
+  correría sobre otro Next y sin `next-auth`. (Ese zip además tomaba `docs/whitepaper.md` de
+  `apps/web/docs/`; desde la versión que quitó el whitepaper del sitio ya no hace falta.)
 - **Opción A (la elegida):** build standalone en Linux (ver arriba). Lleva su propio `node_modules`
   trazado. Copiar también `apps/web/scripts/verificar-paquete.mjs` a
   `.next/standalone/apps/web/scripts/` para poder verificarlo.
@@ -242,13 +242,12 @@ nadie pierde un acceso que tuviera.
   instala desde `apps/web/package.json` sin el lockfile de la raíz, así que las versiones no quedan
   fijadas). En `/home/site/wwwroot` deben quedar: `.next/` (sin `cache/`), `public/`, `package.json`,
   `next.config.mjs`, `start-azure.sh`, `scripts/verificar-paquete.mjs`, `CLA.md` junto a
-  `package.json` (es `apps/web/CLA.md`), `docs/whitepaper.md` (copiado de `docs/whitepaper.md` de la
-  **raíz**), `src/lib/schema.sql`, `src/lib/*.mjs` y `node_modules/`.
+  `package.json` (es `apps/web/CLA.md`), `src/lib/schema.sql`, `src/lib/*.mjs` y `node_modules/`.
 - **Comprobar en Kudu ANTES de arrancar:** `cd /home/site/wwwroot && node scripts/verificar-paquete.mjs`
   (en standalone, `node apps/web/scripts/verificar-paquete.mjs apps/web`). Tiene que terminar en
   `listo para arrancar.` Revisa que `node_modules/next` esté en esa carpeta y sea ≥ 14.2.35 (porque
   `start-azure.sh` lo ejecuta desde ahí), `next-auth` y el resto de dependencias en su rango, el
-  sha256 del CLA, el whitepaper y `schema.sql`. `start-azure.sh` corre la misma verificación y **no
+  sha256 del CLA y `schema.sql`. `start-azure.sh` corre la misma verificación y **no
   arranca** si falla; `ZELENA_OMITIR_VERIFICACION=1` la salta, solo para una emergencia consciente.
 
 **Definición de "v1 desplegada":** los 6 entran con su correo, ven sus asignaciones y hacen check-in; John captura tareas desde Telegram y recibe sus 3 focos del día; el dashboard responde sin preguntar.

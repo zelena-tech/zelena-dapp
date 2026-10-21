@@ -35,8 +35,9 @@ const standalone = process.env.NEXT_STANDALONE === "1";
 //  - schema.sql → db.ts (`cwd/src/lib/schema.sql`);
 //  - el worker y el backend de Azure SQL → db-sync-bridge.ts (`cwd/src/lib/*.mjs`);
 //  - CLA.md → cla.ts. Sin él se firma el TEXTO DE RESERVA: ya pasó en prod con
-//    2 firmas (cla_hash 54aecc56…) cuando el paquete de Azure no traía CLA.md;
-//  - docs/whitepaper.md → /whitepaper.
+//    2 firmas (cla_hash 54aecc56…) cuando el paquete de Azure no traía CLA.md.
+// docs/whitepaper.md ya no va: el sitio no lo sirve (decisión del founder, el
+// manifiesto cumple esa función) y queda en el repo como documento interno.
 // Rutas relativas a apps/web; la raíz de trazado es la del monorepo.
 const ARCHIVOS_DE_RUNTIME = [
   "./src/lib/schema.sql",
@@ -44,7 +45,6 @@ const ARCHIVOS_DE_RUNTIME = [
   "./src/lib/db-mssql-backend.mjs",
   "./CLA.md",
   "../../CLA.md",
-  "../../docs/whitepaper.md",
 ];
 
 const nextConfig = {
@@ -75,12 +75,14 @@ const nextConfig = {
       },
     ];
   },
-  // Rutas que cambiaron de nombre (WP31). `permanent: true` = 308: los enlaces y
+  // Rutas que cambiaron de nombre o salieron del sitio. `permanent: true` = 308: los enlaces y
   // QR viejos siguen funcionando y los buscadores aprenden la dirección nueva.
   async redirects() {
     return [
       { source: "/ecosistema", destination: "/metodo", permanent: true },
       { source: "/academia/por-que-sas-dao", destination: "/academia/construir-sin-riesgo", permanent: true },
+      // El whitepaper salió del sitio: el manifiesto cumple la misma función y es más claro.
+      { source: "/whitepaper", destination: "/manifiesto", permanent: true },
     ];
   },
 };

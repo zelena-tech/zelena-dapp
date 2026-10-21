@@ -116,7 +116,7 @@ export const FOOTER_GRUPOS: ReadonlyArray<{ titulo: string; enlaces: readonly En
       { href: "/agora", label: "Proyectos abiertos" },
       { href: "/academia", label: "Academia" },
       { href: "/gobernanza", label: "Decisiones" },
-      { href: "/whitepaper", label: "Whitepaper" },
+      { href: "/manifiesto", label: "Manifiesto" },
     ],
   },
   {

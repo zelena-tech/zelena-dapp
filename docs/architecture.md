@@ -82,13 +82,14 @@ wallet (`reading_sessions`).
 ## Rutas
 
 Páginas: `/`, `/entrar`, `/agora`, `/agora/[id]`, `/academia`, `/academia/[slug]`,
-`/perfil`, `/gobernanza`, `/admin`, `/whitepaper`.
+`/perfil`, `/gobernanza`, `/admin`, `/manifiesto`, `/metodo` (`/whitepaper` redirige con 308 a
+`/manifiesto`: el whitepaper salió del sitio y `docs/whitepaper.md` queda como documento interno).
 API: `/api/cla`, `/api/invite/verify`, `/api/invite/generate`, `/api/onboard`, `/api/apply`,
 `/api/governance/vote`, `/api/academia/start|heartbeat|quiz`, `/api/admin`.
 
 ## Middleware
 
-Lectura pública (`/`, `/agora`, `/academia`, `/gobernanza`, `/whitepaper`). `/perfil` y
+Lectura pública (`/`, `/manifiesto`, `/metodo`, `/agora`, `/academia`, `/gobernanza`). `/perfil` y
 `/admin` exigen sesión con CLA firmado. Las mutaciones (aplicar, votar, generar invitación,
 Academia, admin) revalidan sesión y CLA en el handler (defensa en profundidad).
 

@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { SESSION_COOKIE, verifySession } from "@/lib/jwt";
 
 /**
- * Gate de acceso. Las páginas de lectura (/, /agora, /academia, /gobernanza,
- * /whitepaper) son públicas.
+ * Gate de acceso. Las páginas de lectura (/, /manifiesto, /metodo, /agora,
+ * /academia, /gobernanza) son públicas.
  * La verificación de la firma JWT (jose) corre en el edge.
  *
  *  - PROTECTED_CLA: sesión CON CLA firmado (candado de PI: cobrar y firmar).

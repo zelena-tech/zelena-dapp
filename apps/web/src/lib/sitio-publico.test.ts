@@ -88,6 +88,21 @@ describe("la lista generada de archivos públicos", () => {
   it("/ecosistema ya no es una página (redirige a /metodo)", () => {
     expect(fs.existsSync(path.join(WEB, "app", "ecosistema", "page.tsx"))).toBe(false);
   });
+
+  // Decisión del founder: el manifiesto cumple la misma función que el whitepaper y es
+  // más claro. docs/whitepaper.md queda en el repo como documento interno, sin servirse.
+  it("/whitepaper ya no es una página (redirige a /manifiesto)", () => {
+    expect(fs.existsSync(path.join(WEB, "app", "whitepaper"))).toBe(false);
+  });
+
+  it("ninguna superficie pública enlaza ni nombra el whitepaper", () => {
+    expect(coincidencias(PUBLICOS, /whitepaper/i)).toEqual([]);
+  });
+
+  it("el paquete ya no lleva docs/whitepaper.md", () => {
+    expect(leer("next.config.mjs")).not.toMatch(/"[^"]*docs\/whitepaper\.md"/);
+    expect(leer("scripts/verificar-paquete.mjs")).not.toMatch(/falta docs\/whitepaper/);
+  });
 });
 
 describe("E1-1 · ninguna superficie pública nombra la estructura societaria", () => {
@@ -168,6 +183,7 @@ describe("E1-3 · redirecciones permanentes (308)", () => {
     expect(typeof mod.default.redirects).toBe("function");
     const r = await mod.default.redirects!();
     expect(r).toContainEqual({ source: "/ecosistema", destination: "/metodo", permanent: true });
+    expect(r).toContainEqual({ source: "/whitepaper", destination: "/manifiesto", permanent: true });
     expect(r).toContainEqual({
       source: "/academia/por-que-sas-dao",
       destination: "/academia/construir-sin-riesgo",

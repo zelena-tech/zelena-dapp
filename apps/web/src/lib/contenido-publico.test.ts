@@ -605,9 +605,10 @@ describe("E2-6 · packages/scripts/smoke-wp31.sh", () => {
       "/agora",
       "/academia",
       "/academia/construir-sin-riesgo",
-      "/whitepaper",
       "/gobernanza",
     ]);
+    // El whitepaper salió del sitio: ya no se pide en 200 (se comprueba su 308).
+    expect(variable("RUTAS_200").split(" ")).not.toContain("/whitepaper");
   });
 
   it("busca la estructura societaria en las públicas y deja fuera las excepciones legales", () => {
@@ -619,7 +620,6 @@ describe("E2-6 · packages/scripts/smoke-wp31.sh", () => {
       "/agora",
       "/academia",
       "/academia/construir-sin-riesgo",
-      "/whitepaper",
       "/empresas",
       "/encuentros",
     ]);
@@ -637,6 +637,7 @@ describe("E2-6 · packages/scripts/smoke-wp31.sh", () => {
     const g = guion();
     expect(g).toContain(`"/ecosistema /metodo"`);
     expect(g).toContain(`"/academia/por-que-sas-dao /academia/construir-sin-riesgo"`);
+    expect(g).toContain(`"/whitepaper /manifiesto"`);
     expect(g).toMatch(/"308"/);
     expect(g).toContain(`pedir "/equipo/hoy"`);
     expect(g).toContain("*/entrar*");
@@ -754,12 +755,12 @@ describe.concurrent("E2-6 · smoke-wp31.sh contra un sitio de mentira", () => {
     "/agora",
     "/academia",
     "/academia/construir-sin-riesgo",
-    "/whitepaper",
     "/gobernanza",
   ]);
   const REDIRECCIONES: Record<string, [number, string]> = {
     "/ecosistema": [308, "/metodo"],
     "/academia/por-que-sas-dao": [308, "/academia/construir-sin-riesgo"],
+    "/whitepaper": [308, "/manifiesto"],
     "/equipo/hoy": [307, "/entrar?next=%2Fequipo%2Fhoy"],
   };
 

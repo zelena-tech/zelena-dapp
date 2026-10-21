@@ -7,7 +7,8 @@ export const metadata = {
 };
 
 // Valores y filosofía, no estructura: aquí no se explica la forma legal ni la
-// mecánica de la comunidad (eso vive en el whitepaper). Contenido en constantes para
+// mecánica de la comunidad (eso vive en /metodo y /comunidad). Es el documento de fondo
+// del sitio: la dirección vieja del documento largo redirige aquí. Contenido en constantes para
 // que la capa de idiomas solo tenga que añadir el lado en inglés.
 
 const ORIGEN = [

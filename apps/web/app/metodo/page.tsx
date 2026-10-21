@@ -95,10 +95,10 @@ export default function Metodo() {
               Ver los proyectos abiertos
             </Link>
             <Link
-              href="/whitepaper"
+              href="/manifiesto"
               className="inline-flex min-h-[44px] items-center gap-2 text-sm text-muted transition-colors hover:text-primary"
             >
-              Leer el whitepaper <span aria-hidden>→</span>
+              Leer el manifiesto <span aria-hidden>→</span>
             </Link>
           </div>
         </div>

@@ -7,7 +7,7 @@ node -e "require('node:sqlite')" >/dev/null 2>&1 || export NODE_OPTIONS="${NODE_
 
 # Verificacion del paquete ANTES de arrancar (fusion v1, 2026-09-30): node_modules de la misma build
 # (next >= 14.2.35 y next-auth; no el que Oryx construyo para 14.2.15), CLA.md con el hash que firman
-# las altas, docs/whitepaper.md y src/lib/schema.sql. Sin esto un paquete incompleto arranca y falla
+# las altas y src/lib/schema.sql. Sin esto un paquete incompleto arranca y falla
 # despues, o firma el texto de reserva del CLA. Ver docs/DESPLIEGUE-V1.md, "Paquete del despliegue".
 # Solo para una emergencia consciente: ZELENA_OMITIR_VERIFICACION=1 en App Settings.
 if [ "${ZELENA_OMITIR_VERIFICACION:-}" != "1" ]; then
