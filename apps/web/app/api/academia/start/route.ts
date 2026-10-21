@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/session";
-import { startReading } from "@/lib/academia";
+import { startReading, statusDeErrorAcademia } from "@/lib/academia";
 import { academiaStartSchema } from "@/lib/validation";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 
@@ -22,6 +22,7 @@ export async function POST(req: NextRequest) {
     const r = startReading(getDb(), session.wallet, parsed.data.contentId);
     return NextResponse.json({ ok: true, ...r });
   } catch (e) {
-    return NextResponse.json({ error: (e as Error).message }, { status: 400 });
+    // RETRY_WAIT (429): tras un intento fallido hay que esperar antes de volver a leer.
+    return NextResponse.json({ error: (e as Error).message }, { status: statusDeErrorAcademia(e) });
   }
 }

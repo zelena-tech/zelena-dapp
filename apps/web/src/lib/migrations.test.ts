@@ -28,6 +28,8 @@ describe("esquema idempotente y migraciones (fusión v1)", () => {
       "projects.draft",
       "projects.origin",
       "anchor_queue.claimed_at",
+      "reading_sessions.quiz_ids",
+      "reading_sessions.graded_at",
     ]);
   });
 

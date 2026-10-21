@@ -305,6 +305,9 @@ export const COLUMNAS_NUEVAS: ReadonlyArray<{ tabla: string; columna: string; dd
   { tabla: "projects", columna: "origin", ddl: "TEXT" },
   // Cola de anclaje: reserva de la fila por una pasada (lib/anchor.ts, hallazgo M23).
   { tabla: "anchor_queue", columna: "claimed_at", ddl: "TEXT" },
+  // Academia (hallazgo A2): preguntas servidas en la lectura y su única calificación.
+  { tabla: "reading_sessions", columna: "quiz_ids", ddl: "TEXT" },
+  { tabla: "reading_sessions", columna: "graded_at", ddl: "INTEGER" },
 ];
 
 /** Columnas de una tabla (vacío si no existe). */
