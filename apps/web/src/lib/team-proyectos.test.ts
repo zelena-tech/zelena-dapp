@@ -47,6 +47,7 @@ import {
   seedTeam,
   supervisoresDeProyecto,
   tableroDeProyecto,
+  COPY_CUENTA_DE_PRUEBA,
   TeamError,
   visibleAssignments,
 } from "./team";
@@ -189,6 +190,13 @@ describe("A1b · sin acuerdo de contribución no hay primer trabajo", () => {
 
   it("cuentas demo o inactivas no se suman", () => {
     expect(fallo(() => agregarMiembro(db, actor(JOHN), { initiativeId: p, wallet: DEMO, rol: "ejecuta" }))?.status).toBe(400);
+    // La cuenta de prueba está activa: el motivo dice la verdad (hallazgo de la verificación final).
+    expect(fallo(() => agregarMiembro(db, actor(JOHN), { initiativeId: p, wallet: DEMO, rol: "ejecuta" }))?.message).toBe(
+      COPY_CUENTA_DE_PRUEBA
+    );
+    expect(fallo(() => agregarMiembro(db, actor(JOHN), { initiativeId: p, wallet: "GNADIE", rol: "ejecuta" }))?.message).toBe(
+      "Esa persona no está activa en el registro."
+    );
     expect(fallo(() => agregarMiembro(db, actor(JOHN), { initiativeId: p, wallet: "GNADIE", rol: "ejecuta" }))?.status).toBe(
       400
     );

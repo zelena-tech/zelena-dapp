@@ -1389,6 +1389,23 @@ function autorizarCambioDeRol(db: DB, actor: TeamActor, initiativeId: number, wa
  * Suma a una persona a un proyecto con un rol. Devuelve el id de la fila.
  * Vínculo por defecto: `externo` si `users.role = 'contributor'`, si no `interno`.
  */
+/**
+ * Por qué no se suma (ni recibe trabajo) una cuenta de prueba. Antes salía "no está
+ * activa en el registro", que era falso: la persona está activa, solo entró con la wallet
+ * de prueba del navegador (hallazgo de la verificación final). Si una cuenta así debe
+ * poder pasar a una wallet real es decisión del founder; aquí solo se dice la verdad.
+ */
+export const COPY_CUENTA_DE_PRUEBA =
+  "Esa persona entró con una wallet de prueba: para trabajar en un proyecto tiene que entrar con su propia wallet.";
+
+const COPY_NO_ACTIVA = "Esa persona no está activa en el registro.";
+
+/** Lanza el 400 que corresponde si `u` no puede recibir trabajo: inexistente, inactiva o de prueba. */
+function exigirCuentaReal(u: { status: string; is_demo: number } | undefined): asserts u {
+  if (!u || u.status !== "active") throw new TeamError(400, COPY_NO_ACTIVA);
+  if (u.is_demo !== 0) throw new TeamError(400, COPY_CUENTA_DE_PRUEBA);
+}
+
 export function agregarMiembro(
   db: DB,
   actor: TeamActor,
@@ -1400,9 +1417,7 @@ export function agregarMiembro(
     throw new TeamError(400, "El vínculo es interno o externo.");
   }
   const u = usuarioBasico(db, wallet);
-  if (!u || u.status !== "active" || u.is_demo !== 0) {
-    throw new TeamError(400, "Esa persona no está activa en el registro.");
-  }
+  exigirCuentaReal(u);
   const vinculo: Vinculo = input.vinculo ?? (u.role === "contributor" ? "externo" : "interno");
   // Sin acuerdo de contribución no hay primer trabajo.
   if ((u.role === "contributor" || vinculo === "externo") && u.cla_signed !== 1) {
@@ -1644,9 +1659,7 @@ export function candidatosParaProyecto(
  * miembro del proyecto. Lanza 400 con el paso a seguir si no.
  */
 function validarDestino(db: DB, u: UsuarioBasico, initiativeId: number | null): void {
-  if (u.status !== "active" || u.is_demo !== 0) {
-    throw new TeamError(400, "Esa persona no está activa en el registro.");
-  }
+  exigirCuentaReal(u);
   if (esInternoActivo(u)) return;
   if (initiativeId !== null && esMiembroDe(db, identidadesDe(db, u.wallet), initiativeId)) return;
   throw new TeamError(400, "Primero súmale al proyecto.");

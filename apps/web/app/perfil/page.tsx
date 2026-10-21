@@ -107,6 +107,14 @@ export default async function PerfilPage() {
         </div>
       </header>
 
+      {/* Cuenta de prueba: se dice qué no puede hacer, antes de que lo descubra con un error. */}
+      {session.isDemo ? (
+        <p className="border-l-2 border-primary-dim bg-surface-2 py-3 pl-4 pr-3 text-sm leading-6 text-muted">
+          Entraste con una wallet de prueba: sirve para mirar por dentro. Para trabajar en un proyecto o registrar
+          tu asistencia a un rito, entra con tu propia wallet (por ejemplo Freighter).
+        </p>
+      ) : null}
+
       {/* Tu progreso — compites contigo mismo; mismo peso visual que cualquier comparación */}
       <section className="card p-6">
         <div className="flex flex-wrap items-center justify-between gap-2">

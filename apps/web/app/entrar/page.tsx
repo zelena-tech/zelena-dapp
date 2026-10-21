@@ -577,7 +577,7 @@ export default function Entrar() {
               <p className="label">Wallet de prueba</p>
               <p className="mt-1 text-xs text-muted">
                 Para mirar por dentro sin instalar nada. Es una cuenta de prueba: vive solo en este navegador y no
-                cuenta en las cifras públicas.
+                cuenta en las cifras públicas. Para trabajar en proyectos, usa tu propia wallet.
               </p>
               <button
                 className="btn btn-ghost mt-3 w-full"
