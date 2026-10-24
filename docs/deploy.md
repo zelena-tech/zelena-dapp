@@ -108,7 +108,7 @@ Variables de entorno de producción: `SESSION_SECRET`, `FOUNDER_WALLET`, `TURSO_
 
 # Azure (producción v1) — WP16
 
-Coherente con el tenant de Microsoft (Entra ID, WP13) y con el FMS que ya corre ahí.
+Coherente con el tenant de Microsoft (Entra ID, WP13) y con el WMS que ya corre ahí.
 Todo lo de esta sección **excepto crear los recursos** está implementado y probado en
 la suite; crear la suscripción/recursos y el smoke test son el paso 6 de `docs/DESPLIEGUE-V1.md`.
 

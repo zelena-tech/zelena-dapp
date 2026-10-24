@@ -38,7 +38,7 @@ Zelena parte de una creencia central: **el valor que entregas debería determina
 
 ### 3.1 Capa 1 — WMS (validado)
 
-El **Fulfillment Management System** es un sistema de gestión logística de extremo a extremo que controla el ciclo completo de fulfillment desde una sola plataforma. Nació resolviendo un problema real de un cliente real, y hoy opera con **clientes reales en Colombia**, llegados por recomendación, sin inversión en publicidad y sin capital externo.
+El **WMS** (sistema de gestión de bodega) es un sistema de gestión logística de extremo a extremo que controla el ciclo completo de la operación de bodega desde una sola plataforma. Nació resolviendo un problema real de un cliente real, y hoy opera con **clientes reales en Colombia**, llegados por recomendación, sin inversión en publicidad y sin capital externo.
 
 Cubre la operación completa: autenticación con roles, productos, órdenes, picking optimizado por ruta, packing, ubicaciones, recepción, reportes de avería, métricas de desempeño, facturación y traslados.
 
