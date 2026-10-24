@@ -200,6 +200,7 @@ describe("migración de la base de producción (forma 58ee2fd → v1)", () => {
       "anchor_queue.claimed_at",
       "reading_sessions.quiz_ids",
       "reading_sessions.graded_at",
+      "reading_sessions.quiz_orden",
     ]);
     // El proyecto del fixture no es sembrado (hitos desde 1): sigue publicado.
     expect(db.prepare(`SELECT draft, origin FROM projects`).all()).toEqual([{ draft: 0, origin: null }]);

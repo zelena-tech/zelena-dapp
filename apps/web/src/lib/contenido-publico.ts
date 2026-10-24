@@ -19,6 +19,10 @@
  * Idempotente y en una sola transacción. La llama `seedIfEmpty` dentro de su propio
  * `try/catch` (spec §3.5): el arranque no se cae por contenido y la migración se
  * reintenta en el siguiente.
+ *
+ * S4 (`reordenarOpcionesAcademia`, revisión del hallazgo A2) va aparte, con su propia
+ * transacción y su propio `try/catch`: reparte entre las posiciones las respuestas
+ * correctas del quiz sembrado, que estaban casi todas en la segunda opción.
  */
 import type { DB } from "./db"; // solo tipo: sin ciclo en runtime
 import { sha256Hex } from "./crypto";
@@ -53,11 +57,11 @@ export const ACADEMIA_S1: {
 5. La autonomía de la comunidad se gana por etapas.`,
   // En este orden: la migración reescribe las 5 filas viejas por orden de id.
   quiz: [
-    ["¿Quién responde ante el cliente por lo que se entrega?", ["La comunidad", "Zelena", "Cada contribuidor", "El cliente"], 1],
-    ["¿Firmar el acuerdo de contribución crea una relación laboral?", ["Sí", "No", "Solo si cobras", "Solo para el equipo"], 1],
-    ["¿Qué se evalúa?", ["La persona", "La entrega", "Las horas", "La antigüedad"], 1],
-    ["¿Se puede perder lo que ya ganaste?", ["Sí, si faltas a un rito", "Sí, al irte", "No", "Solo al cambiar de época"], 2],
-    ["La autonomía de la comunidad es…", ["Inmediata", "La recompensa de la madurez", "Decisión de un cliente", "Un token"], 1],
+    ["¿Quién responde ante el cliente por lo que se entrega?", ["La comunidad", "Cada contribuidor", "Zelena", "El cliente"], 2],
+    ["¿Firmar el acuerdo de contribución crea una relación laboral?", ["No", "Sí", "Solo si cobras", "Solo para el equipo"], 0],
+    ["¿Qué se evalúa?", ["La persona", "La antigüedad", "Las horas", "La entrega"], 3],
+    ["¿Se puede perder lo que ya ganaste?", ["Sí, si faltas a un rito", "No", "Sí, al irte", "Solo al cambiar de época"], 1],
+    ["La autonomía de la comunidad es…", ["La recompensa de la madurez", "Inmediata", "Decisión de un cliente", "Un token"], 0],
   ],
 };
 
@@ -216,4 +220,120 @@ export function aplicarContenidoPublico(
     );
   }
   return r;
+}
+
+/* ------------------------------------------------------------------ *
+ * S4 · Orden de las opciones del quiz de la Academia (revisión del hallazgo A2)
+ * ------------------------------------------------------------------ */
+
+/**
+ * Una pregunta sembrada cuyo orden de opciones cambia: en su forma anterior (`antes`, con
+ * la correcta en `de`) se intercambian las opciones `de` y `a`, y la correcta pasa a `a`.
+ * Mismos textos y mismos ids: solo cambia el orden.
+ */
+interface ReordenOpciones {
+  readonly pregunta: string;
+  readonly antes: readonly string[];
+  readonly de: number;
+  readonly a: number;
+}
+
+/**
+ * Las preguntas de la Academia sembrada con su orden ANTERIOR, en el que la correcta era
+ * la segunda opción en 15 de 20 preguntas (por contenido: 1,1,1,2,1 · 2,1,1,1,1 ·
+ * 1,1,1,2,1 · 1,2,1,1,1). El orden nuevo es el de `seed()` y `ACADEMIA_S1`: ninguna
+ * posición con más de 2 correctas por contenido. Las preguntas que ya estaban bien
+ * repartidas no aparecen.
+ */
+export const REORDEN_OPCIONES_S4: readonly ReordenOpciones[] = [
+  // S1 · Construir sin cargar con el riesgo (una base que ya aplicó S1 con el orden anterior).
+  { pregunta: "¿Quién responde ante el cliente por lo que se entrega?", antes: ["La comunidad", "Zelena", "Cada contribuidor", "El cliente"], de: 1, a: 2 },
+  { pregunta: "¿Firmar el acuerdo de contribución crea una relación laboral?", antes: ["Sí", "No", "Solo si cobras", "Solo para el equipo"], de: 1, a: 0 },
+  { pregunta: "¿Qué se evalúa?", antes: ["La persona", "La entrega", "Las horas", "La antigüedad"], de: 1, a: 3 },
+  { pregunta: "¿Se puede perder lo que ya ganaste?", antes: ["Sí, si faltas a un rito", "Sí, al irte", "No", "Solo al cambiar de época"], de: 2, a: 1 },
+  { pregunta: "La autonomía de la comunidad es…", antes: ["Inmediata", "La recompensa de la madurez", "Decisión de un cliente", "Un token"], de: 1, a: 0 },
+  // El triángulo de activos.
+  { pregunta: "¿ZWORK es transferible en la fase actual?", antes: ["Sí, libremente", "No, son puntos no transferibles", "Solo en mainnet", "Solo los fines de semana"], de: 1, a: 3 },
+  { pregunta: "¿Qué activo otorga voto?", antes: ["USDC", "La reputación", "ZWORK", "El CLA"], de: 1, a: 0 },
+  { pregunta: "Un token que es 'ownership de nada'...", antes: ["Es lo ideal", "Es el error que el diseño evita", "Da más voto", "Es obligatorio"], de: 1, a: 3 },
+  // Cómo se mide el valor.
+  { pregunta: "¿Cuál es el orden correcto de la máquina de estados?", antes: ["Open→Delivered→Assigned", "Open→Assigned→Delivered→Scored→Distributed", "Assigned→Open→Scored", "Scored→Open→Delivered"], de: 1, a: 3 },
+  { pregunta: "¿Puede un supervisor evaluar a su invitado directo?", antes: ["Sí", "No (regla B8)", "Solo con permiso", "Siempre"], de: 1, a: 0 },
+  { pregunta: "El score compuesto es...", antes: ["Subjetivo", "Calculado, transparente y verificable", "Secreto", "Aleatorio"], de: 1, a: 2 },
+  // Qué es Zelena DAO (video).
+  { pregunta: "La tesis central de Zelena es...", antes: ["La antigüedad manda", "El valor que entregas determina lo que recibes", "El título importa más", "Las horas registradas"], de: 1, a: 3 },
+  { pregunta: "El onboarding es...", antes: ["Abierto a todos", "Por invitación con CLA", "Solo por pago", "Automático"], de: 1, a: 0 },
+  { pregunta: "El tagline de Zelena es...", antes: ["Move fast", "Real work, Real rewards", "Code is law", "To the moon"], de: 1, a: 3 },
+];
+
+/** Opciones guardadas (JSON) de una fila; null si la fila está rota. */
+function opcionesDeFila(texto: string): string[] | null {
+  try {
+    const o = JSON.parse(texto) as unknown;
+    return Array.isArray(o) && o.every((x) => typeof x === "string") ? (o as string[]) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Lecturas en curso con el quiz ya servido: su orden mostrado apunta a índices guardados,
+ * así que se corrige con el mismo intercambio para que la persona siga viendo lo mismo y
+ * se califique igual. Solo `quiz_orden` de lecturas SIN calificar: lo leído y lo ganado
+ * no se toca.
+ */
+function corregirLecturasEnCurso(db: DB, cambios: ReadonlyMap<number, ReordenOpciones>): void {
+  const lecturas = db
+    .prepare(`SELECT token, quiz_ids, quiz_orden FROM reading_sessions WHERE completed = 0 AND quiz_orden IS NOT NULL`)
+    .all() as Array<{ token: string; quiz_ids: string | null; quiz_orden: string }>;
+  const upd = db.prepare(`UPDATE reading_sessions SET quiz_orden = ? WHERE token = ? AND quiz_orden = ?`);
+  for (const l of lecturas) {
+    let ids: unknown;
+    let orden: unknown;
+    try {
+      ids = JSON.parse(l.quiz_ids ?? "null");
+      orden = JSON.parse(l.quiz_orden);
+    } catch {
+      continue; // fila rota: el quiz la vuelve a barajar al pedirlo
+    }
+    if (!Array.isArray(ids) || !Array.isArray(orden)) continue;
+    let tocada = false;
+    const nuevo = orden.map((p: unknown, k) => {
+      const c = cambios.get(ids[k] as number);
+      if (!c || !Array.isArray(p)) return p;
+      tocada = true;
+      return p.map((i) => (i === c.de ? c.a : i === c.a ? c.de : i));
+    });
+    if (tocada) upd.run(JSON.stringify(nuevo), l.token, l.quiz_orden);
+  }
+}
+
+/**
+ * S4. Lleva cada pregunta de `REORDEN_OPCIONES_S4` de su orden anterior al nuevo. Solo
+ * toca una fila con EXACTAMENTE la forma anterior (mismo texto, mismas opciones en el
+ * mismo orden y la misma correcta): una pregunta editada después no se toca y la segunda
+ * corrida no encuentra nada. No toca `academia_awards`, `points_ledger` ni
+ * `reputation_events`, ni las lecturas calificadas. En una transacción; la llama
+ * `seedIfEmpty` en su propio `try/catch`. Devuelve cuántas preguntas reordenó.
+ */
+export function reordenarOpcionesAcademia(db: DB): number {
+  const tx = db.transaction(() => {
+    const cambios = new Map<number, ReordenOpciones>();
+    const sel = db.prepare(`SELECT id, options FROM academia_quiz WHERE question = ? AND correct = ? ORDER BY id`);
+    const upd = db.prepare(`UPDATE academia_quiz SET options = ?, correct = ? WHERE id = ? AND correct = ?`);
+    for (const r of REORDEN_OPCIONES_S4) {
+      for (const f of sel.all(r.pregunta, r.de) as Array<{ id: number; options: string }>) {
+        const opciones = opcionesDeFila(f.options);
+        if (!opciones || opciones.length !== r.antes.length || opciones.some((o, i) => o !== r.antes[i])) continue;
+        const nuevas = [...opciones];
+        [nuevas[r.de], nuevas[r.a]] = [nuevas[r.a], nuevas[r.de]];
+        if (Number(upd.run(JSON.stringify(nuevas), r.a, f.id, r.de).changes) === 1) cambios.set(f.id, r);
+      }
+    }
+    if (cambios.size > 0) corregirLecturasEnCurso(db, cambios);
+    return cambios.size;
+  });
+  const n = tx();
+  if (n > 0) console.info(`[seed] Academia: ${n} pregunta(s) con las opciones reordenadas (revisión de A2).`);
+  return n;
 }

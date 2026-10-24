@@ -22,9 +22,15 @@
  *  - Tras un intento fallido hay que esperar `ACADEMIA_ESPERA_TRAS_FALLO_MS` y volver a
  *    leer (sesión nueva con su tiempo mínimo), con un máximo de
  *    `ACADEMIA_FALLOS_MAX_24H` intentos fallidos por contenido en 24 horas.
+ *  - Revisión de A2: las opciones de cada pregunta se BARAJAN por lectura en el servidor
+ *    (`quiz_orden`, junto a `quiz_ids`) y la respuesta se traduce al orden guardado antes
+ *    de calificar. Con el orden guardado fijo y casi todas las correctas en la misma
+ *    posición, responder siempre la segunda opción aprobaba sin leer. Ahora una posición
+ *    fija acierta como el azar (1 de 4 por pregunta).
  * Nada de esto quita lo ya otorgado: `academia_awards`, `points_ledger` y
  * `reputation_events` solo reciben inserciones.
  */
+import { randomInt } from "node:crypto";
 import type { DB } from "./db";
 import { randomToken } from "./crypto";
 import { getActiveGenome, currentEpoch } from "./genome";
@@ -137,6 +143,7 @@ interface SesionLectura {
   completed: number;
   passed: number;
   quiz_ids: string | null;
+  quiz_orden: string | null;
 }
 
 /**
@@ -167,7 +174,7 @@ function getSessionForQuiz(db: DB, wallet: string, token: string, now: number): 
 }
 
 /** Ids servidos guardados en la sesión, o null si todavía no se pidió el quiz. */
-function idsServidos(s: SesionLectura): number[] | null {
+function idsServidos(s: { quiz_ids: string | null }): number[] | null {
   if (!s.quiz_ids) return null;
   try {
     const ids = JSON.parse(s.quiz_ids) as unknown;
@@ -178,6 +185,82 @@ function idsServidos(s: SesionLectura): number[] | null {
   return null;
 }
 
+/**
+ * Orden mostrado de las opciones de cada pregunta servida, alineado con `quiz_ids`:
+ * `orden[k][i]` es el índice GUARDADO de la opción que se mostró en la posición `i` de
+ * la pregunta `k`. Null si no hay orden guardado o la fila está rota.
+ */
+function ordenServido(s: { quiz_orden: string | null }): number[][] | null {
+  if (!s.quiz_orden) return null;
+  try {
+    const orden = JSON.parse(s.quiz_orden) as unknown;
+    if (Array.isArray(orden) && orden.every((p) => Array.isArray(p))) return orden as number[][];
+  } catch {
+    /* fila rota: se trata como sin orden */
+  }
+  return null;
+}
+
+/** ¿`p` reordena exactamente `n` opciones (cada índice 0..n-1 una vez)? */
+function esPermutacion(p: unknown, n: number): p is number[] {
+  return (
+    Array.isArray(p) &&
+    p.length === n &&
+    p.every((i) => Number.isInteger(i) && i >= 0 && i < n) &&
+    new Set(p).size === n
+  );
+}
+
+/** Un orden al azar de `n` opciones (Fisher-Yates con el azar criptográfico de Node). */
+function barajar(n: number): number[] {
+  const p = Array.from({ length: n }, (_, i) => i);
+  for (let i = n - 1; i > 0; i--) {
+    const j = randomInt(i + 1);
+    [p[i], p[j]] = [p[j], p[i]];
+  }
+  return p;
+}
+
+/** Opciones guardadas de una pregunta (JSON); vacío si la fila está rota. */
+function opcionesGuardadas(texto: string): string[] {
+  try {
+    const o = JSON.parse(texto) as unknown;
+    return Array.isArray(o) ? o.map(String) : [];
+  } catch {
+    return [];
+  }
+}
+
+interface PreguntaGuardada {
+  id: number;
+  question: string;
+  options: string[];
+  correct: number;
+}
+
+function preguntaGuardada(db: DB, id: number, contentId: number): PreguntaGuardada | undefined {
+  const q = db
+    .prepare(`SELECT id, question, options, correct FROM academia_quiz WHERE id = ? AND content_id = ?`)
+    .get(id, contentId) as { id: number; question: string; options: string; correct: number } | undefined;
+  return q ? { id: q.id, question: q.question, options: opcionesGuardadas(q.options), correct: q.correct } : undefined;
+}
+
+/** ¿El orden guardado sirve para las preguntas servidas tal como están hoy? */
+function ordenValido(orden: number[][] | null, preguntas: Array<PreguntaGuardada | undefined>): orden is number[][] {
+  return (
+    !!orden &&
+    orden.length === preguntas.length &&
+    preguntas.every((q, k) => !q || esPermutacion(orden[k], q.options.length))
+  );
+}
+
+function servidoDe(db: DB, token: string): { quiz_ids: string | null; quiz_orden: string | null } {
+  return db.prepare(`SELECT quiz_ids, quiz_orden FROM reading_sessions WHERE token = ?`).get(token) as {
+    quiz_ids: string | null;
+    quiz_orden: string | null;
+  };
+}
+
 export interface PreguntaQuiz {
   id: number;
   question: string;
@@ -186,34 +269,54 @@ export interface PreguntaQuiz {
 
 /**
  * Las preguntas del quiz de esta lectura (sin respuestas). La primera vez elige 3 al
- * azar del pool del contenido y las guarda en la sesión; después devuelve SIEMPRE las
- * mismas, así que pedirlo muchas veces no recorre el pool.
+ * azar del pool del contenido, baraja las opciones de cada una y guarda las dos cosas
+ * en la sesión; después devuelve SIEMPRE las mismas preguntas en el mismo orden, así que
+ * pedirlo muchas veces no recorre el pool ni deja buscar un orden cómodo.
  */
 export function getQuiz(db: DB, wallet: string, token: string, now: number = Date.now()): PreguntaQuiz[] {
   const s = getSessionForQuiz(db, wallet, token, now);
-  let ids = idsServidos(s);
-  if (!ids) {
-    // Selección aleatoria de 3 preguntas del pool (rotación).
+  if (!idsServidos(s)) {
+    // Selección aleatoria de 3 preguntas del pool (rotación) y un orden al azar para cada una.
     const elegidas = (
       db
         .prepare(`SELECT id FROM academia_quiz WHERE content_id = ? ORDER BY RANDOM() LIMIT ${PREGUNTAS_POR_QUIZ}`)
         .all(s.content_id) as Array<{ id: number }>
     ).map((q) => q.id);
+    const orden = elegidas.map((id) => barajar(preguntaGuardada(db, id, s.content_id)?.options.length ?? 0));
     // Condicional: si dos pedidos llegan a la vez, gana el primero y ambos ven lo mismo.
-    db.prepare(`UPDATE reading_sessions SET quiz_ids = ? WHERE token = ? AND quiz_ids IS NULL`).run(
+    db.prepare(`UPDATE reading_sessions SET quiz_ids = ?, quiz_orden = ? WHERE token = ? AND quiz_ids IS NULL`).run(
       JSON.stringify(elegidas),
+      JSON.stringify(orden),
       token
     );
-    const guardada = db.prepare(`SELECT quiz_ids FROM reading_sessions WHERE token = ?`).get(token) as {
-      quiz_ids: string | null;
-    };
-    ids = idsServidos({ ...s, quiz_ids: guardada.quiz_ids }) ?? elegidas;
   }
-  const pregunta = db.prepare(`SELECT id, question, options FROM academia_quiz WHERE id = ? AND content_id = ?`);
-  return ids
-    .map((id) => pregunta.get(id, s.content_id) as { id: number; question: string; options: string } | undefined)
-    .filter((q): q is { id: number; question: string; options: string } => !!q)
-    .map((q) => ({ id: q.id, question: q.question, options: JSON.parse(q.options) as string[] }));
+
+  let servido = servidoDe(db, token);
+  const preguntas = (idsServidos(servido) ?? []).map((id) => preguntaGuardada(db, id, s.content_id));
+  let orden = ordenServido(servido);
+  if (!ordenValido(orden, preguntas)) {
+    // Preguntas servidas sin orden guardado (o con las opciones cambiadas desde entonces):
+    // se barajan ahora, UNA vez, con un UPDATE condicional como el de arriba.
+    const nuevo = JSON.stringify(preguntas.map((q) => barajar(q?.options.length ?? 0)));
+    if (servido.quiz_orden === null) {
+      db.prepare(`UPDATE reading_sessions SET quiz_orden = ? WHERE token = ? AND quiz_orden IS NULL`).run(nuevo, token);
+    } else {
+      db.prepare(`UPDATE reading_sessions SET quiz_orden = ? WHERE token = ? AND quiz_orden = ?`).run(
+        nuevo,
+        token,
+        servido.quiz_orden
+      );
+    }
+    servido = servidoDe(db, token);
+    orden = ordenServido(servido);
+    if (!ordenValido(orden, preguntas)) {
+      throw new AcademiaError("NO_QUIZ", "No se pudieron preparar las preguntas. Vuelve a intentarlo.");
+    }
+  }
+  const mostrado = orden;
+  return preguntas.flatMap((q, k) =>
+    q ? [{ id: q.id, question: q.question, options: mostrado[k].map((i) => q.options[i]) }] : []
+  );
 }
 
 export interface GradeResult {
@@ -235,7 +338,8 @@ export function gradeQuiz(
 ): GradeResult {
   const s = getSessionForQuiz(db, wallet, token, now);
   const servidos = idsServidos(s);
-  if (!servidos) {
+  const orden = ordenServido(s);
+  if (!servidos || !orden || orden.length !== servidos.length) {
     throw new AcademiaError("NO_QUIZ", "Primero pide las preguntas de esta lectura.");
   }
   // Exactamente las preguntas servidas en esta lectura, cada una una vez.
@@ -254,15 +358,22 @@ export function gradeQuiz(
     points: number;
   };
 
-  // Califica contra las respuestas correctas del servidor (nunca salen de aquí).
+  // Califica contra las respuestas correctas del servidor (nunca salen de aquí). Cada
+  // respuesta es la posición MOSTRADA: se traduce a la guardada con el orden de la lectura.
   let correct = 0;
-  const pregunta = db.prepare(`SELECT correct, content_id FROM academia_quiz WHERE id = ?`);
   for (let i = 0; i < quizIds.length; i++) {
-    const q = pregunta.get(quizIds[i]) as { correct: number; content_id: number } | undefined;
-    if (!q || q.content_id !== s.content_id) {
+    const q = preguntaGuardada(db, quizIds[i], s.content_id);
+    if (!q) {
       throw new AcademiaError("BAD_QUIZ", "Las respuestas no corresponden a las preguntas de esta lectura.");
     }
-    if (q.correct === answers[i]) correct++;
+    const mostrado = orden[servidos.indexOf(quizIds[i])];
+    if (!esPermutacion(mostrado, q.options.length)) {
+      // Las opciones cambiaron después de servirlas: al pedirlas otra vez se barajan de nuevo.
+      throw new AcademiaError("NO_QUIZ", "Las preguntas cambiaron mientras leías. Vuelve a pedirlas.");
+    }
+    const a = answers[i];
+    const guardada = Number.isInteger(a) && a >= 0 && a < mostrado.length ? mostrado[a] : -1;
+    if (guardada === q.correct) correct++;
   }
   const passed = correct >= ACIERTOS_PARA_APROBAR;
 

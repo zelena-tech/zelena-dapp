@@ -325,7 +325,10 @@ CREATE TABLE IF NOT EXISTS academia_quiz (
 -- Una sesion de lectura activa por wallet a la vez (server-side timing).
 -- Hallazgo A2: `quiz_ids` guarda las preguntas servidas (JSON) y la calificacion exige
 -- exactamente esas; `graded_at` (epoch ms) marca la UNICA calificacion de la sesion y
--- cuenta para la espera tras un intento fallido. Las dos van tambien en COLUMNAS_NUEVAS.
+-- cuenta para la espera tras un intento fallido. `quiz_orden` (revision de A2) guarda,
+-- alineado con `quiz_ids`, el orden barajado en que se mostraron las opciones de cada
+-- pregunta: la respuesta se traduce con el antes de calificar. Las tres van tambien en
+-- COLUMNAS_NUEVAS.
 CREATE TABLE IF NOT EXISTS reading_sessions (
   token         TEXT PRIMARY KEY,
   wallet        TEXT NOT NULL,
@@ -337,6 +340,7 @@ CREATE TABLE IF NOT EXISTS reading_sessions (
   passed        INTEGER NOT NULL DEFAULT 0,
   quiz_ids      TEXT,                 -- JSON de los ids servidos (NULL = quiz no pedido)
   graded_at     INTEGER,              -- epoch ms de la calificacion (NULL = sin calificar)
+  quiz_orden    TEXT,                 -- JSON: por pregunta, indice guardado de cada opcion mostrada
   FOREIGN KEY (content_id) REFERENCES academia_content(id)
 );
 

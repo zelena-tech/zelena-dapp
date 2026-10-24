@@ -308,6 +308,8 @@ export const COLUMNAS_NUEVAS: ReadonlyArray<{ tabla: string; columna: string; dd
   // Academia (hallazgo A2): preguntas servidas en la lectura y su única calificación.
   { tabla: "reading_sessions", columna: "quiz_ids", ddl: "TEXT" },
   { tabla: "reading_sessions", columna: "graded_at", ddl: "INTEGER" },
+  // Academia (revisión de A2): orden barajado de las opciones servidas en la lectura.
+  { tabla: "reading_sessions", columna: "quiz_orden", ddl: "TEXT" },
 ];
 
 /** Columnas de una tabla (vacío si no existe). */

@@ -10,7 +10,7 @@ import { FOUNDER_WALLET, BOOTSTRAP_CODE_MAX, BOOTSTRAP_CODE_MIN, DEMO_INVITE_COD
 import { GENOME_V1, seedGenomeV1, seedGenomeV2 } from "./genome";
 import { seedTeam } from "./team";
 import { createCohortInvite } from "./invites";
-import { ACADEMIA_S1, aplicarContenidoPublico } from "./contenido-publico";
+import { ACADEMIA_S1, aplicarContenidoPublico, reordenarOpcionesAcademia } from "./contenido-publico";
 import { ORIGEN_SEMBRADO, marcarSembradosComoBorrador } from "./agora-borradores";
 import { vincularReemplazosConocidos } from "./decisiones";
 import { marcarCuentasDeNavegadorComoReales } from "./cuentas-reales";
@@ -101,6 +101,12 @@ export function seedIfEmpty(db: DB, env: NodeJS.ProcessEnv = process.env): void 
   // Contenido público (WP31-E2): lleva una base con el contenido viejo a la forma que
   // `seed()` siembra hoy. Idempotente; si falla, el arranque sigue y se reintenta.
   try { aplicarContenidoPublico(db); } catch (e) { console.error("[seed] contenido público", e); }
+
+  // Academia (revisión del hallazgo A2): las respuestas correctas del quiz sembrado dejan
+  // de estar casi todas en la segunda opción. Solo reordena filas con la forma anterior
+  // exacta (después de S1, que ya escribe el orden nuevo). Idempotente; si falla, el
+  // arranque sigue y se reintenta.
+  try { reordenarOpcionesAcademia(db); } catch (e) { console.error("[seed] orden de opciones de la Academia", e); }
 
   // Decisiones (decisión del founder, 2026-10-21): registra que la decisión histórica de
   // las etiquetas viejas la reemplaza la de S2. Solo inserta en decision_replacements; el
@@ -554,10 +560,10 @@ Esto evita generar expectativa de inversión, evita dinámicas de "farm-and-dump
     },
     [
       ["¿Qué activo paga el trabajo?", ["ZWORK", "Reputación", "USDC", "Ninguno"], 2],
-      ["¿ZWORK es transferible en la fase actual?", ["Sí, libremente", "No, son puntos no transferibles", "Solo en mainnet", "Solo los fines de semana"], 1],
-      ["¿Qué activo otorga voto?", ["USDC", "La reputación", "ZWORK", "El CLA"], 1],
+      ["¿ZWORK es transferible en la fase actual?", ["Sí, libremente", "Solo los fines de semana", "Solo en mainnet", "No, son puntos no transferibles"], 3],
+      ["¿Qué activo otorga voto?", ["La reputación", "USDC", "ZWORK", "El CLA"], 0],
       ["La emisión de ZWORK sigue...", ["Sin límite", "Un presupuesto por época con techo duro", "El precio de mercado", "La inflación"], 1],
-      ["Un token que es 'ownership de nada'...", ["Es lo ideal", "Es el error que el diseño evita", "Da más voto", "Es obligatorio"], 1],
+      ["Un token que es 'ownership de nada'...", ["Es lo ideal", "Es obligatorio", "Da más voto", "Es el error que el diseño evita"], 3],
     ]
   );
 
@@ -589,9 +595,9 @@ El supervisor cierra el periodo y genera un **score compuesto** por entrega: cal
 Cada proyecto alimenta el perfil append-only del contribuidor. Más historial habilita mejores proyectos: así gira el flywheel.`,
     },
     [
-      ["¿Cuál es el orden correcto de la máquina de estados?", ["Open→Delivered→Assigned", "Open→Assigned→Delivered→Scored→Distributed", "Assigned→Open→Scored", "Scored→Open→Delivered"], 1],
-      ["¿Puede un supervisor evaluar a su invitado directo?", ["Sí", "No (regla B8)", "Solo con permiso", "Siempre"], 1],
-      ["El score compuesto es...", ["Subjetivo", "Calculado, transparente y verificable", "Secreto", "Aleatorio"], 1],
+      ["¿Cuál es el orden correcto de la máquina de estados?", ["Open→Delivered→Assigned", "Scored→Open→Delivered", "Assigned→Open→Scored", "Open→Assigned→Delivered→Scored→Distributed"], 3],
+      ["¿Puede un supervisor evaluar a su invitado directo?", ["No (regla B8)", "Sí", "Solo con permiso", "Siempre"], 0],
+      ["El score compuesto es...", ["Subjetivo", "Secreto", "Calculado, transparente y verificable", "Aleatorio"], 2],
       ["¿Cuántos pasos tiene la metodología del Ágora?", ["4", "6", "8", "12"], 2],
       ["La revisión cruzada sirve para...", ["Acelerar pagos", "Contener la colusión supervisor–ejecutor", "Subir el presupuesto", "Eliminar el CLA"], 1],
     ]
@@ -609,11 +615,11 @@ Cada proyecto alimenta el perfil append-only del contribuidor. Más historial ha
       videoId: "aqz-KE-bpKQ",
     },
     [
-      ["La tesis central de Zelena es...", ["La antigüedad manda", "El valor que entregas determina lo que recibes", "El título importa más", "Las horas registradas"], 1],
+      ["La tesis central de Zelena es...", ["La antigüedad manda", "Las horas registradas", "El título importa más", "El valor que entregas determina lo que recibes"], 3],
       ["Zelena se construye sobre...", ["Bitcoin", "Ethereum L2", "Stellar / Soroban", "Una base de datos central"], 2],
-      ["El onboarding es...", ["Abierto a todos", "Por invitación con CLA", "Solo por pago", "Automático"], 1],
+      ["El onboarding es...", ["Por invitación con CLA", "Abierto a todos", "Solo por pago", "Automático"], 0],
       ["¿Dónde corre todo hoy?", ["Mainnet", "Testnet", "Un servidor privado", "En papel"], 1],
-      ["El tagline de Zelena es...", ["Move fast", "Real work, Real rewards", "Code is law", "To the moon"], 1],
+      ["El tagline de Zelena es...", ["Move fast", "To the moon", "Code is law", "Real work, Real rewards"], 3],
     ]
   );
 }
