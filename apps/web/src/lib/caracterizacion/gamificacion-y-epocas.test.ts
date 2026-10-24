@@ -1,6 +1,7 @@
 /**
  * Prueba de caracterización · gamificacion-y-epocas
- * Ficha: docs/features/gamificacion-y-epocas.md (sección 8). Commit de referencia: 0e07d8f.
+ * Ficha: docs/features/gamificacion-y-epocas.md (sección 8). Commit de referencia: 0e07d8f;
+ * revisada contra wp/32-release (4032c7c).
  *
  * Protege el comportamiento ACTUAL del flujo principal, a través de las rutas reales
  * (`POST /api/equipo/asignacion` y `GET|POST /api/admin/epoca`):

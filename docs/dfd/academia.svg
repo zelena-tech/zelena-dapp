@@ -57,9 +57,9 @@
 <path d="M1175,1070 Q1329,1019 1415,880" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="1312" y="997" text-anchor="middle" font-size="11" fill="#555">f23 getQuiz</text>
 <path d="M1460,2625 Q1516,1775 1460,925" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="1488" y="1775" text-anchor="middle" font-size="11" fill="#555">f24 Tiempo activo y transcurrido</text>
+<text x="1488" y="1775" text-anchor="middle" font-size="11" fill="#555">f24 Sesión de la lectura</text>
 <path d="M1460,2435 Q1516,1680 1460,925" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="1488" y="1680" text-anchor="middle" font-size="11" fill="#555">f25 3 preguntas al azar</text>
+<text x="1488" y="1680" text-anchor="middle" font-size="11" fill="#555">f25 3 preguntas al azar (solo la primera vez)</text>
 <path d="M1085,1070 Q1019,596 845,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="992" y="603" text-anchor="middle" font-size="11" fill="#555">f26 Preguntas</text>
 <path d="M845,150 Q911,717 1085,1260" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
@@ -96,6 +96,14 @@
 <text x="944" y="2326" text-anchor="middle" font-size="11" fill="#555">f42 Reescribe S1 y S3</text>
 <path d="M1175,2210 Q1253,2383 1415,2480" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="1274" y="2364" text-anchor="middle" font-size="11" fill="#555">f43 Reescribe el quiz de S1</text>
+<path d="M1415,2670 Q1349,2050 1175,1450" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1322" y="2055" text-anchor="middle" font-size="11" fill="#555">f44 Fallos recientes de ese contenido</text>
+<path d="M1175,1070 Q1295,1126 1415,1070" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1295" y="1098" text-anchor="middle" font-size="11" fill="#b03a2e">f45 Cuenta el pedido del quiz *</text>
+<path d="M1460,925 Q1404,1775 1460,2625" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1432" y="1775" text-anchor="middle" font-size="11" fill="#555">f46 Guarda lo servido</text>
+<path d="M1175,2210 Q1205,2425 1415,2480" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1250" y="2385" text-anchor="middle" font-size="11" fill="#555">f47 Reparte las correctas (S4)</text>
 <rect x="90" y="100" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
 <text x="140" y="122" text-anchor="middle" fill="#222">Persona con</text>
 <text x="140" y="138" text-anchor="middle" fill="#222">sesión y</text>
@@ -134,19 +142,23 @@
 <text x="1130" y="1256" text-anchor="middle" fill="#222">POST</text>
 <text x="1130" y="1272" text-anchor="middle" fill="#222">/api/academia/quiz</text>
 <circle cx="1130" cy="1450" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
-<text x="1130" y="1446" text-anchor="middle" fill="#222">Iniciar</text>
-<text x="1130" y="1462" text-anchor="middle" fill="#222">lectura</text>
+<text x="1130" y="1414" text-anchor="middle" fill="#222">Iniciar</text>
+<text x="1130" y="1430" text-anchor="middle" fill="#222">lectura</text>
+<text x="1130" y="1446" text-anchor="middle" fill="#222">(espera tras</text>
+<text x="1130" y="1462" text-anchor="middle" fill="#222">un fallo; máx.</text>
 <circle cx="1460" cy="690" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
 <text x="1460" y="686" text-anchor="middle" fill="#222">Sumar tiempo</text>
 <text x="1460" y="702" text-anchor="middle" fill="#222">activo</text>
 <circle cx="1460" cy="880" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
-<text x="1460" y="860" text-anchor="middle" fill="#222">Servir 3</text>
-<text x="1460" y="876" text-anchor="middle" fill="#222">preguntas</text>
-<text x="1460" y="892" text-anchor="middle" fill="#222">(valida el</text>
-<text x="1460" y="908" text-anchor="middle" fill="#222">tiempo)</text>
+<text x="1460" y="820" text-anchor="middle" fill="#222">Servir las 3</text>
+<text x="1460" y="836" text-anchor="middle" fill="#222">preguntas de</text>
+<text x="1460" y="852" text-anchor="middle" fill="#222">la lectura</text>
+<text x="1460" y="868" text-anchor="middle" fill="#222">(valida el</text>
 <circle cx="1130" cy="1640" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
-<text x="1130" y="1636" text-anchor="middle" fill="#222">Calificar y</text>
-<text x="1130" y="1652" text-anchor="middle" fill="#222">otorgar puntos</text>
+<text x="1130" y="1612" text-anchor="middle" fill="#222">Calificar una</text>
+<text x="1130" y="1628" text-anchor="middle" fill="#222">vez las</text>
+<text x="1130" y="1644" text-anchor="middle" fill="#222">preguntas</text>
+<text x="1130" y="1660" text-anchor="middle" fill="#222">servidas y</text>
 <circle cx="1130" cy="1830" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
 <text x="1130" y="1818" text-anchor="middle" fill="#222">POST</text>
 <text x="1130" y="1834" text-anchor="middle" fill="#222">/api/admin</text>
@@ -156,10 +168,10 @@
 <text x="1130" y="2024" text-anchor="middle" fill="#222">contenido al</text>
 <text x="1130" y="2040" text-anchor="middle" fill="#222">arrancar</text>
 <circle cx="1130" cy="2210" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
-<text x="1130" y="2190" text-anchor="middle" fill="#222">Migración del</text>
-<text x="1130" y="2206" text-anchor="middle" fill="#222">contenido</text>
-<text x="1130" y="2222" text-anchor="middle" fill="#222">público (S1,</text>
-<text x="1130" y="2238" text-anchor="middle" fill="#222">S3)</text>
+<text x="1130" y="2182" text-anchor="middle" fill="#222">Migración del</text>
+<text x="1130" y="2198" text-anchor="middle" fill="#222">contenido</text>
+<text x="1130" y="2214" text-anchor="middle" fill="#222">público (S1,</text>
+<text x="1130" y="2230" text-anchor="middle" fill="#222">S3) y orden de</text>
 <rect x="750" y="2450" width="100" height="60" fill="#fdfefe" stroke="none"/>
 <line x1="750" y1="2450" x2="850" y2="2450" stroke="#222" stroke-width="1.5"/>
 <line x1="750" y1="2510" x2="850" y2="2510" stroke="#222" stroke-width="1.5"/>
@@ -206,5 +218,5 @@
 <text x="1460" y="1058" text-anchor="middle" fill="#222">Contadores de</text>
 <text x="1460" y="1074" text-anchor="middle" fill="#222">límite de tasa</text>
 <text x="1460" y="1090" text-anchor="middle" fill="#222">en memoria</text>
-<text x="90" y="3410" font-size="11" fill="#777">Academia: contenido, lectura con tiempo mínimo, quiz y puntos de Academia · docs/dfd/academia.json · commit 0e07d8f · * = flujo con datos sensibles</text>
+<text x="90" y="3410" font-size="11" fill="#777">Academia: contenido, lectura con tiempo mínimo, quiz y puntos de Academia · docs/dfd/academia.json · commit 4032c7c · * = flujo con datos sensibles</text>
 </svg>

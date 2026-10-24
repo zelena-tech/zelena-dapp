@@ -1,7 +1,7 @@
 /**
  * Prueba de caracterización · SLA, recordatorios y avisos.
  * Ficha: docs/features/sla-recordatorios-y-avisos.md · DFD: docs/dfd/sla-recordatorios-y-avisos.json
- * Commit de referencia: 0e07d8f.
+ * Commit de referencia: 0e07d8f; revisada contra wp/32-release (4032c7c).
  *
  * Protege el comportamiento ACTUAL, no el deseado. Recorre el flujo principal de punta a
  * punta por las rutas reales:

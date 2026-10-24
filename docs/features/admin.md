@@ -1,12 +1,12 @@
 # Ficha: Admin
 
-Dueño: QA (por asignar) · Revisor: John · Fecha: 2026-10-21 · Commit de referencia: 0e07d8f
+Dueño: QA (por asignar) · Revisor: John · Fecha: 2026-10-21 · Commit de referencia: 0e07d8f · Actualizada al release `wp/32-release` (4032c7c): secciones 1, 2, 4, 5, 7 y 8
 
 ## 1. Resumen
 
 Qué hace: es el panel del founder. Una sola página (`/admin`, server component) lee casi todo el estado del sistema y monta los botones y formularios que cambian ese estado. Las escrituras pasan por dos rutas:
 
-- `POST /api/admin`: una ruta con un `switch` de 11 acciones: aprobar o rechazar aplicaciones del Ágora, avanzar el estado de un proyecto, aprobar hitos (emite puntos y reputación), encender o apagar contenido de la Academia, calcular y firmar el fitness de la época, proponer o revertir una mutación del genoma, registrar "sin cambios" y crear una auditoría de funciones latentes.
+- `POST /api/admin`: una ruta con un `switch` de 12 acciones: publicar un proyecto en borrador del Ágora (`publishProject`, nueva en el release), aprobar o rechazar aplicaciones del Ágora, avanzar el estado de un proyecto, aprobar hitos (emite puntos y reputación), encender o apagar contenido de la Academia, calcular y firmar el fitness de la época, proponer o revertir una mutación del genoma, registrar "sin cambios" y crear una auditoría de funciones latentes.
 - `GET/POST /api/admin/epoca`: ver qué falta para cerrar la época, cerrarla y abrir la siguiente en una operación (raíz Merkle de lo emitido, encolada para la red de pruebas), o abrir una cuando no hay ninguna abierta.
 
 Además, la página muestra paneles de otras features que tienen su propia ruta: ritos (`/api/ritos`), el vínculo del asistente de Telegram (`/api/telegram/vincular`), y la bandeja de leads del sitio público (solicitudes de empresas y avisos de encuentros, con nombre y correo).
@@ -15,7 +15,7 @@ Quién lo usa: solo quien tiene `users.role = 'founder'` en la base (`src/lib/au
 
 Casos de uso:
 
-1. Elegir quién ejecuta un proyecto del Ágora (aprobar o rechazar aplicaciones).
+1. Publicar los proyectos del Ágora que están en borrador (los sembrados nacen así desde 2c049eb) y elegir quién ejecuta cada uno (aprobar o rechazar aplicaciones; un borrador no se asigna).
 2. Avanzar el estado de un proyecto con la máquina de estados pura (`Open → Assigned → Delivered → Scored → Distributed`).
 3. Aprobar hitos: 1 USD = 1 punto de ejecución para el ejecutor, dentro del presupuesto de la época y con la regla B8.
 4. Moderar la Academia.
@@ -25,7 +25,9 @@ Casos de uso:
 
 ## 2. Diagrama (DFD)
 
-Archivo: [`docs/dfd/admin.tm7`](../dfd/admin.tm7), más la imagen exportada [`docs/dfd/admin.svg`](../dfd/admin.svg). Los dos se generan desde la fuente [`docs/dfd/admin.json`](../dfd/admin.json) con `python docs/dfd/generar_tm7.py docs/dfd/admin.json --estricto`, que pasa: cada `codigo` existe en el repo. La fuente tiene 30 elementos (2 actores, 15 procesos, 13 almacenes), 42 flujos (14 sensibles) y 4 fronteras de confianza.
+Archivo: [`docs/dfd/admin.tm7`](../dfd/admin.tm7), más la imagen exportada [`docs/dfd/admin.svg`](../dfd/admin.svg). Los dos se generan desde la fuente [`docs/dfd/admin.json`](../dfd/admin.json) con `python docs/dfd/generar_tm7.py docs/dfd/admin.json --estricto`, que pasa: cada `codigo` existe en el repo. La fuente tiene 31 elementos (2 actores, 16 procesos, 13 almacenes), 44 flujos (14 sensibles) y 4 fronteras de confianza.
+
+Cambios del release `wp/32-release`: proceso nuevo "Publicar un borrador del Ágora" (`publicarProyecto`) con sus flujos f43-f44; `projects` lleva `draft` y `origin`; la página lee además los originales de las decisiones reemplazadas (`decision_replacements`, f8).
 
 Vista para GitHub (salida de `--mermaid`): `[/ /]` actor, `(( ))` proceso, `[( )]` almacén, cada `subgraph` es una frontera de confianza y los flujos con `*` y en rojo llevan datos sensibles.
 
@@ -42,23 +44,24 @@ flowchart LR
     page(("Página /admin (server component): puerta y lecturas"))
     ses(("Lectura de la cookie de sesión"))
     authz(("adminActor: rol founder leído de users"))
-    api(("POST /api/admin (11 acciones por switch)"))
+    api(("POST /api/admin (12 acciones por switch, incluida publishProject)"))
     apie(("GET/POST /api/admin/epoca"))
-    adm(("Operaciones: aplicaciones, estado, hitos, Academia"))
-    sm(("Máquina de estados pura de proyectos"))
+    adm(("Operaciones: aplicaciones (no asigna borradores), estado, hitos, Academia"))
+    sm(("Máquina de estados pura de proyectos (y la marca de borrador)"))
     fit(("Motor de épocas: fitness y firma de la decisión"))
     mut(("Mutación del genoma (proponer, revertir, sin cambios)"))
     aud(("Auditoría de funciones latentes"))
     epo(("Cerrar y abrir época (raíz Merkle)"))
     rl[("Contadores de intentos en memoria (solo /api/admin/epoca)")]
     worker(("Worker de anclaje (otra feature)"))
+    borr(("Publicar un borrador del Ágora (draft 1 → 0)"))
   end
   subgraph F3["Base SQLite persistente (/home/data)"]
     users[("users")]
-    proj[("applications, projects, milestones")]
+    proj[("applications, projects (draft, origin), milestones")]
     ledger[("points_ledger y reputation_events (append-only)")]
     per[("periods y epoch_fitness")]
-    gen[("genome_versions, mutation_decisions y decision_log")]
+    gen[("genome_versions, mutation_decisions, decision_log y decision_replacements")]
     lat[("latent_audits")]
     acad[("academia_content")]
     leads[("leads (solicitudes de empresas y avisos de encuentros)")]
@@ -74,9 +77,9 @@ flowchart LR
   cookie -->|"f3 Leer y verificar el JWT *"| ses
   page -->|"f4 ¿Es founder?"| authz
   authz -->|"f5 Leer el rol"| users
-  page -->|"f6 Aplicaciones, proyectos e hitos"| proj
+  page -->|"f6 Aplicaciones, proyectos (incluidos borradores) e hitos"| proj
   page -->|"f7 Época actual, fitness y estado de cierre"| per
-  page -->|"f8 Genoma vigente, linaje y mutación pendiente"| gen
+  page -->|"f8 Genoma vigente, linaje, mutación pendiente y decisiones reemplazadas"| gen
   page -->|"f9 Últimos 100 leads *"| leads
   page -->|"f10 Log del asistente y vínculo del founder *"| bot
   page -->|"f11 Panel de ritos"| ritos
@@ -111,6 +114,8 @@ flowchart LR
   ses -->|"f40 Claims de la sesión *"| apie
   u -->|"f41 Clic en una acción o envío de un formulario"| btn
   u -->|"f42 Cerrar o abrir época"| epanel
+  api -->|"f43 publishProject"| borr
+  borr -->|"f44 Publicar: UPDATE projects SET draft = 0 WHERE draft = 1"| proj
   linkStyle 0,2,8,9,12,13,18,27,28,30,36,37,38,39 stroke:#b03a2e,color:#b03a2e
   style F1 fill:none,stroke:#c0392b,stroke-dasharray:6 4
   style F2 fill:none,stroke:#c0392b,stroke-dasharray:6 4
@@ -159,10 +164,11 @@ Acción elegida: **el founder aprueba un hito de un proyecto que ya tiene ejecut
 | adminActor | Proceso | `src/lib/authz.ts#adminActor` | Exige fila en `users` y `role = 'founder'`; no mira `status` ni `cla_signed`. |
 | Botones y formularios | Proceso | `src/components/AdminAction.tsx#AdminAction` | También `GenomeMutationPanel` y `LatentAuditForm`, que llaman a la misma ruta. |
 | Panel de épocas | Proceso | `src/components/EpocaPanel.tsx#EpocaPanel` | Llama a `/api/admin/epoca`. |
-| POST /api/admin | Proceso | `app/api/admin/route.ts#POST` | 11 acciones; sin límite de tasa; devuelve 403 también sin sesión. |
+| POST /api/admin | Proceso | `app/api/admin/route.ts#POST` | 12 acciones (`publishProject` en l. 71-75); sin límite de tasa; devuelve 403 también sin sesión. |
 | GET/POST /api/admin/epoca | Proceso | `app/api/admin/epoca/route.ts#POST` | Con `GET`; 401 sin sesión, 403 sin rol, límite de 10 por minuto, `Cache-Control: no-store`. |
 | Operaciones de administración | Proceso | `src/lib/admin.ts#approveMilestone` | Con `approveApplication`, `rejectApplication`, `advanceState`, `toggleContent`. Usan `getDb()` global salvo `approveMilestone`, que acepta `db`. |
-| Máquina de estados | Proceso | `src/lib/state-machine.ts#transition` | Con `nextAction`; función pura única (regla de `CLAUDE.md`). |
+| Máquina de estados | Proceso | `src/lib/state-machine.ts#transition` | Con `nextAction`; función pura única (regla de `CLAUDE.md`). Desde el release también `esBorrador` y `recibeAplicaciones`: el borrador es una marca aparte del ciclo. |
+| Publicar un borrador | Proceso | `src/lib/agora-borradores.ts#publicarProyecto` | `UPDATE projects SET draft = 0 WHERE id = ? AND draft = 1`; no toca el estado. Si ya estaba publicado lanza `BorradorError(409)`, pero la ruta lo devuelve como 400 (ver sección 8). |
 | Motor de épocas | Proceso | `src/lib/epochs.ts#signEpochDecision` | Con `computeAndStoreEpochFitness`; exige mutación decidida antes de firmar. |
 | Mutación del genoma | Proceso | `src/lib/mutation.ts#proposeMutation` | Con `revertToVersion`, `recordNoMutation`, `validateMutation`. |
 | Auditoría de funciones latentes | Proceso | `src/lib/audits.ts#createLatentAudit` | |
@@ -171,10 +177,10 @@ Acción elegida: **el founder aprueba un hito de un proyecto que ya tiene ejecut
 | Cookie zelena_session | Almacén de datos | `src/lib/jwt.ts#SESSION_COOKIE` | Ver ficha de login y sesión. |
 | Contadores en memoria | Almacén de datos | `src/lib/rate-limit.ts#rateLimit` | Solo los usa `/api/admin/epoca`. |
 | users | Almacén de datos | `src/lib/schema.sql#users` | Fuente del rol. |
-| applications, projects, milestones | Almacén de datos | `src/lib/schema.sql#projects` | Tablas en `schema.sql` l. 112-153. |
+| applications, projects, milestones | Almacén de datos | `src/lib/schema.sql#projects` | `projects.draft` (1 = borrador, no se ve en público) y `projects.origin` (`seed` o `agora`) llegan con el release. |
 | points_ledger, reputation_events | Almacén de datos | `src/lib/schema.sql#points_ledger` | Append-only; saldos por `SUM()`. |
 | periods, epoch_fitness | Almacén de datos | `src/lib/schema.sql#periods` | `epoch_fitness` es append-only: una fila por cálculo. |
-| genome_versions, mutation_decisions, decision_log | Almacén de datos | `src/lib/schema.sql#decision_log` | `decision_log` no tiene columna de autor. |
+| genome_versions, mutation_decisions, decision_log, decision_replacements | Almacén de datos | `src/lib/schema.sql#decision_log` | `decision_log` no tiene columna de autor. `decision_replacements` (release) dice qué decisión reemplaza a cuál; los originales solo se ven en /admin. |
 | latent_audits | Almacén de datos | `src/lib/schema.sql#latent_audits` | |
 | academia_content | Almacén de datos | `src/lib/schema.sql#academia_content` | |
 | leads | Almacén de datos | `src/lib/schema.sql#leads` | Nombre, correo, empresa y mensaje del sitio público. |
@@ -193,9 +199,9 @@ Los flujos con **[sensible]** llevan sesión, datos personales o puntos (el equi
 | f3 | Cookie → getSession | HTTPS (Cookie) | **[sensible]** claims (pista, no autoridad) |
 | f4 | Página → adminActor | Llamada en proceso | wallet de la sesión |
 | f5 | adminActor → users | SQL | display_name, role, is_supervisor, is_founder |
-| f6 | Página → applications/projects/milestones | SQL | wallet del aplicante, propuesta, plazo, estados, hitos |
+| f6 | Página → applications/projects/milestones | SQL | wallet del aplicante, propuesta, plazo, estados, hitos y la marca de borrador (`listProjects({ incluirBorradores: true })`) |
 | f7 | Página → periods/epoch_fitness | SQL | época actual, fitness, faltantes para cerrar |
-| f8 | Página → genoma | SQL | parámetros vigentes, linaje, mutación pendiente |
+| f8 | Página → genoma y decisiones | SQL | parámetros vigentes, linaje, mutación pendiente y originales de las decisiones reemplazadas (`decisionesReemplazadas`) |
 | f9 | Página → leads | SQL | **[sensible]** nombre, correo, empresa, mensaje (últimos 100) |
 | f10 | Página → bot_actions/telegram_links | SQL | **[sensible]** log del asistente y vínculo de Telegram del founder |
 | f11 | Página → rite_sessions | SQL | sesiones de ritos y conteos |
@@ -230,6 +236,8 @@ Los flujos con **[sensible]** llevan sesión, datos personales o puntos (el equi
 | f40 | getSession → /api/admin/epoca | Llamada en proceso | **[sensible]** claims de la sesión |
 | f41 | Founder → botones y formularios | UI del navegador | acción elegida, genes, justificación, textos de auditoría |
 | f42 | Founder → panel de épocas | UI del navegador | justificación y nombre de la época |
+| f43 | /api/admin → publicarProyecto | Llamada en proceso | `projectId` validado con zod |
+| f44 | publicarProyecto → projects | SQL | `draft = 0` para ese id; el estado del ciclo no cambia |
 
 ## 6. Dependencias con otras features
 
@@ -255,7 +263,7 @@ Los flujos con **[sensible]** llevan sesión, datos personales o puntos (el equi
 | 4. Acciones sin autor registrado | Repudio | /api/admin, decision_log | Pendiente | La ruta no pasa el actor a `lib/admin.ts` (`app/api/admin/route.ts:51-112`; `src/lib/admin.ts:9-112`) y `decision_log` no tiene columna de autor (`src/lib/schema.sql:188-195`). Con un solo founder se sabe quién fue; con dos, no. |
 | 5. Doble emisión de puntos por aprobar el mismo hito dos veces | Manipulación | lib/admin, points_ledger | Mitigada | `src/lib/admin.ts:63` rechaza un hito aprobado y la UI deshabilita el botón (`app/admin/page.tsx:420`); el chequeo y la escritura corren sin ceder el hilo (driver síncrono). Residual: el `UPDATE` de `:96` no lleva `AND approved = 0`, así que con varias instancias escribiendo la misma base no hay guarda en SQL. Caracterización paso 4. |
 | 6. Emitir por encima del presupuesto de la época | Manipulación | lib/admin | Mitigada | `withinEpochBudget` con lo emitido en la época actual (`src/lib/admin.ts:88-93`). |
-| 7. Cambiar al ejecutor de un proyecto sin aviso | Manipulación | lib/admin, projects | Pendiente | `approveApplication` sobre un proyecto ya asignado reescribe `assignee_wallet` y deja dos aplicaciones aprobadas (`src/lib/admin.ts:29-31`); los hitos siguientes pagan al nuevo. Fijado en la caracterización. |
+| 7. Cambiar al ejecutor de un proyecto sin aviso | Manipulación | lib/admin, projects | Pendiente | `approveApplication` sobre un proyecto ya asignado reescribe `assignee_wallet` y deja dos aplicaciones aprobadas (`src/lib/admin.ts:31-33`); los hitos siguientes pagan al nuevo. El release solo agregó la guarda de borrador (`:20`). Fijado en la caracterización. |
 | 8. Regla B8 saltada o aplicada por persona y no por rol | Elevación | lib/admin | Pendiente | La excepción "Stage 0" compara `supervisor_wallet !== FOUNDER_WALLET` (`src/lib/admin.ts:77-82`): un founder por rol con otra wallet (por ejemplo, el que entra por Entra) no tiene la excepción, y la wallet de la variable sí aunque deje de ser founder. Contradice la regla "roles, no personas" (`src/lib/authz.ts:1-22`); el test estático solo vigila `app/` y `src/components/`. Fijado en la caracterización. |
 | 9. Clic accidental en una acción que no se puede deshacer | Manipulación | AdminAction | Pendiente | `AdminAction` ejecuta al primer clic, sin confirmación (`src/components/AdminAction.tsx:24-44`). Aprobar un hito emite puntos que por regla de producto no se quitan, y la firma de la época va al decision log. |
 | 10. Exposición de datos personales de los leads | Divulgación | Página /admin, leads | Mitigada | Solo el founder pasa la puerta de la página (`app/admin/page.tsx:33`) y la página es dinámica (`:24`). No hay política de retención: los leads se acumulan sin fecha de borrado (se lista con `LIMIT 100`, `:64`). |
@@ -265,22 +273,25 @@ Los flujos con **[sensible]** llevan sesión, datos personales o puntos (el equi
 | 14. Mutación del genoma fuera de rango | Manipulación | mutation | Mitigada | El esquema acepta 1 o 2 genes (`src/lib/validation.ts:99`) y `validateMutation` aplica los límites del genoma (`src/lib/mutation.ts:49`). |
 | 15. Petición cruzada con la cookie del founder (CSRF) | Manipulación | Cookie, /api/admin | Mitigada | Cookie `SameSite=lax` (`src/lib/session.ts:21`): un POST desde otro sitio no la lleva. |
 | 16. Cookie del founder robada | Suplantación | Cookie zelena_session | Pendiente | Da administración completa hasta 24 h (`src/lib/jwt.ts:44`); no hay reautenticación para acciones sensibles ni revocación (ver amenaza 6 de login y sesión). |
+| 17. Proyectos de ejemplo visibles o asignables como si fueran reales | Divulgación / Manipulación | projects, /api/apply, lib/admin | Mitigada | Release `wp/32-release` (2c049eb): el seed los crea con `draft = 1` y `origin = 'seed'` (`src/lib/seed.ts`, `addProject`) y una base que ya los tenía los pasa a borrador al arrancar (`src/lib/agora-borradores.ts#marcarSembradosComoBorrador`). Un borrador responde 404 en `/api/apply` (`app/api/apply/route.ts:28-30`) y no se asigna (`src/lib/admin.ts:20`). Solo el founder lo publica (`app/api/admin/route.ts:23` y `:71-75`). Caracterización paso 0. |
 
 ## 8. Prueba de caracterización
 
-Archivo: `apps/web/src/lib/caracterizacion/admin.test.ts` (19 casos, pasa). Se corre con:
+Archivo: `apps/web/src/lib/caracterizacion/admin.test.ts` (21 casos, pasa). Se corre con:
 
 ```bash
 cd apps/web && npx vitest run src/lib/caracterizacion/admin.test.ts
 ```
 
-Qué cubre: el ciclo principal del founder llamando a los **handlers reales** (`/api/apply`, `/api/admin`, `/api/admin/epoca`) y al `middleware.ts`, contra una base SQLite **temporal en disco** arrancada con `prepararSqlite` (schema, migraciones y seed, como en producción). La cookie del founder se firma con `signSession`, que es lo que emite `/api/login` (la wallet demo del seed no es una llave real y no puede firmar; el login se prueba en la ficha de login y sesión).
+Qué cubre: el ciclo principal del founder llamando a los **handlers reales** (`/api/apply`, `/api/admin`, `/api/admin/epoca`) y al `middleware.ts`, contra una base SQLite **temporal en disco** arrancada con `prepararSqlite` (schema, migraciones y seed, como en producción). La cookie del founder se firma con `signSession`, que es lo que emite `/api/login` (la wallet demo del seed no es una llave real y no puede firmar; el login se prueba en la ficha de login y sesión). Los alias `@/lib/agora-borradores` y `@/lib/state-machine`, que el release sumó a las rutas, también apuntan a los módulos reales.
 
-Pasos: puertas (middleware, puerta propia de la página por lectura del código, `adminActor` con cookie que miente, 401/403 de las dos rutas); (1) dos contribuidores aplican al mismo proyecto; (2) el contribuidor no puede aprobar y el founder asigna (`Open → Assigned`); (3) aprobar un hito emite puntos y reputación en la época 1; (4) el mismo hito otra vez da 400 sin emitir; (5) `advanceState` a `Delivered`; (6) `toggleContent` ida y vuelta; (7) la época no cierra sin fitness ni mutación (409 con lo que falta); (8) fitness, "sin cambios" para la época 2 y firma (firmar antes de decidir la mutación da 400); (9) cierre: periodo 1 `Closed` con su raíz, raíz en `anchor_queue`, época 2 abierta y las dos actas con "Cierre" en el título; (10) fallas de forma.
+Pasos: puertas (middleware, puerta propia de la página por lectura del código, `adminActor` con cookie que miente, 401/403 de las dos rutas); (0) el proyecto sembrado nace en **borrador** (`draft = 1`, `origin = 'seed'`): `/api/apply` responde 404, el contribuidor no puede publicarlo (403), una aplicación previa sobre otro borrador no se aprueba (400 "El proyecto está en borrador: publícalo antes de asignarlo."), `publishProject` sin id o con un id inexistente da 400 y el founder lo publica (`draft = 0`, sigue `Open`); (1) dos contribuidores aplican al mismo proyecto; (2) el contribuidor no puede aprobar y el founder asigna (`Open → Assigned`); (3) aprobar un hito emite puntos y reputación en la época 1; (4) el mismo hito otra vez da 400 sin emitir; (5) `advanceState` a `Delivered`; (6) `toggleContent` ida y vuelta; (7) la época no cierra sin fitness ni mutación (409 con lo que falta); (8) fitness, "sin cambios" para la época 2 y firma (firmar antes de decidir la mutación da 400); (9) cierre: periodo 1 `Closed` con su raíz, raíz en `anchor_queue`, época 2 abierta y las dos actas con "Cierre" en el título; (10) fallas de forma.
 
-Hallazgos fijados (si se corrigen, la prueba falla a propósito y la ficha se actualiza en el mismo cambio): segunda aprobación que reemplaza al ejecutor, rechazo de una aplicación inexistente que responde `ok`, founder sin CLA que usa la API pero no la página, y excepción B8 por `FOUNDER_WALLET`. También deja documentado que `epoch_fitness` es append-only (dos cálculos, dos filas).
+Hallazgos fijados (si se corrigen, la prueba falla a propósito y la ficha se actualiza en el mismo cambio): segunda aprobación que reemplaza al ejecutor, rechazo de una aplicación inexistente que responde `ok`, founder sin CLA que usa la API pero no la página, excepción B8 por `FOUNDER_WALLET` y, nuevo con el release, **publicar dos veces responde 400** "Este proyecto ya está publicado." aunque `publicarProyecto` lance `BorradorError` con 409: la ruta convierte toda excepción en 400 (`app/api/admin/route.ts:121`). No escribe nada; es solo el código de estado. También deja documentado que `epoch_fitness` es append-only (dos cálculos, dos filas).
 
-Pruebas existentes que cubren piezas del feature: `src/lib/authz.test.ts` (puertas), `src/lib/epocas.test.ts` (cierre y apertura), `src/lib/epochs.test.ts` (fitness), `src/lib/mutation.test.ts` (genoma), `src/lib/audits.test.ts`, `src/lib/state-machine.test.ts`, `src/lib/rules.test.ts` y `src/lib/points-ledger.test.ts`.
+Qué cambió respecto de la versión escrita contra 0e07d8f: los pasos 1 a 5 y el hallazgo de la segunda aprobación fallaban porque el proyecto sembrado ahora es un borrador (404 al aplicar, 400 al asignar). No es una regresión: es la decisión del commit 2c049eb ("los proyectos sembrados pasan a borrador hasta que el founder los publique"). Se agregó el paso 0, que publica el proyecto con la acción nueva, y el resto del flujo quedó igual.
+
+Pruebas existentes que cubren piezas del feature: `src/lib/authz.test.ts` (puertas), `src/lib/agora-borradores.test.ts` (migración a borrador y publicación), `src/lib/epocas.test.ts` (cierre y apertura), `src/lib/epochs.test.ts` (fitness), `src/lib/mutation.test.ts` (genoma), `src/lib/audits.test.ts`, `src/lib/state-machine.test.ts`, `src/lib/rules.test.ts` y `src/lib/points-ledger.test.ts`.
 
 ## 9. Preguntas abiertas
 

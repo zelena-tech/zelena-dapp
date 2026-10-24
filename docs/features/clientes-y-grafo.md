@@ -1,6 +1,6 @@
 # Ficha: Clientes y grafo de operación
 
-Dueño: QA (por asignar) · Revisor: John · Fecha: 2026-10-21 · Commit de referencia: 0e07d8f
+Dueño: QA (por asignar) · Revisor: John · Fecha: 2026-10-21 · Commit de referencia: 0e07d8f · Revisada contra wp/32-release (`4032c7c`) el 2026-10-24: §4, §6, §7, §8 y §9 (lo marcado «en `4032c7c`» cita líneas de ese commit)
 
 ## 1. Resumen
 
@@ -110,7 +110,7 @@ Importación (la otra acción del feature): `POST /api/clientes/grafo` con `{ sl
 
 | Elemento | Tipo | Archivo y función | Notas |
 | --- | --- | --- | --- |
-| Miembro del equipo interno | Cliente externo | `apps/web/app/clientes/page.tsx` · `ClientesPage` | Llega por el enlace "Clientes" del menú (`src/lib/menu.ts:60`), que solo se pinta al equipo interno. |
+| Miembro del equipo interno | Cliente externo | `apps/web/app/clientes/page.tsx` · `ClientesPage` | Llega por el enlace "Clientes" del menú (`src/lib/menu.ts:60`), que solo se pinta al equipo interno; desde `184a606`, solo si además hay algún cliente que esa sesión pueda ver (`src/components/Nav.tsx:38-48` y `menu.ts:107` en `4032c7c`, misma regla que la página: `clientActor` + `listClientsFor`). |
 | Founder con grafo.json de zelena-ops | Cliente externo | `apps/web/src/lib/client-graph.ts` · `GraphJson` (63-95), `construir_grafo.py` (citado en el encabezado, 7) | No hay UI: importa con un `POST` y su cookie. |
 | Middleware de sesión | Proceso | `apps/web/middleware.ts` · `middleware`, `PROTECTED_SESSION` (27) | Solo exige sesión; la puerta real es el layout. |
 | Puerta de /clientes | Proceso | `apps/web/app/clientes/layout.tsx` · `ClientesLayout` (14-19) | `equipoInternoActor`, lee la base. |
@@ -179,7 +179,7 @@ Los marcados **Sensible** llevan sesión, conocimiento comercial del cliente, da
 - **Módulo equipo** (`src/lib/team.ts`): pestaña Backlog (`assignmentsForClient`); y a la inversa, las iniciativas con `client_id` solo las ve quien está en `client_members` o `project_members` (`team.ts:1291-1306`). Las asignaciones pueden apuntar a un nodo del grafo (`graph_node_id`).
 - **Talento e identidades** (`src/lib/talento.ts:433`, `src/lib/identidades.ts`): al vincular una identidad se mueven sus filas de `client_members`.
 - **Ágora y hitos** (`docs/features/agora-y-hitos.md`): al publicar una pieza de un cliente, el tipo por defecto es "cliente" y la página avisa "No incluyas nombres de clientes sin su permiso".
-- **Menú** (`src/lib/menu.ts:60,99`): el enlace "Clientes" solo para el equipo interno.
+- **Menú** (`src/lib/menu.ts:60,99`): el enlace "Clientes" solo para el equipo interno y, desde `184a606`, solo si hay algún cliente que esa sesión pueda ver (`Nav.tsx#hayClientes` con `clientActor` + `listClientsFor`).
 - **Repositorio privado zelena-ops** (fuera de esta app): fuente de verdad del grafo.
 
 Dependencias inversas anotadas al integrar (la otra ficha ya las tenía; la guía pide anotarlas en las dos):
@@ -202,13 +202,13 @@ Dependencias inversas anotadas al integrar (la otra ficha ya las tenía; la guí
 | Cuerpo enorme o importaciones repetidas | Denegación de servicio | POST /api/clientes/grafo | Aceptada | Solo responde a un founder autenticado por rol (`route.ts:20-23`); no hay límite de tamaño ni de solicitudes. |
 | Nombres de personas del cliente (dueños, nodos `persona`) visibles a cualquier miembro, incluso `lectura` | Divulgación de información | Lectura del grafo | Aceptada | Solo equipo interno y miembro del cliente (`client-graph.ts:287-289,440-466`); la pantalla aclara que es riesgo organizacional, no evaluación de personas (`[slug]/page.tsx:260-262`). Revisar contra `/privacidad` si el grafo crece. |
 | Un `file_url` de marca con esquema `javascript:` | Elevación de privilegios | Página /clientes/[slug] | Aceptada | Se pinta como `href` sin validar (`[slug]/page.tsx:369-370`), pero hoy nada escribe `brand_assets` desde la app (solo `addBrandAsset`, sin ruta). Pasa a Pendiente el día que exista un formulario. |
-| Datos de cliente en el repositorio público | Divulgación de información | Pruebas y esquema | Pendiente | `src/lib/client-graph.test.ts:19-54` y el comentario de `src/lib/schema.sql:413` contienen el nombre de un cliente real y de una persona (no se repiten aquí), aunque el fixture sí se excluyó. |
+| Datos de cliente en el repositorio público | Divulgación de información | Pruebas y esquema | Mitigada | Desde `b97448a`: `client-graph.test.ts` no nombra a ningún cliente; el grafo privado se lee de un archivo ignorado por git y hay una suite sintética que corre siempre (`src/lib/client-graph.test.ts:1-11` y `89-175` en `4032c7c`), y el comentario de `schema.sql` usa `<cliente>` (`schema.sql:442`). El barrido de nombres por huella revisa en cada corrida todo lo versionado y lo nuevo (`src/lib/contenido-publico.test.ts:272`). |
 
 ## 8. Prueba de caracterización
 
-Archivo: `apps/web/src/lib/caracterizacion/clientes-y-grafo.test.ts`. Correr con `cd apps/web && npx vitest run src/lib/caracterizacion/clientes-y-grafo.test.ts` (5 casos, pasan en 0e07d8f).
+Archivo: `apps/web/src/lib/caracterizacion/clientes-y-grafo.test.ts`. Correr con `cd apps/web && npx vitest run src/lib/caracterizacion/clientes-y-grafo.test.ts` (5 casos, pasan en 0e07d8f y en `4032c7c`, wp/32-release).
 
-Llama al **handler real** de `POST /api/clientes/grafo` y a las funciones que usan las páginas, contra una base SQLite temporal en memoria (`schema.sql` + `seedTeam`). El grafo es **sintético** (cliente, procesos y personas ficticios): `src/lib/client-graph.test.ts` depende de un fixture real que no viaja en el repo y por eso sus 13 casos **se saltan** en CI y en este worktree.
+Llama al **handler real** de `POST /api/clientes/grafo` y a las funciones que usan las páginas, contra una base SQLite temporal en memoria (`schema.sql` + `seedTeam`). El grafo es **sintético** (cliente, procesos y personas ficticios). Desde `b97448a`, `src/lib/client-graph.test.ts` tiene una suite sintética que corre siempre (16 casos) y la del grafo privado, que solo corre donde exista el archivo ignorado (8 casos: se saltan en CI y en este worktree). Al revisarla contra wp/32-release, las personas del equipo pasaron a los slugs de la plantilla de roles (`founder`, `operaciones`, `producto`), porque el roster del código ya no siembra filas con nombres de personas (A8); las aserciones no cambiaron. La prueba deja `ZELENA_TEAM_ROSTER` vacío (`vi.stubEnv`) para no depender del entorno.
 
 - Flujo principal: el founder importa (3 nodos, 2 aristas válidas de 4, 33,3 % verificado, 3 preguntas, 2 con bus factor ≤ 1) → `clientActor` de una core miembro → `listClientsFor` y `getClientForActor` → `listNodes`, `getNode` (vecinos), `impactOf`, `exposureMap`, `coverage` → un core que no es miembro no ve el cliente (null, la página da 404) y una contribuidora no es actor → reimportar es idempotente → un nodo que desaparece se borra.
 - Puertas de la importación: 401, 403 (supervisora con cookie de founder), 400, 404.
@@ -222,5 +222,5 @@ Llama al **handler real** de `POST /api/clientes/grafo` y a las funciones que us
 - ¿Hace falta una pantalla para importar el grafo (hoy es un `POST` manual con la cookie del founder) y para ver `credential_access_log`?
 - ¿`accessLevelFor` debe usar todas las identidades de la persona, como `participaEnCliente` en `src/lib/team.ts:1301-1306`?
 - ¿El mapa de exposición con nombres de personas del cliente está cubierto por la política de `/privacidad`?
-- ¿Se limpian del repo público el nombre de cliente y de persona que quedan en `client-graph.test.ts` y en el comentario de `schema.sql:413`? ¿Y se reemplaza esa suite por un fixture sintético para que corra en CI?
+- ~~¿Se limpian del repo público el nombre de cliente y de persona que quedan en `client-graph.test.ts` y en el comentario de `schema.sql:413`? ¿Y se reemplaza esa suite por un fixture sintético para que corra en CI?~~ Respondida por `b97448a` (ver §7).
 - ¿`importGraph` debe validar los campos obligatorios y responder 422 en vez de 500?

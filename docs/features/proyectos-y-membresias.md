@@ -1,6 +1,6 @@
 # Ficha: Proyectos y membresías
 
-Dueño: QA (por asignar) · Revisor: John · Fecha: 2026-10-21 · Commit de referencia: 0e07d8f
+Dueño: QA (por asignar) · Revisor: John · Fecha: 2026-10-21 · Commit de referencia: 0e07d8f · Revisada contra wp/32-release (`4032c7c`) el 2026-10-24: §3, §7 y §8 (lo marcado «en `4032c7c`» cita líneas de ese commit)
 
 ## 1. Resumen
 
@@ -122,7 +122,7 @@ Acción elegida: desde el tablero de un proyecto, una supervisora suma a una per
      - que la wallet no venga vacía (400);
      - que no sea sobre sí misma, con `mismaPersona` (403);
      - que el rol esté en `rolesQuePuedeConceder` (`roles.ts:400-407`, 403).
-   - Valida el vínculo (1399-1401, 400) y que la persona esté activa y no sea demo (1402-1405, 400).
+   - Valida el vínculo (1399-1401, 400) y que la persona esté activa y no sea demo (1402-1405, 400). Desde `6b3b7d3` lo hace `exigirCuentaReal` (`team.ts:1424-1427` en `4032c7c`), que separa los dos casos: una cuenta de baja o inexistente sigue con «no está activa» y una de demostración recibe su propio motivo (`COPY_CUENTA_DE_PRUEBA`, `team.ts:1418-1419`).
    - Fija el vínculo por defecto: `externo` para un `contributor` (1406).
    - Sin acuerdo de contribución → 409 (1408-1410).
    - En una transacción: si la persona ya tiene ese rol → 409 (1414-1417). Si no, `INSERT project_members` con `added_by = actor` (1418-1422) y `registrarTalento('miembro_alta', { rol, vinculo })` (1424-1429).
@@ -138,7 +138,8 @@ Acción elegida: desde el tablero de un proyecto, una supervisora suma a una per
      - "Solo quien planifica el proyecto suma o quita personas."
      - "Tus propios roles los cambia otra persona."
      - "Puedes sumar a quien ejecuta o vende…" (cuando `estructura` intenta dar `revisa` o `estructura`).
-   - 400 "Esa persona no está activa en el registro." (no existe, alumni o demo).
+   - 400 "Esa persona no está activa en el registro." (no existe o alumni).
+   - 400 "Esa es una cuenta de demostración (entró con un código de demostración): para trabajar en un proyecto necesita una invitación real." (desde `6b3b7d3`; antes recibía el mensaje anterior). Desde `4291a2d`, quien entró con una invitación válida y la wallet del navegador ya no es demo.
    - 409 "Primero tiene que firmar el acuerdo de contribución.".
    - 409 "Esa persona ya tiene ese rol en este proyecto.".
    - 500 si falla la base: se revierte la transacción.
@@ -251,16 +252,16 @@ Dependencias inversas anotadas al integrar (la otra ficha ya las tenía; la guí
 | Cambiar el slug de un proyecto rompe enlaces o suplanta otro proyecto | Manipulación (T) | proj | Mitigada | El slug nace del nombre, es `UNIQUE` (`schema.sql:482`) y `editarProyecto` nunca lo cambia (`team.ts:1546-1591`). Un nombre que choca da 409 (`team.ts:1525-1527`). |
 | Nadie sabe quién sumó o quitó a alguien | Repudio (R) | mem, proj | Mitigada | `talent_events` con `actor_wallet`, `target_wallet`, acción y detalle, en la misma transacción (`team.ts:1424-1429`, 1472-1477 y 1532-1536). `project_members.added_by` (1420-1422). |
 | Quitar a alguien que tiene trabajo abierto (pierde acceso a sus piezas) | Denegación de servicio (D) | mem | Mitigada | Si era su último rol y le quedan piezas abiertas o bloqueadas → 409 (`team.ts:1458-1470`). Test: `caracterizacion/proyectos-y-membresias.test.ts`. |
-| Saltarse el límite de 30 por minuto rotando `X-Forwarded-For` | Denegación de servicio (D) | rl | Pendiente | `clientIp` confía en el primer valor de `X-Forwarded-For` (`rate-limit.ts:22-24`). El `Map` es por proceso. |
+| Saltarse el límite de 30 por minuto rotando `X-Forwarded-For` | Denegación de servicio (D) | rl | Mitigada | Desde `05a2f4e` y `642e412`: `clientIp` ya no toma el primer valor de `X-Forwarded-For` (lo manda el cliente) sino el último, que agrega el frontal de App Service, y solo cree `X-Azure-ClientIP` si `X-Azure-FDID` es el de nuestro Front Door (`apps/web/src/lib/rate-limit.ts:46-62` y `78-93` en `4032c7c`); el mapa se poda de cubetas vencidas (10-19). Tests: `rate-limit.test.ts`. Queda que el `Map` es por proceso. |
 
 ## 8. Prueba de caracterización
 
-Archivo: `apps/web/src/lib/caracterizacion/proyectos-y-membresias.test.ts`. Se corre con `cd apps/web && npx vitest run src/lib/caracterizacion/proyectos-y-membresias.test.ts` y el resultado es **8 de 8 pasan**.
+Archivo: `apps/web/src/lib/caracterizacion/proyectos-y-membresias.test.ts`. Se corre con `cd apps/web && npx vitest run src/lib/caracterizacion/proyectos-y-membresias.test.ts` y el resultado es **8 de 8 pasan** contra `4032c7c` (wp/32-release).
 
-Usa una base SQLite en memoria con `schema.sql` y `seedTeam`, más tres contributors ficticios (uno de ellos sin acuerdo). Fija:
+Usa una base SQLite en memoria con `schema.sql` y `seedTeam`, más tres contributors ficticios (uno de ellos sin acuerdo); el caso de sumar añade una cuenta de demostración y una de baja, también ficticias. Las personas del equipo son los slugs de la plantilla de roles (`b97448a`, hallazgo A8: `founder`, `operaciones`, `plataforma`, `producto`). La prueba deja `ZELENA_TEAM_ROSTER` vacío (`vi.stubEnv`) para no depender del entorno. Fija:
 
 - **crear:** `crearProyectoSchema` + `crearProyecto` por la supervisión. El slug sale del nombre. Queda `proyecto_crear` en `talent_events`. Un nombre que choca da 409 y un `core` recibe 403. Cambiar el nombre no cambia el slug.
-- **sumar:** con `miembroSchema` + `agregarMiembro`, el vínculo `externo` es el de defecto y `added_by` queda guardado, con `miembro_alta`. Sin acuerdo → 409. Duplicado → 409. Sobre sí → 403. Un `core` sin planificar → 403.
+- **sumar:** con `miembroSchema` + `agregarMiembro`, el vínculo `externo` es el de defecto y `added_by` queda guardado, con `miembro_alta`. Sin acuerdo → 409. Una cuenta de demostración → 400 con `COPY_CUENTA_DE_PRUEBA` y una de baja → 400 «no está activa» (nuevo, desde `6b3b7d3`). Duplicado → 409. Sobre sí → 403. Un `core` sin planificar → 403.
 - **puerta:** sin membresía, `equipoActor` da `null`. Con membresía, el alcance es `proyectos` y solo ve su proyecto. Permisos de `ejecuta` y de un `core` sin rol.
 - **estructura:** concede `vende` pero no `revisa` (403 con su texto). Edita la descripción y no el cliente (403). Candidatos según quién pregunta.
 - **tablero:** columnas por estado. `Hecha` muestra 14 días por defecto (30 con `hechas=30`). `parseFiltrosTablero` ignora lo inválido. Filtros `responsable=sin`, `vence=vencidas` y `q`. `quitarMiembro` da 409 con trabajo abierto y funciona después de reasignar (`miembro_baja`); sin membresías la persona ya no entra a `/equipo`.

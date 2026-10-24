@@ -13,10 +13,12 @@
  * Más la regla de proyectos de cliente (spec WP31 §4.A.12).
  *
  * Si una aserción "COMPORTAMIENTO ACTUAL" deja de cumplirse porque se corrigió su
- * hallazgo, se actualiza la aserción y la ficha. Personas: slugs del roster y wallets
+ * hallazgo, se actualiza la aserción y la ficha. Personas: slugs de la plantilla de roles del roster
+ * (Founder, Operaciones, Plataforma, Producto…; repo público, A8 en b97448a) y wallets
  * ficticias de prueba.
+ * Commit de referencia: 0e07d8f; revisada contra wp/32-release (4032c7c).
  */
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import { openDb, type DB } from "../db";
@@ -26,6 +28,7 @@ import { equipoActor, type EquipoActor } from "../authz";
 import { addMember, createClient } from "../clients";
 import { instanteDb } from "../zona-horaria";
 import {
+  COPY_CUENTA_DE_PRUEBA,
   TeamError,
   agregarMiembro,
   aplicarAccionAsignacion,
@@ -49,18 +52,20 @@ import {
   tableroDeProyecto,
 } from "../team";
 
-const JOHN = pendingPrincipal("john");
-const VALE = pendingPrincipal("vale");
-const FAUSTO = pendingPrincipal("fausto");
-const DAVID = pendingPrincipal("david");
+const FILA_FOUNDER = pendingPrincipal("founder");
+const OPERACIONES = pendingPrincipal("operaciones");
+const PLATAFORMA = pendingPrincipal("plataforma");
+const PRODUCTO = pendingPrincipal("producto");
 const EXTERNA = "GEXTERNAEJECUTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 const SIN_ACUERDO = "GSINACUERDOAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 const VENDEDORA = "GVENDEDORAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+const DEMO = "GCUENTADEMOAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"; // cuenta de demostración ficticia
+const DE_BAJA = "GCUENTADEBAJAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"; // alumni ficticia
 
-const FOUNDER: TeamActor = { wallet: JOHN, name: "John", role: "founder", isSupervisor: true };
-const SUPERVISORA: TeamActor = { wallet: VALE, name: "Vale", role: "core", isSupervisor: true };
-const CORE: TeamActor = { wallet: FAUSTO, name: "Fausto", role: "core", isSupervisor: false };
-const ESTRUCTURA: TeamActor = { wallet: DAVID, name: "David", role: "core", isSupervisor: false };
+const FOUNDER: TeamActor = { wallet: FILA_FOUNDER, name: "Founder", role: "founder", isSupervisor: true };
+const SUPERVISORA: TeamActor = { wallet: OPERACIONES, name: "Operaciones", role: "core", isSupervisor: true };
+const CORE: TeamActor = { wallet: PLATAFORMA, name: "Plataforma", role: "core", isSupervisor: false };
+const ESTRUCTURA: TeamActor = { wallet: PRODUCTO, name: "Producto", role: "core", isSupervisor: false };
 
 const AHORA = new Date("2026-10-08T15:00:00.000Z"); // jueves 10:00 en Bogotá
 
@@ -68,6 +73,7 @@ function freshDb(): DB {
   const db = openDb(":memory:");
   db.pragma("foreign_keys = ON");
   db.exec(fs.readFileSync(path.join(process.cwd(), "src", "lib", "schema.sql"), "utf8"));
+  vi.stubEnv("ZELENA_TEAM_ROSTER", ""); // sin roster del entorno: la plantilla de roles del código (A8)
   seedTeam(db);
   clearGenomeCache(db);
   return db;
@@ -103,6 +109,10 @@ function talento(db: DB): Array<{ action: string; target_wallet: string | null; 
   }>;
 }
 
+afterAll(() => {
+  vi.unstubAllEnvs();
+});
+
 describe("caracterización · proyectos y membresías (flujo principal)", () => {
   let db: DB;
   let proyecto: number;
@@ -137,7 +147,7 @@ describe("caracterización · proyectos y membresías (flujo principal)", () => 
     const body = miembroSchema.parse({ action: "agregar", initiativeId: proyecto, wallet: EXTERNA, rol: "ejecuta" });
     agregarMiembro(db, SUPERVISORA, { initiativeId: body.initiativeId, wallet: body.wallet, rol: body.rol, vinculo: body.vinculo });
     expect(miembrosDeProyecto(db, proyecto).map((m) => [m.wallet, m.rol_proyecto, m.vinculo, m.added_by])).toEqual([
-      [EXTERNA, "ejecuta", "externo", VALE],
+      [EXTERNA, "ejecuta", "externo", OPERACIONES],
     ]);
     expect(talento(db).at(-1)).toEqual({
       action: "miembro_alta",
@@ -149,8 +159,23 @@ describe("caracterización · proyectos y membresías (flujo principal)", () => 
       status: 409,
       message: "Primero tiene que firmar el acuerdo de contribución.",
     });
+    // Desde 6b3b7d3 una cuenta de demostración tiene su propio motivo; una de baja sigue con "no está activa".
+    db.prepare(
+      `INSERT INTO users (wallet, display_name, role, status, is_demo, cla_signed) VALUES (?, 'Demo', 'contributor', 'active', 1, 1)`
+    ).run(DEMO);
+    db.prepare(
+      `INSERT INTO users (wallet, display_name, role, status, is_demo, cla_signed) VALUES (?, 'De baja', 'contributor', 'alumni', 0, 1)`
+    ).run(DE_BAJA);
+    expect(fallo(() => agregarMiembro(db, SUPERVISORA, { initiativeId: proyecto, wallet: DEMO, rol: "ejecuta" }))).toEqual({
+      status: 400,
+      message: COPY_CUENTA_DE_PRUEBA,
+    });
+    expect(fallo(() => agregarMiembro(db, SUPERVISORA, { initiativeId: proyecto, wallet: DE_BAJA, rol: "ejecuta" }))).toEqual({
+      status: 400,
+      message: "Esa persona no está activa en el registro.",
+    });
     expect(fallo(() => agregarMiembro(db, SUPERVISORA, { initiativeId: proyecto, wallet: EXTERNA, rol: "ejecuta" }))?.status).toBe(409);
-    expect(fallo(() => agregarMiembro(db, SUPERVISORA, { initiativeId: proyecto, wallet: VALE, rol: "revisa" }))).toEqual({
+    expect(fallo(() => agregarMiembro(db, SUPERVISORA, { initiativeId: proyecto, wallet: OPERACIONES, rol: "revisa" }))).toEqual({
       status: 403,
       message: "Tus propios roles los cambia otra persona.",
     });
@@ -171,13 +196,13 @@ describe("caracterización · proyectos y membresías (flujo principal)", () => 
     const otro = crearProyecto(db, FOUNDER, { name: "Interno" }).id;
     expect(puedeVerProyecto(db, ext, otro)).toBe(false);
     // Para un core del equipo interno, sí (sin roles: ver, crear y tomar).
-    expect(puedeVerProyecto(db, puerta(db, FAUSTO), otro)).toBe(true);
+    expect(puedeVerProyecto(db, puerta(db, PLATAFORMA), otro)).toBe(true);
     expect(permisosDe(db, CORE, otro)).toEqual({ ver: true, crear: true, planificar: false, revisar: false, tomar: true });
   });
 
   it("quien estructura planifica su proyecto: concede 'ejecuta'/'vende', no 'revisa'; no cambia el cliente", () => {
-    agregarMiembro(db, SUPERVISORA, { initiativeId: proyecto, wallet: DAVID, rol: "estructura" });
-    expect(rolesEnProyecto(db, DAVID, proyecto)).toEqual(["estructura"]);
+    agregarMiembro(db, SUPERVISORA, { initiativeId: proyecto, wallet: PRODUCTO, rol: "estructura" });
+    expect(rolesEnProyecto(db, PRODUCTO, proyecto)).toEqual(["estructura"]);
     expect(rolesQuePuedeConceder(ESTRUCTURA, ["estructura"])).toEqual(["ejecuta", "vende"]);
     expect(permisosDe(db, ESTRUCTURA, proyecto)).toEqual({ ver: true, crear: true, planificar: true, revisar: true, tomar: true });
 
@@ -210,7 +235,7 @@ describe("caracterización · proyectos y membresías (flujo principal)", () => 
       { title: "Contar pasillo 3", initiativeId: proyecto, ownerWallet: EXTERNA, priority: "High", dueDate: "2026-10-06" },
       AHORA
     );
-    const vieja = createAssignmentAs(db, SUPERVISORA, { title: "Pieza vieja", initiativeId: proyecto, ownerWallet: FAUSTO }, AHORA);
+    const vieja = createAssignmentAs(db, SUPERVISORA, { title: "Pieza vieja", initiativeId: proyecto, ownerWallet: PLATAFORMA }, AHORA);
     db.prepare(`UPDATE assignments SET status = 'Hecha', closed_at = ? WHERE id = ?`).run(
       instanteDb(new Date(AHORA.getTime() - 20 * 86_400_000)),
       vieja
@@ -236,8 +261,8 @@ describe("caracterización · proyectos y membresías (flujo principal)", () => 
       status: 409,
       message: "Primero reasigna sus entregas abiertas en este proyecto.",
     });
-    editarAsignacion(db, SUPERVISORA, { assignmentId: libre, ownerWallet: FAUSTO }, AHORA);
-    editarAsignacion(db, SUPERVISORA, { assignmentId: suya, ownerWallet: FAUSTO }, AHORA);
+    editarAsignacion(db, SUPERVISORA, { assignmentId: libre, ownerWallet: PLATAFORMA }, AHORA);
+    editarAsignacion(db, SUPERVISORA, { assignmentId: suya, ownerWallet: PLATAFORMA }, AHORA);
     quitarMiembro(db, SUPERVISORA, { initiativeId: proyecto, wallet: EXTERNA, rol: "ejecuta" });
     expect(miembrosDeProyecto(db, proyecto)).toEqual([]);
     expect(talento(db).at(-1)).toEqual({ action: "miembro_baja", target_wallet: EXTERNA, detail: JSON.stringify({ rol: "ejecuta" }) });
@@ -247,12 +272,12 @@ describe("caracterización · proyectos y membresías (flujo principal)", () => 
   it("proyecto de cliente: lo ven el founder y quien participa (client_members o project_members)", () => {
     const cliente = createClient(db, { name: "Cliente de prueba" });
     const deCliente = crearProyecto(db, FOUNDER, { name: "Proyecto de cliente", clientId: cliente }).id;
-    expect(puedeVerProyecto(db, puerta(db, JOHN), deCliente)).toBe(true);
-    expect(puedeVerProyecto(db, puerta(db, FAUSTO), deCliente)).toBe(false);
-    expect(puedeVerProyecto(db, puerta(db, VALE), deCliente)).toBe(false); // supervisar no basta
+    expect(puedeVerProyecto(db, puerta(db, FILA_FOUNDER), deCliente)).toBe(true);
+    expect(puedeVerProyecto(db, puerta(db, PLATAFORMA), deCliente)).toBe(false);
+    expect(puedeVerProyecto(db, puerta(db, OPERACIONES), deCliente)).toBe(false); // supervisar no basta
     expect(permisosDe(db, SUPERVISORA, deCliente)).toEqual({ ver: false, crear: false, planificar: false, revisar: false, tomar: false });
-    addMember(db, cliente, FAUSTO, "colaborador");
-    expect(puedeVerProyecto(db, puerta(db, FAUSTO), deCliente)).toBe(true);
+    addMember(db, cliente, PLATAFORMA, "colaborador");
+    expect(puedeVerProyecto(db, puerta(db, PLATAFORMA), deCliente)).toBe(true);
   });
 
   it("COMPORTAMIENTO ACTUAL (hallazgo): una pieza con cliente dentro de un proyecto interno la ve todo el equipo interno", () => {
@@ -261,7 +286,7 @@ describe("caracterización · proyectos y membresías (flujo principal)", () => 
     const pieza = createAssignmentAs(db, FOUNDER, { title: "Pieza etiquetada", initiativeId: proyecto, clientId: cliente }, AHORA);
     // Un core que no participa en el cliente la ve: manda la regla del proyecto, no la del cliente.
     const deCore = tableroDeProyecto(db, proyecto, {}, AHORA).columnas.Backlog.map((a) => a.id);
-    expect(puedeVerProyecto(db, puerta(db, FAUSTO), proyecto)).toBe(true);
+    expect(puedeVerProyecto(db, puerta(db, PLATAFORMA), proyecto)).toBe(true);
     expect(deCore).toContain(pieza);
   });
 
@@ -270,9 +295,9 @@ describe("caracterización · proyectos y membresías (flujo principal)", () => 
     // `crearProyecto` solo valida que el cliente exista (no `client_members`).
     const p = crearProyecto(db, SUPERVISORA, { name: "Proyecto asociado", clientId: cliente });
     expect(p.client_id).toBe(cliente);
-    expect(puedeVerProyecto(db, puerta(db, VALE), p.id)).toBe(false);
+    expect(puedeVerProyecto(db, puerta(db, OPERACIONES), p.id)).toBe(false);
     // Y `editarProyecto` deja mover un proyecto interno con trabajo a ese cliente.
     editarProyecto(db, SUPERVISORA, { initiativeId: proyecto, clientId: cliente });
-    expect(puedeVerProyecto(db, puerta(db, FAUSTO), proyecto)).toBe(false);
+    expect(puedeVerProyecto(db, puerta(db, PLATAFORMA), proyecto)).toBe(false);
   });
 });

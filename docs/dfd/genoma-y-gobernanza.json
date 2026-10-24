@@ -1,7 +1,7 @@
 {
   "feature": "genoma-y-gobernanza",
   "titulo": "Genoma y gobernanza: genoma versionado, mutaciones, fitness de la época, votos, decision log, auditorías latentes y /gobernanza",
-  "commit": "0e07d8f",
+  "commit": "4032c7c",
   "elementos": [
     { "id": "fundador", "tipo": "actor", "nombre": "Founder (navegador, /admin)", "codigo": "src/components/GenomeMutationPanel.tsx#GenomeMutationPanel" },
     { "id": "votante", "tipo": "actor", "nombre": "Persona con sesión y acuerdo firmado (navegador)", "codigo": "src/components/VoteForm.tsx#VoteForm" },
@@ -19,7 +19,8 @@
     { "id": "firmar", "tipo": "proceso", "nombre": "Firmar la recomendación (keep / revert)", "codigo": "src/lib/epochs.ts#signEpochDecision" },
     { "id": "auditar", "tipo": "proceso", "nombre": "Registrar y listar auditorías latentes", "codigo": "src/lib/audits.ts#createLatentAudit,listLatentAudits" },
     { "id": "pag_gob", "tipo": "proceso", "nombre": "Página pública /gobernanza", "codigo": "app/gobernanza/page.tsx#GobernanzaPage" },
-    { "id": "repo", "tipo": "proceso", "nombre": "Lecturas de decisiones y votación", "codigo": "src/lib/repo.ts#listDecisions,getOpenProposal,voteTally,userVote" },
+    { "id": "repo", "tipo": "proceso", "nombre": "Lecturas de la votación", "codigo": "src/lib/repo.ts#getOpenProposal,voteTally,userVote" },
+    { "id": "decis", "tipo": "proceso", "nombre": "Decisiones vigentes (oculta las reemplazadas; enlaces viejos → la vigente)", "codigo": "src/lib/decisiones.ts#decisionesVigentes,vigenteDe" },
     { "id": "api_voto", "tipo": "proceso", "nombre": "POST /api/governance/vote", "codigo": "app/api/governance/vote/route.ts#POST" },
     { "id": "banner", "tipo": "proceso", "nombre": "Banner de mutación anunciada (todas las páginas)", "codigo": "src/components/MutationBanner.tsx#MutationBanner" },
 
@@ -28,6 +29,7 @@
     { "id": "t_genoma", "tipo": "almacen", "nombre": "genome_versions (append-only)", "codigo": "src/lib/schema.sql#genome_versions" },
     { "id": "t_mutaciones", "tipo": "almacen", "nombre": "mutation_decisions (una por época)", "codigo": "src/lib/schema.sql#mutation_decisions" },
     { "id": "t_decision", "tipo": "almacen", "nombre": "decision_log", "codigo": "src/lib/schema.sql#decision_log" },
+    { "id": "t_reemplazos", "tipo": "almacen", "nombre": "decision_replacements (qué decisión reemplaza a cuál; solo inserción)", "codigo": "src/lib/schema.sql#decision_replacements" },
     { "id": "t_fitness", "tipo": "almacen", "nombre": "epoch_fitness", "codigo": "src/lib/schema.sql#epoch_fitness" },
     { "id": "t_senales", "tipo": "almacen", "nombre": "Señales del fitness: points_ledger, milestones, rite_attendance", "codigo": "src/lib/schema.sql#points_ledger,milestones,rite_attendance" },
     { "id": "t_rep", "tipo": "almacen", "nombre": "reputation_events (append-only)", "codigo": "src/lib/schema.sql#reputation_events" },
@@ -66,8 +68,10 @@
     { "id": "h28", "de": "auditar", "a": "t_auditorias", "nombre": "Guardar o leer auditorías", "protocolo": "SQL", "datos": "INSERT latent_audits; SELECT con el título de la decisión enlazada", "sensible": false },
     { "id": "h29", "de": "api_admin", "a": "fundador", "nombre": "Resultado", "protocolo": "HTTPS", "datos": "JSON {ok, mutation | report} o {error} (400 con el mensaje de la excepción)", "sensible": false },
     { "id": "h30", "de": "visitante", "a": "pag_gob", "nombre": "Ver decisiones", "protocolo": "HTTPS", "datos": "GET /gobernanza (pública; cookie opcional)", "sensible": false },
-    { "id": "h31", "de": "pag_gob", "a": "repo", "nombre": "Decisiones y votación", "protocolo": "Llamada en proceso", "datos": "id de la propuesta abierta; wallet de la sesión si existe", "sensible": false },
-    { "id": "h32", "de": "repo", "a": "t_decision", "nombre": "Leer decisiones", "protocolo": "SQL", "datos": "SELECT * FROM decision_log ORDER BY id", "sensible": false },
+    { "id": "h31", "de": "pag_gob", "a": "repo", "nombre": "Votación", "protocolo": "Llamada en proceso", "datos": "id de la propuesta abierta; wallet de la sesión si existe", "sensible": false },
+    { "id": "h43", "de": "pag_gob", "a": "decis", "nombre": "Decisiones vigentes y vigente de cada auditoría", "protocolo": "Llamada en proceso", "datos": "base; decisionLogId de cada auditoría", "sensible": false },
+    { "id": "h32", "de": "decis", "a": "t_decision", "nombre": "Leer decisiones", "protocolo": "SQL", "datos": "SELECT id, date, title, reason, hash FROM decision_log ORDER BY id", "sensible": false },
+    { "id": "h44", "de": "decis", "a": "t_reemplazos", "nombre": "Leer reemplazos", "protocolo": "SQL", "datos": "SELECT decision_id, replaced_by_id FROM decision_replacements", "sensible": false },
     { "id": "h33", "de": "repo", "a": "t_votos", "nombre": "Propuesta, conteo y mi voto", "protocolo": "SQL", "datos": "proposals open; COUNT por choice; voto de la wallet", "sensible": false },
     { "id": "h34", "de": "pag_gob", "a": "auditar", "nombre": "Auditorías públicas", "protocolo": "Llamada en proceso", "datos": "listLatentAudits", "sensible": false },
     { "id": "h35", "de": "pag_gob", "a": "visitante", "nombre": "Página pública", "protocolo": "HTTPS", "datos": "HTML: decisiones con huella, votación en vivo y auditorías", "sensible": false },
@@ -81,7 +85,7 @@
   ],
   "fronteras": [
     { "nombre": "Navegador (Internet)", "contiene": ["fundador", "votante", "visitante"] },
-    { "nombre": "Proceso Next.js en App Service", "contiene": ["pag_admin", "api_admin", "authz", "mutar", "validar", "genoma", "seed_v2", "fitness", "motor", "firmar", "auditar", "pag_gob", "repo", "api_voto", "banner", "defaults"] },
-    { "nombre": "Base SQLite (/home/data)", "contiene": ["t_users", "t_genoma", "t_mutaciones", "t_decision", "t_fitness", "t_senales", "t_rep", "t_periods", "t_auditorias", "t_votos"] }
+    { "nombre": "Proceso Next.js en App Service", "contiene": ["pag_admin", "api_admin", "authz", "mutar", "validar", "genoma", "seed_v2", "fitness", "motor", "firmar", "auditar", "pag_gob", "repo", "api_voto", "banner", "defaults", "decis"] },
+    { "nombre": "Base SQLite (/home/data)", "contiene": ["t_users", "t_genoma", "t_mutaciones", "t_decision", "t_fitness", "t_senales", "t_rep", "t_periods", "t_auditorias", "t_votos", "t_reemplazos"] }
   ]
 }

@@ -1,7 +1,7 @@
 {
   "feature": "telegram",
   "titulo": "Telegram: vinculación, webhook, comandos y focos del día",
-  "commit": "0e07d8f",
+  "commit": "4032c7c",
   "elementos": [
     { "id": "u", "tipo": "actor", "nombre": "Persona del equipo (navegador)", "codigo": "apps/web/src/components/BotLinkPanel.tsx#BotLinkPanel" },
     { "id": "tu", "tipo": "actor", "nombre": "Persona en la app de Telegram", "codigo": "apps/web/src/lib/telegram.ts#parseUpdate" },
@@ -49,7 +49,7 @@
     { "id": "f18", "de": "d_tablero", "a": "p_focos", "nombre": "Candidatas", "protocolo": "SQL", "datos": "assignmentsForOwner + founderInbox", "sensible": false },
     { "id": "f19", "de": "p_tools", "a": "d_drafts", "nombre": "Borrador / nota", "protocolo": "SQL", "datos": "pieza ya estructurada (nunca el mensaje crudo); estado pendiente|confirmado|descartado", "sensible": false },
     { "id": "f20", "de": "p_tools", "a": "d_tablero", "nombre": "Escritura confirmada (solo founder)", "protocolo": "SQL", "datos": "createAssignment, upsertCheckin, applyAssignmentAction, UPDATE priority", "sensible": false },
-    { "id": "f21", "de": "p_agent", "a": "an", "nombre": "Clasificar texto libre", "protocolo": "HTTPS (POST /v1/messages)", "datos": "x-api-key, texto del mensaje, nombres de proyectos visibles, fecha", "sensible": true },
+    { "id": "f21", "de": "p_agent", "a": "an", "nombre": "Clasificar texto libre", "protocolo": "HTTPS (POST /v1/messages)", "datos": "x-api-key, texto del mensaje, nombres de proyectos visibles, nombres de las personas del equipo (de la base, desde b97448a), fecha", "sensible": true },
     { "id": "f22", "de": "an", "a": "p_agent", "nombre": "Decisión", "protocolo": "HTTPS", "datos": "tool_use (una de 5 herramientas) + input", "sensible": false },
     { "id": "f23", "de": "p_agent", "a": "d_log", "nombre": "Log de cada acción", "protocolo": "SQL", "datos": "wallet o sender_ref (id de Telegram no registrado), acción, resultado, target, detalle (sin texto del usuario)", "sensible": true },
     { "id": "f24", "de": "p_agent", "a": "tg", "nombre": "Respuesta", "protocolo": "HTTPS (Bot API sendMessage / answerCallbackQuery)", "datos": "token en la URL, chat_id, texto (títulos, estados, focos), teclado de botones", "sensible": true },
@@ -59,7 +59,8 @@
     { "id": "f28", "de": "p_poll", "a": "p_hook", "nombre": "Reenvío al mismo handler (local)", "protocolo": "HTTP localhost", "datos": "update + x-telegram-bot-api-secret-token; /focos sintético a la hora del genoma", "sensible": true },
     { "id": "f29", "de": "d_genoma", "a": "p_poll", "nombre": "Hora de los focos", "protocolo": "SQL (lectura directa del archivo SQLite)", "datos": "DAILY_FOCUS_HOUR y telegram_user_id autorizado", "sensible": true },
     { "id": "f30", "de": "d_links", "a": "p_pag", "nombre": "¿Ya vinculado?", "protocolo": "SQL", "datos": "telegram_user_id (presencia), linked_at", "sensible": false },
-    { "id": "f31", "de": "p_pag", "a": "u", "nombre": "Estado del vínculo", "protocolo": "HTTPS", "datos": "HTML: vinculado o pasos para vincular; si el bot está encendido", "sensible": false }
+    { "id": "f31", "de": "p_pag", "a": "u", "nombre": "Estado del vínculo", "protocolo": "HTTPS", "datos": "HTML: vinculado o pasos para vincular; si el bot está encendido", "sensible": false },
+    { "id": "f32", "de": "p_agent", "a": "d_personas", "nombre": "Personas del equipo para el contexto", "protocolo": "SQL", "datos": "display_name de founder y core activos, sin demos (listTeamMembers en hintsFor); solo si el texto libre va al modelo", "sensible": true }
   ],
   "fronteras": [
     { "nombre": "Internet: navegador de la persona", "contiene": ["u"] },

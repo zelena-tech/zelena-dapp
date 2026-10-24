@@ -13,8 +13,10 @@
  *
  * La red NO se toca: `Horizon.Server` es un doble que registra la transacción firmada y
  * devuelve su hash real; el resto del SDK (Keypair, TransactionBuilder) es el de verdad.
- * Protege el comportamiento ACTUAL (commit 0e07d8f), incluidos los puntos discutibles
- * que la ficha lista como hallazgos (sin estado `failed`, UPDATE por wallet).
+ * Protege el comportamiento ACTUAL, incluidos los puntos discutibles que la ficha lista
+ * como hallazgos (UPDATE por wallet). Escrita contra 0e07d8f y actualizada al release
+ * wp/32-release: los casos "ARREGLADO" fijan el tope de intentos con estado `failed` y la
+ * reserva de filas (27a3044, hallazgo M23), y el secreto del cron de 32 caracteres o más.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import fs from "node:fs";
@@ -67,6 +69,7 @@ vi.mock("@/lib/rate-limit", async () => await import("../rate-limit"));
 vi.mock("@/lib/onboard", async () => await import("../onboard"));
 vi.mock("@/lib/authz", async () => await import("../authz"));
 vi.mock("@/lib/anchor", async () => await import("../anchor"));
+vi.mock("@/lib/config", async () => await import("../config"));
 
 import { POST as onboardPOST } from "../../../app/api/onboard/route";
 import { GET as anclarGET, POST as anclarPOST } from "../../../app/api/anchor/run/route";
@@ -74,6 +77,7 @@ import { claCanonicalHash } from "../cla";
 import { claSigningPayload } from "../cla-signing";
 import { cifrasEnVivo } from "../prueba-en-vivo";
 import { PRUEBAS_TESTNET, contenidoTarjeta, txVerificable } from "../pruebas-testnet";
+import { ANCLAJE_MAX_INTENTOS } from "../anchor";
 
 const g = globalThis as unknown as { __zelenaDb?: DB };
 const SECRETO_CRON = "secreto-de-prueba-para-el-cron-0001"; // valor de prueba, no es un secreto real
@@ -224,6 +228,19 @@ describe("Anclaje en Stellar testnet · flujo principal (firma → cola → pasa
     expect(red.enviadas).toHaveLength(0);
   });
 
+  it("ARREGLADO: un ANCHOR_RUN_SECRET de menos de 32 caracteres no abre la puerta, y ?limite= que no es entero ya no da 500", async () => {
+    await firmarAcuerdo();
+    // 76ed59e: anchorRunSecret() exige 32 caracteres o más; uno corto es como no tenerlo.
+    process.env.ANCHOR_RUN_SECRET = "corto-de-prueba";
+    expect((await anclarPOST(post("/api/anchor/run", {}, { "x-anchor-secret": "corto-de-prueba" }))).status).toBe(401);
+    expect(red.enviadas).toHaveLength(0);
+    // 27a3044: `?limite=abc` usa 8 (antes, Number("abc") llegaba a la consulta y respondía 500).
+    process.env.ANCHOR_RUN_SECRET = SECRETO_CRON;
+    const r = await anclarPOST(post("/api/anchor/run?limite=abc", {}, { "x-anchor-secret": SECRETO_CRON }));
+    expect(r.status).toBe(200);
+    expect(await r.json()).toMatchObject({ anclados: 1, fallidos: 0 });
+  });
+
   it("sin SERVICE_ACCOUNT_SECRET y con pendientes → 500 con el motivo; nada cambia", async () => {
     await firmarAcuerdo();
     delete process.env.SERVICE_ACCOUNT_SECRET;
@@ -233,7 +250,7 @@ describe("Anclaje en Stellar testnet · flujo principal (firma → cola → pasa
     expect(db.prepare(`SELECT status, attempts FROM anchor_queue`).get()).toEqual({ status: "pending", attempts: 0 });
   });
 
-  it("si la red rechaza el envío: la fila SIGUE 'pending' (no existe estado 'failed'), suma un intento y guarda el error", async () => {
+  it("si la red rechaza el envío: la fila vuelve a 'pending', suma un intento y guarda el error; la siguiente pasada la reintenta", async () => {
     await firmarAcuerdo();
     red.fallarEnvio = "tx_bad_seq";
     const res = (await (await anclarPOST(post("/api/anchor/run", {}, { "x-anchor-secret": SECRETO_CRON }))).json()) as {
@@ -248,10 +265,49 @@ describe("Anclaje en Stellar testnet · flujo principal (firma → cola → pasa
     });
     expect(db.prepare(`SELECT anchor_status FROM cla_signatures`).get()).toEqual({ anchor_status: "pending" });
 
-    // La siguiente pasada la reintenta (sin tope ni espera) y entonces sí la ancla.
+    // La siguiente pasada la reintenta (sin espera) y entonces sí la ancla.
     red.fallarEnvio = null;
     await anclarPOST(post("/api/anchor/run", {}, { "x-anchor-secret": SECRETO_CRON }));
-    expect(db.prepare(`SELECT status, attempts FROM anchor_queue`).get()).toEqual({ status: "anchored", attempts: 2 });
+    expect(db.prepare(`SELECT status, attempts, claimed_at FROM anchor_queue`).get()).toEqual({
+      status: "anchored",
+      attempts: 2,
+      claimed_at: null,
+    });
+  });
+
+  it("ARREGLADO (M23): tras ANCLAJE_MAX_INTENTOS fallos la fila queda 'failed', la firma también, y no se reintenta más", async () => {
+    // 27a3044: antes no había estado final y una fila rota se reintentaba para siempre.
+    expect(ANCLAJE_MAX_INTENTOS).toBe(8);
+    await firmarAcuerdo();
+    red.fallarEnvio = "tx_failed";
+    for (let i = 0; i < ANCLAJE_MAX_INTENTOS; i++) {
+      await anclarPOST(post("/api/anchor/run", {}, { "x-anchor-secret": SECRETO_CRON }));
+    }
+    expect(db.prepare(`SELECT status, attempts, last_error FROM anchor_queue`).get()).toEqual({
+      status: "failed",
+      attempts: ANCLAJE_MAX_INTENTOS,
+      last_error: "tx_failed",
+    });
+    expect(db.prepare(`SELECT anchor_status FROM cla_signatures`).get()).toEqual({ anchor_status: "failed" });
+
+    // Ya no cuenta como pendiente ni se vuelve a enviar, aunque la red se recupere.
+    red.fallarEnvio = null;
+    const otra = (await (await anclarPOST(post("/api/anchor/run", {}, { "x-anchor-secret": SECRETO_CRON }))).json()) as {
+      pendientes: number;
+    };
+    expect(otra.pendientes).toBe(0);
+    expect(red.enviadas).toHaveLength(0);
+  });
+
+  it("ARREGLADO (M23): dos pasadas a la vez no anclan la misma fila dos veces (reserva pending → processing)", async () => {
+    await firmarAcuerdo();
+    const [a, b] = await Promise.all([
+      anclarPOST(post("/api/anchor/run", {}, { "x-anchor-secret": SECRETO_CRON })),
+      anclarPOST(post("/api/anchor/run", {}, { "x-anchor-secret": SECRETO_CRON })),
+    ]);
+    expect([a.status, b.status]).toEqual([200, 200]);
+    expect(red.enviadas).toHaveLength(1);
+    expect(db.prepare(`SELECT status, attempts FROM anchor_queue`).get()).toEqual({ status: "anchored", attempts: 1 });
   });
 
   it("la raíz Merkle de una época (kind 'merkle_root', como la encola cerrarYAbrirEpoca) deja la época 'Anchored'", async () => {

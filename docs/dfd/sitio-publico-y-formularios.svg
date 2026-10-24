@@ -106,6 +106,16 @@
 <text x="1323" y="1968" text-anchor="middle" font-size="11" fill="#b03a2e">f46 Lee solicitudes y avisos *</text>
 <path d="M1505,880 Q1679,533 1745,150" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="1652" y="524" text-anchor="middle" font-size="11" fill="#b03a2e">f47 Listas de prospectos *</text>
+<path d="M845,1070 Q909,2161 1085,3240" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="937" y="2158" text-anchor="middle" font-size="11" fill="#b03a2e">f48 Guarda la prueba de la autorización *</text>
+<path d="M845,1260 Q909,2256 1085,3240" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="937" y="2253" text-anchor="middle" font-size="11" fill="#b03a2e">f49 Guarda la prueba de la autorización *</text>
+<path d="M755,2020 Q583,2283 515,2590" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="609" y="2294" text-anchor="middle" font-size="11" fill="#555">f50 Texto del aviso</text>
+<path d="M800,1975 Q856,1545 800,1115" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="828" y="1545" text-anchor="middle" font-size="11" fill="#555">f51 Versión vigente y huella</text>
+<path d="M800,1975 Q856,1640 800,1305" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="828" y="1640" text-anchor="middle" font-size="11" fill="#555">f52 Versión vigente y huella</text>
 <rect x="90" y="100" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
 <text x="140" y="138" text-anchor="middle" fill="#222">Visitante o</text>
 <text x="140" y="154" text-anchor="middle" fill="#222">prospecto</text>
@@ -167,11 +177,15 @@
 <text x="470" y="352" text-anchor="middle" fill="#222">encuentros</text>
 <text x="470" y="368" text-anchor="middle" fill="#222">(navegador)</text>
 <circle cx="800" cy="1070" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
-<text x="800" y="1066" text-anchor="middle" fill="#222">POST</text>
-<text x="800" y="1082" text-anchor="middle" fill="#222">/api/empresas/contacto</text>
+<text x="800" y="1042" text-anchor="middle" fill="#222">POST</text>
+<text x="800" y="1058" text-anchor="middle" fill="#222">/api/empresas/contacto</text>
+<text x="800" y="1074" text-anchor="middle" fill="#222">(exige la</text>
+<text x="800" y="1090" text-anchor="middle" fill="#222">autorización</text>
 <circle cx="800" cy="1260" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
-<text x="800" y="1256" text-anchor="middle" fill="#222">POST</text>
-<text x="800" y="1272" text-anchor="middle" fill="#222">/api/encuentros/aviso</text>
+<text x="800" y="1232" text-anchor="middle" fill="#222">POST</text>
+<text x="800" y="1248" text-anchor="middle" fill="#222">/api/encuentros/aviso</text>
+<text x="800" y="1264" text-anchor="middle" fill="#222">(exige la</text>
+<text x="800" y="1280" text-anchor="middle" fill="#222">autorización</text>
 <circle cx="1460" cy="880" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
 <text x="1460" y="852" text-anchor="middle" fill="#222">Página /admin</text>
 <text x="1460" y="868" text-anchor="middle" fill="#222">(Solicitudes</text>
@@ -182,6 +196,13 @@
 <line x1="1080" y1="3080" x2="1180" y2="3080" stroke="#222" stroke-width="1.5"/>
 <text x="1130" y="3046" text-anchor="middle" fill="#222">Tabla leads</text>
 <text x="1130" y="3062" text-anchor="middle" fill="#222">(SQLite)</text>
+<rect x="1080" y="3210" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="3210" x2="1180" y2="3210" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="3270" x2="1180" y2="3270" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="3172" text-anchor="middle" fill="#222">Tabla</text>
+<text x="1130" y="3188" text-anchor="middle" fill="#222">lead_consents:</text>
+<text x="1130" y="3204" text-anchor="middle" fill="#222">prueba de la</text>
+<text x="1130" y="3220" text-anchor="middle" fill="#222">autorización</text>
 <rect x="750" y="3020" width="100" height="60" fill="#fdfefe" stroke="none"/>
 <line x1="750" y1="3020" x2="850" y2="3020" stroke="#222" stroke-width="1.5"/>
 <line x1="750" y1="3080" x2="850" y2="3080" stroke="#222" stroke-width="1.5"/>
@@ -229,5 +250,12 @@
 <text x="800" y="3506" text-anchor="middle" fill="#222">del despliegue</text>
 <text x="800" y="3522" text-anchor="middle" fill="#222">(ZELENA_LEGAL_NAME,</text>
 <text x="800" y="3538" text-anchor="middle" fill="#222">ZELENA_PRIVACY_EMAIL)</text>
-<text x="90" y="3680" font-size="11" fill="#777">Sitio público y formularios (landing, manifiesto, método, empresas, contacto, encuentros, legales, menú y pie) · docs/dfd/sitio-publico-y-formularios.json · commit 0e07d8f · * = flujo con datos sensibles</text>
+<rect x="750" y="1990" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="750" y1="1990" x2="850" y2="1990" stroke="#222" stroke-width="1.5"/>
+<line x1="750" y1="2050" x2="850" y2="2050" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="1992" text-anchor="middle" fill="#222">Texto y</text>
+<text x="800" y="2008" text-anchor="middle" fill="#222">versión del</text>
+<text x="800" y="2024" text-anchor="middle" fill="#222">aviso de</text>
+<text x="800" y="2040" text-anchor="middle" fill="#222">privacidad</text>
+<text x="90" y="3680" font-size="11" fill="#777">Sitio público y formularios (landing, manifiesto, método, empresas, contacto, encuentros, legales, menú y pie) · docs/dfd/sitio-publico-y-formularios.json · commit 4032c7c · * = flujo con datos sensibles</text>
 </svg>

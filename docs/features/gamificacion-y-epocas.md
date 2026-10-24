@@ -1,6 +1,6 @@
 # Ficha: Gamificación y épocas
 
-Dueño: QA (por asignar) · Revisor: John · Fecha: 2026-10-21 · Commit de referencia: 0e07d8f
+Dueño: QA (por asignar) · Revisor: John · Fecha: 2026-10-21 · Commit de referencia: 0e07d8f · Revisada contra wp/32-release (`4032c7c`) el 2026-10-24: §8 (lo marcado «en `4032c7c`» cita líneas de ese commit)
 
 ## 1. Resumen
 
@@ -248,7 +248,7 @@ Dependencias inversas anotadas al integrar (la otra ficha ya las tenía; la guí
 
 ## 8. Prueba de caracterización
 
-Archivo: [`apps/web/src/lib/caracterizacion/gamificacion-y-epocas.test.ts`](../../apps/web/src/lib/caracterizacion/gamificacion-y-epocas.test.ts). Se corre con `cd apps/web && npx vitest run src/lib/caracterizacion/gamificacion-y-epocas.test.ts` y **pasa (8 de 8)**.
+Archivo: [`apps/web/src/lib/caracterizacion/gamificacion-y-epocas.test.ts`](../../apps/web/src/lib/caracterizacion/gamificacion-y-epocas.test.ts). Se corre con `cd apps/web && npx vitest run src/lib/caracterizacion/gamificacion-y-epocas.test.ts` y **pasa (8 de 8)** contra `4032c7c` (wp/32-release), sin cambios: ninguna corrección de la release toca este flujo ni el hallazgo que fija (el `day` del evento sigue saliendo de `today()`). Ninguna amenaza de §7 cambió de estado.
 
 Qué flujo cubre, llamando a las **rutas reales** (`POST /api/equipo/asignacion`, `GET` y `POST /api/admin/epoca`) contra una base SQLite temporal en memoria con `schema.sql` + `seedIfEmpty` (igual que `epocas.test.ts`):
 

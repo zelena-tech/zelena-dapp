@@ -1,6 +1,6 @@
 # Ficha: SLA, recordatorios y avisos
 
-Dueño: QA (por asignar) · Revisor: John · Fecha: 2026-10-21 · Commit de referencia: 0e07d8f
+Dueño: QA (por asignar) · Revisor: John · Fecha: 2026-10-21 · Commit de referencia: 0e07d8f · Revisada contra wp/32-release (`4032c7c`) el 2026-10-24: §7 y §8 (lo marcado «en `4032c7c`» cita líneas de ese commit)
 
 ## 1. Resumen
 
@@ -192,7 +192,7 @@ Los marcados **(S)** llevan datos sensibles (credencial, sesión o dato personal
 | Reenvío (replay) de una petición válida del cron | Manipulación | Corrida (f1, f13, f14) | Mitigada | La corrida es idempotente por `(clave, wallet)`: se consulta antes y dentro de la transacción y el UNIQUE cuenta como "ya procesado" (`src/lib/recordatorios-db.ts:487-556`). Probado en la sección 8 (segunda corrida: 0 avisos, 0 mensajes). |
 | La respuesta del cron expone wallets, nombres o textos | Divulgación de información | Ruta del cron (f18) | Mitigada | Responde solo `ResultadoCorrida` con conteos (`src/lib/recordatorios-db.ts:50-63`); el error 500 no lleva detalle (`route.ts:44-46`). La prueba comprueba que la respuesta no contiene la wallet ni el título. |
 | Dos corridas a la vez duplican mensajes | Denegación de servicio | Corrida | Aceptada | Candado en memoria de 5 min (`src/lib/recordatorios-db.ts:450-463`) y `concurrency: recordatorios` en el workflow (`recordatorios.yml:7-9`). El candado no sirve con varias instancias; se acepta porque producción es una sola instancia (`recordatorios-db.ts:20-21`). Si se escala, se pierde esta garantía (la idempotencia por fila sigue). |
-| El límite de tasa se evade cambiando `X-Forwarded-For` | Denegación de servicio | Ruta del cron, API /api/avisos | Pendiente | `clientIp` toma el primer valor de `X-Forwarded-For`, que manda el cliente (`src/lib/rate-limit.ts:22-26`), y el mapa no se poda nunca (`rate-limit.ts:7-20`). En el cron el secreto se valida igual; el riesgo es memoria y ruido. |
+| El límite de tasa se evade cambiando `X-Forwarded-For` | Denegación de servicio | Ruta del cron, API /api/avisos | Mitigada | Desde `05a2f4e` y `642e412`: `clientIp` ya no toma el primer valor de `X-Forwarded-For` (lo manda el cliente) sino el último, que agrega el frontal de App Service, y solo cree `X-Azure-ClientIP` si `X-Azure-FDID` es el de nuestro Front Door (`apps/web/src/lib/rate-limit.ts:46-62` y `78-93` en `4032c7c`); el mapa se poda de cubetas vencidas (10-19). Tests: `rate-limit.test.ts`. Con eso ya no crece sin tope. Queda que el `Map` es por proceso; en el cron el secreto se valida igual. |
 | Un escalamiento de un proyecto de cliente llega a quien no participa | Divulgación de información | Destinatarios (f10, f11) | Mitigada | Se descarta a quien no podría ver la pieza (`src/lib/recordatorios-db.ts:259-269` y `:320`); destinatario válido = activo, no demo, no `pending:` (`:242-247`); el dueño nunca recibe su escalamiento (`:317`). |
 | Títulos y nombres de proyecto (que pueden ser de cliente) salen a Telegram | Divulgación de información | Corrida → Telegram (f17) | Aceptada | La vinculación es voluntaria por persona y el texto habla de la entrega, nunca de la persona (`src/lib/recordatorios.ts:8-11`, `VOCABULARIO_PROHIBIDO` en `:108-121`). Queda abierta la pregunta de nombrar a Telegram como encargado en `/privacidad` (sección 9). |
 | Un título con formato rompe o falsea el mensaje de Telegram | Manipulación | Corrida → Telegram (f17) | Mitigada | `sendMessage` no manda `parse_mode` (`src/lib/telegram.ts:268`); títulos recortados a 140 y en una línea (`recordatorios.ts:169-172`); mensaje cortado a 4000 caracteres para que Telegram no lo rechace en bucle (`recordatorios.ts:413-459`). |
@@ -205,7 +205,7 @@ Los marcados **(S)** llevan datos sensibles (credencial, sesión o dato personal
 
 ## 8. Prueba de caracterización
 
-Archivo: `apps/web/src/lib/caracterizacion/sla-recordatorios-y-avisos.test.ts` (12 casos, pasan). Se corre con `cd apps/web && npx vitest run src/lib/caracterizacion/sla-recordatorios-y-avisos.test.ts`.
+Archivo: `apps/web/src/lib/caracterizacion/sla-recordatorios-y-avisos.test.ts` (12 casos, pasan contra `4032c7c`, wp/32-release, sin cambios: ninguna corrección de la release toca este flujo ni sus dos hallazgos; las IP de prueba van en un `X-Forwarded-For` de un solo valor, que la regla nueva de `clientIp` sigue tomando). Se corre con `cd apps/web && npx vitest run src/lib/caracterizacion/sla-recordatorios-y-avisos.test.ts`.
 
 Qué cubre, por las rutas reales y contra una base SQLite en memoria con `schema.sql` + `seedTeam` (inyectada en `globalThis.__zelenaDb`):
 

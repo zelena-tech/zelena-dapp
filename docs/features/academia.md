@@ -1,6 +1,6 @@
 # Ficha: Academia
 
-Dueño: QA (por asignar) · Revisor: John · Fecha: 2026-10-21 · Commit de referencia: 0e07d8f
+Dueño: QA (por asignar) · Revisor: John · Fecha: 2026-10-21 · Commit de referencia: 0e07d8f · Actualizada al release `wp/32-release` (4032c7c): secciones 1, 2, 3, 7, 8 y 9
 
 ## 1. Resumen
 
@@ -22,10 +22,11 @@ Casos de uso:
 | CU4. Publicar o despublicar un contenido | `/admin` → `POST /api/admin` `toggleContent` | `academia_content.enabled` |
 | CU5. Cargar o reescribir el contenido | al arrancar: `seedAcademia` (base vacía) y `aplicarContenidoPublico` (cada arranque) | `academia_content`, `academia_quiz` |
 
-Reglas del motor (`src/lib/academia.ts`, comentario de las líneas 1-10), todas en el servidor:
+Reglas del motor (`src/lib/academia.ts`, comentario de las líneas 1-32), todas en el servidor:
 
 1. Tiempo mínimo por contenido, medido con latidos (el servidor suma el tiempo real entre latidos, con tope de 20 s por latido) **y** con el tiempo transcurrido desde el inicio.
-2. Quiz de 3 preguntas al azar de un grupo de 5; se aprueba con 2 de 3.
+2. Quiz de 3 preguntas al azar de un grupo de 5; se aprueba con 2 de 3. Desde el release `wp/32-release` (hallazgo A2: ed5d167 y 8530cce) las preguntas servidas y el orden **barajado** de sus opciones quedan guardados en la lectura (`quiz_ids`, `quiz_orden`): pedir el quiz otra vez devuelve lo mismo, la calificación exige exactamente esas preguntas, distintas, y traduce cada respuesta de la posición mostrada a la guardada. Cada lectura se califica **una** vez (`graded_at`).
+7. Si no apruebas, no se dice cuántas acertaste, hay que esperar 15 minutos y volver a leer; como mucho 3 intentos fallidos por contenido en 24 horas (`ACADEMIA_ESPERA_TRAS_FALLO_MS`, `ACADEMIA_FALLOS_MAX_24H`). Pedir el quiz tiene su propio límite (20 por minuto).
 3. Tope diario: 3 contenidos con puntos por wallet (`ACADEMIA_DAILY_CAP`).
 4. Rendimientos decrecientes: 100 %, 75 % y 50 % (`ACADEMIA_DIMINISHING`).
 5. Presupuesto de Academia por época, separado del de ejecución (`ACADEMIA_BUDGET`, hoy 5.000).
@@ -35,7 +36,9 @@ No hay editor de contenido: los 4 contenidos y sus 20 preguntas se siembran por 
 
 ## 2. Diagrama (DFD)
 
-Archivo: [`docs/dfd/academia.tm7`](../dfd/academia.tm7), más la imagen exportada [`docs/dfd/academia.svg`](../dfd/academia.svg). Los dos se generan desde la fuente [`docs/dfd/academia.json`](../dfd/academia.json) con `python docs/dfd/generar_tm7.py docs/dfd/academia.json --estricto`, que pasa: cada `codigo` existe en el repo. La fuente tiene 26 elementos (3 actores, 14 procesos, 9 almacenes), 43 flujos (16 sensibles) y 4 fronteras de confianza.
+Archivo: [`docs/dfd/academia.tm7`](../dfd/academia.tm7), más la imagen exportada [`docs/dfd/academia.svg`](../dfd/academia.svg). Los dos se generan desde la fuente [`docs/dfd/academia.json`](../dfd/academia.json) con `python docs/dfd/generar_tm7.py docs/dfd/academia.json --estricto`, que pasa: cada `codigo` existe en el repo. La fuente tiene 26 elementos (3 actores, 14 procesos, 9 almacenes), 47 flujos (17 sensibles) y 4 fronteras de confianza.
+
+Cambios del release `wp/32-release`: mismos elementos, flujos nuevos f44 (fallos recientes al iniciar), f45 (límite del GET del quiz), f46 (guardar preguntas y orden servidos) y f47 (migración S4 que reparte las respuestas correctas); f24-f26, f30, f31 y f37 describen la calificación única y la respuesta sin aciertos al reprobar.
 
 Se lee de izquierda a derecha. Las dos páginas solo leen. El componente `Reader`, que corre en el navegador, hace cuatro llamadas en orden (iniciar, latir, pedir el quiz, responder). Cada ruta de API revisa sesión, límite de tasa y forma del cuerpo, y delega en una función de `src/lib/academia.ts`; solo `gradeQuiz` escribe puntos y reputación. Los flujos con `*` y en rojo llevan la cookie de sesión, el token de lectura, la wallet con la IP, o crean valor (puntos y reputación).
 
@@ -56,13 +59,13 @@ flowchart LR
     p_api_beat(("POST /api/academia/heartbeat"))
     p_api_quiz_get(("GET /api/academia/quiz"))
     p_api_quiz_post(("POST /api/academia/quiz"))
-    p_start(("Iniciar lectura"))
+    p_start(("Iniciar lectura (espera tras un fallo; máx. 3 fallos en 24 h)"))
     p_beat(("Sumar tiempo activo"))
-    p_quiz(("Servir 3 preguntas (valida el tiempo)"))
-    p_calificar(("Calificar y otorgar puntos"))
+    p_quiz(("Servir las 3 preguntas de la lectura (valida el tiempo; las guarda y baraja las opciones una vez)"))
+    p_calificar(("Calificar una vez las preguntas servidas y otorgar puntos"))
     p_moderar(("POST /api/admin (toggleContent)"))
     p_siembra(("Siembra del contenido al arrancar"))
-    p_migracion(("Migración del contenido público (S1, S3)"))
+    p_migracion(("Migración del contenido público (S1, S3) y orden de opciones (S4)"))
     s_rl[("Contadores de límite de tasa en memoria")]
   end
   subgraph F4["Base SQLite (/home/data/zelena.db)"]
@@ -98,8 +101,8 @@ flowchart LR
   p_api_beat -->|"f21 Tiempo acumulado"| p_reader
   p_reader -->|"f22 Pide el quiz *"| p_api_quiz_get
   p_api_quiz_get -->|"f23 getQuiz"| p_quiz
-  s_sesiones -->|"f24 Tiempo activo y transcurrido"| p_quiz
-  s_preguntas -->|"f25 3 preguntas al azar"| p_quiz
+  s_sesiones -->|"f24 Sesión de la lectura"| p_quiz
+  s_preguntas -->|"f25 3 preguntas al azar (solo la primera vez)"| p_quiz
   p_api_quiz_get -->|"f26 Preguntas"| p_reader
   p_reader -->|"f27 Envía respuestas *"| p_api_quiz_post
   p_api_quiz_post -->|"f28 Cuenta el intento *"| s_rl
@@ -118,7 +121,11 @@ flowchart LR
   p_siembra -->|"f41 Siembra 5 preguntas por contenido"| s_preguntas
   p_migracion -->|"f42 Reescribe S1 y S3"| s_contenido
   p_migracion -->|"f43 Reescribe el quiz de S1"| s_preguntas
-  linkStyle 0,5,9,10,11,14,15,16,17,21,26,27,33,34,35,37 stroke:#b03a2e,color:#b03a2e
+  s_sesiones -->|"f44 Fallos recientes de ese contenido"| p_start
+  p_api_quiz_get -->|"f45 Cuenta el pedido del quiz *"| s_rl
+  p_quiz -->|"f46 Guarda lo servido"| s_sesiones
+  p_migracion -->|"f47 Reparte las correctas (S4)"| s_preguntas
+  linkStyle 0,5,9,10,11,14,15,16,17,21,26,27,33,34,35,37,44 stroke:#b03a2e,color:#b03a2e
   style F1 fill:none,stroke:#c0392b,stroke-dasharray:6 4
   style F2 fill:none,stroke:#c0392b,stroke-dasharray:6 4
   style F3 fill:none,stroke:#c0392b,stroke-dasharray:6 4
@@ -144,23 +151,25 @@ Acción elegida: **una persona con el acuerdo firmado lee "Cómo se mide el valo
    - `GET /api/academia/quiz?token=…` al pulsar "Ir al quiz" (`Reader.tsx:87`);
    - `POST /api/academia/quiz` con `{ token, quizIds, answers }` (`Reader.tsx:113-121`).
    Todas llevan la cookie `zelena_session`.
-3. **Rutas y controladores.** `app/api/academia/start/route.ts#POST`, `app/api/academia/heartbeat/route.ts#POST`, `app/api/academia/quiz/route.ts#GET` y `#POST`. Cada una: sesión con `claSigned` o 401 (`start/route.ts:12`, `heartbeat/route.ts:12`, `quiz/route.ts:13,30`); límite por wallet e IP (30/min para iniciar, 12/min para latir, 20/min para responder; `start:15`, `heartbeat:16`, `quiz:33`); cuerpo con zod (`validation.ts:64-76`) o 400 "Entrada inválida.".
+3. **Rutas y controladores.** `app/api/academia/start/route.ts#POST`, `app/api/academia/heartbeat/route.ts#POST`, `app/api/academia/quiz/route.ts#GET` y `#POST`. Cada una: sesión con `claSigned` o 401; límite por wallet e IP (30/min para iniciar, 12/min para latir, 20/min para pedir el quiz y 20/min para responder; `start:15`, `heartbeat:16`, `quiz:17` y `:37`); cuerpo con zod (`validation.ts:82-86`) o 400 "Entrada inválida.". El status de cada error de la lógica sale de su código (`statusDeErrorAcademia`, `academia.ts:447`).
 4. **Lógica de negocio** (`src/lib/academia.ts`).
-   - `startReading` (línea 20): el contenido debe existir y estar habilitado; borra las lecturas incompletas de la wallet (línea 26) e inserta una nueva con un token aleatorio de 24 bytes.
-   - `heartbeat` (línea 36): suma `min(20, segundos desde el último latido)` (línea 43).
-   - `getQuiz` (línea 75): exige `active_seconds` **y** tiempo transcurrido ≥ `min_seconds` (línea 67, si no 403 "Aún no cumples el tiempo mínimo de lectura."); devuelve 3 preguntas al azar **sin** la respuesta (línea 79).
-   - `gradeQuiz` (línea 90): valida que cada pregunta sea del contenido (línea 109), cuenta aciertos, aprueba con 2 (línea 112) y cierra la lectura (línea 115). Si aprobó: si ya había premio para ese contenido, 0 puntos (líneas 120-121); si no, mira el tope diario del genoma (línea 132, si no 409), aplica el multiplicador del día (línea 138), recorta contra el presupuesto de Academia de la época actual (líneas 143-152, si no queda nada 409) y escribe todo en una transacción (líneas 154-165).
+   - `startReading` (línea 103): el contenido debe existir y estar habilitado; exige la espera tras un fallo y el máximo de 3 fallos en 24 h (`exigirEsperaTrasFallo`, línea 76, si no 429); borra las lecturas incompletas de la wallet e inserta una nueva con un token aleatorio de 24 bytes.
+   - `heartbeat` (línea 124): suma `min(20, segundos desde el último latido)` (línea 131).
+   - `getQuiz` (línea 276): exige una lectura sin calificar (si no, 409) con `active_seconds` **y** tiempo transcurrido ≥ `min_seconds` (`getSessionForQuiz`, línea 153, si no 403 "Aún no cumples el tiempo mínimo de lectura."); la primera vez elige 3 preguntas al azar, baraja las opciones de cada una (`barajar`, línea 215) y guarda las dos cosas con un UPDATE condicional (línea 287); devuelve las preguntas en ese orden **sin** la respuesta.
+   - `gradeQuiz` (línea 331): exige exactamente las preguntas servidas, distintas (líneas 346-355, si no 400), traduce cada respuesta de la posición mostrada a la guardada (línea 375), aprueba con 2 y reclama la lectura **una** vez con `UPDATE … WHERE completed = 0` y `graded_at` (líneas 382-393, si ya estaba calificada 409). Si no aprobó, responde sin aciertos y con la espera (línea 395). Si aprobó: si ya había premio para ese contenido, 0 puntos (línea 400); si no, mira el tope diario del genoma (línea 413, si no 409), aplica el multiplicador del día, recorta contra el presupuesto de Academia de la época actual (si no queda nada 409, línea 427) y escribe todo en una transacción (línea 430).
 5. **Base de datos.**
    - Lee: `academia_content`, `academia_quiz`, `reading_sessions`, `academia_awards`, `genome_versions` (vía `getActiveGenome`), `periods` (vía `currentEpoch`) y `points_ledger` (vía `puntosDeEpoca`, `src/lib/gamificacion.ts:75`).
-   - Escribe: `reading_sessions` (INSERT, UPDATE de tiempo y de cierre); y al aprobar, en una transacción: `academia_awards` (wallet, contenido, día UTC, orden del día, puntos), `points_ledger` (`bucket = 'academia'`, `period_id` = época actual, `ref = 'Academia #<id>'`) y `reputation_events` (`axis = 'investigacion'`, `delta = max(1, round(puntos/15))`, `ref = 'Academia completada'`).
-6. **Respuesta y qué hace la pantalla.** `{ ok: true, passed: true, correct: 3, points: 150 }`. `Reader` muestra "+150 puntos · Aprobaste con 3/3" y un enlace a `/perfil`, y llama `router.refresh()` (`Reader.tsx:127-129`): al recargar, la tarjeta dice "completado" y el contador del día sube a 1. Si reprueba, muestra "No aprobado" y "Reintentar", que vuelve a empezar la lectura (`Reader.tsx:241-250`).
+   - Escribe: `reading_sessions` (INSERT, UPDATE de tiempo, de lo servido —`quiz_ids`, `quiz_orden`— y de la calificación —`completed`, `passed`, `graded_at`—); y al aprobar, en una transacción: `academia_awards` (wallet, contenido, día UTC, orden del día, puntos), `points_ledger` (`bucket = 'academia'`, `period_id` = época actual, `ref = 'Academia #<id>'`) y `reputation_events` (`axis = 'investigacion'`, `delta = max(1, round(puntos/15))`, `ref = 'Academia completada'`).
+6. **Respuesta y qué hace la pantalla.** `{ ok: true, passed: true, correct: 3, points: 150 }`. `Reader` muestra "+150 puntos · Aprobaste con 3/3" y un enlace a `/perfil`, y llama `router.refresh()` (`Reader.tsx:127-129`): al recargar, la tarjeta dice "completado" y el contador del día sube a 1. Si reprueba, la respuesta es `{ ok: true, passed: false, correct: null, points: 0, reintentarEnMin: 15 }`: el lector no dice cuántas acertó y pide volver a leer pasada la espera.
 7. **Casos de falla.**
    - Sin sesión o sin el acuerdo firmado: 401 en las cuatro llamadas. Ojo: `Reader` decide qué mostrar con `loggedIn = !!session` (`app/academia/[slug]/page.tsx:47-53`), así que alguien que entró por correo corporativo y no ha firmado ve "Comenzar lectura" y recibe "Debes entrar y firmar el CLA.".
    - Contenido deshabilitado o inexistente: 400 "Contenido no disponible.".
    - Token de otra wallet o de una lectura descartada: 400 "Sesión de lectura no encontrada.".
-   - Quiz antes de tiempo: 403. Tope diario o presupuesto agotado: 409 con su mensaje.
+   - Quiz antes de tiempo: 403. Lectura ya calificada, tope diario o presupuesto agotado: 409 con su mensaje.
+   - Preguntas que no son las servidas (repetidas, del resto del pool): 400 "Las respuestas no corresponden a las preguntas de esta lectura." sin gastar la lectura.
+   - Volver a leer antes de 15 min tras un fallo, o con 3 fallos en 24 h: 429 con el tiempo que falta.
    - Exceso de llamadas: 429. Error de red: "Error de red." en el lector.
-   - Cualquier otro error (por ejemplo, de la base) se devuelve como 400 con el mensaje interno tal cual (`start/route.ts:25`, `quiz/route.ts:44-46`).
+   - Cualquier otro error (por ejemplo, de la base) se devuelve como 400 con el mensaje interno tal cual (`start/route.ts:26`, `quiz/route.ts:26` y `:48`).
 
 ## 4. Elementos del DFD en el código
 
@@ -259,44 +268,49 @@ Los marcados **[sensible]** llevan la cookie de sesión, el token de lectura, la
 | Amenaza | Categoría | Elemento | Estado | Justificación |
 | --- | --- | --- | --- | --- |
 | Llamar a las APIs como otra wallet | Suplantación (S) | rutas de API, reading_sessions | Mitigada | La wallet sale de la cookie verificada (`session.ts:11-15`, `jwt.ts:48-55`) y el token de lectura solo sirve con su wallet (`academia.ts:37,50`, `WHERE token = ? AND wallet = ?`). |
-| Aprobar el quiz mandando la misma pregunta tres veces, o eligiendo qué preguntas responder | Manipulación (T) | Calificar | Pendiente | `academiaQuizSchema` solo exige 3 ids positivos (`validation.ts:75`) y `gradeQuiz` solo comprueba que sean del contenido (`academia.ts:105-111`); no exige que sean distintos ni que sean los servidos por `getQuiz`. La prueba lo fija. |
-| Volver a calificar una lectura ya reprobada sin releer (fuerza bruta de respuestas) | Manipulación (T) | Calificar, reading_sessions | Pendiente | `getSessionForQuiz` no mira `completed` (`academia.ts:49-73`); el cierre de la línea 115 no impide un segundo intento con el mismo token. Con 20 intentos por minuto (`quiz/route.ts:33`) se recorren las combinaciones en minutos. La prueba lo fija. |
+| Aprobar el quiz mandando la misma pregunta tres veces, o eligiendo qué preguntas responder | Manipulación (T) | Calificar | Mitigada | Release `wp/32-release` (ed5d167, A2): las preguntas servidas se guardan en la lectura (`academia.ts:287`) y `gradeQuiz` exige exactamente esas, cada una una vez (`academia.ts:346-355`; 400 "Las respuestas no corresponden…"). Caso "ARREGLADO: el quiz exige exactamente las preguntas servidas" de la caracterización. |
+| Volver a calificar una lectura ya reprobada sin releer (fuerza bruta de respuestas) | Manipulación (T) | Calificar, reading_sessions | Mitigada | Release `wp/32-release` (ed5d167, A2): una sola calificación por lectura con `UPDATE … WHERE completed = 0` y `graded_at` (`academia.ts:382-393`; 409 "Esta lectura ya se calificó…"); al reprobar no se dicen los aciertos (`:395`); volver a leer exige 15 min de espera y como mucho 3 fallos por contenido en 24 h (`exigirEsperaTrasFallo`, `:76-101`). Caso "ARREGLADO: una lectura se califica UNA vez…" de la caracterización. |
 | Mandar latidos con un script sin leer de verdad | Manipulación (T) | Sumar tiempo activo | Aceptada | Es el límite del diseño: el servidor solo puede medir tiempo, no atención. Se acota con el tope de 20 s por latido (`academia.ts:43`), el doble control de tiempo activo y transcurrido (línea 67), el tope diario, los rendimientos decrecientes y el presupuesto por época. |
-| Saltarse el límite por wallet e IP inventando la IP | Denegación de servicio (D) | Contadores | Pendiente | La clave incluye la IP del primer `X-Forwarded-For` (`rate-limit.ts:22-24`); cambiarla abre un contador nuevo. Agrava la fila de recalificación. Ya listado en `docs/security-review.md` (H7). |
+| Saltarse el límite por wallet e IP inventando la IP | Denegación de servicio (D) | Contadores | Mitigada | Release `wp/32-release` (05a2f4e, 642e412): `clientIp` toma el último valor de `X-Forwarded-For` (el que pone el proxy) o `X-Azure-ClientIP` solo con el `X-Azure-FDID` de nuestro Front Door (`src/lib/rate-limit.ts:78-93`). Además, el límite ya no es la única barrera contra la fuerza bruta: la calificación es única por lectura. Se prueba en la ficha de login (`login-y-sesion.test.ts`, caso 12). |
 | Ganar puntos sin haber firmado el acuerdo | Elevación de privilegios (E) | rutas de API | Mitigada | Las cuatro rutas exigen `session.claSigned` (`start/route.ts:12`, `heartbeat/route.ts:12`, `quiz/route.ts:13,30`). |
 | Premiar dos veces el mismo contenido (dos pestañas o carrera) | Manipulación (T) | academia_awards | Mitigada | `UNIQUE (wallet, content_id)` (`schema.sql:327`) y la comprobación previa (`academia.ts:120-121`); la escritura va en una transacción (154-165). |
 | Agotar el presupuesto de Academia de la época con muchas cuentas | Denegación de servicio (D) | points_ledger | Aceptada | El presupuesto por época es el tope por diseño (`academia.ts:143-152`) y las cuentas entran solo por invitación con acuerdo firmado, lo que limita las cuentas falsas. |
 | Negar que se otorgaron puntos o no saber por qué | Repudio (R) | points_ledger, academia_awards | Mitigada | Cada premio deja fila en `academia_awards` y en `points_ledger` con `ref = 'Academia #<id>'` (`academia.ts:155-160`); el ledger es de solo inserción. |
 | Publicar o despublicar contenidos sin ser founder | Elevación de privilegios (E) | Moderación | Mitigada | `adminActor` resuelve el rol contra la base (`app/api/admin/route.ts:22`, `authz.ts:80-84`). |
 | Moderación sin rastro (quién despublicó qué y cuándo) | Repudio (R) | Moderación, academia_content | Pendiente | `toggleContent` solo hace `UPDATE` (`admin.ts:108-112`); no escribe en `decision_log` ni en otra bitácora. |
-| Ver las respuestas correctas desde el navegador | Divulgación de información (I) | Servir preguntas | Mitigada | `getQuiz` no selecciona `correct` (`academia.ts:79`); la prueba comprueba las llaves de cada pregunta. |
-| Filtrar mensajes internos de la base al cliente | Divulgación de información (I) | rutas de API | Pendiente | Los `catch` devuelven `(e as Error).message` tal cual con 400 (`start/route.ts:25`, `heartbeat/route.ts:26`, `quiz/route.ts:23,44-46`). |
+| Ver las respuestas correctas desde el navegador | Divulgación de información (I) | Servir preguntas | Mitigada | `getQuiz` devuelve solo `id`, `question` y `options` en el orden mostrado (`academia.ts:276-325`); la caracterización comprueba las llaves de cada pregunta. |
+| Aprobar sin leer respondiendo siempre la misma posición (la correcta solía ser la segunda opción) | Manipulación (T) | Servir preguntas, Calificar | Mitigada | Release `wp/32-release` (8530cce, revisión de A2): las opciones se barajan por lectura con `crypto.randomInt` (`barajar`, `academia.ts:215-222`) y se guardan en `quiz_orden`; `gradeQuiz` traduce la posición mostrada a la guardada (`:375`). La siembra reparte las correctas (ninguna posición con más de 2 por contenido) y la migración S4 (`reordenarOpcionesAcademia`) lleva a ese orden una base existente. Una posición fija aprueba 2 de 3 al azar el 15,6 % de las veces. Casos "ARREGLADO" de la caracterización (orden guardado, reparto de la siembra). |
+| Filtrar mensajes internos de la base al cliente | Divulgación de información (I) | rutas de API | Pendiente | Los `catch` devuelven `(e as Error).message` tal cual (`start/route.ts:26`, `heartbeat/route.ts:26`, `quiz/route.ts:26` y `:48`); el status ya sale del código del error (`statusDeErrorAcademia`), pero un error que no es de la Academia sigue llegando con su texto y 400. |
 | El token de lectura queda en registros por ir en la URL | Divulgación de información (I) | quiz (GET) | Aceptada | Va en `?token=` (`Reader.tsx:87`), pero solo sirve junto a la cookie de la misma wallet (`academia.ts:50`) y caduca al iniciar otra lectura. |
 | Cuerpo de un contenido con HTML o JS | Elevación de privilegios (E) | /academia/[slug] | Mitigada | `Markdown.tsx` devuelve elementos de React y no usa `dangerouslySetInnerHTML` (comentario de las líneas 1-5); el contenido solo entra por siembra o migración. |
 | El video embebido entrega la IP del visitante a YouTube sin que lo diga el aviso de privacidad | Divulgación de información (I) | YouTube | Pendiente | Se usa `youtube-nocookie.com` con `sandbox` (`app/academia/[slug]/page.tsx:33-38`), pero `/privacidad` no menciona a YouTube como tercero. |
 
 ## 8. Prueba de caracterización
 
-Archivo: `apps/web/src/lib/caracterizacion/academia.test.ts` (13 casos, pasan).
+Archivo: `apps/web/src/lib/caracterizacion/academia.test.ts` (15 casos, pasan con el release `wp/32-release`).
 
 Cómo correrla: `cd apps/web && npx vitest run src/lib/caracterizacion/academia.test.ts`.
 
 Qué cubre:
 
-- **Flujo principal de punta a punta**, con las rutas REALES (`start`, `heartbeat`, `quiz` GET y POST) contra una base SQLite en memoria con `schema.sql` y la siembra (`seedIfEmpty`), inyectada en `globalThis.__zelenaDb`. El tiempo se mueve con el reloj falso de vitest (solo `Date`) y los latidos van de 15 en 15 s, como en `Reader`. Comprueba: el token, el 403 antes del mínimo, el tiempo acumulado `[15, 30, 45]`, que las preguntas no traen la respuesta, el resultado `{passed: true, correct: 3, points: 150}` y las filas que quedan en `reading_sessions`, `academia_awards`, `points_ledger` y `reputation_events`, más lo que vuelve a pintar la página.
-- **Reglas**: la lista y su orden; 100 %, 75 % y 50 % y el 409 del cuarto contenido del día; reprobar no da puntos; un contenido premiado da 0 la segunda vez; una lectura nueva descarta la anterior; el 409 por presupuesto agotado.
+- **Flujo principal de punta a punta**, con las rutas REALES (`start`, `heartbeat`, `quiz` GET y POST) contra una base SQLite en memoria con `schema.sql` y la siembra (`seedIfEmpty`), inyectada en `globalThis.__zelenaDb`. El tiempo se mueve con el reloj falso de vitest (solo `Date`) y los latidos van de 15 en 15 s, como en `Reader`. Comprueba: el token, el 403 antes del mínimo, el tiempo acumulado `[15, 30, 45]`, que las preguntas no traen la respuesta, que la lectura guarda las preguntas servidas y una permutación de sus opciones, que pedir el quiz otra vez devuelve exactamente lo mismo, el resultado `{passed: true, correct: 3, points: 150}` y las filas que quedan en `reading_sessions` (con `graded_at`), `academia_awards`, `points_ledger` y `reputation_events`, más lo que vuelve a pintar la página.
+- **Cómo responde**: como las opciones vienen barajadas, la prueba responde como quien sí leyó: busca en las opciones servidas el texto de la respuesta correcta (`correctasMostradas`).
+- **Reglas**: la lista y su orden; 100 %, 75 % y 50 % y el 409 del cuarto contenido del día; reprobar no da puntos y responde `{passed: false, correct: null, points: 0, reintentarEnMin: 15}`; un contenido premiado da 0 la segunda vez; una lectura nueva descarta la anterior; el 409 por presupuesto agotado.
 - **Puertas y fallas**: 401 sin sesión o sin acuerdo firmado en las cuatro rutas; contenido deshabilitado; entrada inválida; token de otra wallet.
-- **Rarezas fijadas (HALLAZGO)**: el quiz acepta la misma pregunta repetida; una lectura reprobada se puede volver a calificar con el mismo token; el día del tope es el día UTC; el detalle por slug sigue mostrando un contenido despublicado. Si alguien las corrige, la prueba falla a propósito y se actualiza en el mismo cambio.
+- **ARREGLADO (A2)**: la misma pregunta repetida o una pregunta del pool que no se sirvió → 400 sin gastar la lectura; una lectura reprobada no se vuelve a calificar (409), volver a leer antes de 15 min da 429 y el tercer fallo en 24 h bloquea ese contenido (otro sí se puede leer); el GET del quiz tiene límite de 20 por minuto y siempre trae lo mismo; la siembra no concentra las correctas en una posición.
+- **Rarezas que siguen fijadas (HALLAZGO)**: el día del tope es el día UTC; el detalle por slug sigue mostrando un contenido despublicado. Si alguien las corrige, la prueba falla a propósito y se actualiza en el mismo cambio.
+
+Qué cambió respecto de la versión escrita contra 0e07d8f, y por qué commit: 8 casos fallaban. Seis porque respondían con el índice GUARDADO de la correcta y desde 8530cce la respuesta es la posición MOSTRADA (opciones barajadas): se cambió el ayudante, no lo que se afirma. El de reprobar, porque ed5d167 dejó de revelar los aciertos (`correct: null`, `reintentarEnMin`). Los dos HALLAZGOS del quiz (pregunta repetida y recalificación) los corrigió ed5d167 y pasaron a **ARREGLADO**. Ninguno es una regresión.
 
 Lo único que se sustituye es `getSession()`, porque lee la cookie con `next/headers` y eso no existe fuera de una petición de Next; los alias `@/lib/…` se redirigen a los módulos reales.
 
-La prueba unitaria previa del motor sigue en `apps/web/src/lib/academia.test.ts` (tiempo mínimo, aprobar y no repetir premio, heartbeat, presupuesto por época y bucket).
+La prueba unitaria del motor sigue en `apps/web/src/lib/academia.test.ts` (tiempo mínimo, preguntas servidas, calificación única, espera tras fallo, opciones barajadas, migración S4, presupuesto por época y bucket).
 
 ## 9. Preguntas abiertas
 
 1. Quien entra solo con su correo corporativo no puede ganar puntos de Academia hasta firmar el acuerdo con una wallet. ¿Es lo que se quiere para el equipo interno, o el acuerdo debe poder firmarse sin wallet?
 2. ¿El tope diario y el día de `academia_awards` deben usar la zona del negocio (`BUSINESS_TZ = America/Bogota` del genoma) en vez de UTC? Hoy el "día" cambia a las 19:00 de Bogotá.
-3. ¿Se corrige la calificación (ids distintos, que sean los servidos y una sola calificación por lectura) antes de la nueva versión? Hoy el quiz no filtra a quien no leyó.
+3. ~~¿Se corrige la calificación (ids distintos, que sean los servidos y una sola calificación por lectura)?~~ Resuelta en el release (ed5d167 y 8530cce, hallazgo A2).
 4. El gen `ACADEMIA_VOTE_WEIGHT` se puede mutar y el banner público lo anuncia como "peso de los puntos de la Academia en las votaciones", pero ningún código de la app lo usa (solo `src/lib/sim.ts:170`); el voto es uno por wallet (`app/api/governance/vote/route.ts:30-34`). ¿Se retira el gen o se implementa el peso?
 5. `periods.academia_budget` se escribe al abrir cada época, pero el tope real sale del genoma (`ACADEMIA_BUDGET`). ¿Cuál es la fuente de verdad?
 6. ¿Hace falta un editor de contenidos o basta con siembra y migraciones? Hoy cambiar un texto o una pregunta exige código y despliegue.

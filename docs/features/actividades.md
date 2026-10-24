@@ -1,6 +1,6 @@
 # Ficha: Actividades
 
-Dueño: QA (por asignar) · Revisor: John · Fecha: 2026-10-21 · Commit de referencia: 0e07d8f
+Dueño: QA (por asignar) · Revisor: John · Fecha: 2026-10-21 · Commit de referencia: 0e07d8f · Revisada contra wp/32-release (`4032c7c`) el 2026-10-24: §7 y §8 (lo marcado «en `4032c7c`» cita líneas de ese commit)
 
 ## 1. Resumen
 
@@ -234,12 +234,14 @@ Dependencias inversas anotadas al integrar (la otra ficha ya las tenía; la guí
 | Un contributor con alcance `proyectos` escribe un check-in (se mediría su jornada) | Elevación de privilegios (E) | api_chk | Mitigada | `route.ts:27-29` exige alcance `equipo`. Test estático: `authz.test.ts:386`. |
 | Nadie sabe quién movió una pieza | Repudio (R) | db_trabajo | Mitigada | Cada creación, acción y edición deja un evento con `actor_wallet`, `day` y `created_at` (`team.ts:448-451`, 773-776 y 2022-2025). |
 | El historial "append-only" se reescribe | Repudio (R) | db_trabajo, db_checkins | Aceptada | No hay trigger que lo impida. `vincularPrincipal` (`talento.ts:609-627`, solo el founder) reescribe `actor_wallet` y borra los check-ins que chocan. Se acepta porque es la misma persona y queda en `talent_events` con conteos exactos. |
-| Saltarse el límite de 60 por minuto rotando `X-Forwarded-For` | Denegación de servicio (D) | rl | Pendiente | `clientIp` confía en el primer valor de `X-Forwarded-For` (`rate-limit.ts:22-24`). El `Map` es por proceso. Hace falta sesión. |
+| Saltarse el límite de 60 por minuto rotando `X-Forwarded-For` | Denegación de servicio (D) | rl | Mitigada | Desde `05a2f4e` y `642e412`: `clientIp` ya no toma el primer valor de `X-Forwarded-For` (lo manda el cliente) sino el último, que agrega el frontal de App Service, y solo cree `X-Azure-ClientIP` si `X-Azure-FDID` es el de nuestro Front Door (`apps/web/src/lib/rate-limit.ts:46-62` y `78-93` en `4032c7c`); el mapa se poda de cubetas vencidas (10-19). Tests: `rate-limit.test.ts`. Queda que el `Map` es por proceso; además hace falta sesión. |
 | Exposición del texto del check-in | Divulgación de información (I) | db_checkins, f13-f14 | Aceptada | Solo lo ve quien supervisa en el digest (`digest.ts:141-145`) y la propia persona. Viaja por HTTPS con sesión. La hora queda guardada en `created_at` y `updated_at` (`schema.sql:555-556`), aunque el comentario de la ruta dice que no (§9). |
 
 ## 8. Prueba de caracterización
 
-Archivo: `apps/web/src/lib/caracterizacion/actividades.test.ts`. Se corre con `cd apps/web && npx vitest run src/lib/caracterizacion/actividades.test.ts` y el resultado es **9 de 9 pasan**.
+Archivo: `apps/web/src/lib/caracterizacion/actividades.test.ts`. Se corre con `cd apps/web && npx vitest run src/lib/caracterizacion/actividades.test.ts` y el resultado es **9 de 9 pasan** contra `4032c7c` (wp/32-release).
+
+Al revisarla contra wp/32-release, las personas pasaron a los slugs de la plantilla de roles (`b97448a`, hallazgo A8: `founder`, `operaciones`, `plataforma`, `producto`): el roster del código ya no siembra filas `pending:<slug>` con nombres de personas y el repo es público. Las aserciones no cambiaron: ningún hallazgo de esta prueba se corrigió en la release. La prueba deja `ZELENA_TEAM_ROSTER` vacío (`vi.stubEnv`) para no depender del entorno.
 
 Usa una base SQLite en memoria con `schema.sql`, `seedTeam` y la época 1 abierta. El caso central recorre la entrega de punta a punta con las funciones que invocan las rutas:
 

@@ -5,7 +5,7 @@
 <rect x="50" y="45" width="1500" height="195" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
 <text x="58" y="63" fill="#c0392b">Navegador y wallet de la persona (no confiable)</text>
 <rect x="1700" y="315" width="510" height="385" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
-<text x="1708" y="333" fill="#c0392b">Fuera del servidor: cron y máquina del operador</text>
+<text x="1708" y="333" fill="#c0392b">Fuera del servidor: GitHub Actions (cron) y máquina del operador</text>
 <rect x="380" y="1235" width="1500" height="765" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
 <text x="388" y="1253" fill="#c0392b">Servidor Next.js en Azure App Service</text>
 <rect x="710" y="2075" width="1500" height="765" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
@@ -57,7 +57,7 @@
 <path d="M1175,1530 Q1247,1750 1415,1910" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="1271" y="1735" text-anchor="middle" font-size="11" fill="#b03a2e">f22 Leer llave de servicio *</text>
 <path d="M1175,1530 Q1241,2057 1415,2560" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="1268" y="2051" text-anchor="middle" font-size="11" fill="#555">f23 Tomar pendientes y marcar</text>
+<text x="1268" y="2051" text-anchor="middle" font-size="11" fill="#555">f23 Mantener, reservar y marcar</text>
 <path d="M1175,1530 Q1345,1326 1415,1070" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="1320" y="1313" text-anchor="middle" font-size="11" fill="#b03a2e">f24 Anclar *</text>
 <path d="M1415,1070 Q1245,1274 1175,1530" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
@@ -65,7 +65,7 @@
 <path d="M1175,1530 Q1347,1225 1415,880" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="1321" y="1215" text-anchor="middle" font-size="11" fill="#555">f26 Fondear cuenta nueva</text>
 <path d="M1085,1530 Q913,1835 845,2180" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="939" y="1845" text-anchor="middle" font-size="11" fill="#555">f27 Marcar firma anclada</text>
+<text x="939" y="1845" text-anchor="middle" font-size="11" fill="#555">f27 Marcar firma anclada o fallida</text>
 <path d="M1175,1530 Q1241,2150 1415,2750" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="1268" y="2145" text-anchor="middle" font-size="11" fill="#555">f28 Marcar época anclada</text>
 <path d="M1505,1530 Q1679,987 1745,420" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
@@ -103,10 +103,10 @@
 <text x="800" y="154" text-anchor="middle" fill="#222">(extensión) o</text>
 <text x="800" y="170" text-anchor="middle" fill="#222">wallet de</text>
 <rect x="1740" y="370" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
-<text x="1790" y="392" text-anchor="middle" fill="#222">Cron externo</text>
-<text x="1790" y="408" text-anchor="middle" fill="#222">con</text>
-<text x="1790" y="424" text-anchor="middle" fill="#222">x-anchor-secret,</text>
-<text x="1790" y="440" text-anchor="middle" fill="#222">o founder con</text>
+<text x="1790" y="376" text-anchor="middle" fill="#222">Cron: workflow</text>
+<text x="1790" y="392" text-anchor="middle" fill="#222">programado</text>
+<text x="1790" y="408" text-anchor="middle" fill="#222">anclaje.yml</text>
+<text x="1790" y="424" text-anchor="middle" fill="#222">(cada 15 min,</text>
 <rect x="2070" y="370" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
 <text x="2120" y="400" text-anchor="middle" fill="#222">Operador que</text>
 <text x="2120" y="416" text-anchor="middle" fill="#222">corre el</text>
@@ -155,18 +155,20 @@
 <text x="1790" y="1534" text-anchor="middle" fill="#222">pública</text>
 <text x="1790" y="1550" text-anchor="middle" fill="#222">(cerrarRito,</text>
 <circle cx="1460" cy="1530" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
-<text x="1460" y="1526" text-anchor="middle" fill="#222">GET y POST</text>
-<text x="1460" y="1542" text-anchor="middle" fill="#222">/api/anchor/run</text>
+<text x="1460" y="1494" text-anchor="middle" fill="#222">GET y POST</text>
+<text x="1460" y="1510" text-anchor="middle" fill="#222">/api/anchor/run</text>
+<text x="1460" y="1526" text-anchor="middle" fill="#222">(secreto de</text>
+<text x="1460" y="1542" text-anchor="middle" fill="#222">32+ o founder;</text>
 <circle cx="1130" cy="1530" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
-<text x="1130" y="1510" text-anchor="middle" fill="#222">Pasada de</text>
-<text x="1130" y="1526" text-anchor="middle" fill="#222">anclaje en el</text>
-<text x="1130" y="1542" text-anchor="middle" fill="#222">servidor</text>
-<text x="1130" y="1558" text-anchor="middle" fill="#222">(anclarPendientes)</text>
+<text x="1130" y="1486" text-anchor="middle" fill="#222">Pasada de</text>
+<text x="1130" y="1502" text-anchor="middle" fill="#222">anclaje</text>
+<text x="1130" y="1518" text-anchor="middle" fill="#222">(anclarPendientes):</text>
+<text x="1130" y="1534" text-anchor="middle" fill="#222">mantenimiento,</text>
 <circle cx="1790" cy="610" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
 <text x="1790" y="590" text-anchor="middle" fill="#222">Worker de</text>
-<text x="1790" y="606" text-anchor="middle" fill="#222">anclaje</text>
-<text x="1790" y="622" text-anchor="middle" fill="#222">(script; hoy</text>
-<text x="1790" y="638" text-anchor="middle" fill="#222">no parsea)</text>
+<text x="1790" y="606" text-anchor="middle" fill="#222">anclaje local</text>
+<text x="1790" y="622" text-anchor="middle" fill="#222">(reutiliza</text>
+<text x="1790" y="638" text-anchor="middle" fill="#222">lib/anchor.ts)</text>
 <circle cx="1130" cy="1720" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
 <text x="1130" y="1708" text-anchor="middle" fill="#222">Cifras en vivo</text>
 <text x="1130" y="1724" text-anchor="middle" fill="#222">de la landing</text>
@@ -208,17 +210,17 @@
 <rect x="750" y="2150" width="100" height="60" fill="#fdfefe" stroke="none"/>
 <line x1="750" y1="2150" x2="850" y2="2150" stroke="#222" stroke-width="1.5"/>
 <line x1="750" y1="2210" x2="850" y2="2210" stroke="#222" stroke-width="1.5"/>
-<text x="800" y="2152" text-anchor="middle" fill="#222">SQLite ·</text>
-<text x="800" y="2168" text-anchor="middle" fill="#222">cla_signatures</text>
-<text x="800" y="2184" text-anchor="middle" fill="#222">(firma,</text>
-<text x="800" y="2200" text-anchor="middle" fill="#222">anchor_status,</text>
+<text x="800" y="2144" text-anchor="middle" fill="#222">SQLite ·</text>
+<text x="800" y="2160" text-anchor="middle" fill="#222">cla_signatures</text>
+<text x="800" y="2176" text-anchor="middle" fill="#222">(firma,</text>
+<text x="800" y="2192" text-anchor="middle" fill="#222">anchor_status</text>
 <rect x="1410" y="2530" width="100" height="60" fill="#fdfefe" stroke="none"/>
 <line x1="1410" y1="2530" x2="1510" y2="2530" stroke="#222" stroke-width="1.5"/>
 <line x1="1410" y1="2590" x2="1510" y2="2590" stroke="#222" stroke-width="1.5"/>
-<text x="1460" y="2540" text-anchor="middle" fill="#222">SQLite ·</text>
-<text x="1460" y="2556" text-anchor="middle" fill="#222">anchor_queue</text>
-<text x="1460" y="2572" text-anchor="middle" fill="#222">(cola de</text>
-<text x="1460" y="2588" text-anchor="middle" fill="#222">anclaje)</text>
+<text x="1460" y="2524" text-anchor="middle" fill="#222">SQLite ·</text>
+<text x="1460" y="2540" text-anchor="middle" fill="#222">anchor_queue</text>
+<text x="1460" y="2556" text-anchor="middle" fill="#222">(pending →</text>
+<text x="1460" y="2572" text-anchor="middle" fill="#222">processing →</text>
 <rect x="1410" y="2720" width="100" height="60" fill="#fdfefe" stroke="none"/>
 <line x1="1410" y1="2720" x2="1510" y2="2720" stroke="#222" stroke-width="1.5"/>
 <line x1="1410" y1="2780" x2="1510" y2="2780" stroke="#222" stroke-width="1.5"/>
@@ -254,5 +256,5 @@
 <text x="1460" y="1050" text-anchor="middle" fill="#222">testnet vía</text>
 <text x="1460" y="1066" text-anchor="middle" fill="#222">Horizon</text>
 <text x="1460" y="1082" text-anchor="middle" fill="#222">(ledger de la</text>
-<text x="90" y="2920" font-size="11" fill="#777">Anclaje en Stellar testnet: firma del acuerdo (SEP-53), anchor_queue, /api/anchor/run, worker y evidencia pública · docs/dfd/anclaje-stellar.json · commit 0e07d8f · * = flujo con datos sensibles</text>
+<text x="90" y="2920" font-size="11" fill="#777">Anclaje en Stellar testnet: firma del acuerdo (SEP-53), anchor_queue, /api/anchor/run, worker y evidencia pública · docs/dfd/anclaje-stellar.json · commit 4032c7c · * = flujo con datos sensibles</text>
 </svg>

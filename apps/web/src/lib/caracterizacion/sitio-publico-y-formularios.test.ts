@@ -11,7 +11,10 @@
  *
  * Los casos marcados "HALLAZGO" fijan una rareza actual que la auditoría reporta. Si
  * alguien la corrige, esta prueba debe fallar y actualizarse en el mismo cambio: así el
- * cambio de comportamiento queda a la vista.
+ * cambio de comportamiento queda a la vista. Los marcados "ARREGLADO" eran hallazgos que
+ * el release wp/32-release corrigió (A3: autorización de datos obligatoria y probada,
+ * dab355c; IP del límite, 05a2f4e; proyectos sembrados en borrador, 2c049eb; whitepaper
+ * fuera del sitio, 67a78df) y ahora fijan el arreglo.
  *
  * Base: SQLite en memoria con `schema.sql` (el mismo patrón que academia.test.ts y
  * ritos.test.ts). La base se inyecta en `globalThis.__zelenaDb`, que es lo primero que
@@ -28,6 +31,7 @@ vi.mock("@/lib/db", () => import("../db"));
 vi.mock("@/lib/validation", () => import("../validation"));
 vi.mock("@/lib/rate-limit", () => import("../rate-limit"));
 vi.mock("@/lib/servicios", () => import("../servicios"));
+vi.mock("@/lib/consentimiento", () => import("../consentimiento"));
 
 import { openDb, type DB } from "../db";
 import { seedIfEmpty } from "../seed";
@@ -38,6 +42,8 @@ import { AVISO_LEGAL, FOOTER_GRUPOS, MENU_EMPRESAS, MENU_PUBLICO, URL_LICENCIA, 
 import { ENCUENTROS, diasPara, proximosEncuentros } from "../encuentros";
 import { cifrasEnVivo } from "../prueba-en-vivo";
 import { responsableTratamiento } from "../legal";
+import { AVISO_PRIVACIDAD_VERSION, MENSAJE_AVISO_CAMBIO, MENSAJE_SIN_AUTORIZACION } from "../aviso-privacidad";
+import { avisoVigente } from "../consentimiento";
 
 const SCHEMA = fs.readFileSync(path.join(process.cwd(), "src", "lib", "schema.sql"), "utf8");
 
@@ -89,6 +95,24 @@ type Lead = {
 };
 
 const leads = (): Lead[] => db.prepare(`SELECT * FROM leads ORDER BY id`).all() as Lead[];
+const consentimientos = () =>
+  db.prepare(`SELECT lead_id, formulario, aviso_version, aviso_sha256, accepted_at FROM lead_consents ORDER BY id`).all() as Array<{
+    lead_id: number;
+    formulario: string;
+    aviso_version: string;
+    aviso_sha256: string;
+    accepted_at: string;
+  }>;
+
+/** Lo que manda la casilla marcada desde dab355c (A3): `acepto: true` y la versión del aviso. */
+const AUTORIZA = { acepto: true, aviso: AVISO_PRIVACIDAD_VERSION } as const;
+
+/** Copia de `o` sin la clave `k` (lo que manda un cliente que no la envía). */
+function sinCampo<T extends object>(o: T, k: keyof T): Partial<T> {
+  const copia: Partial<T> = { ...o };
+  delete copia[k];
+  return copia;
+}
 
 const SOLICITUD = {
   nombre: "  Persona de Prueba  ",
@@ -97,6 +121,7 @@ const SOLICITUD = {
   interes: "wms",
   mensaje: "Dos bodegas y veinte personas en piso.",
   sitio: "",
+  ...AUTORIZA,
 };
 
 describe("flujo principal · /empresas/contacto → POST /api/empresas/contacto → leads", () => {
@@ -115,7 +140,17 @@ describe("flujo principal · /empresas/contacto → POST /api/empresas/contacto 
       mensaje: "Dos bodegas y veinte personas en piso.",
       estado: "nuevo", // DEFAULT de schema.sql; ningún código lo cambia después
     });
-    expect(filas[0].created_at).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/); // UTC de SQLite
+    expect(filas[0].created_at).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/); // UTC (instanteDb)
+    // Y, junto a ella, la prueba de la autorización (A3).
+    expect(consentimientos()).toEqual([
+      {
+        lead_id: filas[0].id,
+        formulario: "empresas/contacto",
+        aviso_version: AVISO_PRIVACIDAD_VERSION,
+        aviso_sha256: avisoVigente().huella,
+        accepted_at: filas[0].created_at,
+      },
+    ]);
   });
 
   it("empresa y mensaje vacíos (opcionales) se guardan como NULL", async () => {
@@ -188,28 +223,48 @@ describe("flujo principal · /empresas/contacto → POST /api/empresas/contacto 
     expect(leads()).toHaveLength(5);
   });
 
-  it("HALLAZGO: la ruta no recibe ni guarda la casilla de autorización (Ley 1581); sin ella también guarda", async () => {
-    // ContactoForm exige la casilla solo en el navegador (`required`) y no la envía.
-    const res = await postContacto(peticion("/api/empresas/contacto", SOLICITUD, ipNueva()));
-    expect(res.status).toBe(200);
-    const columnas = (db.prepare(`PRAGMA table_info(leads)`).all() as Array<{ name: string }>).map((c) => c.name);
-    expect(columnas).toEqual(["id", "nombre", "email", "empresa", "interes", "mensaje", "estado", "created_at"]);
+  it("ARREGLADO (A3): sin la casilla de autorización la ruta responde 400 y no guarda nada; con una versión vieja del aviso, 409", async () => {
+    // dab355c: antes la casilla solo vivía en el navegador y la ruta guardaba igual.
+    const sinCasilla = sinCampo(SOLICITUD, "acepto");
+    for (const cuerpo of [sinCasilla, { ...SOLICITUD, acepto: false }, { ...SOLICITUD, acepto: "si" }]) {
+      const res = await postContacto(peticion("/api/empresas/contacto", cuerpo, ipNueva()));
+      expect(res.status).toBe(400);
+      expect(await res.json()).toEqual({ error: MENSAJE_SIN_AUTORIZACION });
+    }
+    const vieja = await postContacto(peticion("/api/empresas/contacto", { ...SOLICITUD, aviso: "2020-01-01" }, ipNueva()));
+    expect(vieja.status).toBe(409);
+    expect(await vieja.json()).toEqual({ error: MENSAJE_AVISO_CAMBIO });
+    expect(leads()).toHaveLength(0);
+    expect(consentimientos()).toHaveLength(0);
+    // Sin `aviso` (cliente viejo) se toma la versión vigente, que es la que enlaza la casilla.
+    const sinVersion = sinCampo(SOLICITUD, "aviso");
+    expect((await postContacto(peticion("/api/empresas/contacto", sinVersion, ipNueva()))).status).toBe(200);
+    expect(consentimientos().map((c) => c.aviso_version)).toEqual([AVISO_PRIVACIDAD_VERSION]);
+    // La prueba no guarda la IP ni datos del navegador.
+    const columnas = (db.prepare(`PRAGMA table_info(lead_consents)`).all() as Array<{ name: string }>).map((c) => c.name);
+    expect(columnas).toEqual(["id", "lead_id", "formulario", "aviso_version", "aviso_sha256", "accepted_at"]);
   });
 
-  it("HALLAZGO: la IP del límite es el PRIMER valor de X-Forwarded-For (lo controla quien llama)", async () => {
+  it("ARREGLADO: la IP del límite es el ÚLTIMO valor de X-Forwarded-For (el que agrega el proxy), no el que manda quien llama", async () => {
+    // 05a2f4e: antes anteponer otra "IP" abría un contador nuevo.
     const real = ipNueva();
     for (let i = 0; i < 5; i++) await postContacto(peticion("/api/empresas/contacto", SOLICITUD, real));
     expect((await postContacto(peticion("/api/empresas/contacto", SOLICITUD, real))).status).toBe(429);
-    // Misma IP real al final de la cadena, otra "IP" inventada al principio: pasa.
+    // Misma IP real al final de la cadena, otra "IP" inventada al principio: sigue limitada.
     const res = await postContacto(peticion("/api/empresas/contacto", SOLICITUD, `${ipNueva()}, ${real}`));
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(429);
+    expect(leads()).toHaveLength(5);
   });
 });
 
 describe("aviso de /encuentros → POST /api/encuentros/aviso → leads (interes = 'encuentros')", () => {
   it("guarda nombre y correo; empresa NULL; la ciudad va en `mensaje` como 'Ciudad: …'", async () => {
     const res = await postAviso(
-      peticion("/api/encuentros/aviso", { nombre: "Persona Aviso", email: "aviso@ejemplo.test", ciudad: " Bogotá ", sitio: "" }, ipNueva())
+      peticion(
+        "/api/encuentros/aviso",
+        { nombre: "Persona Aviso", email: "aviso@ejemplo.test", ciudad: " Bogotá ", sitio: "", ...AUTORIZA },
+        ipNueva()
+      )
     );
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ok: true });
@@ -221,18 +276,27 @@ describe("aviso de /encuentros → POST /api/encuentros/aviso → leads (interes
       mensaje: "Ciudad: Bogotá",
       estado: "nuevo",
     });
+    expect(consentimientos()).toMatchObject([{ lead_id: leads()[0].id, formulario: "encuentros", aviso_version: AVISO_PRIVACIDAD_VERSION }]);
+  });
+
+  it("ARREGLADO (A3): el aviso de encuentros sin la casilla → 400 y nada guardado", async () => {
+    const res = await postAviso(peticion("/api/encuentros/aviso", { nombre: "Persona", email: "p@ejemplo.test" }, ipNueva()));
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: MENSAJE_SIN_AUTORIZACION });
+    expect(leads()).toHaveLength(0);
   });
 
   it("sin ciudad, `mensaje` queda NULL", async () => {
-    await postAviso(peticion("/api/encuentros/aviso", { nombre: "Sin Ciudad", email: "sc@ejemplo.test" }, ipNueva()));
+    await postAviso(peticion("/api/encuentros/aviso", { nombre: "Sin Ciudad", email: "sc@ejemplo.test", ...AUTORIZA }, ipNueva()));
     expect(leads()[0].mensaje).toBeNull();
   });
 
   it("campo trampa lleno → 200 sin guardar; correo inválido → 400 'Revisa el correo.'", async () => {
     const trampa = await postAviso(
-      peticion("/api/encuentros/aviso", { nombre: "Bot", email: "bot@ejemplo.test", sitio: "x" }, ipNueva())
+      peticion("/api/encuentros/aviso", { nombre: "Bot", email: "bot@ejemplo.test", sitio: "x", ...AUTORIZA }, ipNueva())
     );
     expect(trampa.status).toBe(200);
+    // Sin la casilla, el error que se ve es el del dato (la autorización va al final del esquema).
     const malo = await postAviso(peticion("/api/encuentros/aviso", { nombre: "Persona", email: "x" }, ipNueva()));
     expect(malo.status).toBe(400);
     expect(await malo.json()).toEqual({ error: "Revisa el correo." });
@@ -243,7 +307,7 @@ describe("aviso de /encuentros → POST /api/encuentros/aviso → leads (interes
     const ip = ipNueva();
     for (let i = 0; i < 5; i++) await postContacto(peticion("/api/empresas/contacto", SOLICITUD, ip));
     expect((await postContacto(peticion("/api/empresas/contacto", SOLICITUD, ip))).status).toBe(429);
-    const aviso = await postAviso(peticion("/api/encuentros/aviso", { nombre: "Persona", email: "p@ejemplo.test" }, ip));
+    const aviso = await postAviso(peticion("/api/encuentros/aviso", { nombre: "Persona", email: "p@ejemplo.test", ...AUTORIZA }, ip));
     expect(aviso.status).toBe(200);
   });
 
@@ -283,9 +347,13 @@ describe("menú, pie y redirecciones", () => {
     const empresas = FOOTER_GRUPOS.find((x) => x.titulo === "Empresas");
     expect(empresas?.enlaces.map((e) => e.href)).toEqual(["/empresas/servicios", "/empresas/contacto"]);
     expect(AVISO_LEGAL).toMatch(/red de pruebas de Stellar/);
+    // 67a78df: el pie enlaza el manifiesto, ya no el whitepaper.
+    const enlaces = FOOTER_GRUPOS.flatMap((x) => x.enlaces.map((e) => e.href));
+    expect(enlaces).toContain("/manifiesto");
+    expect(enlaces).not.toContain("/whitepaper");
   });
 
-  it("redirecciones 308 de next.config.mjs (y, si ya existe, /whitepaper → /manifiesto)", async () => {
+  it("redirecciones 308 de next.config.mjs, incluidas /whitepaper → /manifiesto y /equipo/seguimiento → /equipo/dashboard", async () => {
     const mod = (await import("../../../next.config.mjs")) as {
       default: { redirects: () => Promise<Array<{ source: string; destination: string; permanent: boolean }>> };
     };
@@ -296,9 +364,11 @@ describe("menú, pie y redirecciones", () => {
       destination: "/academia/construir-sin-riesgo",
       permanent: true,
     });
-    // El retiro del whitepaper va en otra rama: cuando llegue, la redirección debe ser permanente y a /manifiesto.
-    const wp = r.find((x) => x.source === "/whitepaper");
-    if (wp) expect(wp).toEqual({ source: "/whitepaper", destination: "/manifiesto", permanent: true });
+    // 67a78df: el whitepaper salió del sitio y su enlace viejo lleva al manifiesto.
+    expect(r).toContainEqual({ source: "/whitepaper", destination: "/manifiesto", permanent: true });
+    // 4032c7c: la pantalla de seguimiento de la línea anterior la reemplaza el tablero.
+    expect(r).toContainEqual({ source: "/equipo/seguimiento", destination: "/equipo/dashboard", permanent: true });
+    expect(fs.existsSync(path.join(process.cwd(), "app", "whitepaper"))).toBe(false);
   });
 });
 
@@ -312,14 +382,20 @@ describe("landing y páginas que leen datos", () => {
     });
   });
 
-  it("con la siembra demo: no cuenta firmas ni entregas de cuentas demo, pero SÍ cuenta sus proyectos abiertos", () => {
+  it("ARREGLADO: con la siembra demo no cuenta firmas, entregas ni proyectos sembrados (nacen en borrador)", () => {
     const sembrada = baseTemporal(true);
     const abiertos = (sembrada.prepare(`SELECT COUNT(*) AS n FROM projects WHERE state = 'Open'`).get() as { n: number }).n;
+    expect(abiertos).toBeGreaterThan(0);
+    // 2c049eb: los proyectos del seed nacen con draft = 1 y la landing cuenta solo los publicados.
+    expect(sembrada.prepare(`SELECT COUNT(*) AS n FROM projects WHERE draft = 0`).get()).toEqual({ n: 0 });
     const c = cifrasEnVivo(sembrada);
     expect(c.firmasRegistradas).toBe(0); // las SEEDTX_… no son hash de Stellar y son de cuentas demo
     expect(c.entregasAprobadas).toBe(0);
     expect(c.ultimaFirmaAnclada).toBeNull();
-    expect(c.proyectosAbiertos).toBe(abiertos); // HALLAZGO: el conteo de proyectos no filtra lo demo
+    expect(c.proyectosAbiertos).toBe(0);
+    // Publicado por el founder, cuenta.
+    sembrada.prepare(`UPDATE projects SET draft = 0 WHERE id = (SELECT MIN(id) FROM projects WHERE state = 'Open')`).run();
+    expect(cifrasEnVivo(sembrada).proyectosAbiertos).toBe(1);
   });
 
   it("una firma real anclada (tx de 64 hex, cuenta no demo) cuenta y es la que muestra la tarjeta", () => {

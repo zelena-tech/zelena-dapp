@@ -1,7 +1,7 @@
 {
   "feature": "ritos-y-comunidad",
   "titulo": "Ritos y comunidad: código rotativo, asistencia, /comunidad y aviso de encuentros",
-  "commit": "0e07d8f",
+  "commit": "4032c7c",
   "elementos": [
     { "id": "gestor", "tipo": "actor", "nombre": "Founder o supervisor (navegador, /admin)", "codigo": "apps/web/src/components/RitosAdminPanel.tsx#RitosAdminPanel" },
     { "id": "anf", "tipo": "actor", "nombre": "Anfitrión del rito (navegador)", "codigo": "apps/web/src/components/RitoAnfitrionAcciones.tsx#RitoAnfitrionAcciones" },
@@ -21,8 +21,8 @@
     { "id": "p_publico", "tipo": "proceso", "nombre": "Lecturas públicas sin wallets", "codigo": "apps/web/src/lib/ritos.ts#ritosPublicos" },
     { "id": "p_admin", "tipo": "proceso", "nombre": "Panel de ritos y avisos de encuentros en /admin", "codigo": "apps/web/app/admin/page.tsx#AdminPage" },
     { "id": "p_enc_pag", "tipo": "proceso", "nombre": "Página /encuentros", "codigo": "apps/web/app/encuentros/page.tsx#Encuentros" },
-    { "id": "p_enc_api", "tipo": "proceso", "nombre": "API /api/encuentros/aviso", "codigo": "apps/web/app/api/encuentros/aviso/route.ts#POST" },
-    { "id": "p_anclaje", "tipo": "proceso", "nombre": "Pasada de anclaje (botón de /admin o cron externo)", "codigo": "apps/web/app/api/anchor/run/route.ts#POST" },
+    { "id": "p_enc_api", "tipo": "proceso", "nombre": "API /api/encuentros/aviso (exige la autorización de datos)", "codigo": "apps/web/app/api/encuentros/aviso/route.ts#POST" },
+    { "id": "p_anclaje", "tipo": "proceso", "nombre": "Pasada de anclaje (workflow anclaje.yml cada 15 min, o founder)", "codigo": "apps/web/app/api/anchor/run/route.ts#POST" },
     { "id": "p_fitness", "tipo": "proceso", "nombre": "Participación para el fitness de la época", "codigo": "apps/web/src/lib/ritos.ts#participacionRitos" },
 
     { "id": "d_sesiones", "tipo": "almacen", "nombre": "rite_sessions", "codigo": "apps/web/src/lib/schema.sql#rite_sessions" },
@@ -33,6 +33,7 @@
     { "id": "d_personas", "tipo": "almacen", "nombre": "users + project_members", "codigo": "apps/web/src/lib/schema.sql#users" },
     { "id": "d_genoma", "tipo": "almacen", "nombre": "genome_versions (RITES_CADENCE, RITE_*)", "codigo": "apps/web/src/lib/genome.ts#getActiveGenome" },
     { "id": "d_leads", "tipo": "almacen", "nombre": "leads (interes = 'encuentros')", "codigo": "apps/web/src/lib/schema.sql#leads" },
+    { "id": "d_consents", "tipo": "almacen", "nombre": "lead_consents (prueba de la autorización del aviso)", "codigo": "apps/web/src/lib/schema.sql#lead_consents" },
     { "id": "d_encuentros", "tipo": "almacen", "nombre": "Lista de encuentros en código", "codigo": "apps/web/src/lib/encuentros.ts#ENCUENTROS" },
     { "id": "d_memoria", "tipo": "almacen", "nombre": "Memoria del proceso (límites de tasa y fallos por rito)", "codigo": "apps/web/src/lib/ritos.ts#anotarFallo" },
     { "id": "d_env", "tipo": "almacen", "nombre": "Variables de entorno (RITES_SECRET o SESSION_SECRET)", "codigo": "apps/web/src/lib/ritos-codigo.ts#ritesSecret" }
@@ -65,8 +66,8 @@
     { "id": "f25", "de": "asis", "a": "p_rito_pag", "nombre": "Ver el rito", "protocolo": "HTTPS", "datos": "GET /comunidad/ritos/<id> + cookie", "sensible": true },
     { "id": "f26", "de": "p_rito_pag", "a": "asis", "nombre": "Detalle", "protocolo": "HTTPS", "datos": "estado, lugar, join_url (si corresponde), formulario de asistencia", "sensible": false },
     { "id": "f27", "de": "d_encuentros", "a": "p_enc_pag", "nombre": "Encuentros publicados", "protocolo": "import de módulo", "datos": "ENCUENTROS (hoy vacío) y FORMATOS", "sensible": false },
-    { "id": "f28", "de": "vis", "a": "p_enc_api", "nombre": "Avísame", "protocolo": "HTTPS", "datos": "POST { nombre, email, ciudad?, sitio (trampa) }", "sensible": true },
-    { "id": "f29", "de": "p_enc_api", "a": "d_leads", "nombre": "Guardar el aviso", "protocolo": "SQL", "datos": "INSERT leads (nombre, email, interes 'encuentros', mensaje 'Ciudad: …')", "sensible": true },
+    { "id": "f28", "de": "vis", "a": "p_enc_api", "nombre": "Avísame", "protocolo": "HTTPS", "datos": "POST { nombre, email, ciudad?, sitio (trampa), acepto: true, aviso: <versión del aviso> }", "sensible": true },
+    { "id": "f29", "de": "p_enc_api", "a": "d_leads", "nombre": "Guardar el aviso", "protocolo": "SQL", "datos": "INSERT leads (nombre, email, interes 'encuentros', mensaje 'Ciudad: …', created_at UTC), en la transacción de f40", "sensible": true },
     { "id": "f30", "de": "d_leads", "a": "p_admin", "nombre": "Avisos de encuentros", "protocolo": "SQL", "datos": "últimos 100 leads (nombre, correo, ciudad)", "sensible": true },
     { "id": "f31", "de": "p_admin", "a": "gestor", "nombre": "Panel", "protocolo": "HTTPS", "datos": "sesiones con conteo (nunca lista), candidatos a presentar, correos de avisos (mailto)", "sensible": true },
     { "id": "f32", "de": "d_asistencia", "a": "p_fitness", "nombre": "Participación de la época", "protocolo": "SQL", "datos": "asistencias de ritos cerrados en la época y personas activas", "sensible": false },
@@ -76,13 +77,14 @@
     { "id": "f36", "de": "p_cadencia", "a": "p_gestion", "nombre": "Fecha válida y ventana", "protocolo": "llamada en proceso", "datos": "esOcurrenciaValida, ventanaRito [inicio − margen, fin + margen]", "sensible": false },
     { "id": "f37", "de": "p_api_asistir", "a": "asis", "nombre": "Resultado de la asistencia", "protocolo": "HTTPS", "datos": "{ ok, registrada, yaEstaba, reputacion, mensaje } o error 400/403/409/429", "sensible": false },
     { "id": "f38", "de": "p_api_ritos", "a": "anf", "nombre": "Estado de la sesión", "protocolo": "HTTPS", "datos": "{ ok, id, state } (sin wallets ni lista de asistentes)", "sensible": false },
-    { "id": "f39", "de": "p_enc_pag", "a": "vis", "nombre": "Página /encuentros", "protocolo": "HTTPS", "datos": "HTML con próximos encuentros (o «Estamos preparando la primera fecha») y el formulario «Avísame»", "sensible": false }
+    { "id": "f39", "de": "p_enc_pag", "a": "vis", "nombre": "Página /encuentros", "protocolo": "HTTPS", "datos": "HTML con próximos encuentros (o «Estamos preparando la primera fecha») y el formulario «Avísame»", "sensible": false },
+    { "id": "f40", "de": "p_enc_api", "a": "d_consents", "nombre": "Guardar la prueba de la autorización", "protocolo": "SQL", "datos": "INSERT lead_id, formulario 'encuentros', aviso_version, aviso_sha256, accepted_at (UTC); sin IP", "sensible": true }
   ],
   "fronteras": [
     { "nombre": "Internet: navegadores (founder, anfitrión, asistente, visitante)", "contiene": ["gestor", "anf", "asis", "vis"] },
     { "nombre": "Tercero: red de pruebas de Stellar", "contiene": ["stellar"] },
     { "nombre": "Azure App Service: proceso Next.js", "contiene": ["p_api_ritos", "p_api_codigo", "p_api_asistir", "p_gestion", "p_asist", "p_codigo", "p_cadencia", "p_rito_pag", "p_comunidad", "p_publico", "p_admin", "p_enc_pag", "p_enc_api", "p_anclaje", "p_fitness", "d_memoria"] },
-    { "nombre": "Datos y configuración del servidor (SQLite / Azure SQL y App Settings)", "contiene": ["d_sesiones", "d_asistencia", "d_reputacion", "d_decisiones", "d_anclaje", "d_personas", "d_genoma", "d_leads", "d_env"] },
+    { "nombre": "Datos y configuración del servidor (SQLite / Azure SQL y App Settings)", "contiene": ["d_sesiones", "d_asistencia", "d_reputacion", "d_decisiones", "d_anclaje", "d_personas", "d_genoma", "d_leads", "d_env", "d_consents"] },
     { "nombre": "Código desplegado (dato versionado en el repo)", "contiene": ["d_encuentros"] }
   ]
 }

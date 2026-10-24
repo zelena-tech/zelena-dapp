@@ -14,10 +14,12 @@
  *
  * Las rutas HTTP solo validan con zod e invocan estas funciones (ver la ficha, §3).
  * Si una aserción "COMPORTAMIENTO ACTUAL" deja de cumplirse porque se corrigió su
- * hallazgo, se actualiza la aserción y la ficha. Personas: slugs del roster y wallets
+ * hallazgo, se actualiza la aserción y la ficha. Personas: slugs de la plantilla de roles del roster
+ * (Founder, Operaciones, Plataforma, Producto…; repo público, A8 en b97448a) y wallets
  * ficticias de prueba.
+ * Commit de referencia: 0e07d8f; revisada contra wp/32-release (4032c7c).
  */
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import { openDb, type DB } from "../db";
@@ -46,16 +48,16 @@ import {
   upsertCheckin,
 } from "../team";
 
-const JOHN = pendingPrincipal("john");
-const VALE = pendingPrincipal("vale");
-const FAUSTO = pendingPrincipal("fausto");
-const DAVID = pendingPrincipal("david");
+const FILA_FOUNDER = pendingPrincipal("founder");
+const OPERACIONES = pendingPrincipal("operaciones");
+const PLATAFORMA = pendingPrincipal("plataforma");
+const PRODUCTO = pendingPrincipal("producto");
 const EXTERNA = "GEXTERNAEJECUTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"; // contributor ficticia
 
-const FOUNDER: TeamActor = { wallet: JOHN, name: "John", role: "founder", isSupervisor: true };
-const SUPERVISORA: TeamActor = { wallet: VALE, name: "Vale", role: "core", isSupervisor: true };
-const DUENO: TeamActor = { wallet: FAUSTO, name: "Fausto", role: "core", isSupervisor: false };
-const OTRO_CORE: TeamActor = { wallet: DAVID, name: "David", role: "core", isSupervisor: false };
+const FOUNDER: TeamActor = { wallet: FILA_FOUNDER, name: "Founder", role: "founder", isSupervisor: true };
+const SUPERVISORA: TeamActor = { wallet: OPERACIONES, name: "Operaciones", role: "core", isSupervisor: true };
+const DUENO: TeamActor = { wallet: PLATAFORMA, name: "Plataforma", role: "core", isSupervisor: false };
+const OTRO_CORE: TeamActor = { wallet: PRODUCTO, name: "Producto", role: "core", isSupervisor: false };
 const EXT: TeamActor = { wallet: EXTERNA, name: "Externa", role: "contributor", isSupervisor: false };
 
 // Calendario (Bogotá = UTC−5; vitest corre en UTC como Azure). Lunes 5 de octubre de 2026.
@@ -72,6 +74,7 @@ function freshDb(): DB {
   const db = openDb(":memory:");
   db.pragma("foreign_keys = ON");
   db.exec(fs.readFileSync(path.join(process.cwd(), "src", "lib", "schema.sql"), "utf8"));
+  vi.stubEnv("ZELENA_TEAM_ROSTER", ""); // sin roster del entorno: la plantilla de roles del código (A8)
   seedTeam(db);
   db.prepare(`INSERT INTO periods (id, name, epoch_budget, academia_budget, state) VALUES (1, 'Época 1', ?, ?, 'Open')`).run(
     GENOME_DEFAULTS.EPOCH_BUDGET,
@@ -97,6 +100,10 @@ function eventos(db: DB, id: number): Array<{ action: string; from_status: strin
     .all(id) as Array<{ action: string; from_status: string; to_status: string; reason: string | null; actor_wallet: string }>;
 }
 
+afterAll(() => {
+  vi.unstubAllEnvs();
+});
+
 describe("caracterización · actividades (flujo principal de una entrega)", () => {
   let db: DB;
   let proyecto: number;
@@ -109,7 +116,7 @@ describe("caracterización · actividades (flujo principal de una entrega)", () 
     const body = createAssignmentSchema.parse({
       title: "Conciliar el inventario",
       initiativeId: proyecto,
-      ownerWallet: FAUSTO,
+      ownerWallet: PLATAFORMA,
       priority: "High",
       size: "M",
       dueDate: "2026-10-07",
@@ -120,11 +127,11 @@ describe("caracterización · actividades (flujo principal de una entrega)", () 
 
   it("crear: con responsable nace Asignada y deja el evento 'crear' desde el minuto cero", () => {
     const row = getAssignment(db, pieza)!;
-    expect(row).toMatchObject({ status: "Asignada", owner_wallet: FAUSTO, size: "M", due_date: "2026-10-07", created_by: JOHN });
+    expect(row).toMatchObject({ status: "Asignada", owner_wallet: PLATAFORMA, size: "M", due_date: "2026-10-07", created_by: FILA_FOUNDER });
     expect(eventos(db, pieza)).toEqual([
-      { action: "crear", from_status: "Backlog", to_status: "Asignada", reason: null, actor_wallet: JOHN },
+      { action: "crear", from_status: "Backlog", to_status: "Asignada", reason: null, actor_wallet: FILA_FOUNDER },
     ]);
-    expect(assignmentsForOwner(db, FAUSTO).map((a) => a.id)).toEqual([pieza]);
+    expect(assignmentsForOwner(db, PLATAFORMA).map((a) => a.id)).toEqual([pieza]);
     // La UI de /equipo/hoy solo pinta lo que el dueño puede hacer.
     expect(accionesPermitidas(db, DUENO, row)).toEqual(["empezar", "bloquear"]);
   });
@@ -191,10 +198,10 @@ describe("caracterización · actividades (flujo principal de una entrega)", () 
     expect(r.textoEmision).toBeNull();
     const ref = refTarea(pieza);
     expect(db.prepare(`SELECT wallet, points, period_id, bucket FROM points_ledger WHERE ref = ?`).all(ref)).toEqual([
-      { wallet: FAUSTO, points: 38, period_id: 1, bucket: "ejecucion" },
+      { wallet: PLATAFORMA, points: 38, period_id: 1, bucket: "ejecucion" },
     ]);
     expect(db.prepare(`SELECT wallet, axis, delta FROM reputation_events WHERE ref = ?`).all(ref)).toEqual([
-      { wallet: FAUSTO, axis: "ejecucion", delta: 3 },
+      { wallet: PLATAFORMA, axis: "ejecucion", delta: 3 },
     ]);
 
     // Hecha es final: no se aprueba dos veces ni se edita.
@@ -222,8 +229,8 @@ describe("caracterización · actividades (flujo principal de una entrega)", () 
     expect(row.description).toBe("con el acta del lunes");
     expect(fallo(() => editarAsignacion(db, DUENO, { assignmentId: pieza, priority: "Urgent" }, LUN_10))?.status).toBe(403);
     // Quien planifica reasigna: un evento 'reasignar' con la lista de campos, nunca valores.
-    row = editarAsignacion(db, SUPERVISORA, { assignmentId: pieza, ownerWallet: DAVID }, LUN_11);
-    expect(row.owner_wallet).toBe(DAVID);
+    row = editarAsignacion(db, SUPERVISORA, { assignmentId: pieza, ownerWallet: PRODUCTO }, LUN_11);
+    expect(row.owner_wallet).toBe(PRODUCTO);
     const ultimo = eventos(db, pieza).at(-1)!;
     expect(ultimo).toMatchObject({ action: "reasignar", from_status: "Asignada", to_status: "Asignada", reason: "campos: ownerWallet" });
     // Un enlace que no es http(s) no entra por la edición.
@@ -231,18 +238,18 @@ describe("caracterización · actividades (flujo principal de una entrega)", () 
   });
 
   it("check-in: uno por persona y día, editable el mismo día; vacío → 400", () => {
-    const a = upsertCheckin(db, FAUSTO, checkinSchema.parse({ done: "conté el depósito", doing: "", blocked: "" }), LUN_10);
-    const b = upsertCheckin(db, FAUSTO, checkinSchema.parse({ done: "conté el depósito", doing: "conciliar", blocked: "" }), LUN_14);
+    const a = upsertCheckin(db, PLATAFORMA, checkinSchema.parse({ done: "conté el depósito", doing: "", blocked: "" }), LUN_10);
+    const b = upsertCheckin(db, PLATAFORMA, checkinSchema.parse({ done: "conté el depósito", doing: "conciliar", blocked: "" }), LUN_14);
     expect(b.id).toBe(a.id);
     expect(b.day).toBe("2026-10-05");
-    expect(getCheckin(db, FAUSTO, "2026-10-05")!.doing).toBe("conciliar");
-    expect(fallo(() => upsertCheckin(db, FAUSTO, { done: " ", doing: "", blocked: "" }, LUN_14))?.status).toBe(400);
+    expect(getCheckin(db, PLATAFORMA, "2026-10-05")!.doing).toBe("conciliar");
+    expect(fallo(() => upsertCheckin(db, PLATAFORMA, { done: " ", doing: "", blocked: "" }, LUN_14))?.status).toBe(400);
   });
 
   it("COMPORTAMIENTO ACTUAL (hallazgo): el día del check-in es el del servidor (UTC), no el de BUSINESS_TZ", () => {
     // 21:30 del lunes en Bogotá = 02:30 UTC del martes: el check-in queda guardado como del martes.
     const noche = new Date("2026-10-06T02:30:00.000Z");
-    expect(upsertCheckin(db, FAUSTO, { done: "cierre del día", doing: "", blocked: "" }, noche).day).toBe("2026-10-06");
+    expect(upsertCheckin(db, PLATAFORMA, { done: "cierre del día", doing: "", blocked: "" }, noche).day).toBe("2026-10-06");
   });
 
   it("externo con acuerdo y rol 'ejecuta': crea solo en su proyecto, para sí, sin campos de planificación, y toma lo libre", () => {
@@ -255,7 +262,7 @@ describe("caracterización · actividades (flujo principal de una entrega)", () 
       status: 403,
       message: "Crea el trabajo dentro de uno de tus proyectos.",
     });
-    expect(fallo(() => createAssignmentAs(db, EXT, { title: "para otro", initiativeId: proyecto, ownerWallet: FAUSTO }, LUN_10))?.status).toBe(403);
+    expect(fallo(() => createAssignmentAs(db, EXT, { title: "para otro", initiativeId: proyecto, ownerWallet: PLATAFORMA }, LUN_10))?.status).toBe(403);
     const propia = createAssignmentAs(
       db,
       EXT,
@@ -272,13 +279,13 @@ describe("caracterización · actividades (flujo principal de una entrega)", () 
 
   it("COMPORTAMIENTO ACTUAL (hallazgo): 'Tus asignaciones' lista por wallet exacta, aunque los cuatro ojos usan todas las identidades", () => {
     // El founder entra con la wallet de su sesión (otra fila con role='founder'); su
-    // trabajo puede estar a nombre de `pending:john`. Para los cuatro ojos es la misma persona…
+    // trabajo puede estar a nombre de `pending:founder`. Para los cuatro ojos es la misma persona…
     const SESION_FOUNDER = "GFOUNDERSESIONAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
     db.prepare(
       `INSERT INTO users (wallet, display_name, role, status, is_demo, is_founder, cla_signed) VALUES (?, 'Founder', 'founder', 'active', 0, 1, 1)`
     ).run(SESION_FOUNDER);
-    const suya = createAssignmentAs(db, FOUNDER, { title: "del founder", initiativeId: proyecto, ownerWallet: JOHN }, LUN_10);
-    expect(mismaPersona(db, SESION_FOUNDER, JOHN)).toBe(true);
+    const suya = createAssignmentAs(db, FOUNDER, { title: "del founder", initiativeId: proyecto, ownerWallet: FILA_FOUNDER }, LUN_10);
+    expect(mismaPersona(db, SESION_FOUNDER, FILA_FOUNDER)).toBe(true);
     aplicarAccionAsignacion(db, { assignmentId: suya, action: "empezar", actor: FOUNDER, now: LUN_11 });
     aplicarAccionAsignacion(db, { assignmentId: suya, action: "enviar_a_revision", actor: FOUNDER, now: LUN_12 });
     const yo: TeamActor = { wallet: SESION_FOUNDER, name: "Founder", role: "founder", isSupervisor: true };

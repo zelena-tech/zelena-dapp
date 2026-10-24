@@ -1,7 +1,7 @@
 /**
  * Prueba de caracterización · Telegram (bot, vinculación, webhook, focos del día).
  * Ficha: docs/features/telegram.md · DFD: docs/dfd/telegram.json
- * Commit de referencia: 0e07d8f.
+ * Commit de referencia: 0e07d8f; revisada contra wp/32-release (4032c7c).
  *
  * Protege el comportamiento ACTUAL, no el deseado. Recorre el flujo principal por las
  * rutas reales:

@@ -1,13 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2300 3430" width="2300" height="3430" font-family="Segoe UI, Arial, sans-serif" font-size="13">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2300 3620" width="2300" height="3620" font-family="Segoe UI, Arial, sans-serif" font-size="13">
 <title>Admin del founder: /admin (lectura y paneles), /api/admin (acciones) y /api/admin/epoca (cerrar y abrir épocas)</title>
 <defs><marker id="punta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker></defs>
-<rect width="2300" height="3430" fill="#ffffff"/>
+<rect width="2300" height="3620" fill="#ffffff"/>
 <rect x="50" y="45" width="1170" height="385" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
 <text x="58" y="63" fill="#c0392b">Navegador del founder (no confiable)</text>
-<rect x="380" y="775" width="1500" height="1145" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<rect x="380" y="775" width="1500" height="1335" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
 <text x="388" y="793" fill="#c0392b">Servidor Next.js en Azure App Service</text>
-<rect x="710" y="1995" width="840" height="1335" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
-<text x="718" y="2013" fill="#c0392b">Base SQLite persistente (/home/data)</text>
+<rect x="710" y="2185" width="840" height="1335" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="718" y="2203" fill="#c0392b">Base SQLite persistente (/home/data)</text>
 <rect x="2030" y="505" width="180" height="195" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
 <text x="2038" y="523" fill="#c0392b">Red de pruebas Stellar</text>
 <path d="M185,150 Q251,533 425,880" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
@@ -18,22 +18,22 @@
 <text x="938" y="506" text-anchor="middle" font-size="11" fill="#b03a2e">f3 Leer y verificar el JWT *</text>
 <path d="M515,1070 Q635,1126 755,1070" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="635" y="1098" text-anchor="middle" font-size="11" fill="#555">f4 ¿Es founder?</text>
-<path d="M845,1070 Q911,1597 1085,2100" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="938" y="1591" text-anchor="middle" font-size="11" fill="#555">f5 Leer el rol</text>
-<path d="M515,1070 Q581,1597 755,2100" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="608" y="1591" text-anchor="middle" font-size="11" fill="#555">f6 Aplicaciones, proyectos e hitos</text>
+<path d="M845,1070 Q911,1690 1085,2290" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="1685" text-anchor="middle" font-size="11" fill="#555">f5 Leer el rol</text>
 <path d="M515,1070 Q581,1690 755,2290" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="608" y="1685" text-anchor="middle" font-size="11" fill="#555">f7 Época actual, fitness y estado de cierre</text>
+<text x="608" y="1685" text-anchor="middle" font-size="11" fill="#555">f6 Aplicaciones, proyectos (incluidos borradores) e hitos</text>
 <path d="M515,1070 Q579,1785 755,2480" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="607" y="1780" text-anchor="middle" font-size="11" fill="#555">f8 Genoma vigente, linaje y mutación pendiente</text>
-<path d="M515,1070 Q579,1973 755,2860" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="607" y="1969" text-anchor="middle" font-size="11" fill="#b03a2e">f9 Últimos 100 leads *</text>
-<path d="M515,1070 Q579,2066 755,3050" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="607" y="2063" text-anchor="middle" font-size="11" fill="#b03a2e">f10 Log del asistente y vínculo del founder *</text>
-<path d="M515,1070 Q579,2161 755,3240" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="607" y="2158" text-anchor="middle" font-size="11" fill="#555">f11 Panel de ritos</text>
+<text x="607" y="1780" text-anchor="middle" font-size="11" fill="#555">f7 Época actual, fitness y estado de cierre</text>
 <path d="M515,1070 Q579,1878 755,2670" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="607" y="1874" text-anchor="middle" font-size="11" fill="#555">f12 Contenido de la Academia (incluye apagados)</text>
+<text x="607" y="1874" text-anchor="middle" font-size="11" fill="#555">f8 Genoma vigente, linaje, mutación pendiente y decisiones reemplazadas</text>
+<path d="M515,1070 Q579,2066 755,3050" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="607" y="2063" text-anchor="middle" font-size="11" fill="#b03a2e">f9 Últimos 100 leads *</text>
+<path d="M515,1070 Q579,2161 755,3240" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="607" y="2158" text-anchor="middle" font-size="11" fill="#b03a2e">f10 Log del asistente y vínculo del founder *</text>
+<path d="M515,1070 Q579,2256 755,3430" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="607" y="2253" text-anchor="middle" font-size="11" fill="#555">f11 Panel de ritos</text>
+<path d="M515,1070 Q579,1973 755,2860" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="607" y="1969" text-anchor="middle" font-size="11" fill="#555">f12 Contenido de la Academia (incluye apagados)</text>
 <path d="M425,1070 Q359,596 185,150" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="332" y="603" text-anchor="middle" font-size="11" fill="#b03a2e">f13 HTML del panel *</text>
 <path d="M515,150 Q581,717 755,1260" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
@@ -44,42 +44,42 @@
 <text x="989" y="1085" text-anchor="middle" font-size="11" fill="#555">f16 approveApplication / rejectApplication / advanceState / approveMilestone / toggleContent</text>
 <path d="M1175,880 Q1295,936 1415,880" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="1295" y="908" text-anchor="middle" font-size="11" fill="#555">f17 Siguiente estado</text>
-<path d="M1085,880 Q911,1480 845,2100" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="938" y="1485" text-anchor="middle" font-size="11" fill="#555">f18 Aprobar/rechazar, asignar, avanzar, marcar hito aprobado</text>
-<path d="M1175,880 Q1241,1500 1415,2100" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="1268" y="1495" text-anchor="middle" font-size="11" fill="#b03a2e">f19 Emitir puntos y reputación del hito *</text>
-<path d="M1085,880 Q909,1767 845,2670" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="937" y="1771" text-anchor="middle" font-size="11" fill="#555">f20 Encender/apagar contenido</text>
+<path d="M1085,880 Q909,1575 845,2290" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="937" y="1580" text-anchor="middle" font-size="11" fill="#555">f18 Aprobar/rechazar, asignar, avanzar, marcar hito aprobado</text>
+<path d="M1175,880 Q1239,1595 1415,2290" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1267" y="1590" text-anchor="middle" font-size="11" fill="#b03a2e">f19 Emitir puntos y reputación del hito *</text>
+<path d="M1085,880 Q909,1864 845,2860" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="937" y="1867" text-anchor="middle" font-size="11" fill="#555">f20 Encender/apagar contenido</text>
 <path d="M845,1260 Q999,1209 1085,1070" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="982" y="1187" text-anchor="middle" font-size="11" fill="#555">f21 computeEpochFitness / signEpochDecision</text>
-<path d="M1085,1070 Q911,1670 845,2290" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="938" y="1675" text-anchor="middle" font-size="11" fill="#555">f22 Guardar reporte y firma</text>
+<path d="M1085,1070 Q909,1765 845,2480" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="937" y="1770" text-anchor="middle" font-size="11" fill="#555">f22 Guardar reporte y firma</text>
 <path d="M845,1260 Q965,1316 1085,1260" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="965" y="1288" text-anchor="middle" font-size="11" fill="#555">f23 proposeMutation / revertGenome / recordNoMutation</text>
-<path d="M1085,1260 Q911,1860 845,2480" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="938" y="1865" text-anchor="middle" font-size="11" fill="#555">f24 Nueva versión del genoma y acta</text>
+<path d="M1085,1260 Q909,1955 845,2670" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="937" y="1960" text-anchor="middle" font-size="11" fill="#555">f24 Nueva versión del genoma y acta</text>
 <path d="M845,1260 Q931,1399 1085,1450" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="948" y="1377" text-anchor="middle" font-size="11" fill="#555">f25 createLatentAudit</text>
-<path d="M1175,1450 Q1241,1886 1415,2290" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="1268" y="1878" text-anchor="middle" font-size="11" fill="#555">f26 Guardar auditoría</text>
+<path d="M1175,1450 Q1241,1977 1415,2480" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1268" y="1971" text-anchor="middle" font-size="11" fill="#555">f26 Guardar auditoría</text>
 <path d="M755,1260 Q689,693 515,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="662" y="699" text-anchor="middle" font-size="11" fill="#555">f27 Resultado</text>
 <path d="M515,340 Q581,907 755,1450" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="608" y="901" text-anchor="middle" font-size="11" fill="#b03a2e">f28 Estado / cerrar / abrir época *</text>
-<path d="M845,1450 Q917,1670 1085,1830" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="941" y="1655" text-anchor="middle" font-size="11" fill="#b03a2e">f29 Contar intento *</text>
-<path d="M845,1450 Q931,1589 1085,1640" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="948" y="1567" text-anchor="middle" font-size="11" fill="#555">f30 Cerrar y abrir (o solo abrir)</text>
-<path d="M1175,1640 Q1245,1896 1415,2100" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="1270" y="1883" text-anchor="middle" font-size="11" fill="#b03a2e">f31 Leer las hojas de la época *</text>
-<path d="M1085,1640 Q913,1945 845,2290" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="939" y="1955" text-anchor="middle" font-size="11" fill="#555">f32 Cerrar la época con su raíz y abrir la siguiente</text>
-<path d="M1085,1640 Q911,2044 845,2480" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="938" y="2052" text-anchor="middle" font-size="11" fill="#555">f33 Acta en el decision log</text>
-<path d="M1175,1640 Q1241,2076 1415,2480" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="1268" y="2068" text-anchor="middle" font-size="11" fill="#555">f34 Encolar la raíz Merkle</text>
-<path d="M1505,2480 Q1681,1688 1745,880" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="1653" y="1684" text-anchor="middle" font-size="11" fill="#555">f35 Leer pendientes (otra feature)</text>
+<path d="M845,1450 Q913,1757 1085,2020" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="939" y="1746" text-anchor="middle" font-size="11" fill="#b03a2e">f29 Contar intento *</text>
+<path d="M845,1450 Q917,1670 1085,1830" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="941" y="1655" text-anchor="middle" font-size="11" fill="#555">f30 Cerrar y abrir (o solo abrir)</text>
+<path d="M1175,1830 Q1245,2086 1415,2290" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1270" y="2073" text-anchor="middle" font-size="11" fill="#b03a2e">f31 Leer las hojas de la época *</text>
+<path d="M1085,1830 Q913,2135 845,2480" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="939" y="2145" text-anchor="middle" font-size="11" fill="#555">f32 Cerrar la época con su raíz y abrir la siguiente</text>
+<path d="M1085,1830 Q911,2234 845,2670" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="2242" text-anchor="middle" font-size="11" fill="#555">f33 Acta en el decision log</text>
+<path d="M1175,1830 Q1241,2266 1415,2670" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1268" y="2258" text-anchor="middle" font-size="11" fill="#555">f34 Encolar la raíz Merkle</text>
+<path d="M1505,2670 Q1681,1783 1745,880" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1653" y="1779" text-anchor="middle" font-size="11" fill="#555">f35 Leer pendientes (otra feature)</text>
 <path d="M1835,880 Q1997,783 2075,610" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="1976" y="764" text-anchor="middle" font-size="11" fill="#555">f36 Anclar la huella (otra feature)</text>
 <path d="M470,925 Q414,975 470,1025" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
@@ -94,6 +94,10 @@
 <text x="305" y="178" text-anchor="middle" font-size="11" fill="#555">f41 Clic en una acción o envío de un formulario</text>
 <path d="M185,150 Q271,289 425,340" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="288" y="267" text-anchor="middle" font-size="11" fill="#555">f42 Cerrar o abrir época</text>
+<path d="M845,1260 Q917,1480 1085,1640" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="941" y="1465" text-anchor="middle" font-size="11" fill="#555">f43 publishProject</text>
+<path d="M1085,1640 Q913,1945 845,2290" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="939" y="1955" text-anchor="middle" font-size="11" fill="#555">f44 Publicar: UPDATE projects SET draft = 0 WHERE draft = 1</text>
 <rect x="90" y="100" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
 <text x="140" y="122" text-anchor="middle" fill="#222">Founder</text>
 <text x="140" y="138" text-anchor="middle" fill="#222">(navegador;</text>
@@ -132,22 +136,23 @@
 <text x="470" y="344" text-anchor="middle" fill="#222">épocas</text>
 <text x="470" y="360" text-anchor="middle" fill="#222">(cliente)</text>
 <circle cx="800" cy="1260" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
-<text x="800" y="1240" text-anchor="middle" fill="#222">POST</text>
-<text x="800" y="1256" text-anchor="middle" fill="#222">/api/admin (11</text>
-<text x="800" y="1272" text-anchor="middle" fill="#222">acciones por</text>
-<text x="800" y="1288" text-anchor="middle" fill="#222">switch)</text>
+<text x="800" y="1224" text-anchor="middle" fill="#222">POST</text>
+<text x="800" y="1240" text-anchor="middle" fill="#222">/api/admin (12</text>
+<text x="800" y="1256" text-anchor="middle" fill="#222">acciones por</text>
+<text x="800" y="1272" text-anchor="middle" fill="#222">switch,</text>
 <circle cx="800" cy="1450" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
 <text x="800" y="1446" text-anchor="middle" fill="#222">GET/POST</text>
 <text x="800" y="1462" text-anchor="middle" fill="#222">/api/admin/epoca</text>
 <circle cx="1130" cy="880" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
-<text x="1130" y="860" text-anchor="middle" fill="#222">Operaciones:</text>
-<text x="1130" y="876" text-anchor="middle" fill="#222">aplicaciones,</text>
-<text x="1130" y="892" text-anchor="middle" fill="#222">estado, hitos,</text>
-<text x="1130" y="908" text-anchor="middle" fill="#222">Academia</text>
+<text x="1130" y="844" text-anchor="middle" fill="#222">Operaciones:</text>
+<text x="1130" y="860" text-anchor="middle" fill="#222">aplicaciones</text>
+<text x="1130" y="876" text-anchor="middle" fill="#222">(no asigna</text>
+<text x="1130" y="892" text-anchor="middle" fill="#222">borradores),</text>
 <circle cx="1460" cy="880" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
-<text x="1460" y="868" text-anchor="middle" fill="#222">Máquina de</text>
-<text x="1460" y="884" text-anchor="middle" fill="#222">estados pura</text>
-<text x="1460" y="900" text-anchor="middle" fill="#222">de proyectos</text>
+<text x="1460" y="852" text-anchor="middle" fill="#222">Máquina de</text>
+<text x="1460" y="868" text-anchor="middle" fill="#222">estados pura</text>
+<text x="1460" y="884" text-anchor="middle" fill="#222">de proyectos</text>
+<text x="1460" y="900" text-anchor="middle" fill="#222">(y la marca de</text>
 <circle cx="1130" cy="1070" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
 <text x="1130" y="1042" text-anchor="middle" fill="#222">Motor de</text>
 <text x="1130" y="1058" text-anchor="middle" fill="#222">épocas:</text>
@@ -163,9 +168,14 @@
 <text x="1130" y="1454" text-anchor="middle" fill="#222">funciones</text>
 <text x="1130" y="1470" text-anchor="middle" fill="#222">latentes</text>
 <circle cx="1130" cy="1640" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
-<text x="1130" y="1628" text-anchor="middle" fill="#222">Cerrar y abrir</text>
-<text x="1130" y="1644" text-anchor="middle" fill="#222">época (raíz</text>
-<text x="1130" y="1660" text-anchor="middle" fill="#222">Merkle)</text>
+<text x="1130" y="1620" text-anchor="middle" fill="#222">Publicar un</text>
+<text x="1130" y="1636" text-anchor="middle" fill="#222">borrador del</text>
+<text x="1130" y="1652" text-anchor="middle" fill="#222">Ágora (draft 1</text>
+<text x="1130" y="1668" text-anchor="middle" fill="#222">→ 0)</text>
+<circle cx="1130" cy="1830" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="1818" text-anchor="middle" fill="#222">Cerrar y abrir</text>
+<text x="1130" y="1834" text-anchor="middle" fill="#222">época (raíz</text>
+<text x="1130" y="1850" text-anchor="middle" fill="#222">Merkle)</text>
 <circle cx="1790" cy="880" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
 <text x="1790" y="868" text-anchor="middle" fill="#222">Worker de</text>
 <text x="1790" y="884" text-anchor="middle" fill="#222">anclaje (otra</text>
@@ -175,72 +185,74 @@
 <line x1="1080" y1="180" x2="1180" y2="180" stroke="#222" stroke-width="1.5"/>
 <text x="1130" y="146" text-anchor="middle" fill="#222">Cookie</text>
 <text x="1130" y="162" text-anchor="middle" fill="#222">zelena_session</text>
-<rect x="1080" y="1800" width="100" height="60" fill="#fdfefe" stroke="none"/>
-<line x1="1080" y1="1800" x2="1180" y2="1800" stroke="#222" stroke-width="1.5"/>
-<line x1="1080" y1="1860" x2="1180" y2="1860" stroke="#222" stroke-width="1.5"/>
-<text x="1130" y="1810" text-anchor="middle" fill="#222">Contadores de</text>
-<text x="1130" y="1826" text-anchor="middle" fill="#222">intentos en</text>
-<text x="1130" y="1842" text-anchor="middle" fill="#222">memoria (solo</text>
-<text x="1130" y="1858" text-anchor="middle" fill="#222">/api/admin/epoca)</text>
-<rect x="1080" y="2070" width="100" height="60" fill="#fdfefe" stroke="none"/>
-<line x1="1080" y1="2070" x2="1180" y2="2070" stroke="#222" stroke-width="1.5"/>
-<line x1="1080" y1="2130" x2="1180" y2="2130" stroke="#222" stroke-width="1.5"/>
-<text x="1130" y="2104" text-anchor="middle" fill="#222">users</text>
-<rect x="750" y="2070" width="100" height="60" fill="#fdfefe" stroke="none"/>
-<line x1="750" y1="2070" x2="850" y2="2070" stroke="#222" stroke-width="1.5"/>
-<line x1="750" y1="2130" x2="850" y2="2130" stroke="#222" stroke-width="1.5"/>
-<text x="800" y="2088" text-anchor="middle" fill="#222">applications,</text>
-<text x="800" y="2104" text-anchor="middle" fill="#222">projects,</text>
-<text x="800" y="2120" text-anchor="middle" fill="#222">milestones</text>
-<rect x="1410" y="2070" width="100" height="60" fill="#fdfefe" stroke="none"/>
-<line x1="1410" y1="2070" x2="1510" y2="2070" stroke="#222" stroke-width="1.5"/>
-<line x1="1410" y1="2130" x2="1510" y2="2130" stroke="#222" stroke-width="1.5"/>
-<text x="1460" y="2080" text-anchor="middle" fill="#222">points_ledger</text>
-<text x="1460" y="2096" text-anchor="middle" fill="#222">y</text>
-<text x="1460" y="2112" text-anchor="middle" fill="#222">reputation_events</text>
-<text x="1460" y="2128" text-anchor="middle" fill="#222">(append-only)</text>
+<rect x="1080" y="1990" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="1990" x2="1180" y2="1990" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="2050" x2="1180" y2="2050" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="2000" text-anchor="middle" fill="#222">Contadores de</text>
+<text x="1130" y="2016" text-anchor="middle" fill="#222">intentos en</text>
+<text x="1130" y="2032" text-anchor="middle" fill="#222">memoria (solo</text>
+<text x="1130" y="2048" text-anchor="middle" fill="#222">/api/admin/epoca)</text>
+<rect x="1080" y="2260" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="2260" x2="1180" y2="2260" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="2320" x2="1180" y2="2320" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="2294" text-anchor="middle" fill="#222">users</text>
 <rect x="750" y="2260" width="100" height="60" fill="#fdfefe" stroke="none"/>
 <line x1="750" y1="2260" x2="850" y2="2260" stroke="#222" stroke-width="1.5"/>
 <line x1="750" y1="2320" x2="850" y2="2320" stroke="#222" stroke-width="1.5"/>
-<text x="800" y="2286" text-anchor="middle" fill="#222">periods y</text>
-<text x="800" y="2302" text-anchor="middle" fill="#222">epoch_fitness</text>
-<rect x="750" y="2450" width="100" height="60" fill="#fdfefe" stroke="none"/>
-<line x1="750" y1="2450" x2="850" y2="2450" stroke="#222" stroke-width="1.5"/>
-<line x1="750" y1="2510" x2="850" y2="2510" stroke="#222" stroke-width="1.5"/>
-<text x="800" y="2468" text-anchor="middle" fill="#222">genome_versions,</text>
-<text x="800" y="2484" text-anchor="middle" fill="#222">mutation_decisions</text>
-<text x="800" y="2500" text-anchor="middle" fill="#222">y decision_log</text>
+<text x="800" y="2262" text-anchor="middle" fill="#222">applications,</text>
+<text x="800" y="2278" text-anchor="middle" fill="#222">projects</text>
+<text x="800" y="2294" text-anchor="middle" fill="#222">(draft,</text>
+<text x="800" y="2310" text-anchor="middle" fill="#222">origin),</text>
 <rect x="1410" y="2260" width="100" height="60" fill="#fdfefe" stroke="none"/>
 <line x1="1410" y1="2260" x2="1510" y2="2260" stroke="#222" stroke-width="1.5"/>
 <line x1="1410" y1="2320" x2="1510" y2="2320" stroke="#222" stroke-width="1.5"/>
-<text x="1460" y="2294" text-anchor="middle" fill="#222">latent_audits</text>
+<text x="1460" y="2270" text-anchor="middle" fill="#222">points_ledger</text>
+<text x="1460" y="2286" text-anchor="middle" fill="#222">y</text>
+<text x="1460" y="2302" text-anchor="middle" fill="#222">reputation_events</text>
+<text x="1460" y="2318" text-anchor="middle" fill="#222">(append-only)</text>
+<rect x="750" y="2450" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="750" y1="2450" x2="850" y2="2450" stroke="#222" stroke-width="1.5"/>
+<line x1="750" y1="2510" x2="850" y2="2510" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="2476" text-anchor="middle" fill="#222">periods y</text>
+<text x="800" y="2492" text-anchor="middle" fill="#222">epoch_fitness</text>
 <rect x="750" y="2640" width="100" height="60" fill="#fdfefe" stroke="none"/>
 <line x1="750" y1="2640" x2="850" y2="2640" stroke="#222" stroke-width="1.5"/>
 <line x1="750" y1="2700" x2="850" y2="2700" stroke="#222" stroke-width="1.5"/>
-<text x="800" y="2674" text-anchor="middle" fill="#222">academia_content</text>
-<rect x="750" y="2830" width="100" height="60" fill="#fdfefe" stroke="none"/>
-<line x1="750" y1="2830" x2="850" y2="2830" stroke="#222" stroke-width="1.5"/>
-<line x1="750" y1="2890" x2="850" y2="2890" stroke="#222" stroke-width="1.5"/>
-<text x="800" y="2832" text-anchor="middle" fill="#222">leads</text>
-<text x="800" y="2848" text-anchor="middle" fill="#222">(solicitudes</text>
-<text x="800" y="2864" text-anchor="middle" fill="#222">de empresas y</text>
-<text x="800" y="2880" text-anchor="middle" fill="#222">avisos de</text>
-<rect x="750" y="3020" width="100" height="60" fill="#fdfefe" stroke="none"/>
-<line x1="750" y1="3020" x2="850" y2="3020" stroke="#222" stroke-width="1.5"/>
-<line x1="750" y1="3080" x2="850" y2="3080" stroke="#222" stroke-width="1.5"/>
-<text x="800" y="3030" text-anchor="middle" fill="#222">bot_actions y</text>
-<text x="800" y="3046" text-anchor="middle" fill="#222">telegram_links</text>
-<text x="800" y="3062" text-anchor="middle" fill="#222">(otra feature:</text>
-<text x="800" y="3078" text-anchor="middle" fill="#222">Telegram)</text>
-<rect x="750" y="3210" width="100" height="60" fill="#fdfefe" stroke="none"/>
-<line x1="750" y1="3210" x2="850" y2="3210" stroke="#222" stroke-width="1.5"/>
-<line x1="750" y1="3270" x2="850" y2="3270" stroke="#222" stroke-width="1.5"/>
-<text x="800" y="3228" text-anchor="middle" fill="#222">rite_sessions</text>
-<text x="800" y="3244" text-anchor="middle" fill="#222">(otra feature:</text>
-<text x="800" y="3260" text-anchor="middle" fill="#222">ritos)</text>
+<text x="800" y="2650" text-anchor="middle" fill="#222">genome_versions,</text>
+<text x="800" y="2666" text-anchor="middle" fill="#222">mutation_decisions,</text>
+<text x="800" y="2682" text-anchor="middle" fill="#222">decision_log y</text>
+<text x="800" y="2698" text-anchor="middle" fill="#222">decision_replacements</text>
 <rect x="1410" y="2450" width="100" height="60" fill="#fdfefe" stroke="none"/>
 <line x1="1410" y1="2450" x2="1510" y2="2450" stroke="#222" stroke-width="1.5"/>
 <line x1="1410" y1="2510" x2="1510" y2="2510" stroke="#222" stroke-width="1.5"/>
-<text x="1460" y="2484" text-anchor="middle" fill="#222">anchor_queue</text>
-<text x="90" y="3410" font-size="11" fill="#777">Admin del founder: /admin (lectura y paneles), /api/admin (acciones) y /api/admin/epoca (cerrar y abrir épocas) · docs/dfd/admin.json · commit 0e07d8f · * = flujo con datos sensibles</text>
+<text x="1460" y="2484" text-anchor="middle" fill="#222">latent_audits</text>
+<rect x="750" y="2830" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="750" y1="2830" x2="850" y2="2830" stroke="#222" stroke-width="1.5"/>
+<line x1="750" y1="2890" x2="850" y2="2890" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="2864" text-anchor="middle" fill="#222">academia_content</text>
+<rect x="750" y="3020" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="750" y1="3020" x2="850" y2="3020" stroke="#222" stroke-width="1.5"/>
+<line x1="750" y1="3080" x2="850" y2="3080" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="3022" text-anchor="middle" fill="#222">leads</text>
+<text x="800" y="3038" text-anchor="middle" fill="#222">(solicitudes</text>
+<text x="800" y="3054" text-anchor="middle" fill="#222">de empresas y</text>
+<text x="800" y="3070" text-anchor="middle" fill="#222">avisos de</text>
+<rect x="750" y="3210" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="750" y1="3210" x2="850" y2="3210" stroke="#222" stroke-width="1.5"/>
+<line x1="750" y1="3270" x2="850" y2="3270" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="3220" text-anchor="middle" fill="#222">bot_actions y</text>
+<text x="800" y="3236" text-anchor="middle" fill="#222">telegram_links</text>
+<text x="800" y="3252" text-anchor="middle" fill="#222">(otra feature:</text>
+<text x="800" y="3268" text-anchor="middle" fill="#222">Telegram)</text>
+<rect x="750" y="3400" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="750" y1="3400" x2="850" y2="3400" stroke="#222" stroke-width="1.5"/>
+<line x1="750" y1="3460" x2="850" y2="3460" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="3418" text-anchor="middle" fill="#222">rite_sessions</text>
+<text x="800" y="3434" text-anchor="middle" fill="#222">(otra feature:</text>
+<text x="800" y="3450" text-anchor="middle" fill="#222">ritos)</text>
+<rect x="1410" y="2640" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1410" y1="2640" x2="1510" y2="2640" stroke="#222" stroke-width="1.5"/>
+<line x1="1410" y1="2700" x2="1510" y2="2700" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="2674" text-anchor="middle" fill="#222">anchor_queue</text>
+<text x="90" y="3600" font-size="11" fill="#777">Admin del founder: /admin (lectura y paneles), /api/admin (acciones) y /api/admin/epoca (cerrar y abrir épocas) · docs/dfd/admin.json · commit 4032c7c · * = flujo con datos sensibles</text>
 </svg>

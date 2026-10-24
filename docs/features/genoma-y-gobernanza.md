@@ -1,6 +1,6 @@
 # Ficha: Genoma y gobernanza
 
-Dueño: QA (por asignar) · Revisor: John · Fecha: 2026-10-21 · Commit de referencia: 0e07d8f
+Dueño: QA (por asignar) · Revisor: John · Fecha: 2026-10-21 · Commit de referencia: 0e07d8f · Actualizada al release `wp/32-release` (4032c7c): secciones 1, 2, 4, 5, 6, 7 y 8
 
 ## 1. Resumen
 
@@ -11,7 +11,7 @@ Qué hace: guarda las **reglas del sistema como datos versionados** y deja a la 
 - **Fitness de la época**: el algoritmo mide retención, calidad, participación en ritos y ausencia de disputas con los pesos del genoma y recomienda mantener o revertir; **el founder firma** la recomendación (acta). Es precondición para cerrar la época (feature gamificación y épocas).
 - **Auditorías latentes**: registro de «qué produce esta regla que no buscábamos, a quién le sirve y a quién no», enlazable a una decisión.
 - **Votos**: una votación abierta con umbral; una persona con sesión y acuerdo firmado vota una vez y suma +2 de reputación en gobernanza.
-- **`/gobernanza`** (pública): votación en vivo, auditorías y todas las decisiones con su huella (sha256), de la más reciente a la más vieja, sin las actas de ritos (esas van a Comunidad).
+- **`/gobernanza`** (pública): votación en vivo, auditorías y las decisiones **vigentes** con su huella (sha256), de la más reciente a la más vieja, sin las actas de ritos (esas van a Comunidad). Desde el release `wp/32-release` (ca8c0e0) una decisión reemplazada no se muestra en público: queda intacta en `decision_log`, el vínculo se registra aparte en `decision_replacements` (solo inserción) y el original solo lo ve el founder en `/admin`; la vigente dice de qué fecha es lo que reemplaza.
 
 Quién lo usa: el founder (`/admin`: mutar, fitness, auditorías), las personas con acuerdo firmado (votar) y cualquier visitante (leer `/gobernanza`). En el sitio público, el enlace de documento de referencia es el manifiesto (el founder decidió que `/whitepaper` redirija a `/manifiesto`); esta feature no depende de esa página.
 
@@ -19,7 +19,9 @@ Casos de uso: subir o bajar un presupuesto para la próxima temporada con su jus
 
 ## 2. Diagrama (DFD)
 
-Archivo: [`docs/dfd/genoma-y-gobernanza.tm7`](../dfd/genoma-y-gobernanza.tm7), más la imagen exportada [`docs/dfd/genoma-y-gobernanza.svg`](../dfd/genoma-y-gobernanza.svg). Los dos se generan desde la fuente [`docs/dfd/genoma-y-gobernanza.json`](../dfd/genoma-y-gobernanza.json) con `python docs/dfd/generar_tm7.py docs/dfd/genoma-y-gobernanza.json --estricto`, que pasa: cada `codigo` existe en el repo. La fuente tiene 29 elementos (3 actores, 15 procesos, 11 almacenes), 42 flujos (7 sensibles) y 3 fronteras de confianza.
+Archivo: [`docs/dfd/genoma-y-gobernanza.tm7`](../dfd/genoma-y-gobernanza.tm7), más la imagen exportada [`docs/dfd/genoma-y-gobernanza.svg`](../dfd/genoma-y-gobernanza.svg). Los dos se generan desde la fuente [`docs/dfd/genoma-y-gobernanza.json`](../dfd/genoma-y-gobernanza.json) con `python docs/dfd/generar_tm7.py docs/dfd/genoma-y-gobernanza.json --estricto`, que pasa: cada `codigo` existe en el repo. La fuente tiene 31 elementos (3 actores, 16 procesos, 12 almacenes), 44 flujos (7 sensibles) y 3 fronteras de confianza.
+
+Cambios del release `wp/32-release`: `repo.listDecisions` ya no existe. Las decisiones públicas salen del proceso nuevo `decis` (`src/lib/decisiones.ts#decisionesVigentes`, `vigenteDe`), que lee `decision_log` (h32) y el almacén nuevo `decision_replacements` (h44); `/gobernanza` lo llama en h43 y `repo` queda solo para la votación (h31).
 
 Leyenda: los flujos con `*` y en rojo llevan datos sensibles (sesión, voto, reputación); cada `subgraph` es una frontera de confianza.
 
@@ -43,10 +45,11 @@ flowchart LR
     firmar(("Firmar la recomendación (keep / revert)"))
     auditar(("Registrar y listar auditorías latentes"))
     pag_gob(("Página pública /gobernanza"))
-    repo(("Lecturas de decisiones y votación"))
+    repo(("Lecturas de la votación"))
     api_voto(("POST /api/governance/vote"))
     banner(("Banner de mutación anunciada (todas las páginas)"))
     defaults[("GENOME_DEFAULTS (valores en el código)")]
+    decis(("Decisiones vigentes (oculta las reemplazadas; enlaces viejos → la vigente)"))
   end
   subgraph F3["Base SQLite (/home/data)"]
     t_users[("users (rol)")]
@@ -59,6 +62,7 @@ flowchart LR
     t_periods[("periods (época actual)")]
     t_auditorias[("latent_audits")]
     t_votos[("proposals y votes")]
+    t_reemplazos[("decision_replacements (qué decisión reemplaza a cuál; solo inserción)")]
   end
   fundador -->|"h1 Abrir /admin *"| pag_admin
   pag_admin -->|"h2 Exigir founder *"| authz
@@ -90,8 +94,10 @@ flowchart LR
   auditar -->|"h28 Guardar o leer auditorías"| t_auditorias
   api_admin -->|"h29 Resultado"| fundador
   visitante -->|"h30 Ver decisiones"| pag_gob
-  pag_gob -->|"h31 Decisiones y votación"| repo
-  repo -->|"h32 Leer decisiones"| t_decision
+  pag_gob -->|"h31 Votación"| repo
+  pag_gob -->|"h43 Decisiones vigentes y vigente de cada auditoría"| decis
+  decis -->|"h32 Leer decisiones"| t_decision
+  decis -->|"h44 Leer reemplazos"| t_reemplazos
   repo -->|"h33 Propuesta, conteo y mi voto"| t_votos
   pag_gob -->|"h34 Auditorías públicas"| auditar
   pag_gob -->|"h35 Página pública"| visitante
@@ -102,7 +108,7 @@ flowchart LR
   api_voto -->|"h40 Resultado"| votante
   banner -->|"h41 Mutación anunciada"| t_genoma
   banner -->|"h42 Aviso público"| visitante
-  linkStyle 0,1,5,6,35,36,38 stroke:#b03a2e,color:#b03a2e
+  linkStyle 0,1,5,6,37,38,40 stroke:#b03a2e,color:#b03a2e
   style F1 fill:none,stroke:#c0392b,stroke-dasharray:6 4
   style F2 fill:none,stroke:#c0392b,stroke-dasharray:6 4
   style F3 fill:none,stroke:#c0392b,stroke-dasharray:6 4
@@ -142,8 +148,9 @@ Acción complementaria: **una persona vota** (`VoteForm` → `POST /api/governan
 | `motor` Motor puro de fitness y recomendación | Proceso | `apps/web/src/lib/fitness.ts` → `computeFitness`, `recommend` | fitness.ts:63-113. Puro; renormaliza por los pesos con datos; `recommend` = keep si no hay época anterior. |
 | `firmar` Firmar la recomendación (keep / revert) | Proceso | `apps/web/src/lib/epochs.ts` → `signEpochDecision` | epochs.ts:123-153. Exige la mutación de N+1 decidida (132); escribe acta y marca firmado. «revert» no revierte el genoma. |
 | `auditar` Registrar y listar auditorías latentes | Proceso | `apps/web/src/lib/audits.ts` → `createLatentAudit`, `listLatentAudits` | audits.ts:45-117. Valida longitud mínima de 3; no restringe la mecánica a `AUDIT_MECHANISMS`. |
-| `pag_gob` Página pública /gobernanza | Proceso | `apps/web/app/gobernanza/page.tsx` → `GobernanzaPage` | app/gobernanza/page.tsx:20-195. Filtra actas de ritos (`esActaDeRito`), invierte el orden y muestra la huella corta. |
-| `repo` Lecturas de decisiones y votación | Proceso | `apps/web/src/lib/repo.ts` → `listDecisions`, `getOpenProposal`, `voteTally`, `userVote` | repo.ts:168-197. Usan `getDb()` global. |
+| `pag_gob` Página pública /gobernanza | Proceso | `apps/web/app/gobernanza/page.tsx` → `GobernanzaPage` | Solo decisiones vigentes (`decisionesVigentes`); filtra actas de ritos (`esActaDeRito`), invierte el orden y muestra la huella corta. Una auditoría enlazada a una decisión reemplazada lleva a la vigente (`vigenteDe`). |
+| `repo` Lecturas de la votación | Proceso | `apps/web/src/lib/repo.ts` → `getOpenProposal`, `voteTally`, `userVote` | Usan `getDb()` global. `listDecisions` se quitó en el release (ca8c0e0). |
+| `decis` Decisiones vigentes | Proceso | `apps/web/src/lib/decisiones.ts` → `decisionesVigentes`, `vigenteDe` | Oculta las reemplazadas (tabla `decision_replacements` y, si la migración no corrió, la histórica de las etiquetas viejas). `decisionesReemplazadas` las lista completas para /admin. La migración `vincularReemplazosConocidos` corre en cada arranque (`seedIfEmpty`). |
 | `api_voto` POST /api/governance/vote | Proceso | `apps/web/app/api/governance/vote/route.ts` → `POST` | app/api/governance/vote/route.ts:10-45. Puerta por `session.claSigned` de la cookie (12), límite 20/min (15), voto + reputación sin transacción (30-43). |
 | `banner` Banner de mutación anunciada (todas las páginas) | Proceso | `apps/web/src/components/MutationBanner.tsx` → `MutationBanner` | MutationBanner.tsx: `pendingMutation(getDb())` en cada página; nombres humanos de los 4 genes en su propia tabla (12-17). |
 | `defaults` GENOME_DEFAULTS (valores en el código) | Almacén de datos | `apps/web/src/lib/genome.ts` → `GENOME_DEFAULTS` | genome.ts:116-189: `GENOME_V1` + `GENOME_V2_NUEVAS`. Valores en código que rigen para toda clave ausente de la versión guardada. |
@@ -151,6 +158,7 @@ Acción complementaria: **una persona vota** (`VoteForm` → `POST /api/governan
 | `t_genoma` genome_versions (append-only) | Almacén de datos | `apps/web/src/lib/schema.sql` → `genome_versions` | `version` UNIQUE; `effective_from_epoch` decide desde cuándo rige. |
 | `t_mutaciones` mutation_decisions (una por época) | Almacén de datos | `apps/web/src/lib/schema.sql` → `mutation_decisions` | UNIQUE (epoch): una sola decisión por época. |
 | `t_decision` decision_log | Almacén de datos | `apps/web/src/lib/schema.sql` → `decision_log` | `hash` = sha256(título\|razón) en código nuevo; el seed usa fecha\|título\|razón. |
+| `t_reemplazos` decision_replacements | Almacén de datos | `apps/web/src/lib/schema.sql` → `decision_replacements` | Solo inserción: `decision_id` → `replaced_by_id`. Nada se reescribe en `decision_log`. |
 | `t_fitness` epoch_fitness | Almacén de datos | `apps/web/src/lib/schema.sql` → `epoch_fitness` | Append-only: cada cálculo es una fila nueva. |
 | `t_senales` Señales del fitness: points_ledger, milestones, rite_attendance | Almacén de datos | `apps/web/src/lib/schema.sql` → `points_ledger`, `milestones`, `rite_attendance` | Tablas de otros features (ledgers, Ágora, ritos) leídas en agregado. |
 | `t_rep` reputation_events (append-only) | Almacén de datos | `apps/web/src/lib/schema.sql` → `reputation_events` | El voto suma +2 en el eje gobernanza con `period_id` explícito. |
@@ -192,8 +200,8 @@ Acción complementaria: **una persona vota** (`VoteForm` → `POST /api/governan
 | h28 Guardar o leer auditorías | `auditar` → `t_auditorias` | SQL | INSERT latent_audits; SELECT con el título de la decisión enlazada |
 | h29 Resultado | `api_admin` → `fundador` | HTTPS | JSON {ok, mutation \| report} o {error} (400 con el mensaje de la excepción) |
 | h30 Ver decisiones | `visitante` → `pag_gob` | HTTPS | GET /gobernanza (pública; cookie opcional) |
-| h31 Decisiones y votación | `pag_gob` → `repo` | Llamada en proceso | id de la propuesta abierta; wallet de la sesión si existe |
-| h32 Leer decisiones | `repo` → `t_decision` | SQL | SELECT * FROM decision_log ORDER BY id |
+| h31 Votación | `pag_gob` → `repo` | Llamada en proceso | id de la propuesta abierta; wallet de la sesión si existe |
+| h32 Leer decisiones | `decis` → `t_decision` | SQL | SELECT id, date, title, reason, hash FROM decision_log ORDER BY id |
 | h33 Propuesta, conteo y mi voto | `repo` → `t_votos` | SQL | proposals open; COUNT por choice; voto de la wallet |
 | h34 Auditorías públicas | `pag_gob` → `auditar` | Llamada en proceso | listLatentAudits |
 | h35 Página pública | `pag_gob` → `visitante` | HTTPS | HTML: decisiones con huella, votación en vivo y auditorías |
@@ -204,6 +212,8 @@ Acción complementaria: **una persona vota** (`VoteForm` → `POST /api/governan
 | h40 Resultado | `api_voto` → `votante` | HTTPS | JSON {ok} o {error} |
 | h41 Mutación anunciada | `banner` → `t_genoma` | SQL | versiones con effective_from_epoch = actual + 1 y su razón |
 | h42 Aviso público | `banner` → `visitante` | HTTPS | «Cambio anunciado»: parámetro, valor nuevo y anterior |
+| h43 Decisiones vigentes y vigente de cada auditoría | `pag_gob` → `decis` | Llamada en proceso | base; `decisionLogId` de cada auditoría |
+| h44 Leer reemplazos | `decis` → `t_reemplazos` | SQL | SELECT decision_id, replaced_by_id FROM decision_replacements |
 
 ## 6. Dependencias con otras features
 
@@ -216,7 +226,7 @@ Acción complementaria: **una persona vota** (`VoteForm` → `POST /api/governan
 - **[telegram](telegram.md)**: `DAILY_FOCUS_HOUR` (`dailyFocusHour`).
 - **[agora-y-hitos](agora-y-hitos.md)**: `AGORA_HITOS_DEFAULT`; el fitness cuenta `milestones` aprobados como entregas.
 - **[anclaje-stellar](anclaje-stellar.md)**: las actas del decision log NO se encolan para anclar (solo raíces de época, CLA y ritos).
-- **[sitio-publico-y-formularios](sitio-publico-y-formularios.md)**: `/gobernanza` y el banner del layout son públicos; la decisión histórica marcada «Reemplazada por…» viene de `src/lib/agora-labels.ts`.
+- **[sitio-publico-y-formularios](sitio-publico-y-formularios.md)**: `/gobernanza` y el banner del layout son públicos; la marca de la decisión histórica de las etiquetas viejas (`esDecisionReemplazada`, `REEMPLAZO_DECISION`) vive en `src/lib/agora-labels.ts` y los reemplazos en `src/lib/decisiones.ts`. **[ritos-y-comunidad](ritos-y-comunidad.md)**: `/comunidad` también muestra solo las vigentes.
 - **[00-esqueleto](00-esqueleto.md)** (arranque): `src/lib/seed.ts` siembra el genoma v1, las decisiones históricas y la votación de ejemplo; `seedGenomeV2` corre en cada arranque (`seed.ts:89`).
 
 ## 7. Amenazas relevantes
@@ -228,6 +238,7 @@ Acción complementaria: **una persona vota** (`VoteForm` → `POST /api/governan
 | Una mutación fuera de límites (más de 2 genes, más de 15 %, sin justificación) o aplicada a la época en curso o a una pasada | Manipulación | `mutar`, `validar` | Mitigada | `validateMutation` (`apps/web/src/lib/mutation.ts:49-72`); siempre `effective_from_epoch = actual + 1` (87-88, 108-110); una decisión por época (`assertUndecided`, 80-83, y `UNIQUE (epoch)` en `apps/web/src/lib/schema.sql:243`). |
 | Cambiar parámetros vivos sin pasar por gobernanza, editando los defaults del código | Manipulación | `genoma`, `defaults` | Pendiente | Las claves de WP31 no son mutables (`NUMERIC_GENES`, `mutation.ts:22`) y la v1 guardada no las trae: rigen los valores de `GENOME_V2_NUEVAS` (`apps/web/src/lib/genome.ts:131-189`) por la mezcla (207-209). Un cambio de código cambia la época en curso y la lectura de épocas pasadas sin acta. |
 | Reescribir una decisión ya publicada (título, razón y hash juntos) sin dejar rastro | Manipulación | `t_decision` | Pendiente | El hash es `sha256(título\|razón)` (`mutation.ts:102-106`, `epochs.ts:144-145`), sin encadenar con la anterior y sin anclar: solo se encolan raíces de época, CLA y ritos (`epocas.ts:232`, `onboard.ts:140`, `ritos.ts:516`). |
+| Mostrar en público una decisión que ya fue reemplazada, como si siguiera vigente | Manipulación / Repudio | `pag_gob`, `decis` | Mitigada | Release `wp/32-release` (ca8c0e0): `/gobernanza` lista `decisionesVigentes` (`apps/web/src/lib/decisiones.ts:103-114`), que excluye las de `decision_replacements` (`:96-100`); el original no se toca y solo lo lista `/admin` (`decisionesReemplazadas`, `:137-148`). El vínculo es de solo inserción (`registrarReemplazo`, `:54-70`). Caso 8 de la caracterización. |
 | El founder niega haber decidido una mutación o una firma | Repudio | `mutar`, `firmar` | Mitigada | Acta, versión y decisión se escriben en la misma transacción (`mutation.ts:101-115`; `epochs.ts:138-152`) y se publican en `/gobernanza`. El riesgo de edición directa de la base queda en la fila anterior (Pendiente). |
 | Votar con una sesión de una cuenta dada de baja o sin fila en `users` | Elevación de privilegios | `api_voto`, h36 | Pendiente | La ruta solo mira `session.claSigned` de la cookie (`apps/web/app/api/governance/vote/route.ts:12`), no `users.status`; la prueba de caracterización lo fija (`genoma-y-gobernanza.test.ts`, paso 6). La cookie dura 24 h (`session.ts:24`). |
 | Votar dos veces con la misma wallet | Manipulación | `api_voto` → `t_votos`, h37 | Mitigada | `UNIQUE (proposal_id, wallet)` (`apps/web/src/lib/schema.sql:277`) y 409 (`vote/route.ts:30-38`). |
@@ -240,7 +251,7 @@ Acción complementaria: **una persona vota** (`VoteForm` → `POST /api/governan
 
 ## 8. Prueba de caracterización
 
-Archivo: [`apps/web/src/lib/caracterizacion/genoma-y-gobernanza.test.ts`](../../apps/web/src/lib/caracterizacion/genoma-y-gobernanza.test.ts). Se corre con `cd apps/web && npx vitest run src/lib/caracterizacion/genoma-y-gobernanza.test.ts` y **pasa (7 de 7)**.
+Archivo: [`apps/web/src/lib/caracterizacion/genoma-y-gobernanza.test.ts`](../../apps/web/src/lib/caracterizacion/genoma-y-gobernanza.test.ts). Se corre con `cd apps/web && npx vitest run src/lib/caracterizacion/genoma-y-gobernanza.test.ts` y **pasa (8 de 8)**.
 
 Qué flujo cubre, llamando a las **rutas reales** (`POST /api/admin` y `POST /api/governance/vote`) y a las lecturas de `/gobernanza` contra una base SQLite temporal en memoria con `schema.sql` + `seedIfEmpty`:
 
@@ -250,9 +261,12 @@ Qué flujo cubre, llamando a las **rutas reales** (`POST /api/admin` y `POST /ap
 4. Fitness: reporte de la época 1 con sus 4 componentes y «mantener» (sin época anterior); firmar «revertir» escribe el acta y **no** revierte el genoma (hallazgo); firmar dos veces → 400.
 5. Auditoría latente enlazada a la decisión; campo obligatorio corto → 400.
 6. Voto: 200, conteo +1, +2 de reputación en gobernanza con `period_id = 1`; segundo voto → 409; sin acuerdo en la cookie → 401; propuesta inexistente → 404; **una cuenta `alumni` con sesión vigente vota** (hallazgo).
-7. `/gobernanza`: decisiones sin actas de ritos, de la más reciente a la más vieja, todas con hash hex de 64.
+7. `/gobernanza`: decisiones **vigentes** (`decisionesVigentes`) sin actas de ritos, de la más reciente a la más vieja, todas con hash hex de 64.
+8. **ARREGLADO** (ca8c0e0): una base nueva no tiene reemplazos; con la decisión histórica de las etiquetas viejas (como la de producción), el arranque (`aplicarContenidoPublico` + `vincularReemplazosConocidos`, idempotente) registra un vínculo en `decision_replacements`; el original sigue igual en `decision_log` (título, razón y huella), no sale entre las vigentes, la decisión nueva dice qué fecha reemplaza y `vigenteDe` lleva un enlace viejo a la vigente.
 
-Cómo se arma: sesión simulada con `vi.mock` de `@/lib/session`, alias `@/lib/*` resueltos a los módulos reales, y la base temporal llega a las rutas y a `lib/repo.ts` por `globalThis.__zelenaDb`. Las reglas finas tienen sus pruebas: `genome.test.ts` (24), `mutation.test.ts` (16), `epochs.test.ts` (6), `fitness.test.ts` (9) y `audits.test.ts` (8).
+Qué cambió respecto de la versión escrita contra 0e07d8f: el caso 7 importaba `repo.listDecisions`, que el commit ca8c0e0 quitó (error de `tsc` y de carga); ahora usa `decisionesVigentes`, que es lo que lee la página. El caso 8 es nuevo y fija el arreglo. No hay regresiones.
+
+Cómo se arma: sesión simulada con `vi.mock` de `@/lib/session`, alias `@/lib/*` resueltos a los módulos reales (incluido `@/lib/agora-borradores`, que `/api/admin` importa desde el release), y la base temporal llega a las rutas y a `lib/repo.ts` por `globalThis.__zelenaDb`. Las reglas finas tienen sus pruebas: `genome.test.ts`, `mutation.test.ts`, `epochs.test.ts`, `fitness.test.ts`, `audits.test.ts` y `decisiones.test.ts`.
 
 ## 9. Preguntas abiertas
 

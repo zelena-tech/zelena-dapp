@@ -1,6 +1,6 @@
 # Ficha: Ritos y comunidad
 
-Dueño: QA (por asignar) · Revisor: John · Fecha: 2026-10-21 · Commit de referencia: 0e07d8f
+Dueño: QA (por asignar) · Revisor: John · Fecha: 2026-10-21 · Commit de referencia: 0e07d8f · Actualizada al release `wp/32-release` (4032c7c): secciones 1 a 5, 7, 8 y 9
 
 ## 1. Resumen
 
@@ -10,13 +10,15 @@ Flujo de vida de un rito: el founder o un supervisor lo **prepara** en `/admin` 
 
 La comunidad lo ve en **`/comunidad`** (pública): ritos con su cadencia, próximos de comunidad, pasados con su **conteo** y su huella (nunca la lista de personas), encuentros, Academia, las 3 decisiones más recientes y, con sesión, «Has estado en N ritos». La asistencia alimenta también el **fitness de la época** (participación).
 
-**Encuentros y su aviso**: `/encuentros` anuncia jornadas abiertas que se publican **en código** (`ENCUENTROS`, hoy vacía); mientras no hay fecha, un formulario «Avísame» guarda nombre, correo y ciudad en `leads` (`interes = 'encuentros'`), que el founder ve en `/admin`. La landing anuncia «Lo próximo» (el encuentro o la próxima demo/retro, lo que llegue antes).
+**Encuentros y su aviso**: `/encuentros` anuncia jornadas abiertas que se publican **en código** (`ENCUENTROS`, hoy vacía); mientras no hay fecha, un formulario «Avísame» guarda nombre, correo y ciudad en `leads` (`interes = 'encuentros'`), que el founder ve en `/admin`. Desde el release `wp/32-release` (dab355c, hallazgo A3) la casilla de autorización viaja y la API la exige: sin ella, 400 y nada guardado; con ella, la prueba (versión y huella del aviso de privacidad, fecha UTC) queda en `lead_consents` junto al aviso. La landing anuncia «Lo próximo» (el encuentro o la próxima demo/retro, lo que llegue antes).
 
 Quién lo usa: founder y supervisores (gestionan), cualquier persona con cuenta activa y acuerdo firmado (presenta, relata o asiste; el sync solo el equipo), visitantes sin cuenta (leen `/comunidad` y dejan su correo).
 
 ## 2. Diagrama (DFD)
 
-Archivo: [`docs/dfd/ritos-y-comunidad.tm7`](../dfd/ritos-y-comunidad.tm7), más la imagen exportada [`docs/dfd/ritos-y-comunidad.svg`](../dfd/ritos-y-comunidad.svg). Los dos se generan desde la fuente [`docs/dfd/ritos-y-comunidad.json`](../dfd/ritos-y-comunidad.json) con `python docs/dfd/generar_tm7.py docs/dfd/ritos-y-comunidad.json --estricto`, que pasa: cada `codigo` existe en el repo. La fuente tiene 31 elementos (5 actores, 15 procesos, 11 almacenes), 39 flujos (19 sensibles) y 5 fronteras de confianza.
+Archivo: [`docs/dfd/ritos-y-comunidad.tm7`](../dfd/ritos-y-comunidad.tm7), más la imagen exportada [`docs/dfd/ritos-y-comunidad.svg`](../dfd/ritos-y-comunidad.svg). Los dos se generan desde la fuente [`docs/dfd/ritos-y-comunidad.json`](../dfd/ritos-y-comunidad.json) con `python docs/dfd/generar_tm7.py docs/dfd/ritos-y-comunidad.json --estricto`, que pasa: cada `codigo` existe en el repo. La fuente tiene 32 elementos (5 actores, 15 procesos, 12 almacenes), 40 flujos (20 sensibles) y 5 fronteras de confianza.
+
+Cambios del release `wp/32-release`: almacén nuevo `lead_consents` (`d_consents`) y flujo f40 (prueba de la autorización del aviso); f28 lleva la casilla; la pasada de anclaje la dispara el workflow `anclaje.yml` cada 15 minutos.
 
 Vista para GitHub (salida de `--mermaid`): `[/ /]` actor, `(( ))` proceso, `[( )]` almacén, cada `subgraph` es una frontera de confianza y los flujos con `*` y en rojo llevan datos sensibles.
 
@@ -44,8 +46,8 @@ flowchart LR
     p_publico(("Lecturas públicas sin wallets"))
     p_admin(("Panel de ritos y avisos de encuentros en /admin"))
     p_enc_pag(("Página /encuentros"))
-    p_enc_api(("API /api/encuentros/aviso"))
-    p_anclaje(("Pasada de anclaje (botón de /admin o cron externo)"))
+    p_enc_api(("API /api/encuentros/aviso (exige la autorización de datos)"))
+    p_anclaje(("Pasada de anclaje (workflow anclaje.yml cada 15 min, o founder)"))
     p_fitness(("Participación para el fitness de la época"))
     d_memoria[("Memoria del proceso (límites de tasa y fallos por rito)")]
   end
@@ -59,6 +61,7 @@ flowchart LR
     d_genoma[("genome_versions (RITES_CADENCE, RITE_*)")]
     d_leads[("leads (interes = 'encuentros')")]
     d_env[("Variables de entorno (RITES_SECRET o SESSION_SECRET)")]
+    d_consents[("lead_consents (prueba de la autorización del aviso)")]
   end
   subgraph F5["Código desplegado (dato versionado en el repo)"]
     d_encuentros[("Lista de encuentros en código")]
@@ -102,7 +105,8 @@ flowchart LR
   p_api_asistir -->|"f37 Resultado de la asistencia"| asis
   p_api_ritos -->|"f38 Estado de la sesión"| anf
   p_enc_pag -->|"f39 Página /encuentros"| vis
-  linkStyle 0,5,6,7,8,9,10,12,13,14,15,19,24,27,28,29,30,33,34 stroke:#b03a2e,color:#b03a2e
+  p_enc_api -->|"f40 Guardar la prueba de la autorización *"| d_consents
+  linkStyle 0,5,6,7,8,9,10,12,13,14,15,19,24,27,28,29,30,33,34,39 stroke:#b03a2e,color:#b03a2e
   style F1 fill:none,stroke:#c0392b,stroke-dasharray:6 4
   style F2 fill:none,stroke:#c0392b,stroke-dasharray:6 4
   style F3 fill:none,stroke:#c0392b,stroke-dasharray:6 4
@@ -133,7 +137,7 @@ Acción elegida: **una persona registra su asistencia a la demo quincenal del vi
    - Abrir: founder, supervisor o anfitrión de esa sesión; solo desde `Planned` y dentro de la ventana. Cerrar: solo desde `Open`; huella `hashCierre` (HMAC-SHA256 de un JSON canónico con tipo, fecha, asistentes ordenados, anfitrión, relator y resumen); `decision_log` («Rito demo quincenal del … cerrado · N asistentes», razón con resumen y huella); `anchor_queue (kind 'rite')`; +5 a anfitrión y +5 a relator (si siguen siendo válidos y no son la misma persona).
 5. **Base de datos:** lee `users`, `project_members` (sync), `rite_sessions`, `rite_attendance`, `reputation_events`, `points_ledger` (idempotencia por `ref`), `genome_versions`, `periods`; escribe `rite_attendance` y `reputation_events`. Al abrir/cerrar: `rite_sessions` (UPDATE), `decision_log`, `anchor_queue`, `reputation_events` (INSERT).
 6. **Respuesta y qué hace la pantalla con ella:** `200 { ok: true, registrada: true, yaEstaba: false, reputacion: 2, mensaje: "Listo. Quedó registrada tu asistencia." }`; el formulario se reemplaza por el mensaje y «Estar es suficiente. Faltar no resta nada.». Una segunda vez: `registrada: false, yaEstaba: true`, «Ya estabas registrado.». El anfitrión ve subir el conteo en el siguiente refresco del código. Tras cerrar, `/comunidad` lista el rito en «pasados» con «1 persona registrada», el resumen, la huella corta y, cuando se ancle, el enlace a la transacción.
-7. **Casos de falla:** `401` «Entra para registrar tu asistencia.»; `429` «Demasiados intentos con este rito. Pide ayuda a quien presenta.»; `400` «Entrada inválida.» o «Ese código ya cambió. Pide el actual a quien presenta.»; `403` fila `pending:`, cuenta inactiva, cuenta de prueba, «Para registrar asistencia primero firma el acuerdo de contribución.», o «Este rito es del equipo…» (sync); `404` rito inexistente; `409` «Este rito no está abierto ahora.» (cerrado, sin abrir o fuera de la ventana); `500` genérico (el detalle va a `console.error`). En el navegador sin red: «Sin conexión. Revisa tu red e intenta de nuevo.».
+7. **Casos de falla:** `401` «Entra para registrar tu asistencia.»; `429` «Demasiados intentos con este rito. Pide ayuda a quien presenta.»; `400` «Entrada inválida.» o «Ese código ya cambió. Pide el actual a quien presenta.»; `403` fila `pending:`, cuenta inactiva, «Las cuentas de demostración no registran asistencia.» (texto del release, 4291a2d: una cuenta con la wallet del navegador y una invitación real ya no es de demostración), «Para registrar asistencia primero firma el acuerdo de contribución.», o «Este rito es del equipo…» (sync); `404` rito inexistente; `409` «Este rito no está abierto ahora.» (cerrado, sin abrir o fuera de la ventana); `500` genérico (el detalle va a `console.error`). En el navegador sin red: «Sin conexión. Revisa tu red e intenta de nuevo.».
 
 ## 4. Elementos del DFD en el código
 
@@ -156,8 +160,8 @@ Acción elegida: **una persona registra su asistencia a la demo quincenal del vi
 | Lecturas públicas | Proceso | `apps/web/src/lib/ritos.ts#ritosPublicos` | Y `decisionesPublicas`, `detalleRito`, `asistenciaPropia`, `proximoRitoDeComunidad`. |
 | Panel en /admin | Proceso | `apps/web/app/admin/page.tsx#AdminPage` | `panelRitosAdmin(db)` y la sección «Avisos de encuentros» (de `leads`). |
 | Página /encuentros | Proceso | `apps/web/app/encuentros/page.tsx#Encuentros` | `revalidate = 3600`. |
-| API /api/encuentros/aviso | Proceso | `apps/web/app/api/encuentros/aviso/route.ts#POST` | Pública; campo trampa `sitio`. |
-| Pasada de anclaje | Proceso | `apps/web/app/api/anchor/run/route.ts#POST` | Founder por sesión o `x-anchor-secret`. Ningún workflow la llama. |
+| API /api/encuentros/aviso | Proceso | `apps/web/app/api/encuentros/aviso/route.ts#POST` | Pública; campo trampa `sitio`; exige `acepto: true` (400 sin la casilla, 409 si el aviso cambió) y guarda con `guardarSolicitudConAutorizacion`. |
+| Pasada de anclaje | Proceso | `apps/web/app/api/anchor/run/route.ts#POST` | Founder por sesión o `x-anchor-secret`; la llama el workflow `.github/workflows/anclaje.yml` cada 15 minutos (76ed59e). |
 | Participación de la época | Proceso | `apps/web/src/lib/ritos.ts#participacionRitos` | La consume `src/lib/epochs.ts:69` (`gatherEpochData`). |
 | rite_sessions | Almacén | `apps/web/src/lib/schema.sql#rite_sessions` | `UNIQUE (kind, scheduled_for)`; `join_url` solo se entrega con sesión. |
 | rite_attendance | Almacén | `apps/web/src/lib/schema.sql#rite_attendance` | `UNIQUE (session_id, wallet, layer)`. |
@@ -167,6 +171,7 @@ Acción elegida: **una persona registra su asistencia a la demo quincenal del vi
 | users + project_members | Almacén | `apps/web/src/lib/schema.sql#users` | Estado, demo, acuerdo, rol; membresías para la audiencia del sync. |
 | genome_versions | Almacén | `apps/web/src/lib/genome.ts#getActiveGenome` | `RITES_CADENCE`, `RITE_WINDOW_MIN` 30, `RITE_CODE_ROTATION_S` 90, `RITE_ATTEND_REP` 2, `RITE_HOST_REP` 5, `RITE_RECORDER_REP` 5. |
 | leads | Almacén | `apps/web/src/lib/schema.sql#leads` | Compartida con `/empresas/contacto`; los avisos llevan `interes = 'encuentros'`. |
+| lead_consents | Almacén | `apps/web/src/lib/schema.sql#lead_consents` | Prueba de la autorización de cada aviso (`formulario = 'encuentros'`): versión, huella del aviso y fecha UTC. Solo inserción, sin IP. |
 | Lista de encuentros | Almacén | `apps/web/src/lib/encuentros.ts#ENCUENTROS` | Constante en código (hoy `[]`): publicar una fecha es un despliegue. |
 | Memoria del proceso | Almacén | `apps/web/src/lib/ritos.ts#anotarFallo` | `globalThis.__zelenaFallosRitos` y el mapa de `rate-limit.ts`; se pierden al reiniciar. |
 | Variables de entorno | Almacén | `apps/web/src/lib/ritos-codigo.ts#ritesSecret` | `RITES_SECRET` o `SESSION_SECRET`. |
@@ -204,8 +209,8 @@ Los marcados **(S)** llevan datos sensibles (credencial, sesión, firma o dato p
 | f25 **(S)** | Asistente → /comunidad/ritos/[id] | HTTPS | `GET` + cookie |
 | f26 | Página del rito → Asistente | HTTPS | estado, lugar, enlace (si corresponde), formulario |
 | f27 | Lista de encuentros → /encuentros | import de módulo | `ENCUENTROS` y `FORMATOS` |
-| f28 **(S)** | Visitante → API aviso | HTTPS | nombre, correo, ciudad (datos personales), campo trampa |
-| f29 **(S)** | API aviso → leads | SQL | `INSERT (nombre, email, interes 'encuentros', 'Ciudad: …')` |
+| f28 **(S)** | Visitante → API aviso | HTTPS | nombre, correo, ciudad (datos personales), campo trampa, `acepto: true` y versión del aviso |
+| f29 **(S)** | API aviso → leads | SQL | `INSERT (nombre, email, interes 'encuentros', 'Ciudad: …')` en la misma transacción que f40 |
 | f30 **(S)** | leads → /admin | SQL | últimos 100 leads |
 | f31 **(S)** | /admin → Founder | HTTPS | sesiones con conteo, candidatos a presentar, correos de avisos |
 | f32 | rite_attendance → Participación | SQL | asistencias de ritos cerrados y personas activas |
@@ -216,6 +221,7 @@ Los marcados **(S)** llevan datos sensibles (credencial, sesión, firma o dato p
 | f37 | API asistir → Asistente | HTTPS | `{ ok, registrada, yaEstaba, reputacion, mensaje }` o error |
 | f38 | API /api/ritos → Anfitrión | HTTPS | `{ ok, id, state }` |
 | f39 | /encuentros → Visitante | HTTPS | página con el formulario «Avísame» |
+| f40 **(S)** | API aviso → lead_consents | SQL | `INSERT (lead_id, 'encuentros', aviso_version, aviso_sha256, accepted_at)`; sin IP |
 
 ## 6. Dependencias con otras features
 
@@ -243,31 +249,34 @@ Los marcados **(S)** llevan datos sensibles (credencial, sesión, firma o dato p
 | Reputación duplicada por doble envío o dos identidades | Manipulación | Registrar asistencia → reputation_events (f15, f16) | Mitigada | `asistio` por todas las identidades (`src/lib/ritos.ts:557-563`), `yaEmitido` por `ref` en los dos ledgers (`:318-330`), `UNIQUE (session_id, wallet, layer)` en `schema.sql`. |
 | El anfitrión publica texto o enlace arbitrario, permanente, en el sitio | Manipulación | Gestión → decision_log (f6, f17) | Pendiente | Cualquier anfitrión con acuerdo firmado (también de la comunidad) cierra con `summary` (≤ 1000) y `notesUrl` https (`src/lib/ritos.ts:455-470`), que van a `/comunidad` y a la razón del acta con su hash (`:495-505`), sin revisión previa ni forma de corregir. |
 | Nadie fuera del servidor puede verificar la huella anclada | Repudio | Código y huella → anchor_queue (f18, f20) | Aceptada | Decisión de privacidad documentada: la huella lleva secreto para que no se pueda enumerar la lista (`src/lib/ritos-codigo.ts:91-109`); al rotar el secreto el servidor deja de poder recalcularlas (`:106-108`). El texto del acta dice que se ancla «en la red de pruebas», lo que es cierto solo cuando corre el anclaje (fila siguiente). |
-| La huella queda en cola y nunca se ancla | Repudio | Pasada de anclaje (f19, f20) | Pendiente | `cerrarRito` solo encola (`src/lib/ritos.ts:515-517`); la cola se procesa con `/api/anchor/run` (botón de `/admin` o `x-anchor-secret`), y ningún workflow la llama (solo `ci.yml`, `paquete-azure.yml` y `recordatorios.yml`). |
-| Nombre y correo guardados sin constancia de la autorización | Divulgación de información | API aviso → leads (f28, f29) | Pendiente | La casilla «Acepto el tratamiento…» es solo `required` en el navegador (`src/components/AvisoEncuentrosForm.tsx:111-118`); la API no la recibe ni la guarda (`app/api/encuentros/aviso/route.ts:30-36`) y `leads` no tiene columna para ella, mientras `/privacidad` ofrece «pedir prueba de esa autorización». Fijado en la prueba como HALLAZGO. |
-| Bots llenan `leads` con correos | Denegación de servicio | API aviso (f28) | Pendiente | Campo trampa (`aviso/route.ts:32`) y 5 envíos por IP cada 10 min (`:12`), pero la IP sale de `X-Forwarded-For`, que manda el cliente (`src/lib/rate-limit.ts:22-26`). |
+| La huella queda en cola y nunca se ancla | Repudio | Pasada de anclaje (f19, f20) | Mitigada | Release `wp/32-release` (76ed59e): el workflow `.github/workflows/anclaje.yml` llama a `/api/anchor/run` cada 15 minutos con `ANCHOR_RUN_SECRET`; y desde 27a3044 una fila que falla 8 veces queda `failed` en vez de reintentarse para siempre (`src/lib/anchor.ts:34`, `:160-172`). `cerrarRito` sigue solo encolando (`src/lib/ritos.ts`). Riesgo residual: depende de que el secret esté configurado en el repo y en App Settings. |
+| Nombre y correo guardados sin constancia de la autorización | Divulgación de información | API aviso → leads, lead_consents (f28, f29, f40) | Mitigada | Release `wp/32-release` (dab355c, hallazgo A3): la casilla viaja (`src/components/AvisoEncuentrosForm.tsx`, `acepto` y `aviso`), `avisoEncuentrosSchema` exige `acepto: true` (`src/lib/validation.ts:134-137` y `:160-166`; 400 si falta) y el aviso se guarda con su prueba en una transacción (`app/api/encuentros/aviso/route.ts:40-44`; `src/lib/consentimiento.ts:72-101`). Caso "ARREGLADO (A3)" de la caracterización. |
+| Bots llenan `leads` con correos | Denegación de servicio | API aviso (f28) | Mitigada | Campo trampa (`aviso/route.ts:34`) y 5 envíos por IP cada 10 min (`:14`); desde el release (05a2f4e) la IP es el último valor de `X-Forwarded-For` o `X-Azure-ClientIP` de nuestro Front Door, que el cliente no elige (`src/lib/rate-limit.ts:78-93`). Residual: contador en memoria de una instancia. |
 | Correos de la comunidad expuestos | Divulgación de información | /admin (f30, f31) | Mitigada | `/admin` exige rol founder leído de la base (`app/admin/page.tsx:33`) y el middleware exige sesión con acuerdo firmado (`apps/web/middleware.ts:24`, `:41`). |
 | Producción arranca sin secreto de ritos | Divulgación de información | Variables de entorno (f8) | Mitigada | `ritesSecret` lanza en producción si no hay `RITES_SECRET` ni `SESSION_SECRET` (`src/lib/ritos-codigo.ts:36-40`). |
 
 ## 8. Prueba de caracterización
 
-Archivo: `apps/web/src/lib/caracterizacion/ritos-y-comunidad.test.ts` (8 casos, pasan). Se corre con `cd apps/web && npx vitest run src/lib/caracterizacion/ritos-y-comunidad.test.ts`.
+Archivo: `apps/web/src/lib/caracterizacion/ritos-y-comunidad.test.ts` (8 casos, pasan con el release `wp/32-release`). Se corre con `cd apps/web && npx vitest run src/lib/caracterizacion/ritos-y-comunidad.test.ts`.
 
 Qué cubre, por las rutas reales y contra una base SQLite en memoria con `schema.sql` + `seedIfEmpty`:
 
 - gestión: el founder prepara (fecha normalizada, duración del genoma) y asigna; sin sesión 401; un contributor 403; una fecha fuera de la cadencia 400; abrir antes de la ventana 409 y dentro 200;
 - **flujo principal**: abrir → el anfitrión ve el código (`no-store`, solo `codigo`, `expiraEnS`, `asistentes`) → quien asiste no lo ve (403) → código equivocado 400 → código bueno con espacio registra (+2) → segunda vez `yaEstaba` → el conteo sube → cerrar: huella de 64 hex, `rite_attendance`, reputación de asistente, anfitrión y relator con `period_id`, fila `rite` pendiente en `anchor_queue`, acta «Rito demo quincenal del … cerrado · 1 asistente» con resumen y huella → `/comunidad`: pasados con conteo y huella, sin wallets, sin el acta en las decisiones, `detalleRito` sin enlace para quien no tiene sesión, `asistenciaPropia`;
 - fuera de la ventana no se registra (409);
-- aviso de `/encuentros`: guarda en `leads` con `interes = 'encuentros'` y `Ciudad: …`; la lista de encuentros está vacía;
-- tres HALLAZGOS fijados: el aviso se acepta sin constancia de autorización; la ruta y la lógica validan `lugar` con topes distintos (200 y 120); la participación esperada cuenta a quien no puede asistir.
+- aviso de `/encuentros` con la casilla (`acepto: true` y la versión del aviso): guarda en `leads` con `interes = 'encuentros'` y `Ciudad: …`; la lista de encuentros está vacía;
+- **ARREGLADO (A3)**: sin la casilla el aviso responde 400 con el mensaje de la autorización y no guarda nada; con ella, `lead_consents` tiene la prueba (formulario `encuentros`, versión, huella vigente y la misma fecha que el aviso) y ninguna columna de IP o navegador;
+- dos HALLAZGOS que siguen fijados: la ruta y la lógica validan `lugar` con topes distintos (200 y 120); la participación esperada cuenta a quien no puede asistir.
 
-Dobles: reloj (`vi.useFakeTimers({ toFake: ["Date"] })`) y sesión (`@/lib/session`). Las reglas finas ya las cubren `ritos.test.ts` (43), `ritos-codigo.test.ts` (12) y `encuentros.test.ts` (3); el formulario de encuentros también está en `caracterizacion/sitio-publico-y-formularios.test.ts`.
+Qué cambió respecto de la versión escrita contra 0e07d8f: la suite no cargaba porque la ruta del aviso importa `@/lib/consentimiento` (se agregó el alias). Después fallaban 2 casos: el aviso ahora exige la casilla (dab355c), así que se le agregó `acepto: true`, y el HALLAZGO "se acepta sin constancia de autorización" pasó a **ARREGLADO (A3)**. No hay regresiones.
+
+Dobles: reloj (`vi.useFakeTimers({ toFake: ["Date"] })`) y sesión (`@/lib/session`). Las reglas finas ya las cubren `ritos.test.ts`, `ritos-codigo.test.ts`, `ritos-labels.test.ts` (incluida `llamadaParticipar`, la llamada «ven a una demo» de 4aa788d), `encuentros.test.ts` y `consentimiento.test.ts`; el formulario de encuentros también está en `caracterizacion/sitio-publico-y-formularios.test.ts`.
 
 ## 9. Preguntas abiertas
 
-- ¿Quién dispara el anclaje en producción? Sin un cron que llame a `/api/anchor/run`, las huellas de los ritos quedan `pending` y «Compruébalo tú mismo» no tiene qué mostrar.
+- ~~¿Quién dispara el anclaje en producción?~~ Resuelta en el release (76ed59e): el workflow `anclaje.yml`, cada 15 minutos.
 - ¿Debe el resumen del anfitrión pasar por revisión antes de quedar en el acta pública e inmutable?
-- ¿Se guarda la constancia de la autorización de datos del aviso de encuentros (fecha y versión del aviso)? ¿Cuánto tiempo se conservan esos correos y cómo se borran?
+- ~~¿Se guarda la constancia de la autorización de datos del aviso de encuentros?~~ Resuelta en el release (dab355c): `lead_consents`. Sigue abierto cuánto tiempo se conservan esos correos y cómo se borran.
 - Encuentros (en código) y ritos de comunidad (en base) describen casi lo mismo («Demo abierta» y «Retro pública» están en `FORMATOS` y en `RITES_CADENCE`). ¿Se unifican, o los encuentros pasan a ser datos editables desde `/admin`?
 - ¿La participación esperada del fitness debe contar solo a quien puede asistir (acuerdo firmado y, en el sync, equipo)?
 - El dashboard llama «salud de ritos» (`riteHealth`) a los check-ins diarios, no a la asistencia a ritos. ¿Se renombra o se cambia la fuente?

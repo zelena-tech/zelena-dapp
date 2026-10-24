@@ -9,12 +9,14 @@
  *   3. abre el cliente y navega el grafo                      → getClientForActor + listNodes/getNode/impactOf
  *   4. la pestaña Accesos solo para `colaborador` o más, y cada consulta queda en el log.
  *
- * El grafo es SINTÉTICO (cliente, personas y procesos ficticios): el fixture real de
- * `client-graph.test.ts` es conocimiento de cliente, no viaja en el repo y por eso esa
- * suite se salta entera en CI. Esta prueba no depende de él.
+ * El grafo es SINTÉTICO (cliente, personas y procesos ficticios): el grafo privado de
+ * `client-graph.test.ts` es conocimiento de cliente, no viaja en el repo y esa suite se
+ * salta sin él (desde b97448a la acompaña una suite sintética que corre siempre). Esta
+ * prueba no depende de él. Personas del equipo: slugs de la plantilla de roles (A8).
  *
- * Protege el comportamiento ACTUAL (commit 0e07d8f), incluido lo discutible que la
- * ficha lista como hallazgo (un JSON mal formado revienta en 500, no en 422).
+ * Protege el comportamiento ACTUAL (commit 0e07d8f; revisada contra wp/32-release,
+ * 4032c7c), incluido lo discutible que la ficha lista como hallazgo (un JSON mal
+ * formado revienta en 500, no en 422).
  */
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import fs from "node:fs";
@@ -49,15 +51,16 @@ import { coverage, exposureMap, getNode, impactOf, listNodes, type GraphJson } f
 const g = globalThis as unknown as { __zelenaDb?: DB };
 const dbOriginal = g.__zelenaDb;
 
-const JOHN = pendingPrincipal("john"); // founder (rol leído de la base)
-const VALE = pendingPrincipal("vale"); // core: miembro del cliente con nivel `lectura`
-const DAVID = pendingPrincipal("david"); // core: NO es miembro del cliente
+const FILA_FOUNDER = pendingPrincipal("founder"); // founder (rol leído de la base)
+const OPERACIONES = pendingPrincipal("operaciones"); // core: miembro del cliente con nivel `lectura`
+const PRODUCTO = pendingPrincipal("producto"); // core: NO es miembro del cliente
 const ADA = "GADACONTRIBUIDORAFICTICIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"; // contribuidora externa
 
 function freshDb(): DB {
   const db = openDb(":memory:");
   db.pragma("foreign_keys = ON");
   db.exec(fs.readFileSync(path.join(process.cwd(), "src", "lib", "schema.sql"), "utf8"));
+  vi.stubEnv("ZELENA_TEAM_ROSTER", ""); // sin roster del entorno: la plantilla de roles del código (A8)
   seedTeam(db);
   db.prepare(
     `INSERT INTO users (wallet, display_name, tier, status, is_demo, cla_signed, role, is_supervisor)
@@ -137,16 +140,17 @@ describe("Clientes y grafo · flujo principal (importar → listar → navegar �
     estado.sesion = null;
     // Hoy no hay pantalla ni ruta para crear clientes ni miembros: solo estas funciones.
     clienteId = createClient(db, { name: "Cliente Demo", status: "activo", industry: "Servicios" });
-    addMember(db, clienteId, VALE, "lectura");
+    addMember(db, clienteId, OPERACIONES, "lectura");
   });
 
   afterAll(() => {
     g.__zelenaDb = dbOriginal;
+    vi.unstubAllEnvs();
   });
 
   it("el founder importa el grafo; un miembro 'lectura' lo navega; un core ajeno no ve el cliente", async () => {
     // 1. Importar (founder por rol leído de la base).
-    estado.sesion = sesionDe(JOHN, { isFounder: true, role: "founder", isSupervisor: true });
+    estado.sesion = sesionDe(FILA_FOUNDER, { isFounder: true, role: "founder", isSupervisor: true });
     const r = await importarPOST(post({ slug: "cliente-demo", grafo: grafo() }));
     expect(r.status).toBe(200);
     expect(await r.json()).toEqual({
@@ -159,43 +163,43 @@ describe("Clientes y grafo · flujo principal (importar → listar → navegar �
       busFactorCritical: 2,
       generatedAt: "2026-10-01",
     });
-    expect(db.prepare(`SELECT imported_by FROM graph_imports WHERE client_id = ?`).all(clienteId)).toEqual([{ imported_by: JOHN }]);
+    expect(db.prepare(`SELECT imported_by FROM graph_imports WHERE client_id = ?`).all(clienteId)).toEqual([{ imported_by: FILA_FOUNDER }]);
 
     // 2. /clientes para un miembro del equipo interno.
-    const vale = clientActor(sesionDe(VALE, { role: "core" }) as never, db);
-    expect(vale).toEqual({ wallet: VALE, isFounder: false });
-    expect(listClientsFor(db, vale!).map((c) => c.slug)).toEqual(["cliente-demo"]);
+    const operaciones = clientActor(sesionDe(OPERACIONES, { role: "core" }) as never, db);
+    expect(operaciones).toEqual({ wallet: OPERACIONES, isFounder: false });
+    expect(listClientsFor(db, operaciones!).map((c) => c.slug)).toEqual(["cliente-demo"]);
 
     // Un core que no es miembro: el cliente no existe para él (la página responde 404).
-    const david = clientActor(sesionDe(DAVID, { role: "core" }) as never, db)!;
-    expect(listClientsFor(db, david)).toEqual([]);
-    expect(getClientForActor(db, "cliente-demo", david)).toBeNull();
+    const producto = clientActor(sesionDe(PRODUCTO, { role: "core" }) as never, db)!;
+    expect(listClientsFor(db, producto)).toEqual([]);
+    expect(getClientForActor(db, "cliente-demo", producto)).toBeNull();
     // Una contribuidora externa ni siquiera es actor de /clientes (el layout la manda a /perfil).
     expect(clientActor(sesionDe(ADA, { role: "contributor" }) as never, db)).toBeNull();
 
     // 3. Navegar el grafo como `lectura`.
-    const cliente = getClientForActor(db, "cliente-demo", vale!)!;
-    expect(listNodes(db, cliente.id, vale!).map((n) => n.nodeId)).toEqual([
+    const cliente = getClientForActor(db, "cliente-demo", operaciones!)!;
+    expect(listNodes(db, cliente.id, operaciones!).map((n) => n.nodeId)).toEqual([
       "demo.modulo.cobros",
       "demo.proceso.facturacion",
       "demo.sistema.erp",
     ]);
-    const erp = getNode(db, cliente.id, "demo.sistema.erp", vale!)!;
+    const erp = getNode(db, cliente.id, "demo.sistema.erp", operaciones!)!;
     expect(erp.incoming.map((v) => [v.node.nodeId, v.kind]).sort()).toEqual([
       ["demo.modulo.cobros", "pertenece_a"],
       ["demo.proceso.facturacion", "depende_de"],
     ]);
-    expect(impactOf(db, cliente.id, "demo.sistema.erp", vale!).map((n) => n.nodeId).sort()).toEqual([
+    expect(impactOf(db, cliente.id, "demo.sistema.erp", operaciones!).map((n) => n.nodeId).sort()).toEqual([
       "demo.modulo.cobros",
       "demo.proceso.facturacion",
     ]);
     // Agrupa por responsable (owner_client, si no owner_zelena); el orden entre empates no se fija.
-    expect(exposureMap(db, cliente.id, vale!).map((e) => [e.persona, e.total]).sort()).toEqual([
+    expect(exposureMap(db, cliente.id, operaciones!).map((e) => [e.persona, e.total]).sort()).toEqual([
       ["Persona Ficticia A", 1],
       ["Persona Ficticia B", 1],
     ]);
     expect(coverage(db, cliente.id)).toMatchObject({ total: 3, pctVerified: 33.3, openQuestions: 3, busFactorCritical: 2 });
-    expect(() => listNodes(db, cliente.id, david)).toThrow(ClientAccessError);
+    expect(() => listNodes(db, cliente.id, producto)).toThrow(ClientAccessError);
 
     // Reimportar el mismo JSON es idempotente (misma proyección, una fila más de historia).
     await importarPOST(post({ slug: "cliente-demo", grafo: grafo() }));
@@ -213,17 +217,17 @@ describe("Clientes y grafo · flujo principal (importar → listar → navegar �
   it("puertas de la importación: 401 sin sesión, 403 si no es founder, 400 sin cuerpo, 404 slug desconocido", async () => {
     expect((await importarPOST(post({ slug: "cliente-demo", grafo: grafo() }))).status).toBe(401);
     // Supervisora (core) con cookie que dice founder: manda la base → 403.
-    estado.sesion = sesionDe(VALE, { isFounder: true, role: "founder", isSupervisor: true });
+    estado.sesion = sesionDe(OPERACIONES, { isFounder: true, role: "founder", isSupervisor: true });
     expect((await importarPOST(post({ slug: "cliente-demo", grafo: grafo() }))).status).toBe(403);
 
-    estado.sesion = sesionDe(JOHN, { isFounder: true, role: "founder" });
+    estado.sesion = sesionDe(FILA_FOUNDER, { isFounder: true, role: "founder" });
     expect((await importarPOST(post({ slug: "cliente-demo" }))).status).toBe(400);
     expect((await importarPOST(post({ slug: "no-existe", grafo: grafo() }))).status).toBe(404);
     expect(contar(db, `SELECT COUNT(*) AS n FROM graph_nodes`)).toBe(0);
   });
 
   it("un secreto en el cuerpo de un nodo aborta TODO (422) y no escribe nada", async () => {
-    estado.sesion = sesionDe(JOHN, { isFounder: true, role: "founder" });
+    estado.sesion = sesionDe(FILA_FOUNDER, { isFounder: true, role: "founder" });
     const sucio = grafo();
     sucio.nodos[1].detalle = "Conexión: https://usuario:clave-de-prueba@erp.ejemplo.test/api";
     const r = await importarPOST(post({ slug: "cliente-demo", grafo: sucio }));
@@ -234,7 +238,7 @@ describe("Clientes y grafo · flujo principal (importar → listar → navegar �
   });
 
   it("comportamiento actual discutible: un nodo sin 'nombre' no es 422 sino una excepción sin capturar (500)", async () => {
-    estado.sesion = sesionDe(JOHN, { isFounder: true, role: "founder" });
+    estado.sesion = sesionDe(FILA_FOUNDER, { isFounder: true, role: "founder" });
     const roto = grafo() as unknown as { nodos: Array<Record<string, unknown>> };
     delete roto.nodos[0].nombre;
     await expect(importarPOST(post({ slug: "cliente-demo", grafo: roto }))).rejects.toThrow(/NOT NULL/);
@@ -242,25 +246,25 @@ describe("Clientes y grafo · flujo principal (importar → listar → navegar �
   });
 
   it("credenciales sin secretos: 'lectura' no ve el inventario; 'colaborador' sí y queda en el log; un valor se rechaza", () => {
-    addMember(db, clienteId, DAVID, "colaborador");
-    const founder = { wallet: JOHN, isFounder: true };
+    addMember(db, clienteId, PRODUCTO, "colaborador");
+    const founder = { wallet: FILA_FOUNDER, isFounder: true };
     addCredential(
       db,
       clienteId,
-      { name: "Acceso al ERP", type: "servidor", location: "Bóveda del equipo / entrada erp-demo", ownerWallet: DAVID },
+      { name: "Acceso al ERP", type: "servidor", location: "Bóveda del equipo / entrada erp-demo", ownerWallet: PRODUCTO },
       founder
     );
 
-    expect(() => listCredentials(db, clienteId, { wallet: VALE, isFounder: false })).toThrow(ClientAccessError);
-    const lista = listCredentials(db, clienteId, { wallet: DAVID, isFounder: false });
+    expect(() => listCredentials(db, clienteId, { wallet: OPERACIONES, isFounder: false })).toThrow(ClientAccessError);
+    const lista = listCredentials(db, clienteId, { wallet: PRODUCTO, isFounder: false });
     expect(lista.map((c) => [c.name, c.location])).toEqual([["Acceso al ERP", "Bóveda del equipo / entrada erp-demo"]]);
     expect(db.prepare(`SELECT wallet, action, credential_id FROM credential_access_log`).all()).toEqual([
-      { wallet: DAVID, action: "list", credential_id: null },
+      { wallet: PRODUCTO, action: "list", credential_id: null },
     ]);
 
     // Solo un lead registra, y nunca el valor.
     expect(() =>
-      addCredential(db, clienteId, { name: "Otra", type: "api", location: "en la bóveda" }, { wallet: DAVID, isFounder: false })
+      addCredential(db, clienteId, { name: "Otra", type: "api", location: "en la bóveda" }, { wallet: PRODUCTO, isFounder: false })
     ).toThrow(ClientAccessError);
     expect(() =>
       addCredential(db, clienteId, { name: "API", type: "api", location: "https://usuario:clave-de-prueba@api.ejemplo.test" }, founder)

@@ -1,6 +1,6 @@
 # Ficha: Ágora y hitos
 
-Dueño: QA (por asignar) · Revisor: John · Fecha: 2026-10-21 · Commit de referencia: 0e07d8f
+Dueño: QA (por asignar) · Revisor: John · Fecha: 2026-10-21 · Commit de referencia: 0e07d8f · Actualizada al release `wp/32-release` (4032c7c): secciones 1, 2, 4, 5, 7, 8 y 9
 
 ## 1. Resumen
 
@@ -11,21 +11,26 @@ Quién lo usa:
 - **Visitante** (sin sesión): lista y ficha de proyectos en `/agora` y `/agora/[id]`.
 - **Founder o supervisor**: publica una pieza del backlog interno como proyecto abierto (`/equipo/publicar/[id]`).
 - **Contribuidor con el acuerdo firmado**: aplica con su enfoque y su plazo.
-- **Founder** (solo el rol `founder` leído de la base): en `/admin` aprueba o descarta aplicaciones, avanza el estado del proyecto y aprueba hitos.
+- **Founder** (solo el rol `founder` leído de la base): en `/admin` publica los borradores, aprueba o descarta aplicaciones, avanza el estado del proyecto y aprueba hitos.
+
+Desde el release `wp/32-release` (2c049eb) un proyecto puede estar en **borrador** (`projects.draft = 1`): es una marca aparte del ciclo, no un estado. Los proyectos de ejemplo del seed nacen así (`origin = 'seed'`) y una base que ya los tenía los pasa a borrador al arrancar (`src/lib/agora-borradores.ts#marcarSembradosComoBorrador`). Un borrador no aparece en `/agora`, su ficha responde 404, no recibe aplicaciones y no se asigna, hasta que el founder lo publica desde `/admin` (acción `publishProject`). Lo que publica el puente del tablero nace publicado (`origin = 'agora'`).
 
 Casos de uso:
 
 1. Publicar desde el backlog: una pieza en `Backlog` y sin responsable se convierte en `projects` (estado `Open`) más sus `milestones` (por defecto, el reparto del genoma `AGORA_HITOS_DEFAULT`: 20/25/25/20/10). La pieza interna queda enlazada (`published_as_project_id`) y deja de pagarse por la aprobación interna.
-2. Aplicar a un proyecto `Open` (una aplicación por persona y proyecto).
+2. Aplicar a un proyecto `Open` y publicado (una aplicación por persona y proyecto).
 3. Asignar: aprobar una aplicación pasa el proyecto de `Open` a `Assigned` con su ejecutor.
 4. Avanzar estado por la máquina única `Open → Assigned → Delivered → Scored → Distributed`.
 5. Aprobar un hito: puntos = `amount_usd` del hito, en el bucket `ejecucion` de la época actual, más reputación en el eje Ejecución.
+6. Publicar un borrador (founder, desde `/admin`): `draft` pasa de 1 a 0 y el proyecto sigue en el estado que tenía.
 
 Lo que **no** hace: no mueve dinero real ni hace transacciones en Stellar al aprobar un hito (el "pago" dentro de la app son puntos); no hay transferencias de puntos.
 
 ## 2. Diagrama (DFD)
 
-Archivo: [`docs/dfd/agora-y-hitos.tm7`](../dfd/agora-y-hitos.tm7), más la imagen exportada [`docs/dfd/agora-y-hitos.svg`](../dfd/agora-y-hitos.svg). Los dos se generan desde la fuente [`docs/dfd/agora-y-hitos.json`](../dfd/agora-y-hitos.json) con `python docs/dfd/generar_tm7.py docs/dfd/agora-y-hitos.json --estricto`, que pasa: cada `codigo` existe en el repo. La fuente tiene 25 elementos (4 actores, 13 procesos, 8 almacenes), 41 flujos (20 sensibles) y 4 fronteras de confianza.
+Archivo: [`docs/dfd/agora-y-hitos.tm7`](../dfd/agora-y-hitos.tm7), más la imagen exportada [`docs/dfd/agora-y-hitos.svg`](../dfd/agora-y-hitos.svg). Los dos se generan desde la fuente [`docs/dfd/agora-y-hitos.json`](../dfd/agora-y-hitos.json) con `python docs/dfd/generar_tm7.py docs/dfd/agora-y-hitos.json --estricto`, que pasa: cada `codigo` existe en el repo. La fuente tiene 26 elementos (4 actores, 14 procesos, 8 almacenes), 43 flujos (20 sensibles) y 4 fronteras de confianza.
+
+Cambios del release `wp/32-release`: proceso nuevo "Publicar un borrador" (`publicarProyecto`) en la zona founder con sus flujos f42-f43; `projects` lleva `draft` y `origin`; las páginas públicas y `/api/apply` leen `draft` (f2, f18) y el puente escribe `origin = 'agora'` (f13).
 
 Vista para GitHub (salida de `--mermaid`): `[/ /]` actor, `(( ))` proceso, `[( )]` almacén, cada `subgraph` es una frontera de confianza y los flujos con `*` y en rojo llevan datos sensibles.
 
@@ -38,24 +43,25 @@ flowchart LR
     u_founder[/"Founder en /admin (navegador, AdminAction)"/]
   end
   subgraph F2["Servidor Next.js en Azure App Service (público y equipo)"]
-    p_agora(("Páginas /agora y /agora/[id] (server components)"))
+    p_agora(("Páginas /agora y /agora/[id] (server components; sin borradores)"))
     p_mw(("Middleware de sesión (/equipo y /admin)"))
     p_pubpage(("Página /equipo/publicar/[id] (borrador y vista previa)"))
     p_pubapi(("POST /api/equipo/publicar"))
     p_authz(("Puertas por rol leído de la base (equipoActor, adminActor)"))
     p_publicar(("Puente al Ágora (publicarEnAgora)"))
-    p_apply(("POST /api/apply (lógica en la ruta)"))
+    p_apply(("POST /api/apply (lógica en la ruta; borrador = 404)"))
   end
   subgraph F3["Zona founder (rol leído de la base)"]
     p_adminpage(("Panel /admin: Aplicaciones y Proyectos"))
-    p_adminapi(("POST /api/admin (despacha la acción)"))
-    p_asignar(("Aprobar aplicación y asignar (approveApplication)"))
+    p_adminapi(("POST /api/admin (despacha la acción, incluida publishProject)"))
+    p_asignar(("Aprobar aplicación y asignar (approveApplication; no asigna borradores)"))
     p_avanzar(("Avanzar estado (advanceState)"))
-    p_sm(("Máquina de estados del Ágora (función pura)"))
+    p_sm(("Máquina de estados del Ágora (función pura) y marca de borrador"))
     p_hito(("Aprobar hito: 1 USD = 1 punto (approveMilestone)"))
+    p_borrador(("Publicar un borrador (publicarProyecto)"))
   end
   subgraph F4["Base SQLite (/home/data/zelena.db)"]
-    d_projects[("SQLite · projects (estado, presupuesto, supervisor, ejecutor)")]
+    d_projects[("SQLite · projects (estado, presupuesto, supervisor, ejecutor, draft, origin)")]
     d_milestones[("SQLite · milestones (pct, amount_usd, approved)")]
     d_apps[("SQLite · applications (enfoque, plazo, estado)")]
     d_assign[("SQLite · assignments y assignment_events (backlog interno)")]
@@ -81,7 +87,7 @@ flowchart LR
   p_publicar -->|"f15 Enlazar y dejar evento"| d_assign
   p_pubapi -->|"f16 Proyecto publicado"| u_pub
   u_contrib -->|"f17 Aplicar *"| p_apply
-  p_apply -->|"f18 ¿Sigue Open?"| d_projects
+  p_apply -->|"f18 ¿Publicado y Open?"| d_projects
   p_apply -->|"f19 Guardar aplicación *"| d_apps
   p_apply -->|"f20 Resultado"| u_contrib
   u_founder -->|"f21 Abrir /admin *"| p_mw
@@ -105,6 +111,8 @@ flowchart LR
   p_hito -->|"f39 Sumar y emitir puntos *"| d_ledger
   p_hito -->|"f40 Emitir reputación *"| d_rep
   p_adminapi -->|"f41 Resultado *"| u_founder
+  p_adminapi -->|"f42 publicarProyecto(id)"| p_borrador
+  p_borrador -->|"f43 Quitar la marca de borrador"| d_projects
   linkStyle 4,5,7,8,10,12,13,16,18,20,21,22,24,25,29,33,34,38,39,40 stroke:#b03a2e,color:#b03a2e
   style F1 fill:none,stroke:#c0392b,stroke-dasharray:6 4
   style F2 fill:none,stroke:#c0392b,stroke-dasharray:6 4
@@ -137,20 +145,21 @@ Acción elegida: el founder aprueba el hito H1 (Anticipo, 20 %) de un proyecto y
 | Founder o supervisor que publica | Cliente externo | `apps/web/src/components/PublicarAgoraForm.tsx` · `PublicarAgoraForm`, `publicar` | Valida con las mismas funciones puras que el servidor y obliga a "Ver cómo quedará" antes de publicar. |
 | Contribuidor con acuerdo firmado | Cliente externo | `apps/web/src/components/ApplyForm.tsx` · `ApplyForm`, `submit` | Se pinta con cualquier sesión (`app/agora/[id]/page.tsx:143-144`); el acuerdo lo exige la API. |
 | Founder en /admin | Cliente externo | `apps/web/src/components/AdminAction.tsx` · `AdminAction`, `run` | Botón genérico: manda `{ action, ...payload }`. |
-| Páginas /agora y /agora/[id] | Proceso | `apps/web/app/agora/page.tsx` · `AgoraPage`; `apps/web/app/agora/[id]/page.tsx` · `ProjectDetail` (con `listProjects`, `getProject`, `getMilestones` de `src/lib/repo.ts:102-152`) | Muestra el supervisor abreviado con `shortWallet` (`[id]/page.tsx:121`). |
+| Páginas /agora y /agora/[id] | Proceso | `apps/web/app/agora/page.tsx` · `AgoraPage`; `apps/web/app/agora/[id]/page.tsx` · `ProjectDetail` (con `listProjects`, `getProject`, `getMilestones` de `src/lib/repo.ts`) | Muestra el supervisor abreviado con `shortWallet`. `listProjects` y `getProject` excluyen los borradores salvo `incluirBorradores` (solo /admin); el formulario de aplicar se pinta con `recibeAplicaciones`. |
 | Middleware de sesión | Proceso | `apps/web/middleware.ts` · `middleware`, `PROTECTED_CLA`, `PROTECTED_SESSION` | `/admin` exige `claSigned` en la cookie; `/equipo` solo sesión. No cubre `/api`. |
 | Página /equipo/publicar/[id] | Proceso | `apps/web/app/equipo/publicar/[id]/page.tsx` · `PublicarEnAgoraPage` (con `borradorPublicacion`, `piezaParaPublicar`) | Puerta propia; pieza de un cliente que no ve → 404. |
 | POST /api/equipo/publicar | Proceso | `apps/web/app/api/equipo/publicar/route.ts` · `POST` | 401/403/429/400; traduce `TeamError` a su estado. |
 | Puertas por rol | Proceso | `apps/web/src/lib/authz.ts` · `equipoActor` (120), `adminActor` (80) | Leen `users`, nunca la cookie. |
 | Puente al Ágora | Proceso | `apps/web/src/lib/agora-publicar.ts` · `publicarEnAgora` (271-351), `validarHitos`, `montosDeHitos`, `motivoNoPublicable` | Una transacción; guarda de carrera en el `UPDATE` (327-333). |
-| POST /api/apply | Proceso | `apps/web/app/api/apply/route.ts` · `POST` (con `applySchema`, `src/lib/validation.ts:51-55`) | La lógica y el SQL viven en la ruta, no en `lib/`. |
+| POST /api/apply | Proceso | `apps/web/app/api/apply/route.ts` · `POST` (con `applySchema`) | La lógica y el SQL viven en la ruta, no en `lib/`. Borrador → 404 "Proyecto no encontrado." (l. 28-30); no `Open` → 409 "Este proyecto ya no recibe aplicaciones." (l. 31-33). |
 | Panel /admin | Proceso | `apps/web/app/admin/page.tsx` · `AdminPage` (secciones 348-424) | Lista aplicaciones (enfoque, plazo, wallet) con SQL propio (35-48); `getApplications` de `src/lib/repo.ts:154` no la usa nadie. |
-| POST /api/admin | Proceso | `apps/web/app/api/admin/route.ts` · `POST` (con `adminActionSchema`) | Despacha 11 acciones; solo 3 son del Ágora. |
-| Aprobar aplicación y asignar | Proceso | `apps/web/src/lib/admin.ts` · `approveApplication` (9-34) | Usa `getDb()` interno (no recibe la base). No revisa el estado de la aplicación. |
+| POST /api/admin | Proceso | `apps/web/app/api/admin/route.ts` · `POST` (con `adminActionSchema`) | Despacha 12 acciones; 4 son del Ágora (`publishProject` es nueva). |
+| Publicar un borrador | Proceso | `apps/web/src/lib/agora-borradores.ts` · `publicarProyecto` | `UPDATE … SET draft = 0 WHERE id = ? AND draft = 1`. Ya publicado: `BorradorError(409)`, que la ruta devuelve como 400. |
+| Aprobar aplicación y asignar | Proceso | `apps/web/src/lib/admin.ts` · `approveApplication` (9-36) | Usa `getDb()` interno (no recibe la base). No revisa el estado de la aplicación. Rechaza un borrador (l. 20). |
 | Avanzar estado | Proceso | `apps/web/src/lib/admin.ts` · `advanceState` (40-51) | Usa `getDb()` interno. |
-| Máquina de estados del Ágora | Proceso | `apps/web/src/lib/state-machine.ts` · `transition` (32-38), `nextAction` (45-57) | Función pura, sin saltos. |
+| Máquina de estados del Ágora | Proceso | `apps/web/src/lib/state-machine.ts` · `transition`, `nextAction`, `esBorrador`, `recibeAplicaciones` | Función pura, sin saltos. El borrador es una marca aparte del ciclo. |
 | Aprobar hito | Proceso | `apps/web/src/lib/admin.ts` · `approveMilestone` (58-106), con `violatesB8`/`withinEpochBudget` (`src/lib/rules.ts`) y `puntosDeEpoca` (`src/lib/gamificacion.ts:75`) | Recibe `db` opcional (es la única de `admin.ts` que se puede probar con otra base). |
-| projects | Almacén de datos | `apps/web/src/lib/schema.sql` · tabla `projects` (112-126) | `type` guarda `SAS`/`DAO`; las etiquetas Cliente/Comunidad viven en `src/lib/agora-labels.ts`. |
+| projects | Almacén de datos | `apps/web/src/lib/schema.sql` · tabla `projects` | `type` guarda `SAS`/`DAO`; las etiquetas Cliente/Comunidad viven en `src/lib/agora-labels.ts`. `draft` (1 = borrador) y `origin` (`seed` o `agora`) desde el release. |
 | milestones | Almacén de datos | `apps/web/src/lib/schema.sql` · tabla `milestones` (128-139) | `approved` es un 0/1 mutable. |
 | applications | Almacén de datos | `apps/web/src/lib/schema.sql` · tabla `applications` (141-151) | `UNIQUE (project_id, wallet)` (150). |
 | assignments + assignment_events | Almacén de datos | `apps/web/src/lib/schema.sql` · tablas `assignments` (499) y `assignment_events` (533) | Puente: `assignments.published_as_project_id`. |
@@ -166,7 +175,7 @@ Los marcados **Sensible** llevan sesión, datos personales o dinero (puntos).
 | Flujo | De → a | Protocolo | Datos que viajan |
 | --- | --- | --- | --- |
 | f1 | Visitante → Páginas /agora | HTTPS | `GET /agora?tipo=&state=`, `/agora/<id>` |
-| f2 | Páginas /agora → projects | SQL | `SELECT` de proyectos |
+| f2 | Páginas /agora → projects | SQL | `SELECT` de proyectos publicados (`draft = 0`) |
 | f3 | Páginas /agora → milestones | SQL | `SELECT` de hitos por proyecto |
 | f4 | Páginas /agora → Visitante | HTTPS | HTML: título, presupuesto, hitos, criterio, supervisor abreviado |
 | f5 | Publicador → Middleware | HTTPS | **Sensible:** `GET /equipo/publicar/<id>` + cookie `zelena_session` |
@@ -177,19 +186,19 @@ Los marcados **Sensible** llevan sesión, datos personales o dinero (puntos).
 | f10 | Puertas por rol → users | SQL | `role`, `is_supervisor`, `status`, `cla_signed` |
 | f11 | POST publicar → Puente al Ágora | Llamada en proceso | **Sensible:** actor + entrada validada (montos) |
 | f12 | Puente → genome_versions | SQL | `AGORA_HITOS_DEFAULT`, `BUSINESS_TZ` |
-| f13 | Puente → projects | SQL | **Sensible:** `INSERT` con `budget_usd`, `supervisor_wallet`, estado `Open` |
+| f13 | Puente → projects | SQL | **Sensible:** `INSERT` con `budget_usd`, `supervisor_wallet`, estado `Open`, `origin = 'agora'` (publicado) |
 | f14 | Puente → milestones | SQL | **Sensible:** `INSERT` H1..Hn con `amount_usd` que suman el presupuesto |
 | f15 | Puente → assignments | SQL | `UPDATE published_as_project_id` (con guarda) + evento `publicar` |
 | f16 | POST publicar → Publicador | HTTPS | `{ ok, projectId }` o error 400/403/404/409/429 |
 | f17 | Contribuidor → POST /api/apply | HTTPS | **Sensible:** `{ projectId, approach, timeline }` + cookie (wallet, `claSigned`) |
-| f18 | POST apply → projects | SQL | `SELECT id, state` |
+| f18 | POST apply → projects | SQL | `SELECT id, state, draft` |
 | f19 | POST apply → applications | SQL | **Sensible:** `INSERT` (wallet, enfoque y plazo escritos por la persona) |
 | f20 | POST apply → Contribuidor | HTTPS | `{ ok }` o 401/404/409/429 |
 | f21 | Founder → Middleware | HTTPS | **Sensible:** `GET /admin` + cookie con `claSigned` |
 | f22 | Middleware → Panel /admin | Llamada interna de Next.js | **Sensible:** ruta y cookie verificada |
 | f23 | Panel /admin → applications | SQL | **Sensible:** wallet, enfoque, plazo y estado de cada aplicación |
 | f24 | Panel /admin → milestones | SQL | Código, monto y estado de cada hito |
-| f25 | Founder → POST /api/admin | HTTPS | **Sensible:** `{ action, applicationId \| projectId \| milestoneId }` + cookie |
+| f25 | Founder → POST /api/admin | HTTPS | **Sensible:** `{ action, applicationId \| projectId \| milestoneId }` + cookie (`publishProject` lleva `projectId`) |
 | f26 | POST admin → Puertas por rol | Llamada en proceso | **Sensible:** wallet de la sesión |
 | f27 | POST admin → approveApplication | Llamada en proceso | `applicationId` (sin el actor) |
 | f28 | approveApplication → Máquina de estados | Llamada en proceso | `transition(Open, assign)` |
@@ -206,6 +215,8 @@ Los marcados **Sensible** llevan sesión, datos personales o dinero (puntos).
 | f39 | approveMilestone → points_ledger | SQL | **Sensible:** `SUM` de la época; `INSERT points = amount_usd` |
 | f40 | approveMilestone → reputation_events | SQL | **Sensible:** `INSERT` eje `ejecucion` |
 | f41 | POST admin → Founder | HTTPS | **Sensible:** `{ ok, points, wallet }`, `{ ok, state }` o `{ error }` |
+| f42 | POST admin → publicarProyecto | Llamada en proceso | `projectId` (sin el actor) |
+| f43 | publicarProyecto → projects | SQL | `UPDATE projects SET draft = 0` (el estado no cambia) |
 
 ## 6. Dependencias con otras features
 
@@ -238,25 +249,29 @@ Dependencias inversas anotadas al integrar (la otra ficha ya las tenía; la guí
 | El founder se asigna su propia aplicación y se aprueba sus hitos | Elevación de privilegios | approveApplication / approveMilestone | Pendiente | Ni `approveApplication` (`admin.ts:9-34`) ni `approveMilestone` reciben al actor (`app/api/admin/route.ts:52-69`), así que no hay cuatro ojos en el Ágora (el equipo sí los tiene). |
 | No queda rastro de quién aprobó una aplicación o un hito | Repudio | POST /api/admin | Pendiente | `applications`, `milestones`, `points_ledger` y `reputation_events` no guardan al aprobador (`admin.ts:20-30,95-104`). Publicar sí deja `actor_wallet` en `assignment_events` (`agora-publicar.ts:335-346`). |
 | Proyecto en `Assigned` sin ejecutor por el botón "Avanzar" | Manipulación | advanceState | Pendiente | `nextAction("Open")` es `assign` y `advanceState` no exige ejecutor (`admin.ts:40-51`, `state-machine.ts:45-57`). El proyecto deja de recibir aplicaciones y nadie cobra hasta aprobar una vieja. Fijado en la prueba de caracterización. |
-| Aprobar una segunda aplicación reasigna en silencio el proyecto a otra persona | Manipulación | approveApplication | Pendiente | Si el proyecto ya no está `Open`, se sobrescribe `assignee_wallet` (`admin.ts:29-31`) y las dos aplicaciones quedan `approved`; tampoco se revisa que la aplicación siga `pending`. |
+| Aprobar una segunda aplicación reasigna en silencio el proyecto a otra persona | Manipulación | approveApplication | Pendiente | Si el proyecto ya no está `Open`, se sobrescribe `assignee_wallet` (`admin.ts:31-33`) y las dos aplicaciones quedan `approved`; tampoco se revisa que la aplicación siga `pending`. |
 | Hitos aprobados sin entrega (proyecto en `Assigned`) | Manipulación | approveMilestone | Aceptada | Es decisión de producto que el founder apruebe por hito (el anticipo se paga al empezar, `AGORA_HITOS_DEFAULT` en `src/lib/genome.ts:170`); la máquina de estados del proyecto y los hitos van por separado. |
 | Lectura de enfoques y wallets de quienes aplican | Divulgación de información | Panel /admin | Mitigada | Solo founder por rol (`app/admin/page.tsx:33`); la ficha pública no lista aplicaciones. |
 | La ficha pública muestra el principal del supervisor abreviado (p. ej. `pendi…<slug>`) | Divulgación de información | Páginas /agora | Aceptada | Son 9 caracteres (`src/components/ui.tsx:87-90`) del identificador interno; no es dato personal más allá del slug del roster. |
 | Avalancha de aplicaciones | Denegación de servicio | POST /api/apply | Mitigada | 15 por minuto por wallet + IP (`app/api/apply/route.ts:14`) y `UNIQUE (project_id, wallet)` (`src/lib/schema.sql:150`). El límite es en memoria por instancia (`src/lib/rate-limit.ts:1-5`). |
 | `/api/admin` sin límite de solicitudes | Denegación de servicio | POST /api/admin | Aceptada | Solo responde a un founder autenticado por rol (`route.ts:22`). |
+| Proyectos de ejemplo del seed visibles o asignables en producción como si fueran reales | Divulgación de información / Manipulación | Páginas /agora, POST /api/apply, approveApplication | Mitigada | Release `wp/32-release` (2c049eb): el seed los crea con `draft = 1` y `origin = 'seed'` y `marcarSembradosComoBorrador` pasa a borrador los de una base existente (`src/lib/agora-borradores.ts:40-53`, llamada desde `src/lib/seed.ts#seedIfEmpty`). Un borrador no se lista ni se muestra (`src/lib/repo.ts#listProjects`, `#getProject`), da 404 al aplicar (`app/api/apply/route.ts:28-30`) y no se asigna (`src/lib/admin.ts:20`). Lo prueba el caso "borrador" de la caracterización. |
 
 ## 8. Prueba de caracterización
 
-Archivo: `apps/web/src/lib/caracterizacion/agora-y-hitos.test.ts`. Correr con `cd apps/web && npx vitest run src/lib/caracterizacion/agora-y-hitos.test.ts` (4 casos, pasan en 0e07d8f).
+Archivo: `apps/web/src/lib/caracterizacion/agora-y-hitos.test.ts`. Correr con `cd apps/web && npx vitest run src/lib/caracterizacion/agora-y-hitos.test.ts` (5 casos, pasan con el release `wp/32-release`).
 
-Llama a los **handlers reales** de `POST /api/equipo/publicar`, `POST /api/apply` y `POST /api/admin` contra una base SQLite temporal en memoria (`schema.sql` + `seedTeam`). La sesión se inyecta con un `vi.mock("@/lib/session")` y `globalThis.__zelenaDb` apunta a la base temporal, así `getDb()` nunca abre `data/zelena.db`.
+Llama a los **handlers reales** de `POST /api/equipo/publicar`, `POST /api/apply` y `POST /api/admin` contra una base SQLite temporal en memoria (`schema.sql` + `seedTeam` con la plantilla de roles, sin `ZELENA_TEAM_ROSTER`). La sesión se inyecta con un `vi.mock("@/lib/session")` y `globalThis.__zelenaDb` apunta a la base temporal, así `getDb()` nunca abre `data/zelena.db`. Las personas del roster son los slugs de la plantilla (`pending:founder`, `pending:operaciones`), nunca nombres.
 
-- Flujo principal: publicar (proyecto `Open`, hitos H1..H5 de 200/250/250/200/100 sobre 1.000 USD, enlace y evento `publicar`) → aplicar → aprobar la aplicación (`Assigned` con ejecutora) → aprobar H1 (`{ ok, points: 200 }`, una fila de 200 puntos en bucket `ejecucion`, reputación 20) → segunda aprobación del mismo hito = 400 → la pieza interna ya no emite (`publicada_en_agora`).
-- Puertas: 401 sin sesión, 403 contribuidora sin alcance, supervisora sí publica, 409 al publicar dos veces, 401 sin acuerdo, 409 al aplicar dos veces (mensaje con "bounty"), 403 de `/api/admin` para una supervisora.
+- Flujo principal: publicar (proyecto `Open`, `draft = 0`, `origin = 'agora'`, hitos H1..H5 de 200/250/250/200/100 sobre 1.000 USD, enlace y evento `publicar`) → aplicar → aprobar la aplicación (`Assigned` con ejecutora) → aprobar H1 (`{ ok, points: 200 }`, una fila de 200 puntos en bucket `ejecucion`, reputación 20) → segunda aprobación del mismo hito = 400 → la pieza interna ya no emite (`publicada_en_agora`).
+- Puertas: 401 sin sesión, 403 contribuidora sin alcance, supervisora sí publica, 409 al publicar dos veces, 401 sin acuerdo, 409 al aplicar dos veces ("Ya aplicaste a este proyecto."), 403 de `/api/admin` para una supervisora.
 - B8 tal como está hoy (cadenas crudas): supervisora que invitó a la ejecutora → 400 y sin puntos.
-- Comportamiento discutible fijado a propósito: "Avanzar" deja el proyecto `Assigned` sin ejecutor.
+- Borrador (nuevo): marcado como borrador, el proyecto no sale en `listProjects`, `getProject` no lo devuelve (sí con `incluirBorradores`), `/api/apply` responde 404 y, publicado por el founder con `publishProject`, vuelve a listarse y a recibir aplicaciones.
+- Comportamiento discutible fijado a propósito: "Avanzar" deja el proyecto `Assigned` sin ejecutor; después, aplicar da 409 "Este proyecto ya no recibe aplicaciones.".
 
-Otras pruebas que ya cubren partes: `src/lib/agora-publicar.test.ts` (reglas del puente), `src/lib/points-ledger.test.ts` (anti-confiscación y tope de `approveMilestone`), `src/lib/state-machine.test.ts`, `src/lib/agora-labels.test.ts`.
+Qué cambió respecto de la versión escrita contra 0e07d8f, y por qué commit: los cuatro casos fallaban porque usaban `pending:<nombre>` de personas del roster, que ya no existe: el roster es una plantilla de roles (b97448a, hallazgo A8), así que la publicación respondía 403; ahora usan los slugs de rol. El texto del 409 al aplicar dos veces dejó de decir "bounty" y el proyecto publicado lleva `draft`/`origin` (2c049eb). Ninguno es una regresión.
+
+Otras pruebas que ya cubren partes: `src/lib/agora-publicar.test.ts` (reglas del puente), `src/lib/agora-borradores.test.ts` (migración a borrador y publicación), `src/lib/points-ledger.test.ts` (anti-confiscación y tope de `approveMilestone`), `src/lib/state-machine.test.ts`, `src/lib/agora-labels.test.ts`, `src/lib/roster-plantilla.test.ts`.
 
 ## 9. Preguntas abiertas
 
@@ -265,4 +280,4 @@ Otras pruebas que ya cubren partes: `src/lib/agora-publicar.test.ts` (reglas del
 - ¿Debe B8 del Ágora pasar a `reglaB8` (identidades y exención por rol, no por `FOUNDER_WALLET`)?
 - ¿Qué pasa con la pieza interna cuando el proyecto del Ágora se asigna o se termina? Hoy se queda en `Backlog` sin responsable para siempre: el puente es de un solo sentido.
 - ¿Hace falta guardar quién aprobó cada hito (columna o evento) para auditar la emisión de puntos?
-- ¿Los proyectos demo del seed siguen visibles en el Ágora de producción? `seed()` los crea en cualquier entorno cuando la base está vacía (`src/lib/seed.ts:215-372`).
+- ~~¿Los proyectos demo del seed siguen visibles en el Ágora de producción?~~ Resuelta en el release (2c049eb): nacen en borrador y la migración del arranque oculta los de una base existente.

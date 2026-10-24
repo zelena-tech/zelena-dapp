@@ -1,6 +1,6 @@
 # Ficha: Telegram
 
-Dueño: QA (por asignar) · Revisor: John · Fecha: 2026-10-21 · Commit de referencia: 0e07d8f
+Dueño: QA (por asignar) · Revisor: John · Fecha: 2026-10-21 · Commit de referencia: 0e07d8f · Revisada contra wp/32-release (`4032c7c`) el 2026-10-24: DFD, §3, §4, §5, §7, §8 y §9 (lo marcado «en `4032c7c`» cita líneas de ese commit)
 
 ## 1. Resumen
 
@@ -19,7 +19,7 @@ Quién lo usa: el founder (escritura), supervisores (lectura con modelo), el res
 
 ## 2. Diagrama (DFD)
 
-Archivo: [`docs/dfd/telegram.tm7`](../dfd/telegram.tm7), más la imagen exportada [`docs/dfd/telegram.svg`](../dfd/telegram.svg). Los dos se generan desde la fuente [`docs/dfd/telegram.json`](../dfd/telegram.json) con `python docs/dfd/generar_tm7.py docs/dfd/telegram.json --estricto`, que pasa: cada `codigo` existe en el repo. La fuente tiene 22 elementos (4 actores, 11 procesos, 7 almacenes), 31 flujos (17 sensibles) y 6 fronteras de confianza.
+Archivo: [`docs/dfd/telegram.tm7`](../dfd/telegram.tm7), más la imagen exportada [`docs/dfd/telegram.svg`](../dfd/telegram.svg). Los dos se generan desde la fuente [`docs/dfd/telegram.json`](../dfd/telegram.json) con `python docs/dfd/generar_tm7.py docs/dfd/telegram.json --estricto`, que pasa: cada `codigo` existe en el repo. La fuente tiene 22 elementos (4 actores, 11 procesos, 7 almacenes), 32 flujos (18 sensibles) y 6 fronteras de confianza. Revisada contra `4032c7c`: desde `b97448a` el contexto que va a Anthropic suma los nombres de las personas del equipo leídos de la base (flujo f32 y datos de f21).
 
 Vista para GitHub (salida de `--mermaid`): `[/ /]` actor, `(( ))` proceso, `[( )]` almacén, cada `subgraph` es una frontera de confianza y los flujos con `*` y en rojo llevan datos sensibles.
 
@@ -90,7 +90,8 @@ flowchart LR
   d_genoma -->|"f29 Hora de los focos *"| p_poll
   d_links -->|"f30 ¿Ya vinculado?"| p_pag
   p_pag -->|"f31 Estado del vínculo"| u
-  linkStyle 0,1,4,5,6,7,8,10,11,12,20,22,23,25,26,27,28 stroke:#b03a2e,color:#b03a2e
+  p_agent -->|"f32 Personas del equipo para el contexto *"| d_personas
+  linkStyle 0,1,4,5,6,7,8,10,11,12,20,22,23,25,26,27,28,31 stroke:#b03a2e,color:#b03a2e
   style F1 fill:none,stroke:#c0392b,stroke-dasharray:6 4
   style F2 fill:none,stroke:#c0392b,stroke-dasharray:6 4
   style F3 fill:none,stroke:#c0392b,stroke-dasharray:6 4
@@ -125,7 +126,7 @@ Acción elegida: **una persona del equipo interno (sin supervisión) vincula su 
    - webhook: 404 (flag), 401 (secret), 503 (sin token), 200 `skipped` (límite, cuerpo inválido, error interno: nunca se filtra el detalle).
    - alta: código malo, consumido o vencido → «Ese código no sirve…»; otra cuenta de Telegram ya vinculada → «Esta cuenta de Telegram ya está vinculada.».
    - `telegram_user_id` desconocido: no se contesta nada y queda en el log con su id (`sender_ref`); mensajes de grupo: se ignoran; audio: «Todavía no puedo convertir audio a texto…».
-   - quien está en lectura intenta «cierra N», «sube la prioridad», `/nota` → «En esta versión solo John escribe en el tablero desde Telegram…».
+   - quien está en lectura intenta «cierra N», «sube la prioridad», `/nota` → «En esta versión solo el founder escribe en el tablero desde Telegram…» (desde `b97448a`; antes nombraba a una persona).
    - excepción inesperada → «Algo falló de mi lado y no hice el cambio.» y línea `error` en el log con solo el nombre del error.
 
 ## 4. Elementos del DFD en el código
@@ -141,7 +142,7 @@ Acción elegida: **una persona del equipo interno (sin supervisión) vincula su 
 | Puerta de /equipo | Proceso | `apps/web/src/lib/authz.ts#equipoActor` | Se usa en la vinculación y en cada mensaje del bot. |
 | Emitir código | Proceso | `apps/web/src/lib/bot-store.ts#issueLinkCode` | Con `generateLinkCode`, `hashLinkCode`, `canAuthorizeWrite`, `walletParaVinculo`. |
 | Webhook | Proceso | `apps/web/app/api/telegram/webhook/route.ts#POST` | Solo puerta; siempre 200 tras validar. |
-| Orquestador del bot | Proceso | `apps/web/src/lib/bot-agent.ts#handleUpdate` | `atenderComando`, `atenderTextoLibre`, `atenderBoton`, `BOT_SYSTEM_PROMPT`. |
+| Orquestador del bot | Proceso | `apps/web/src/lib/bot-agent.ts#handleUpdate` | `atenderComando`, `atenderTextoLibre`, `atenderBoton`, `BOT_SYSTEM_PROMPT`. Desde `b97448a`, `hintsFor` (`bot-agent.ts:249-260` en `4032c7c`) suma al contexto las personas del equipo leídas de la base. |
 | Consumir código | Proceso | `apps/web/src/lib/bot-store.ts#consumeLinkCode` | Un solo uso; borra el hash. |
 | Herramientas y comandos | Proceso | `apps/web/src/lib/bot-tools.ts#runBotTool` | `BOT_DISPATCH` congelado (5 herramientas), `renderPendientes`, `avanzarPieza`, `subirPrioridadPieza`, `confirmDraft`, `discardDraft`. |
 | Los 3 focos del día | Proceso | `apps/web/src/lib/bot-tools.ts#focosDelDia` | Y `renderFocos`, `reordenarFocos`. `debeEnviarFocos` y `horaDeLosFocos` existen pero la app no las usa. |
@@ -181,7 +182,7 @@ Los marcados **(S)** llevan datos sensibles (credencial, sesión o dato personal
 | f18 | Tablero → Focos | SQL | `assignmentsForOwner` + `founderInbox` |
 | f19 | Herramientas → bot_drafts/notes | SQL | borrador estructurado, estado, nota |
 | f20 | Herramientas → Tablero | SQL | escritura confirmada por el founder; `UPDATE priority` de «sube la prioridad» |
-| f21 **(S)** | Orquestador → Anthropic | HTTPS | `x-api-key`, texto libre, nombres de proyectos visibles, fecha |
+| f21 **(S)** | Orquestador → Anthropic | HTTPS | `x-api-key`, texto libre, nombres de proyectos visibles, nombres de las personas del equipo (de la base, desde `b97448a`), fecha |
 | f22 | Anthropic → Orquestador | HTTPS | `tool_use` + input |
 | f23 **(S)** | Orquestador → bot_actions | SQL | wallet o `sender_ref` (id de Telegram), acción, resultado, detalle |
 | f24 **(S)** | Orquestador → Bot API | HTTPS | token en la URL, `chat_id`, texto, botones |
@@ -192,6 +193,7 @@ Los marcados **(S)** llevan datos sensibles (credencial, sesión o dato personal
 | f29 **(S)** | genome_versions/telegram_links → Puente local | SQL (archivo SQLite) | `DAILY_FOCUS_HOUR`, `telegram_user_id` autorizado |
 | f30 | telegram_links → Página | SQL | si hay `telegram_user_id`, `linked_at` |
 | f31 | Página → Persona | HTTPS | estado del vínculo |
+| f32 **(S)** | Orquestador → users/project_members | SQL | `display_name` de founder y core activos, sin demos (`listTeamMembers` en `hintsFor`); solo en el camino con modelo |
 
 ## 6. Dependencias con otras features
 
@@ -217,8 +219,8 @@ Dependencias inversas anotadas al integrar (la otra ficha ya las tenía; la guí
 | Alguien en lectura escribe en el tablero por Telegram | Elevación de privilegios | Herramientas (f15, f20) | Mitigada | `canWrite = is_authorized && equipo` (`src/lib/bot-agent.ts:288-294`); `is_authorized` solo para el founder y una sola fila (`bot-store.ts:128-139`); `runBotTool` bloquea escrituras (`bot-tools.ts:532-546`); «cierra N» y «prioridad» rechazan (`bot-agent.ts:507`, `:520`). Probado en la sección 8. |
 | Un externo ve el tablero interno por Telegram | Divulgación de información | Orquestador / Herramientas (f17, f24) | Mitigada | `soloLoPropio` (`bot-tools.ts:333-335`) limita estado y focos a lo propio (`bot-tools.ts:560-564`, `:799-809`); la puerta se recalcula en cada mensaje (`bot-agent.ts:285-294`). |
 | El modelo ejecuta algo no previsto (inyección en el texto) | Elevación de privilegios | Orquestador → Anthropic (f21, f22) | Mitigada | Tabla congelada de 5 herramientas (`bot-tools.ts:520-526`), herramienta desconocida → pregunta (`bot-agent.ts:629-643`), escritura solo vía borrador propio de un solo uso (`bot-tools.ts:871-892`). |
-| Texto libre y nombres de proyectos (incluso de cliente) salen a Anthropic | Divulgación de información | Orquestador → Anthropic (f21) | Pendiente | Solo para quien ve todo el equipo y solo proyectos visibles (`bot-agent.ts:243-252`, `:559-561`), pero `/privacidad` no nombra a Anthropic ni a Telegram como encargados (`app/privacidad/page.tsx:17-22`). |
-| Nombres de personas del equipo en el prompt, en un repo público | Divulgación de información | Orquestador (`BOT_SYSTEM_PROMPT`) | Pendiente | `src/lib/bot-agent.ts:109` enumera a las personas del equipo; además quedó desactualizado: el roster ahora es dato (`/equipo/talento`). |
+| Texto libre, nombres de proyectos (incluso de cliente) y de personas del equipo salen a Anthropic | Divulgación de información | Orquestador → Anthropic (f21, f32) | Pendiente | Solo para quien ve todo el equipo y solo proyectos visibles (`bot-agent.ts:243-252`, `:559-561`). Desde `b97448a` el contexto suma los nombres de las personas del equipo leídos de la base (`bot-agent.ts:249-260` en `4032c7c`), solo en el camino con modelo (`:621-622`). El aviso de privacidad nuevo (`dab355c`, texto en `src/lib/aviso-privacidad.ts:40-73`) menciona el id de Telegram (50) pero sigue sin nombrar a Anthropic ni a Telegram como encargados. |
+| Nombres de personas del equipo en el prompt, en un repo público | Divulgación de información | Orquestador (`BOT_SYSTEM_PROMPT`) | Mitigada | Desde `b97448a`: el prompt no nombra a nadie y remite a «Personas del equipo» del contexto (`src/lib/bot-agent.ts:111` en `4032c7c`), que `hintsFor` lee de la base en cada mensaje (`:249-260`); la descripción de `crear_asignacion` tampoco tiene lista (`bot-tools.ts:212-216`) y el responsable se resuelve por datos (`walletDelEquipoPorNombre`). Tests: `roster-plantilla.test.ts` y el barrido de nombres de `contenido-publico.test.ts`. |
 | Cambiar la prioridad sin rastro | Repudio | Herramientas (f20) | Pendiente | `subirPrioridadPieza` hace `UPDATE assignments SET priority` sin evento en `assignment_events` y sin mirar si la pieza está en revisión (`src/lib/bot-tools.ts:747-768`); solo queda la línea en `bot_actions`. |
 | Acciones del bot sin trazabilidad | Repudio | Orquestador → bot_actions (f23) | Mitigada | Cada rama llama a `logBotAction` (`src/lib/bot-store.ts:342-353`) y `/admin` lo muestra (`app/admin/page.tsx:60`). |
 | Telegram reenvía un update y se procesa dos veces | Denegación de servicio | Webhook (f8) | Pendiente | `update_id` se lee pero nunca se usa para deduplicar (`src/lib/telegram.ts:111`); fijado en la prueba. Impacto bajo: las escrituras pasan por un borrador de un solo uso, pero se duplican respuestas, borradores y log. |
@@ -229,7 +231,7 @@ Dependencias inversas anotadas al integrar (la otra ficha ya las tenía; la guí
 
 ## 8. Prueba de caracterización
 
-Archivo: `apps/web/src/lib/caracterizacion/telegram.test.ts` (12 casos, pasan). Se corre con `cd apps/web && npx vitest run src/lib/caracterizacion/telegram.test.ts`.
+Archivo: `apps/web/src/lib/caracterizacion/telegram.test.ts` (12 casos, pasan contra `4032c7c`, wp/32-release, sin cambios: ninguno de sus tres hallazgos se corrigió en la release y la prueba no usa nombres de personas). Se corre con `cd apps/web && npx vitest run src/lib/caracterizacion/telegram.test.ts`.
 
 Qué cubre, por las rutas reales y contra una base SQLite en memoria con `schema.sql` + `seedTeam`:
 
@@ -245,8 +247,8 @@ Dobles: sesión (`@/lib/session`) y `fetch` (borde con Telegram y Anthropic). La
 ## 9. Preguntas abiertas
 
 - Los «focos del día» programados solo existen en el puente local (`packages/scripts/telegram-bot.mjs:192-203`), con la hora del servidor (`getHours()`), y `DAILY_FOCUS_HOUR` (7) cae fuera del horario hábil (08:00). En producción nadie los envía. ¿Se quiere ese envío (por el mismo cron de recordatorios) o se retira la promesa?
-- `BOT_COPY.soloLectura` y `BOT_SYSTEM_PROMPT` hablan de «John» y de una lista fija de personas. ¿Se reescriben para todo el equipo y se saca la lista del prompt (el roster ya es dato)?
-- ¿Se debe nombrar a Telegram y a Anthropic en `/privacidad` como destinos de datos?
+- ~~`BOT_COPY.soloLectura` y `BOT_SYSTEM_PROMPT` hablan de una persona y de una lista fija de personas. ¿Se reescriben para todo el equipo y se saca la lista del prompt (el roster ya es dato)?~~ Respondida por `b97448a`: el copy dice «el founder» (`src/lib/telegram.ts:327-328` en `4032c7c`) y el prompt remite a las personas que el contexto lee de la base.
+- ¿Se debe nombrar a Telegram y a Anthropic en `/privacidad` como destinos de datos? El aviso nuevo de `dab355c` (`src/lib/aviso-privacidad.ts`) tampoco lo hace, y ahora también viajan nombres de personas del equipo.
 - ¿Cuánto tiempo se guardan `bot_actions` (con ids de Telegram de desconocidos) y los borradores resueltos?
 - ¿La vinculación debe negarse cuando el bot está apagado (hoy la UI deshabilita el botón, la API no)?
 - ¿Se deduplican los updates por `update_id`?

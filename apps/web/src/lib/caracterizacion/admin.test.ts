@@ -6,14 +6,17 @@
  * reales y al `middleware.ts`, contra una base SQLite TEMPORAL arrancada con la misma
  * secuencia que producción (`prepararSqlite`: schema + migraciones + seed):
  *
- *   puertas (middleware + adminActor) → un contribuidor aplica (/api/apply)
+ *   puertas (middleware + adminActor) → el founder publica un proyecto sembrado
+ *   (nace en borrador) → un contribuidor aplica (/api/apply)
  *   → el founder aprueba la aplicación → aprueba un hito (puntos + reputación)
  *   → avanza el estado → modera la Academia → fitness + "sin cambios" + firma
  *   → cierra la época (raíz Merkle encolada para la red de pruebas)
  *
  * Protege el comportamiento ACTUAL. Los `it` marcados "HALLAZGO" fijan conductas
  * que la ficha reporta como problema: si alguien las corrige, este test debe fallar
- * y la ficha debe actualizarse en el mismo cambio.
+ * y la ficha debe actualizarse en el mismo cambio. Actualizado al release
+ * wp/32-release: los proyectos sembrados nacen en borrador (2c049eb) y el flujo
+ * empieza por publicarlos con la acción `publishProject`.
  *
  * Aislamiento (mismo patrón que login-y-sesion.test.ts): `next/headers` es un tarro
  * de cookies en memoria, los alias `@/lib/*` apuntan a los módulos REALES y
@@ -55,6 +58,8 @@ vi.mock("@/lib/epochs", async () => await import("../epochs"));
 vi.mock("@/lib/mutation", async () => await import("../mutation"));
 vi.mock("@/lib/audits", async () => await import("../audits"));
 vi.mock("@/lib/epocas", async () => await import("../epocas"));
+vi.mock("@/lib/agora-borradores", async () => await import("../agora-borradores"));
+vi.mock("@/lib/state-machine", async () => await import("../state-machine"));
 
 import { openDb, prepararSqlite, type DB } from "../db";
 import { FOUNDER_WALLET } from "../config";
@@ -212,6 +217,47 @@ describe("admin · puertas", () => {
 // ---------------------------------------------------------------------------
 
 describe("admin · flujo principal: aplicación → hito → estado → Academia → cierre de época", () => {
+  it("0 · un proyecto sembrado nace en BORRADOR: nadie aplica ni se asigna hasta que el founder lo publica", async () => {
+    // 2c049eb: el seed crea sus proyectos con draft = 1 y origin = 'seed'.
+    expect(db.prepare(`SELECT state, draft, origin FROM projects WHERE id = ?`).get(proyecto)).toEqual({
+      state: "Open",
+      draft: 1,
+      origin: "seed",
+    });
+    como(tokenA);
+    const ra = await aplicar(post("/api/apply", { projectId: proyecto, approach: "Propuesta de trabajo de la persona A.", timeline: "4 semanas" }));
+    expect(ra.status).toBe(404); // un borrador no existe para el público
+    expect(await ra.json()).toEqual({ error: "Proyecto no encontrado." });
+    // Publicar es del founder: el contribuidor no pasa la puerta.
+    expect((await accion({ action: "publishProject", projectId: proyecto })).status).toBe(403);
+
+    // Una aplicación que exista sobre un borrador (p. ej. de antes de la migración) no se aprueba.
+    const otroBorrador = (
+      db.prepare(`SELECT id FROM projects WHERE draft = 1 AND id <> ? ORDER BY id LIMIT 1`).get(proyecto) as { id: number }
+    ).id;
+    const vieja = Number(
+      db
+        .prepare(`INSERT INTO applications (project_id, wallet, approach, timeline) VALUES (?, ?, 'Aplicación previa.', '1 semana')`)
+        .run(otroBorrador, walletB).lastInsertRowid
+    );
+    como(tokenFounder);
+    expect(await accion({ action: "approveApplication", applicationId: vieja })).toEqual({
+      status: 400,
+      json: { error: "El proyecto está en borrador: publícalo antes de asignarlo." },
+    });
+    expect(db.prepare(`SELECT status FROM applications WHERE id = ?`).get(vieja)).toEqual({ status: "pending" });
+    db.prepare(`DELETE FROM applications WHERE id = ?`).run(vieja);
+
+    expect(await accion({ action: "publishProject" })).toEqual({ status: 400, json: { error: "Falta projectId." } });
+    expect(await accion({ action: "publishProject", projectId: 999999 })).toEqual({
+      status: 400,
+      json: { error: "Proyecto no encontrado." },
+    });
+    expect(await accion({ action: "publishProject", projectId: proyecto })).toEqual({ status: 200, json: { ok: true } });
+    // Publicar no toca el ciclo: sigue Open, ahora visible.
+    expect(db.prepare(`SELECT state, draft FROM projects WHERE id = ?`).get(proyecto)).toEqual({ state: "Open", draft: 0 });
+  });
+
   it("1 · dos contribuidores aplican al mismo proyecto abierto (/api/apply)", async () => {
     como(tokenA);
     const ra = await aplicar(post("/api/apply", { projectId: proyecto, approach: "Propuesta de trabajo de la persona A.", timeline: "4 semanas" }));
@@ -367,6 +413,15 @@ describe("admin · HALLAZGOS (comportamiento actual)", () => {
     expect(
       db.prepare(`SELECT COUNT(*) AS n FROM applications WHERE project_id = ? AND status = 'approved'`).get(proyecto)
     ).toEqual({ n: 2 });
+  });
+
+  it("HALLAZGO: publicar dos veces responde 400, no el 409 que declara publicarProyecto (la ruta pasa todo error a 400)", async () => {
+    como(tokenFounder);
+    expect(await accion({ action: "publishProject", projectId: proyecto })).toEqual({
+      status: 400,
+      json: { error: "Este proyecto ya está publicado." },
+    });
+    expect(db.prepare(`SELECT draft FROM projects WHERE id = ?`).get(proyecto)).toEqual({ draft: 0 });
   });
 
   it("rechazar una aplicación que no existe responde ok", async () => {

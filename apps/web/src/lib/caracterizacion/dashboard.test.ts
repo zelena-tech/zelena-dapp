@@ -16,9 +16,11 @@
  *
  * Si una aserción marcada "COMPORTAMIENTO ACTUAL" deja de cumplirse porque se corrigió
  * el hallazgo que la acompaña, se actualiza la aserción y la ficha, no el código.
- * Personas: solo los slugs del roster del repo; nada de datos reales.
+ * Personas: solo los slugs de la plantilla de roles del roster (Founder, Operaciones,
+ * Plataforma, Producto…; repo público, A8 en b97448a); nada de datos reales.
+ * Commit de referencia: 0e07d8f; revisada contra wp/32-release (4032c7c).
  */
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import { openDb, type DB } from "../db";
@@ -38,15 +40,15 @@ import { buildDailyDigest, dailyDigestFor, digestFilename, renderDigestText } fr
 import { createClient } from "../clients";
 import { clearGenomeCache } from "../genome";
 
-const JOHN = pendingPrincipal("john");
-const VALE = pendingPrincipal("vale");
-const FAUSTO = pendingPrincipal("fausto");
-const DAVID = pendingPrincipal("david");
+const FILA_FOUNDER = pendingPrincipal("founder");
+const OPERACIONES = pendingPrincipal("operaciones");
+const PLATAFORMA = pendingPrincipal("plataforma");
+const PRODUCTO = pendingPrincipal("producto");
 
-const FOUNDER: TeamActor = { wallet: JOHN, name: "John", role: "founder", isSupervisor: true };
-const SUPERVISORA: TeamActor = { wallet: VALE, name: "Vale", role: "core", isSupervisor: true };
-const CORE_A: TeamActor = { wallet: FAUSTO, name: "Fausto", role: "core", isSupervisor: false };
-const CORE_B: TeamActor = { wallet: DAVID, name: "David", role: "core", isSupervisor: false };
+const FOUNDER: TeamActor = { wallet: FILA_FOUNDER, name: "Founder", role: "founder", isSupervisor: true };
+const SUPERVISORA: TeamActor = { wallet: OPERACIONES, name: "Operaciones", role: "core", isSupervisor: true };
+const CORE_A: TeamActor = { wallet: PLATAFORMA, name: "Plataforma", role: "core", isSupervisor: false };
+const CORE_B: TeamActor = { wallet: PRODUCTO, name: "Producto", role: "core", isSupervisor: false };
 
 // Calendario en UTC (vitest.config.ts fija TZ=UTC, como Azure). Lunes 5 de octubre de 2026.
 const LUN_09 = new Date("2026-10-05T14:00:00.000Z");
@@ -58,6 +60,7 @@ function freshDb(): DB {
   const db = openDb(":memory:");
   db.pragma("foreign_keys = ON");
   db.exec(fs.readFileSync(path.join(process.cwd(), "src", "lib", "schema.sql"), "utf8"));
+  vi.stubEnv("ZELENA_TEAM_ROSTER", ""); // sin roster del entorno: la plantilla de roles del código (A8)
   seedTeam(db);
   clearGenomeCache(db);
   return db;
@@ -71,6 +74,10 @@ function status(fn: () => unknown): number | null {
     return e instanceof TeamError ? e.status : -1;
   }
 }
+
+afterAll(() => {
+  vi.unstubAllEnvs();
+});
 
 describe("caracterización · dashboard (flujo principal)", () => {
   let db: DB;
@@ -87,7 +94,7 @@ describe("caracterización · dashboard (flujo principal)", () => {
     bloqueada = createAssignmentAs(
       db,
       FOUNDER,
-      { title: "Pieza que se bloquea", initiativeId: proyecto, ownerWallet: FAUSTO, priority: "High" },
+      { title: "Pieza que se bloquea", initiativeId: proyecto, ownerWallet: PLATAFORMA, priority: "High" },
       LUN_09
     );
     aplicarAccionAsignacion(db, { assignmentId: bloqueada, action: "empezar", actor: CORE_A, now: LUN_10 });
@@ -103,7 +110,7 @@ describe("caracterización · dashboard (flujo principal)", () => {
     conGate = createAssignmentAs(
       db,
       FOUNDER,
-      { title: "Pieza que espera decisión", initiativeId: proyecto, ownerWallet: DAVID, needsFounder: true, dueDate: "2026-10-06" },
+      { title: "Pieza que espera decisión", initiativeId: proyecto, ownerWallet: PRODUCTO, needsFounder: true, dueDate: "2026-10-06" },
       LUN_09
     );
     aplicarAccionAsignacion(db, { assignmentId: conGate, action: "empezar", actor: CORE_B, now: LUN_10 });
@@ -112,7 +119,7 @@ describe("caracterización · dashboard (flujo principal)", () => {
     sinDueno = createAssignmentAs(db, FOUNDER, { title: "Pieza sin responsable", initiativeId: proyecto }, LUN_09);
 
     // Check-in escrito el lunes.
-    upsertCheckin(db, FAUSTO, { done: "revisé el inventario", doing: "migración", blocked: "acceso" }, LUN_10);
+    upsertCheckin(db, PLATAFORMA, { done: "revisé el inventario", doing: "migración", blocked: "acceso" }, LUN_10);
   });
 
   it("buildDashboard arma las seis secciones que pinta /equipo/dashboard", () => {
@@ -150,10 +157,10 @@ describe("caracterización · dashboard (flujo principal)", () => {
     const nombres = d.load.people.map((p) => p.name);
     expect(nombres).toEqual([...nombres].sort((a, b) => a.localeCompare(b, "es")));
     expect(nombres).toHaveLength(6);
-    const fausto = d.load.people.find((p) => p.wallet === FAUSTO)!;
-    const david = d.load.people.find((p) => p.wallet === DAVID)!;
-    expect(fausto).toMatchObject({ open: 0, blocked: 1, needsFounder: 0 });
-    expect(david).toMatchObject({ open: 1, inProgress: 1, needsFounder: 1 });
+    const plataforma = d.load.people.find((p) => p.wallet === PLATAFORMA)!;
+    const producto = d.load.people.find((p) => p.wallet === PRODUCTO)!;
+    expect(plataforma).toMatchObject({ open: 0, blocked: 1, needsFounder: 0 });
+    expect(producto).toMatchObject({ open: 1, inProgress: 1, needsFounder: 1 });
     expect(d.load.unassignedOpen).toBe(1);
     expect(d.load.totalOpen).toBe(2);
 
@@ -211,7 +218,7 @@ describe("caracterización · dashboard (flujo principal)", () => {
     const pieza = createAssignmentAs(
       db,
       FOUNDER,
-      { title: "Pieza de cliente", initiativeId: deCliente, ownerWallet: FAUSTO, needsFounder: true },
+      { title: "Pieza de cliente", initiativeId: deCliente, ownerWallet: PLATAFORMA, needsFounder: true },
       LUN_09
     );
     aplicarAccionAsignacion(db, { assignmentId: pieza, action: "empezar", actor: CORE_A, now: LUN_10 });

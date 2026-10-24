@@ -1,6 +1,6 @@
 # Ficha: Dashboard
 
-Dueño: QA (por asignar) · Revisor: John · Fecha: 2026-10-21 · Commit de referencia: 0e07d8f
+Dueño: QA (por asignar) · Revisor: John · Fecha: 2026-10-21 · Commit de referencia: 0e07d8f · Revisada contra wp/32-release (`4032c7c`) el 2026-10-24: §1, §3, §4, §6, §7, §8 y §9 (lo marcado «en `4032c7c`» cita líneas de ese commit)
 
 ## 1. Resumen
 
@@ -17,7 +17,7 @@ Después vienen la salud del rito de check-in (check-ins escritos ÷ personas ×
 - **Solo lee.** La página y la ruta del digest no escriben nada en la base.
 - **Visibilidad (spec WP31 §4.A.12):** todo lo que se cuenta pasa por `piezasVisiblesPara`. Un proyecto de cliente solo cuenta para el founder y para quien participa en ese cliente o proyecto, aunque supervise.
 - El bot de Telegram reutiliza las mismas funciones para responder "consultar estado" (`bot-tools.ts:566-633`).
-- **Ojo:** no hay ningún enlace a `/equipo/dashboard` en el menú ni en otra página; hoy solo se llega escribiendo la URL (ver §9).
+- **Cómo se llega:** desde `184a606`, por «Seguimiento» en el menú, que solo ve quien ve todo el equipo (`src/lib/menu.ts:60-61` y `106` en `4032c7c`); desde `4032c7c`, la ruta vieja `/equipo/seguimiento` redirige con 308 aquí (`next.config.mjs:86-87`). Antes no había enlace y solo se llegaba escribiendo la URL. La puerta sigue siendo la de la página.
 
 ## 2. Diagrama (DFD)
 
@@ -93,7 +93,7 @@ flowchart LR
 
 Acción elegida: el founder o una supervisora abre `/equipo/dashboard` para ver qué está bloqueado y descarga el digest del día.
 
-1. **Pantalla o componente:** `app/equipo/dashboard/page.tsx#EquipoDashboardPage` (server component, `dynamic = "force-dynamic"` en la línea 40). No hay enlace en el menú (`src/lib/menu.ts:55-56` solo tiene "Mi día" y "Proyectos"): se llega escribiendo la URL. El único componente de cliente es `DigestPanel` (botones "Copiar el digest" y "Descargar .txt").
+1. **Pantalla o componente:** `app/equipo/dashboard/page.tsx#EquipoDashboardPage` (server component, `dynamic = "force-dynamic"` en la línea 40). Se llega por «Seguimiento» en el menú, que desde `184a606` sale para el founder y la supervisión (`src/lib/menu.ts:60-61` y `106` en `4032c7c`); antes no había enlace. `/equipo/seguimiento` redirige aquí con 308 (`next.config.mjs:86-87` en `4032c7c`). El único componente de cliente es `DigestPanel` (botones "Copiar el digest" y "Descargar .txt").
 2. **Llamada al backend (endpoint y datos enviados):** `GET /equipo/dashboard` con la cookie `zelena_session` (JWT HS256 de 24 h, `httpOnly`, `SameSite=Lax`: `session.ts:19-25`). No hay `fetch`: el servidor arma la página entera en el render. La descarga es `GET /api/equipo/digest?dia=AAAA-MM-DD`, que arma `DigestPanel.tsx:36-42`.
 3. **Ruta y controlador:**
    - `middleware.ts:33-48`: `/equipo` está en `PROTECTED_SESSION` (línea 27). Verifica la firma del JWT (`jwt.ts:48-55`) y, si falta o no es válido, redirige a `/entrar?next=/equipo/dashboard`. El matcher (línea 51) no cubre `/api/**`: cada ruta tiene su propia puerta.
@@ -136,7 +136,7 @@ Acción elegida: el founder o una supervisora abre `/equipo/dashboard` para ver 
 | `sla` SLA en horas hábiles | Proceso | `apps/web/src/lib/sla-db.ts#slaDeAsignaciones` (110-132), `slaConfig` (24-26); lógica pura en `sla.ts#evaluarSla` (341) | Consulta en tandas de 400 ids por el límite de parámetros de SQL Server. |
 | `dig` Digest del día | Proceso | `apps/web/src/lib/digest.ts#buildDailyDigest` (87-129), `dailyDigestFor` (141-146), `renderDigestText` (161-213), `digestFilename` (216) | Los check-ins no se filtran por actor (88). |
 | `api` `GET /api/equipo/digest` | Proceso | `apps/web/app/api/equipo/digest/route.ts#GET` (24-59), `DAY_RE` (22) | Descarga, no envío. `no-store`. |
-| `rl` Límite de solicitudes | Almacén (memoria) | `apps/web/src/lib/rate-limit.ts#rateLimit` (10-20), `clientIp` (22-26) | Un `Map` por proceso. La IP sale del primer valor de `X-Forwarded-For`. |
+| `rl` Límite de solicitudes | Almacén (memoria) | `apps/web/src/lib/rate-limit.ts#rateLimit` (10-20), `clientIp` (22-26) | Un `Map` por proceso. La IP salía del primer valor de `X-Forwarded-For`; desde `05a2f4e` y `642e412` sale del último (o de `X-Azure-ClientIP` si la petición viene de nuestro Front Door). |
 | `db_users` users | Almacén | `apps/web/src/lib/schema.sql#users` (18) | Rol, supervisión, estado, acuerdo y nombre visible. |
 | `db_proy` Visibilidad | Almacén | `schema.sql#initiatives` (480), `project_members` (577), `client_members` (350), `roster_links` (592) | Deciden qué piezas ve cada actor. |
 | `db_trabajo` Trabajo | Almacén | `schema.sql#assignments` (499), `assignment_events` (533) | `assignment_events` es append-only por convención (no hay trigger). |
@@ -191,7 +191,7 @@ Acción elegida: el founder o una supervisora abre `/equipo/dashboard` para ver 
 - **Clientes y grafo:** `client_members` decide qué piezas de cliente cuenta una supervisora.
 - **Talento e importador:** `listTeamMembers` (roster) y `vincularPrincipal`, que mueve la wallet en `checkins` y `assignment_events` al vincular.
 - **Telegram:** el bot consume `blockedWithAge`, `founderInbox`, `initiativeBars`, `loadByPerson`, `epochSnapshot`, `riteHealth` y `buildTodayDigest` (`bot-tools.ts:566-633`). Un cambio aquí cambia sus respuestas.
-- **Menú y navegación:** no hay entrada para el dashboard (`menu.ts:55-58`, `menuPara` 84-102).
+- **Menú y navegación:** desde `184a606`, «Seguimiento» lleva aquí para quien ve todo el equipo (`menu.ts:60-61` y `menuPara`, 106, en `4032c7c`); antes no había entrada.
 
 Dependencias inversas anotadas al integrar (la otra ficha ya las tenía; la guía pide anotarlas en las dos):
 
@@ -211,13 +211,15 @@ Dependencias inversas anotadas al integrar (la otra ficha ya las tenía; la guí
 | Inyección en la cabecera `Content-Disposition` por el parámetro `dia` | Manipulación (T) | api | Mitigada | El nombre del archivo solo se arma con un `dia` que pasó `^\d{4}-\d{2}-\d{2}$` (`route.ts:22`, `34`, `52`). |
 | XSS con el título o el motivo de una pieza pintados en el tablero o en el digest | Manipulación (T) | pg, panel | Mitigada | React escapa el texto. El digest se pinta en `<pre>{text}</pre>` (`DigestPanel.tsx:48-50`) y ninguno de estos archivos usa `dangerouslySetInnerHTML`. |
 | Muchas peticiones al tablero (consultas completas de `assignments` en cada render) | Denegación de servicio (D) | pg, team | Aceptada | La página no tiene límite de solicitudes y `assignmentsByInitiative` lee todas las piezas (`team.ts:638`). Se acepta por volumen: es un equipo pequeño y solo entra quien supervisa (`page.tsx:105`). Revisar si el equipo crece. |
-| Saltarse el límite de 30 por minuto del digest cambiando `X-Forwarded-For` | Denegación de servicio (D) | rl, api | Pendiente | `clientIp` toma el primer valor de `X-Forwarded-For`, que manda el cliente (`rate-limit.ts:22-24`). La clave incluye la wallet, así que hace falta sesión. Con cabeceras distintas se abren cubetas nuevas. El `Map` además es por proceso (`rate-limit.ts:7-8`). |
+| Saltarse el límite de 30 por minuto del digest cambiando `X-Forwarded-For` | Denegación de servicio (D) | rl, api | Mitigada | Desde `05a2f4e` y `642e412`: `clientIp` ya no toma el primer valor de `X-Forwarded-For` (lo manda el cliente) sino el último, que agrega el frontal de App Service, y solo cree `X-Azure-ClientIP` si `X-Azure-FDID` es el de nuestro Front Door (`apps/web/src/lib/rate-limit.ts:46-62` y `78-93` en `4032c7c`); el mapa se poda de cubetas vencidas (10-19). Tests: `rate-limit.test.ts`. Queda que el `Map` es por proceso (`rate-limit.ts:7-8`); además la clave incluye la wallet, así que hace falta sesión. |
 | Nadie registra quién vio o descargó el digest | Repudio (R) | api, pg | Aceptada | Es solo lectura y no cambia estado, y v1 no tiene bitácora de lecturas. El contenido sale de eventos que sí tienen autor (`assignment_events.actor_wallet`). |
 | Una sesión robada sigue sirviendo 24 h después del logout | Suplantación (S) | f1 | Aceptada | No hay revocación del JWT en el servidor (`jwt.ts:44`). Cada render relee rol y estado de la base (`authz.ts:136`), así que pasar a alumni o perder la supervisión corta el acceso al instante. |
 
 ## 8. Prueba de caracterización
 
-Archivo: `apps/web/src/lib/caracterizacion/dashboard.test.ts`. Se corre con `cd apps/web && npx vitest run src/lib/caracterizacion/dashboard.test.ts` y el resultado es **7 de 7 pasan**.
+Archivo: `apps/web/src/lib/caracterizacion/dashboard.test.ts`. Se corre con `cd apps/web && npx vitest run src/lib/caracterizacion/dashboard.test.ts` y el resultado es **7 de 7 pasan** contra `4032c7c` (wp/32-release).
+
+Al revisarla contra wp/32-release, las personas pasaron a los slugs de la plantilla de roles (`b97448a`, hallazgo A8: `founder`, `operaciones`, `plataforma`, `producto`), porque el roster del código ya no siembra filas con nombres de personas; la carga sigue teniendo 6 filas en orden alfabético, ahora con los nombres de los roles. Las aserciones no cambiaron: ningún hallazgo de esta prueba se corrigió en la release. La prueba deja `ZELENA_TEAM_ROSTER` vacío (`vi.stubEnv`) para no depender del entorno.
 
 Usa una base SQLite en memoria con `schema.sql` y `seedTeam`. Crea un proyecto y tres piezas con las funciones reales: una se bloquea con motivo, otra espera al founder con la fecha vencida y otra queda sin responsable. También escribe un check-in. Con eso fija:
 
@@ -232,7 +234,7 @@ Ya hay pruebas que cubren más casos y que esta no reemplaza: `src/lib/dashboard
 
 ## 9. Preguntas abiertas
 
-1. **¿Dónde va el enlace al dashboard?** No aparece en el menú (`menu.ts:55-58`) ni en `/equipo/hoy` ni en `/equipo/proyectos`. La búsqueda `grep "equipo/dashboard"` solo encuentra la propia página. Propuesta: agregarlo en `menuPara` cuando `puedeVerTodo` sea verdadero, igual que "Talento".
+1. ~~**¿Dónde va el enlace al dashboard?** No aparece en el menú (`menu.ts:55-58`) ni en `/equipo/hoy` ni en `/equipo/proyectos`. La búsqueda `grep "equipo/dashboard"` solo encuentra la propia página. Propuesta: agregarlo en `menuPara` cuando `puedeVerTodo` sea verdadero, igual que "Talento".~~ Respondida por `184a606`: «Seguimiento» en el menú, junto a «Talento», para quien ve todo el equipo (ver §1).
 2. **¿El día del equipo es el del servidor o el del negocio?** La página, el digest, el check-in y los días bloqueada usan `today()` (`team.ts:105-110`, reloj del servidor en UTC en Azure). Mientras tanto, `zona-horaria.ts:5-8` dice que el código nuevo nunca debe usarlo y el tablero de proyecto sí usa `BUSINESS_TZ`. Entre las 19:00 y las 24:00 de Bogotá todo aparece como del día siguiente.
 3. **¿Toda supervisión debe leer todos los check-ins?** El digest no filtra los check-ins por actor (`digest.ts:88`). Si alguien escribe sobre un cliente, el texto le llega a supervisión que no participa en ese cliente.
 4. **¿Las personas externas con rol en proyectos deben tener fila en la carga?** Hoy la carga solo lista founder y core (`team.ts:1157`), y el trabajo de las personas externas cae en "fuera del roster" sin nombre (`dashboard.ts:415-421`). Con WP31 (talento por proyectos) esto se queda corto para repartir trabajo.

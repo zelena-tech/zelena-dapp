@@ -1,63 +1,63 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1970 3050" width="1970" height="3050" font-family="Segoe UI, Arial, sans-serif" font-size="13">
-<title>Ágora y hitos: publicar desde el backlog, aplicar, asignar y aprobar hitos (1 USD = 1 punto)</title>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1970 3240" width="1970" height="3240" font-family="Segoe UI, Arial, sans-serif" font-size="13">
+<title>Ágora y hitos: publicar desde el backlog, publicar borradores, aplicar, asignar y aprobar hitos (1 USD = 1 punto)</title>
 <defs><marker id="punta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker></defs>
-<rect width="1970" height="3050" fill="#ffffff"/>
+<rect width="1970" height="3240" fill="#ffffff"/>
 <rect x="50" y="45" width="1830" height="385" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
 <text x="58" y="63" fill="#c0392b">Navegador (no confiable)</text>
 <rect x="380" y="505" width="1500" height="385" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
 <text x="388" y="523" fill="#c0392b">Servidor Next.js en Azure App Service (público y equipo)</text>
-<rect x="1040" y="965" width="510" height="765" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<rect x="1040" y="965" width="510" height="955" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
 <text x="1048" y="983" fill="#c0392b">Zona founder (rol leído de la base)</text>
-<rect x="710" y="1805" width="840" height="1145" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
-<text x="718" y="1823" fill="#c0392b">Base SQLite (/home/data/zelena.db)</text>
+<rect x="710" y="1995" width="840" height="1145" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="718" y="2013" fill="#c0392b">Base SQLite (/home/data/zelena.db)</text>
 <path d="M185,150 Q255,406 425,610" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="280" y="393" text-anchor="middle" font-size="11" fill="#555">f1 Ver proyectos abiertos</text>
-<path d="M515,610 Q579,1270 755,1910" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="607" y="1265" text-anchor="middle" font-size="11" fill="#555">f2 Listar y leer proyectos</text>
 <path d="M515,610 Q579,1363 755,2100" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="607" y="1359" text-anchor="middle" font-size="11" fill="#555">f3 Leer hitos</text>
+<text x="607" y="1359" text-anchor="middle" font-size="11" fill="#555">f2 Listar y leer proyectos</text>
+<path d="M515,610 Q579,1458 755,2290" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="607" y="1454" text-anchor="middle" font-size="11" fill="#555">f3 Leer hitos</text>
 <path d="M425,610 Q355,354 185,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="330" y="367" text-anchor="middle" font-size="11" fill="#555">f4 Ficha pública</text>
 <path d="M1745,150 Q1575,354 1505,610" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="1600" y="367" text-anchor="middle" font-size="11" fill="#b03a2e">f5 Abrir Publicar en el Ágora *</text>
 <path d="M1505,610 Q1625,666 1745,610" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="1625" y="638" text-anchor="middle" font-size="11" fill="#b03a2e">f6 Petición con JWT verificado *</text>
-<path d="M1745,610 Q1569,1347 1505,2100" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="1597" y="1351" text-anchor="middle" font-size="11" fill="#555">f7 Leer la pieza y armar el borrador</text>
+<path d="M1745,610 Q1569,1442 1505,2290" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1597" y="1446" text-anchor="middle" font-size="11" fill="#555">f7 Leer la pieza y armar el borrador</text>
 <path d="M1745,150 Q1573,455 1505,800" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="1599" y="465" text-anchor="middle" font-size="11" fill="#b03a2e">f8 Publicar *</text>
 <path d="M1505,800 Q1625,856 1745,800" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="1625" y="828" text-anchor="middle" font-size="11" fill="#b03a2e">f9 ¿Quién es y qué alcance tiene? *</text>
-<path d="M1745,800 Q1569,1537 1505,2290" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="1597" y="1541" text-anchor="middle" font-size="11" fill="#555">f10 Rol leído de la base</text>
+<path d="M1745,800 Q1569,1632 1505,2480" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1597" y="1636" text-anchor="middle" font-size="11" fill="#555">f10 Rol leído de la base</text>
 <path d="M1415,800 Q1329,661 1175,610" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="1312" y="683" text-anchor="middle" font-size="11" fill="#b03a2e">f11 Entrada validada *</text>
-<path d="M1175,610 Q1239,1553 1415,2480" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="1267" y="1549" text-anchor="middle" font-size="11" fill="#555">f12 Hitos por defecto y zona horaria</text>
-<path d="M1085,610 Q909,1250 845,1910" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="937" y="1255" text-anchor="middle" font-size="11" fill="#b03a2e">f13 Crear proyecto Open *</text>
+<path d="M1175,610 Q1239,1646 1415,2670" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1267" y="1643" text-anchor="middle" font-size="11" fill="#555">f12 Hitos por defecto y zona horaria</text>
 <path d="M1085,610 Q909,1347 845,2100" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="937" y="1351" text-anchor="middle" font-size="11" fill="#b03a2e">f14 Crear hitos con montos *</text>
-<path d="M1175,610 Q1239,1363 1415,2100" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="1267" y="1359" text-anchor="middle" font-size="11" fill="#555">f15 Enlazar y dejar evento</text>
+<text x="937" y="1351" text-anchor="middle" font-size="11" fill="#b03a2e">f13 Crear proyecto Open *</text>
+<path d="M1085,610 Q909,1442 845,2290" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="937" y="1446" text-anchor="middle" font-size="11" fill="#b03a2e">f14 Crear hitos con montos *</text>
+<path d="M1175,610 Q1239,1458 1415,2290" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1267" y="1454" text-anchor="middle" font-size="11" fill="#555">f15 Enlazar y dejar evento</text>
 <path d="M1505,800 Q1677,495 1745,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="1651" y="485" text-anchor="middle" font-size="11" fill="#555">f16 Proyecto publicado</text>
 <path d="M1415,150 Q1243,455 1175,800" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="1269" y="465" text-anchor="middle" font-size="11" fill="#b03a2e">f17 Aplicar *</text>
-<path d="M1085,800 Q911,1343 845,1910" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="938" y="1349" text-anchor="middle" font-size="11" fill="#555">f18 ¿Sigue Open?</text>
-<path d="M1175,800 Q1241,1367 1415,1910" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="1268" y="1361" text-anchor="middle" font-size="11" fill="#b03a2e">f19 Guardar aplicación *</text>
+<path d="M1085,800 Q909,1440 845,2100" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="937" y="1445" text-anchor="middle" font-size="11" fill="#555">f18 ¿Publicado y Open?</text>
+<path d="M1175,800 Q1239,1460 1415,2100" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1267" y="1455" text-anchor="middle" font-size="11" fill="#b03a2e">f19 Guardar aplicación *</text>
 <path d="M1175,800 Q1347,495 1415,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="1321" y="485" text-anchor="middle" font-size="11" fill="#555">f20 Resultado</text>
 <path d="M1745,340 Q1583,437 1505,610" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="1604" y="456" text-anchor="middle" font-size="11" fill="#b03a2e">f21 Abrir /admin *</text>
 <path d="M1415,610 Q1245,814 1175,1070" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="1270" y="827" text-anchor="middle" font-size="11" fill="#b03a2e">f22 Petición con JWT verificado *</text>
-<path d="M1175,1070 Q1241,1506 1415,1910" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="1268" y="1498" text-anchor="middle" font-size="11" fill="#b03a2e">f23 Aplicaciones *</text>
-<path d="M1085,1070 Q911,1573 845,2100" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="938" y="1579" text-anchor="middle" font-size="11" fill="#555">f24 Hitos por proyecto</text>
+<path d="M1175,1070 Q1241,1597 1415,2100" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1268" y="1591" text-anchor="middle" font-size="11" fill="#b03a2e">f23 Aplicaciones *</text>
+<path d="M1085,1070 Q911,1670 845,2290" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="1675" text-anchor="middle" font-size="11" fill="#555">f24 Hitos por proyecto</text>
 <path d="M1745,340 Q1571,687 1505,1070" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="1598" y="696" text-anchor="middle" font-size="11" fill="#b03a2e">f25 Acción de administración *</text>
 <path d="M1505,1070 Q1667,973 1745,800" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
@@ -66,32 +66,36 @@
 <text x="1278" y="1143" text-anchor="middle" font-size="11" fill="#555">f27 approveApplication(id)</text>
 <path d="M1175,1260 Q1295,1316 1415,1260" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="1295" y="1288" text-anchor="middle" font-size="11" fill="#555">f28 transition(Open, assign)</text>
-<path d="M1175,1260 Q1243,1605 1415,1910" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="1269" y="1595" text-anchor="middle" font-size="11" fill="#555">f29 Marcar aprobada</text>
-<path d="M1085,1260 Q913,1565 845,1910" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="939" y="1575" text-anchor="middle" font-size="11" fill="#b03a2e">f30 Asignar ejecutor *</text>
+<path d="M1175,1260 Q1241,1696 1415,2100" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1268" y="1688" text-anchor="middle" font-size="11" fill="#555">f29 Marcar aprobada</text>
+<path d="M1085,1260 Q911,1664 845,2100" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="1672" text-anchor="middle" font-size="11" fill="#b03a2e">f30 Asignar ejecutor *</text>
 <path d="M1415,1070 Q1247,1230 1175,1450" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="1271" y="1245" text-anchor="middle" font-size="11" fill="#555">f31 advanceState(id)</text>
 <path d="M1175,1450 Q1329,1399 1415,1260" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="1312" y="1377" text-anchor="middle" font-size="11" fill="#555">f32 nextAction + transition</text>
-<path d="M1085,1450 Q915,1654 845,1910" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="940" y="1667" text-anchor="middle" font-size="11" fill="#555">f33 Nuevo estado</text>
+<path d="M1085,1450 Q913,1755 845,2100" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="939" y="1765" text-anchor="middle" font-size="11" fill="#555">f33 Nuevo estado</text>
 <path d="M1415,1070 Q1243,1333 1175,1640" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="1269" y="1344" text-anchor="middle" font-size="11" fill="#b03a2e">f34 approveMilestone(id) *</text>
-<path d="M1085,1640 Q915,1844 845,2100" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="940" y="1857" text-anchor="middle" font-size="11" fill="#b03a2e">f35 Leer y marcar hito *</text>
-<path d="M1085,1640 Q923,1737 845,1910" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="944" y="1756" text-anchor="middle" font-size="11" fill="#555">f36 Ejecutor y supervisor</text>
-<path d="M1175,1640 Q1243,1985 1415,2290" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="1269" y="1975" text-anchor="middle" font-size="11" fill="#555">f37 Regla B8</text>
+<path d="M1085,1640 Q913,1945 845,2290" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="939" y="1955" text-anchor="middle" font-size="11" fill="#b03a2e">f35 Leer y marcar hito *</text>
+<path d="M1085,1640 Q915,1844 845,2100" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="940" y="1857" text-anchor="middle" font-size="11" fill="#555">f36 Ejecutor y supervisor</text>
 <path d="M1175,1640 Q1241,2076 1415,2480" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="1268" y="2068" text-anchor="middle" font-size="11" fill="#555">f38 Tope de la época</text>
-<path d="M1175,1640 Q1241,2167 1415,2670" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="1268" y="2161" text-anchor="middle" font-size="11" fill="#b03a2e">f39 Sumar y emitir puntos *</text>
+<text x="1268" y="2068" text-anchor="middle" font-size="11" fill="#555">f37 Regla B8</text>
+<path d="M1175,1640 Q1241,2167 1415,2670" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1268" y="2161" text-anchor="middle" font-size="11" fill="#555">f38 Tope de la época</text>
 <path d="M1175,1640 Q1241,2260 1415,2860" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="1268" y="2255" text-anchor="middle" font-size="11" fill="#b03a2e">f40 Emitir reputación *</text>
+<text x="1268" y="2255" text-anchor="middle" font-size="11" fill="#b03a2e">f39 Sumar y emitir puntos *</text>
+<path d="M1175,1640 Q1239,2355 1415,3050" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1267" y="2350" text-anchor="middle" font-size="11" fill="#b03a2e">f40 Emitir reputación *</text>
 <path d="M1505,1070 Q1679,723 1745,340" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="1652" y="714" text-anchor="middle" font-size="11" fill="#b03a2e">f41 Resultado *</text>
+<path d="M1415,1070 Q1241,1434 1175,1830" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1268" y="1442" text-anchor="middle" font-size="11" fill="#555">f42 publicarProyecto(id)</text>
+<path d="M1085,1830 Q923,1927 845,2100" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="944" y="1946" text-anchor="middle" font-size="11" fill="#555">f43 Quitar la marca de borrador</text>
 <rect x="90" y="100" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
 <text x="140" y="138" text-anchor="middle" fill="#222">Visitante</text>
 <text x="140" y="154" text-anchor="middle" fill="#222">público</text>
@@ -112,10 +116,10 @@
 <text x="1790" y="352" text-anchor="middle" fill="#222">(navegador,</text>
 <text x="1790" y="368" text-anchor="middle" fill="#222">AdminAction)</text>
 <circle cx="470" cy="610" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
-<text x="470" y="590" text-anchor="middle" fill="#222">Páginas /agora</text>
-<text x="470" y="606" text-anchor="middle" fill="#222">y /agora/[id]</text>
-<text x="470" y="622" text-anchor="middle" fill="#222">(server</text>
-<text x="470" y="638" text-anchor="middle" fill="#222">components)</text>
+<text x="470" y="574" text-anchor="middle" fill="#222">Páginas /agora</text>
+<text x="470" y="590" text-anchor="middle" fill="#222">y /agora/[id]</text>
+<text x="470" y="606" text-anchor="middle" fill="#222">(server</text>
+<text x="470" y="622" text-anchor="middle" fill="#222">components;</text>
 <circle cx="1460" cy="610" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
 <text x="1460" y="590" text-anchor="middle" fill="#222">Middleware de</text>
 <text x="1460" y="606" text-anchor="middle" fill="#222">sesión</text>
@@ -139,90 +143,94 @@
 <text x="1130" y="614" text-anchor="middle" fill="#222">Ágora</text>
 <text x="1130" y="630" text-anchor="middle" fill="#222">(publicarEnAgora)</text>
 <circle cx="1130" cy="800" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
-<text x="1130" y="780" text-anchor="middle" fill="#222">POST</text>
-<text x="1130" y="796" text-anchor="middle" fill="#222">/api/apply</text>
-<text x="1130" y="812" text-anchor="middle" fill="#222">(lógica en la</text>
-<text x="1130" y="828" text-anchor="middle" fill="#222">ruta)</text>
+<text x="1130" y="772" text-anchor="middle" fill="#222">POST</text>
+<text x="1130" y="788" text-anchor="middle" fill="#222">/api/apply</text>
+<text x="1130" y="804" text-anchor="middle" fill="#222">(lógica en la</text>
+<text x="1130" y="820" text-anchor="middle" fill="#222">ruta; borrador</text>
 <circle cx="1130" cy="1070" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
 <text x="1130" y="1058" text-anchor="middle" fill="#222">Panel /admin:</text>
 <text x="1130" y="1074" text-anchor="middle" fill="#222">Aplicaciones y</text>
 <text x="1130" y="1090" text-anchor="middle" fill="#222">Proyectos</text>
 <circle cx="1460" cy="1070" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
-<text x="1460" y="1050" text-anchor="middle" fill="#222">POST</text>
-<text x="1460" y="1066" text-anchor="middle" fill="#222">/api/admin</text>
-<text x="1460" y="1082" text-anchor="middle" fill="#222">(despacha la</text>
-<text x="1460" y="1098" text-anchor="middle" fill="#222">acción)</text>
+<text x="1460" y="1034" text-anchor="middle" fill="#222">POST</text>
+<text x="1460" y="1050" text-anchor="middle" fill="#222">/api/admin</text>
+<text x="1460" y="1066" text-anchor="middle" fill="#222">(despacha la</text>
+<text x="1460" y="1082" text-anchor="middle" fill="#222">acción,</text>
 <circle cx="1130" cy="1260" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
-<text x="1130" y="1240" text-anchor="middle" fill="#222">Aprobar</text>
-<text x="1130" y="1256" text-anchor="middle" fill="#222">aplicación y</text>
-<text x="1130" y="1272" text-anchor="middle" fill="#222">asignar</text>
-<text x="1130" y="1288" text-anchor="middle" fill="#222">(approveApplication)</text>
+<text x="1130" y="1224" text-anchor="middle" fill="#222">Aprobar</text>
+<text x="1130" y="1240" text-anchor="middle" fill="#222">aplicación y</text>
+<text x="1130" y="1256" text-anchor="middle" fill="#222">asignar</text>
+<text x="1130" y="1272" text-anchor="middle" fill="#222">(approveApplication;</text>
 <circle cx="1130" cy="1450" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
 <text x="1130" y="1446" text-anchor="middle" fill="#222">Avanzar estado</text>
 <text x="1130" y="1462" text-anchor="middle" fill="#222">(advanceState)</text>
 <circle cx="1460" cy="1260" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
-<text x="1460" y="1240" text-anchor="middle" fill="#222">Máquina de</text>
-<text x="1460" y="1256" text-anchor="middle" fill="#222">estados del</text>
-<text x="1460" y="1272" text-anchor="middle" fill="#222">Ágora (función</text>
-<text x="1460" y="1288" text-anchor="middle" fill="#222">pura)</text>
+<text x="1460" y="1232" text-anchor="middle" fill="#222">Máquina de</text>
+<text x="1460" y="1248" text-anchor="middle" fill="#222">estados del</text>
+<text x="1460" y="1264" text-anchor="middle" fill="#222">Ágora (función</text>
+<text x="1460" y="1280" text-anchor="middle" fill="#222">pura) y marca</text>
 <circle cx="1130" cy="1640" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
 <text x="1130" y="1620" text-anchor="middle" fill="#222">Aprobar hito:</text>
 <text x="1130" y="1636" text-anchor="middle" fill="#222">1 USD = 1</text>
 <text x="1130" y="1652" text-anchor="middle" fill="#222">punto</text>
 <text x="1130" y="1668" text-anchor="middle" fill="#222">(approveMilestone)</text>
-<rect x="750" y="1880" width="100" height="60" fill="#fdfefe" stroke="none"/>
-<line x1="750" y1="1880" x2="850" y2="1880" stroke="#222" stroke-width="1.5"/>
-<line x1="750" y1="1940" x2="850" y2="1940" stroke="#222" stroke-width="1.5"/>
-<text x="800" y="1874" text-anchor="middle" fill="#222">SQLite ·</text>
-<text x="800" y="1890" text-anchor="middle" fill="#222">projects</text>
-<text x="800" y="1906" text-anchor="middle" fill="#222">(estado,</text>
-<text x="800" y="1922" text-anchor="middle" fill="#222">presupuesto,</text>
+<circle cx="1130" cy="1830" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="1818" text-anchor="middle" fill="#222">Publicar un</text>
+<text x="1130" y="1834" text-anchor="middle" fill="#222">borrador</text>
+<text x="1130" y="1850" text-anchor="middle" fill="#222">(publicarProyecto)</text>
 <rect x="750" y="2070" width="100" height="60" fill="#fdfefe" stroke="none"/>
 <line x1="750" y1="2070" x2="850" y2="2070" stroke="#222" stroke-width="1.5"/>
 <line x1="750" y1="2130" x2="850" y2="2130" stroke="#222" stroke-width="1.5"/>
-<text x="800" y="2072" text-anchor="middle" fill="#222">SQLite ·</text>
-<text x="800" y="2088" text-anchor="middle" fill="#222">milestones</text>
-<text x="800" y="2104" text-anchor="middle" fill="#222">(pct,</text>
-<text x="800" y="2120" text-anchor="middle" fill="#222">amount_usd,</text>
-<rect x="1410" y="1880" width="100" height="60" fill="#fdfefe" stroke="none"/>
-<line x1="1410" y1="1880" x2="1510" y2="1880" stroke="#222" stroke-width="1.5"/>
-<line x1="1410" y1="1940" x2="1510" y2="1940" stroke="#222" stroke-width="1.5"/>
-<text x="1460" y="1890" text-anchor="middle" fill="#222">SQLite ·</text>
-<text x="1460" y="1906" text-anchor="middle" fill="#222">applications</text>
-<text x="1460" y="1922" text-anchor="middle" fill="#222">(enfoque,</text>
-<text x="1460" y="1938" text-anchor="middle" fill="#222">plazo, estado)</text>
+<text x="800" y="2056" text-anchor="middle" fill="#222">SQLite ·</text>
+<text x="800" y="2072" text-anchor="middle" fill="#222">projects</text>
+<text x="800" y="2088" text-anchor="middle" fill="#222">(estado,</text>
+<text x="800" y="2104" text-anchor="middle" fill="#222">presupuesto,</text>
+<rect x="750" y="2260" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="750" y1="2260" x2="850" y2="2260" stroke="#222" stroke-width="1.5"/>
+<line x1="750" y1="2320" x2="850" y2="2320" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="2262" text-anchor="middle" fill="#222">SQLite ·</text>
+<text x="800" y="2278" text-anchor="middle" fill="#222">milestones</text>
+<text x="800" y="2294" text-anchor="middle" fill="#222">(pct,</text>
+<text x="800" y="2310" text-anchor="middle" fill="#222">amount_usd,</text>
 <rect x="1410" y="2070" width="100" height="60" fill="#fdfefe" stroke="none"/>
 <line x1="1410" y1="2070" x2="1510" y2="2070" stroke="#222" stroke-width="1.5"/>
 <line x1="1410" y1="2130" x2="1510" y2="2130" stroke="#222" stroke-width="1.5"/>
-<text x="1460" y="2072" text-anchor="middle" fill="#222">SQLite ·</text>
-<text x="1460" y="2088" text-anchor="middle" fill="#222">assignments y</text>
-<text x="1460" y="2104" text-anchor="middle" fill="#222">assignment_events</text>
-<text x="1460" y="2120" text-anchor="middle" fill="#222">(backlog</text>
+<text x="1460" y="2080" text-anchor="middle" fill="#222">SQLite ·</text>
+<text x="1460" y="2096" text-anchor="middle" fill="#222">applications</text>
+<text x="1460" y="2112" text-anchor="middle" fill="#222">(enfoque,</text>
+<text x="1460" y="2128" text-anchor="middle" fill="#222">plazo, estado)</text>
 <rect x="1410" y="2260" width="100" height="60" fill="#fdfefe" stroke="none"/>
 <line x1="1410" y1="2260" x2="1510" y2="2260" stroke="#222" stroke-width="1.5"/>
 <line x1="1410" y1="2320" x2="1510" y2="2320" stroke="#222" stroke-width="1.5"/>
-<text x="1460" y="2262" text-anchor="middle" fill="#222">SQLite · users</text>
-<text x="1460" y="2278" text-anchor="middle" fill="#222">(rol,</text>
-<text x="1460" y="2294" text-anchor="middle" fill="#222">supervisión,</text>
-<text x="1460" y="2310" text-anchor="middle" fill="#222">estado,</text>
+<text x="1460" y="2262" text-anchor="middle" fill="#222">SQLite ·</text>
+<text x="1460" y="2278" text-anchor="middle" fill="#222">assignments y</text>
+<text x="1460" y="2294" text-anchor="middle" fill="#222">assignment_events</text>
+<text x="1460" y="2310" text-anchor="middle" fill="#222">(backlog</text>
 <rect x="1410" y="2450" width="100" height="60" fill="#fdfefe" stroke="none"/>
 <line x1="1410" y1="2450" x2="1510" y2="2450" stroke="#222" stroke-width="1.5"/>
 <line x1="1410" y1="2510" x2="1510" y2="2510" stroke="#222" stroke-width="1.5"/>
-<text x="1460" y="2436" text-anchor="middle" fill="#222">SQLite ·</text>
-<text x="1460" y="2452" text-anchor="middle" fill="#222">genome_versions</text>
-<text x="1460" y="2468" text-anchor="middle" fill="#222">y periods</text>
-<text x="1460" y="2484" text-anchor="middle" fill="#222">(EPOCH_BUDGET,</text>
+<text x="1460" y="2452" text-anchor="middle" fill="#222">SQLite · users</text>
+<text x="1460" y="2468" text-anchor="middle" fill="#222">(rol,</text>
+<text x="1460" y="2484" text-anchor="middle" fill="#222">supervisión,</text>
+<text x="1460" y="2500" text-anchor="middle" fill="#222">estado,</text>
 <rect x="1410" y="2640" width="100" height="60" fill="#fdfefe" stroke="none"/>
 <line x1="1410" y1="2640" x2="1510" y2="2640" stroke="#222" stroke-width="1.5"/>
 <line x1="1410" y1="2700" x2="1510" y2="2700" stroke="#222" stroke-width="1.5"/>
-<text x="1460" y="2658" text-anchor="middle" fill="#222">SQLite ·</text>
-<text x="1460" y="2674" text-anchor="middle" fill="#222">points_ledger</text>
-<text x="1460" y="2690" text-anchor="middle" fill="#222">(append-only)</text>
+<text x="1460" y="2626" text-anchor="middle" fill="#222">SQLite ·</text>
+<text x="1460" y="2642" text-anchor="middle" fill="#222">genome_versions</text>
+<text x="1460" y="2658" text-anchor="middle" fill="#222">y periods</text>
+<text x="1460" y="2674" text-anchor="middle" fill="#222">(EPOCH_BUDGET,</text>
 <rect x="1410" y="2830" width="100" height="60" fill="#fdfefe" stroke="none"/>
 <line x1="1410" y1="2830" x2="1510" y2="2830" stroke="#222" stroke-width="1.5"/>
 <line x1="1410" y1="2890" x2="1510" y2="2890" stroke="#222" stroke-width="1.5"/>
 <text x="1460" y="2848" text-anchor="middle" fill="#222">SQLite ·</text>
-<text x="1460" y="2864" text-anchor="middle" fill="#222">reputation_events</text>
+<text x="1460" y="2864" text-anchor="middle" fill="#222">points_ledger</text>
 <text x="1460" y="2880" text-anchor="middle" fill="#222">(append-only)</text>
-<text x="90" y="3030" font-size="11" fill="#777">Ágora y hitos: publicar desde el backlog, aplicar, asignar y aprobar hitos (1 USD = 1 punto) · docs/dfd/agora-y-hitos.json · commit 0e07d8f · * = flujo con datos sensibles</text>
+<rect x="1410" y="3020" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1410" y1="3020" x2="1510" y2="3020" stroke="#222" stroke-width="1.5"/>
+<line x1="1410" y1="3080" x2="1510" y2="3080" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="3038" text-anchor="middle" fill="#222">SQLite ·</text>
+<text x="1460" y="3054" text-anchor="middle" fill="#222">reputation_events</text>
+<text x="1460" y="3070" text-anchor="middle" fill="#222">(append-only)</text>
+<text x="90" y="3220" font-size="11" fill="#777">Ágora y hitos: publicar desde el backlog, publicar borradores, aplicar, asignar y aprobar hitos (1 USD = 1 punto) · docs/dfd/agora-y-hitos.json · commit 4032c7c · * = flujo con datos sensibles</text>
 </svg>

@@ -14,7 +14,9 @@
  * y el aviso de /encuentros (POST /api/encuentros/aviso → leads).
  *
  * Los casos marcados "HALLAZGO" fijan una rareza actual que la auditoría reporta. Si
- * alguien la corrige, esta prueba debe fallar y actualizarse en el mismo cambio.
+ * alguien la corrige, esta prueba debe fallar y actualizarse en el mismo cambio. Los
+ * marcados "ARREGLADO" eran hallazgos que el release wp/32-release corrigió (A3: la
+ * autorización de datos del aviso de encuentros viaja, se exige y queda probada, dab355c).
  *
  * Dobles (y solo estos):
  *  - Reloj: `vi.useFakeTimers({ toFake: ["Date"] })`. Las rutas usan `new Date()`; se
@@ -39,6 +41,7 @@ vi.mock("@/lib/ritos", () => import("../ritos"));
 vi.mock("@/lib/ritos-labels", () => import("../ritos-labels"));
 vi.mock("@/lib/validation", () => import("../validation"));
 vi.mock("@/lib/servicios", () => import("../servicios"));
+vi.mock("@/lib/consentimiento", () => import("../consentimiento"));
 vi.mock("@/lib/session", () => ({
   getSession: async () => (sesion.wallet ? { wallet: sesion.wallet } : null),
 }));
@@ -57,6 +60,8 @@ import {
 } from "../ritos";
 import { ENCUENTROS, proximosEncuentros } from "../encuentros";
 import { INTERES_ENCUENTROS } from "../servicios";
+import { AVISO_PRIVACIDAD_VERSION, MENSAJE_SIN_AUTORIZACION } from "../aviso-privacidad";
+import { avisoVigente } from "../consentimiento";
 import { POST as postRitos } from "../../../app/api/ritos/route";
 import { GET as getCodigo } from "../../../app/api/ritos/codigo/route";
 import { POST as postAsistir } from "../../../app/api/ritos/asistir/route";
@@ -296,7 +301,16 @@ describe("aviso de /encuentros (POST /api/encuentros/aviso)", () => {
     expect(ENCUENTROS).toEqual([]);
     expect(proximosEncuentros()).toEqual([]);
     const r = await como(null, () =>
-      postAviso(post("/api/encuentros/aviso", { nombre: "Persona Prueba", email: "persona@ejemplo.test", ciudad: "Bogotá", sitio: "" }))
+      postAviso(
+        post("/api/encuentros/aviso", {
+          nombre: "Persona Prueba",
+          email: "persona@ejemplo.test",
+          ciudad: "Bogotá",
+          sitio: "",
+          acepto: true, // la casilla marcada (A3)
+          aviso: AVISO_PRIVACIDAD_VERSION,
+        })
+      )
     );
     expect(r).toMatchObject({ status: 200, body: { ok: true } });
     expect(filas(`SELECT nombre, email, empresa, interes, mensaje, estado FROM leads`)).toEqual([
@@ -306,13 +320,31 @@ describe("aviso de /encuentros (POST /api/encuentros/aviso)", () => {
 });
 
 describe("HALLAZGOS fijados (comportamiento actual que la auditoría reporta)", () => {
-  it("HALLAZGO: el aviso de encuentros se acepta sin ninguna constancia de la autorización de datos (la casilla solo vive en el navegador)", async () => {
-    const r = await como(null, () =>
+  it("ARREGLADO (A3): sin la casilla el aviso de encuentros se rechaza; con ella queda la prueba de la autorización en lead_consents", async () => {
+    // dab355c: antes la casilla solo vivía en el navegador y la API guardaba sin constancia.
+    const sin = await como(null, () =>
       postAviso(post("/api/encuentros/aviso", { nombre: "Sin Casilla", email: "sin.casilla@ejemplo.test" }))
     );
-    expect(r.status).toBe(200);
-    const columnas = (db.prepare(`PRAGMA table_info(leads)`).all() as Array<{ name: string }>).map((c) => c.name);
-    expect(columnas.some((c) => /acept|consent|autoriz/i.test(c))).toBe(false);
+    expect(sin).toMatchObject({ status: 400, body: { error: MENSAJE_SIN_AUTORIZACION } });
+    expect(filas(`SELECT COUNT(*) AS n FROM leads`)).toEqual([{ n: 0 }]);
+
+    const con = await como(null, () =>
+      postAviso(post("/api/encuentros/aviso", { nombre: "Con Casilla", email: "con.casilla@ejemplo.test", acepto: true }))
+    );
+    expect(con.status).toBe(200);
+    const [lead] = filas(`SELECT id, created_at FROM leads`) as Array<{ id: number; created_at: string }>;
+    expect(filas(`SELECT lead_id, formulario, aviso_version, aviso_sha256, accepted_at FROM lead_consents`)).toEqual([
+      {
+        lead_id: lead.id,
+        formulario: "encuentros",
+        aviso_version: AVISO_PRIVACIDAD_VERSION,
+        aviso_sha256: avisoVigente().huella,
+        accepted_at: lead.created_at,
+      },
+    ]);
+    // Ni la IP ni datos del navegador.
+    const columnas = (db.prepare(`PRAGMA table_info(lead_consents)`).all() as Array<{ name: string }>).map((c) => c.name);
+    expect(columnas.some((c) => /ip|agent|navegador/i.test(c))).toBe(false);
   });
 
   it("HALLAZGO: la ruta valida `lugar` hasta 200 y la lógica hasta 120 (dos validaciones con topes distintos)", async () => {

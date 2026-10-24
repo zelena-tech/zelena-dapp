@@ -69,29 +69,33 @@
 <path d="M1415,150 Q1243,455 1175,800" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="1269" y="465" text-anchor="middle" font-size="11" fill="#555">h30 Ver decisiones</text>
 <path d="M1175,800 Q1329,749 1415,610" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="1312" y="727" text-anchor="middle" font-size="11" fill="#555">h31 Decisiones y votación</text>
-<path d="M1415,610 Q1239,1402 1175,2210" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="1267" y="1406" text-anchor="middle" font-size="11" fill="#555">h32 Leer decisiones</text>
-<path d="M1505,610 Q1571,1230 1745,1830" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="1598" y="1225" text-anchor="middle" font-size="11" fill="#555">h33 Propuesta, conteo y mi voto</text>
+<text x="1312" y="727" text-anchor="middle" font-size="11" fill="#555">h31 Votación</text>
+<path d="M1175,800 Q1295,856 1415,800" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1295" y="828" text-anchor="middle" font-size="11" fill="#555">h43 Decisiones vigentes y vigente de cada auditoría</text>
+<path d="M1415,800 Q1239,1495 1175,2210" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1267" y="1500" text-anchor="middle" font-size="11" fill="#555">h32 Leer decisiones</text>
+<path d="M1505,800 Q1571,1236 1745,1640" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1598" y="1228" text-anchor="middle" font-size="11" fill="#555">h44 Leer reemplazos</text>
+<path d="M1505,610 Q1569,1325 1745,2020" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1597" y="1320" text-anchor="middle" font-size="11" fill="#555">h33 Propuesta, conteo y mi voto</text>
 <path d="M1085,800 Q913,1063 845,1370" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="939" y="1074" text-anchor="middle" font-size="11" fill="#555">h34 Auditorías públicas</text>
 <path d="M1175,800 Q1347,495 1415,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="1321" y="485" text-anchor="middle" font-size="11" fill="#555">h35 Página pública</text>
-<path d="M1745,150 Q1573,455 1505,800" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="1599" y="465" text-anchor="middle" font-size="11" fill="#b03a2e">h36 Votar *</text>
-<path d="M1505,800 Q1571,1327 1745,1830" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="1598" y="1321" text-anchor="middle" font-size="11" fill="#b03a2e">h37 Guardar voto *</text>
-<path d="M1415,800 Q1239,1784 1175,2780" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="1267" y="1787" text-anchor="middle" font-size="11" fill="#555">h38 Época actual</text>
-<path d="M1505,800 Q1571,1236 1745,1640" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="1598" y="1228" text-anchor="middle" font-size="11" fill="#b03a2e">h39 Reputación de gobernanza *</text>
-<path d="M1505,800 Q1677,495 1745,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="1651" y="485" text-anchor="middle" font-size="11" fill="#555">h40 Resultado</text>
-<path d="M1415,990 Q1241,1394 1175,1830" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="1268" y="1402" text-anchor="middle" font-size="11" fill="#555">h41 Mutación anunciada</text>
-<path d="M1460,945 Q1516,570 1460,195" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="1488" y="570" text-anchor="middle" font-size="11" fill="#555">h42 Aviso público</text>
+<path d="M1745,150 Q1571,554 1505,990" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1598" y="562" text-anchor="middle" font-size="11" fill="#b03a2e">h36 Votar *</text>
+<path d="M1505,990 Q1571,1517 1745,2020" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1598" y="1511" text-anchor="middle" font-size="11" fill="#b03a2e">h37 Guardar voto *</text>
+<path d="M1415,990 Q1239,1877 1175,2780" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1267" y="1881" text-anchor="middle" font-size="11" fill="#555">h38 Época actual</text>
+<path d="M1505,990 Q1571,1426 1745,1830" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1598" y="1418" text-anchor="middle" font-size="11" fill="#b03a2e">h39 Reputación de gobernanza *</text>
+<path d="M1505,990 Q1679,586 1745,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1652" y="578" text-anchor="middle" font-size="11" fill="#555">h40 Resultado</text>
+<path d="M1415,1180 Q1243,1485 1175,1830" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1269" y="1495" text-anchor="middle" font-size="11" fill="#555">h41 Mutación anunciada</text>
+<path d="M1460,1135 Q1516,665 1460,195" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1488" y="665" text-anchor="middle" font-size="11" fill="#555">h42 Aviso público</text>
 <rect x="90" y="100" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
 <text x="140" y="138" text-anchor="middle" fill="#222">Founder</text>
 <text x="140" y="154" text-anchor="middle" fill="#222">(navegador,</text>
@@ -161,17 +165,21 @@
 <text x="1130" y="796" text-anchor="middle" fill="#222">Página pública</text>
 <text x="1130" y="812" text-anchor="middle" fill="#222">/gobernanza</text>
 <circle cx="1460" cy="610" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
-<text x="1460" y="598" text-anchor="middle" fill="#222">Lecturas de</text>
-<text x="1460" y="614" text-anchor="middle" fill="#222">decisiones y</text>
-<text x="1460" y="630" text-anchor="middle" fill="#222">votación</text>
+<text x="1460" y="606" text-anchor="middle" fill="#222">Lecturas de la</text>
+<text x="1460" y="622" text-anchor="middle" fill="#222">votación</text>
 <circle cx="1460" cy="800" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
-<text x="1460" y="796" text-anchor="middle" fill="#222">POST</text>
-<text x="1460" y="812" text-anchor="middle" fill="#222">/api/governance/vote</text>
+<text x="1460" y="764" text-anchor="middle" fill="#222">Decisiones</text>
+<text x="1460" y="780" text-anchor="middle" fill="#222">vigentes</text>
+<text x="1460" y="796" text-anchor="middle" fill="#222">(oculta las</text>
+<text x="1460" y="812" text-anchor="middle" fill="#222">reemplazadas;</text>
 <circle cx="1460" cy="990" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
-<text x="1460" y="962" text-anchor="middle" fill="#222">Banner de</text>
-<text x="1460" y="978" text-anchor="middle" fill="#222">mutación</text>
-<text x="1460" y="994" text-anchor="middle" fill="#222">anunciada</text>
-<text x="1460" y="1010" text-anchor="middle" fill="#222">(todas las</text>
+<text x="1460" y="986" text-anchor="middle" fill="#222">POST</text>
+<text x="1460" y="1002" text-anchor="middle" fill="#222">/api/governance/vote</text>
+<circle cx="1460" cy="1180" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="1152" text-anchor="middle" fill="#222">Banner de</text>
+<text x="1460" y="1168" text-anchor="middle" fill="#222">mutación</text>
+<text x="1460" y="1184" text-anchor="middle" fill="#222">anunciada</text>
+<text x="1460" y="1200" text-anchor="middle" fill="#222">(todas las</text>
 <rect x="1080" y="960" width="100" height="60" fill="#fdfefe" stroke="none"/>
 <line x1="1080" y1="960" x2="1180" y2="960" stroke="#222" stroke-width="1.5"/>
 <line x1="1080" y1="1020" x2="1180" y2="1020" stroke="#222" stroke-width="1.5"/>
@@ -197,6 +205,13 @@
 <line x1="1080" y1="2180" x2="1180" y2="2180" stroke="#222" stroke-width="1.5"/>
 <line x1="1080" y1="2240" x2="1180" y2="2240" stroke="#222" stroke-width="1.5"/>
 <text x="1130" y="2214" text-anchor="middle" fill="#222">decision_log</text>
+<rect x="1740" y="1610" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1740" y1="1610" x2="1840" y2="1610" stroke="#222" stroke-width="1.5"/>
+<line x1="1740" y1="1670" x2="1840" y2="1670" stroke="#222" stroke-width="1.5"/>
+<text x="1790" y="1612" text-anchor="middle" fill="#222">decision_replacements</text>
+<text x="1790" y="1628" text-anchor="middle" fill="#222">(qué decisión</text>
+<text x="1790" y="1644" text-anchor="middle" fill="#222">reemplaza a</text>
+<text x="1790" y="1660" text-anchor="middle" fill="#222">cuál; solo</text>
 <rect x="1080" y="2370" width="100" height="60" fill="#fdfefe" stroke="none"/>
 <line x1="1080" y1="2370" x2="1180" y2="2370" stroke="#222" stroke-width="1.5"/>
 <line x1="1080" y1="2430" x2="1180" y2="2430" stroke="#222" stroke-width="1.5"/>
@@ -208,11 +223,11 @@
 <text x="1130" y="2578" text-anchor="middle" fill="#222">fitness:</text>
 <text x="1130" y="2594" text-anchor="middle" fill="#222">points_ledger,</text>
 <text x="1130" y="2610" text-anchor="middle" fill="#222">milestones,</text>
-<rect x="1740" y="1610" width="100" height="60" fill="#fdfefe" stroke="none"/>
-<line x1="1740" y1="1610" x2="1840" y2="1610" stroke="#222" stroke-width="1.5"/>
-<line x1="1740" y1="1670" x2="1840" y2="1670" stroke="#222" stroke-width="1.5"/>
-<text x="1790" y="1636" text-anchor="middle" fill="#222">reputation_events</text>
-<text x="1790" y="1652" text-anchor="middle" fill="#222">(append-only)</text>
+<rect x="1740" y="1800" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1740" y1="1800" x2="1840" y2="1800" stroke="#222" stroke-width="1.5"/>
+<line x1="1740" y1="1860" x2="1840" y2="1860" stroke="#222" stroke-width="1.5"/>
+<text x="1790" y="1826" text-anchor="middle" fill="#222">reputation_events</text>
+<text x="1790" y="1842" text-anchor="middle" fill="#222">(append-only)</text>
 <rect x="1080" y="2750" width="100" height="60" fill="#fdfefe" stroke="none"/>
 <line x1="1080" y1="2750" x2="1180" y2="2750" stroke="#222" stroke-width="1.5"/>
 <line x1="1080" y1="2810" x2="1180" y2="2810" stroke="#222" stroke-width="1.5"/>
@@ -222,10 +237,10 @@
 <line x1="1080" y1="2940" x2="1180" y2="2940" stroke="#222" stroke-width="1.5"/>
 <line x1="1080" y1="3000" x2="1180" y2="3000" stroke="#222" stroke-width="1.5"/>
 <text x="1130" y="2974" text-anchor="middle" fill="#222">latent_audits</text>
-<rect x="1740" y="1800" width="100" height="60" fill="#fdfefe" stroke="none"/>
-<line x1="1740" y1="1800" x2="1840" y2="1800" stroke="#222" stroke-width="1.5"/>
-<line x1="1740" y1="1860" x2="1840" y2="1860" stroke="#222" stroke-width="1.5"/>
-<text x="1790" y="1826" text-anchor="middle" fill="#222">proposals y</text>
-<text x="1790" y="1842" text-anchor="middle" fill="#222">votes</text>
-<text x="90" y="3140" font-size="11" fill="#777">Genoma y gobernanza: genoma versionado, mutaciones, fitness de la época, votos, decision log, auditorías latentes y /gobernanza · docs/dfd/genoma-y-gobernanza.json · commit 0e07d8f · * = flujo con datos sensibles</text>
+<rect x="1740" y="1990" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1740" y1="1990" x2="1840" y2="1990" stroke="#222" stroke-width="1.5"/>
+<line x1="1740" y1="2050" x2="1840" y2="2050" stroke="#222" stroke-width="1.5"/>
+<text x="1790" y="2016" text-anchor="middle" fill="#222">proposals y</text>
+<text x="1790" y="2032" text-anchor="middle" fill="#222">votes</text>
+<text x="90" y="3140" font-size="11" fill="#777">Genoma y gobernanza: genoma versionado, mutaciones, fitness de la época, votos, decision log, auditorías latentes y /gobernanza · docs/dfd/genoma-y-gobernanza.json · commit 4032c7c · * = flujo con datos sensibles</text>
 </svg>

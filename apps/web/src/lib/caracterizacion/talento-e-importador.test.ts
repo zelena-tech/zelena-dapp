@@ -1,12 +1,14 @@
 /**
  * Prueba de caracterización · talento-e-importador
- * Ficha: docs/features/talento-e-importador.md (sección 8). Commit de referencia: 0e07d8f.
+ * Ficha: docs/features/talento-e-importador.md (sección 8). Commit de referencia: 0e07d8f;
+ * revisada contra wp/32-release (4032c7c).
  *
  * Protege el comportamiento ACTUAL del flujo principal, de punta a punta y a través
  * de las rutas reales (`POST /api/equipo/importar` y `POST /api/equipo/talento`):
  *
  *   1. El founder importa un CSV: nacen el proyecto y dos piezas; el Assignee se
- *      resuelve por el roster a su fila `pending:<slug>`; no se emiten puntos.
+ *      resuelve por datos (alias de la plantilla de roles con fila en la base, A8) a
+ *      su fila `pending:<slug>`; no se emiten puntos.
  *   2. El directorio muestra la fila pendiente con su carga abierta.
  *   3. El founder simula la vinculación (no deja huella) y luego vincula la fila con
  *      la cuenta real: el trabajo pasa a la cuenta, la fila pendiente desaparece.
@@ -14,6 +16,8 @@
  *   5. Cambiar el rol a contributor con piezas fuera de sus proyectos → 409; tras
  *      sumarle al proyecto, el cambio se guarda con su evento.
  *   6. Puertas: quien no es founder no cambia talento ni importa (403).
+ *   7. Aislamiento por cliente (5e80c34): un supervisor que no participa en un cliente
+ *      no importa en su proyecto (error de fila, sin crear nada); si participa, sí.
  *
  * Base: SQLite temporal en memoria con `schema.sql` (igual que los tests de
  * src/lib/*.test.ts). Las rutas leen esa base vía el singleton `globalThis.__zelenaDb`
@@ -36,10 +40,13 @@ vi.mock("@/lib/team", () => import("../team"));
 vi.mock("@/lib/talento", () => import("../talento"));
 vi.mock("@/lib/roles", () => import("../roles"));
 vi.mock("@/lib/team-import", () => import("../team-import"));
+// Desde 74e9321 la ruta de talento lee `corporateDomain` (acción `correo`, correo corporativo exacto).
+vi.mock("@/lib/config", () => import("../config"));
 
 import { openDb, type DB } from "../db";
 import { TEAM_ROSTER, pendingPrincipal, type TeamActor } from "../roles";
-import { TeamError, agregarMiembro, seedTeam } from "../team";
+import { TeamError, agregarMiembro, crearProyecto, seedTeam } from "../team";
+import { createClient } from "../clients";
 import { cambiarRol, candidatosAVincular, directorioTalento } from "../talento";
 import { POST as postImportar } from "../../../app/api/equipo/importar/route";
 import { POST as postTalento } from "../../../app/api/equipo/talento/route";
@@ -47,6 +54,7 @@ import { POST as postTalento } from "../../../app/api/equipo/talento/route";
 const FOUNDER = "GCARACFOUNDERAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 const REAL = "GCARACCUENTAREALAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 const AJENA = "GCARACCONTRIBUIDORAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+const SUPERVISORA = "GCARACSUPERVISORAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 
 // Una persona del roster con rol core y sin supervisión (no el founder).
 const MIEMBRO = TEAM_ROSTER.find((m) => m.role === "core" && !m.isSupervisor)!;
@@ -88,6 +96,7 @@ beforeAll(() => {
   db = openDb(":memory:");
   db.pragma("foreign_keys = ON");
   db.exec(fs.readFileSync(path.join(process.cwd(), "src", "lib", "schema.sql"), "utf8"));
+  vi.stubEnv("ZELENA_TEAM_ROSTER", ""); // sin roster del entorno: la plantilla de roles del código (A8)
   seedTeam(db); // lo mismo que hace el arranque: filas pending:<slug> del roster
   const ins = db.prepare(
     `INSERT INTO users (wallet, display_name, role, is_supervisor, cla_signed, status) VALUES (?, ?, ?, ?, 1, 'active')`
@@ -100,6 +109,7 @@ beforeAll(() => {
 
 afterAll(() => {
   delete g.__zelenaDb;
+  vi.unstubAllEnvs();
 });
 
 describe("caracterización · talento-e-importador (flujo principal)", () => {
@@ -253,5 +263,33 @@ describe("caracterización · talento-e-importador (flujo principal)", () => {
     const founder: TeamActor = { wallet: FOUNDER, name: "Founder de prueba", role: "founder", isSupervisor: true };
     expect(() => cambiarRol(db, founder, { wallet: FOUNDER, role: "core" })).toThrow(TeamError);
     expect(() => cambiarRol(db, founder, { wallet: FOUNDER, role: "core" })).toThrow("Tus propios roles los cambia otra persona.");
+  });
+
+  it("7. aislamiento por cliente (5e80c34): un supervisor no importa en el proyecto de un cliente donde no participa", async () => {
+    const founder: TeamActor = { wallet: FOUNDER, name: "Founder de prueba", role: "founder", isSupervisor: true };
+    db.prepare(
+      `INSERT INTO users (wallet, display_name, role, is_supervisor, cla_signed, status) VALUES (?, 'Supervisora de prueba', 'core', 1, 1, 'active')`
+    ).run(SUPERVISORA);
+    const cliente = createClient(db, { name: "Cliente de prueba" });
+    const deCliente = crearProyecto(db, founder, { name: "Proyecto de cliente", clientId: cliente }).id;
+    const csvCliente = ["Iniciativa,Title", "Proyecto de cliente,Pieza inyectada"].join("\n");
+
+    // La ruta pasa el actor a `importTasks`: la fila sale como error, sin crear ni decir si existía.
+    estado.session = sesion(SUPERVISORA);
+    const r = await llamar(postImportar, "/api/equipo/importar", { csv: csvCliente });
+    expect(r.status).toBe(200);
+    expect(r.data).toMatchObject({
+      created: 0,
+      updated: 0,
+      errors: [{ line: 2, title: "Pieza inyectada", reason: "no puedes importar en el proyecto «Proyecto de cliente»" }],
+    });
+    expect(contar(`SELECT COUNT(*) AS n FROM assignments WHERE initiative_id = ?`, deCliente)).toBe(0);
+
+    // Con participación en el cliente, la misma fila entra.
+    db.prepare(`INSERT INTO client_members (client_id, wallet, access_level) VALUES (?, ?, 'colaborador')`).run(cliente, SUPERVISORA);
+    const ok = await llamar(postImportar, "/api/equipo/importar", { csv: csvCliente });
+    expect(ok.status).toBe(200);
+    expect(ok.data).toMatchObject({ created: 1, updated: 0, errors: [] });
+    expect(contar(`SELECT COUNT(*) AS n FROM assignments WHERE initiative_id = ?`, deCliente)).toBe(1);
   });
 });

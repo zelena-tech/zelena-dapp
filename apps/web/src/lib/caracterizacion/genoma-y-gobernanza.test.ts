@@ -14,7 +14,9 @@
  *   4. Fitness de la época: el algoritmo propone, el founder firma (acta).
  *   5. Auditoría latente enlazada a la decisión.
  *   6. Voto: uno por wallet, +2 de reputación en gobernanza con `period_id` explícito.
- *   7. `/gobernanza` lista decisiones (más reciente primero), votación y auditorías.
+ *   7. `/gobernanza` lista solo las decisiones VIGENTES (más reciente primero): una
+ *      decisión reemplazada no se muestra, sigue intacta en `decision_log` y su vínculo
+ *      vive en `decision_replacements` (release wp/32-release, ca8c0e0).
  *
  * Base: SQLite temporal en memoria con `schema.sql` + `seedIfEmpty` (como
  * src/lib/genome.test.ts y src/lib/epocas.test.ts). Las rutas y `lib/repo.ts` leen esa
@@ -37,6 +39,7 @@ vi.mock("@/lib/epochs", () => import("../epochs"));
 vi.mock("@/lib/mutation", () => import("../mutation"));
 vi.mock("@/lib/audits", () => import("../audits"));
 vi.mock("@/lib/genome", () => import("../genome"));
+vi.mock("@/lib/agora-borradores", () => import("../agora-borradores"));
 
 import { openDb, type DB } from "../db";
 import { seedIfEmpty } from "../seed";
@@ -44,8 +47,10 @@ import { sha256Hex } from "../crypto";
 import { getActiveGenome } from "../genome";
 import { genomeLineage, pendingMutation } from "../mutation";
 import { listLatentAudits } from "../audits";
-import { getOpenProposal, listDecisions, userVote, voteTally } from "../repo";
-import { esActaDeRito } from "../agora-labels";
+import { getOpenProposal, userVote, voteTally } from "../repo";
+import { REEMPLAZO_DECISION, esActaDeRito } from "../agora-labels";
+import { decisionesReemplazadas, decisionesVigentes, vigenteDe, vincularReemplazosConocidos } from "../decisiones";
+import { aplicarContenidoPublico } from "../contenido-publico";
 import { POST as postAdmin } from "../../../app/api/admin/route";
 import { POST as postVoto } from "../../../app/api/governance/vote/route";
 
@@ -250,12 +255,44 @@ describe("caracterización · genoma-y-gobernanza (flujo principal)", () => {
     expect((await llamar(postVoto, "/api/governance/vote", { proposalId: propuesta.id, choice: "favor" })).status).toBe(200);
   });
 
-  it("7. /gobernanza: decisiones (sin actas de ritos) de la más reciente a la más vieja", () => {
-    const decisiones = listDecisions()
+  it("7. /gobernanza: solo decisiones VIGENTES (sin actas de ritos), de la más reciente a la más vieja", () => {
+    // ca8c0e0: la página usa decisionesVigentes(db); repo.listDecisions ya no existe.
+    const decisiones = decisionesVigentes(db)
       .filter((d) => !esActaDeRito(d.title))
       .reverse();
     expect(decisiones[0].title).toBe("Cierre de época 1: revertir genoma");
     expect(decisiones[1].title).toBe("Mutación del genoma para la época 2 (v3)");
     expect(decisiones.every((d) => /^[0-9a-f]{64}$/.test(d.hash))).toBe(true);
+  });
+
+  it("8. ARREGLADO: una decisión reemplazada no se ve en público; el original sigue intacto y solo lo lista /admin", () => {
+    // Antes /gobernanza listaba TODO decision_log y marcaba la histórica como "Reemplazada por…".
+    // Una base nueva no trae la decisión histórica con las etiquetas viejas: se simula una base
+    // de producción con su texto de entonces y se corre lo que hace cada arranque (seedIfEmpty).
+    expect(decisionesReemplazadas(db)).toEqual([]);
+    const texto = ["2026-07-01", "Publicación de campañas de prueba", "Se abren al Ágora dos campañas de prueba etiquetadas SAS."];
+    db.prepare(`INSERT INTO decision_log (date, title, reason, hash) VALUES (?, ?, ?, ?)`).run(...texto, sha256Hex(texto.join("|")));
+    aplicarContenidoPublico(db); // agrega la decisión que la reemplaza (S2)
+    expect(vincularReemplazosConocidos(db)).toBe(1); // registra el vínculo, sin tocar el original
+    expect(vincularReemplazosConocidos(db)).toBe(0); // idempotente
+    const reemplazadas = decisionesReemplazadas(db);
+    expect(reemplazadas).toHaveLength(1);
+    const [original] = reemplazadas;
+    expect(original.reemplazadaPor?.title).toBe(REEMPLAZO_DECISION);
+    expect(db.prepare(`SELECT decision_id, replaced_by_id FROM decision_replacements`).all()).toEqual([
+      { decision_id: original.id, replaced_by_id: original.reemplazadaPor!.id },
+    ]);
+    // El original no se reescribe ni se borra: misma fila, misma huella.
+    expect(db.prepare(`SELECT title, reason, hash FROM decision_log WHERE id = ?`).get(original.id)).toEqual({
+      title: original.title,
+      reason: original.reason,
+      hash: original.hash,
+    });
+    const vigentes = decisionesVigentes(db);
+    expect(vigentes.map((d) => d.id)).not.toContain(original.id);
+    const nueva = vigentes.find((d) => d.title === REEMPLAZO_DECISION)!;
+    expect(nueva.reemplazaA).toEqual([{ id: original.id, date: original.date }]);
+    // Un enlace viejo al original lleva a la vigente.
+    expect(vigenteDe(db, original.id)?.id).toBe(nueva.id);
   });
 });

@@ -14,8 +14,13 @@
  * entregaría el login. El tiempo se mueve con el reloj falso de vitest (solo `Date`).
  *
  * Los casos "HALLAZGO" fijan rarezas actuales que la auditoría reporta; si alguien las
- * corrige, esta prueba debe actualizarse en el mismo cambio. La prueba unitaria previa del
- * motor está en src/lib/academia.test.ts.
+ * corrige, esta prueba debe actualizarse en el mismo cambio. Los casos "ARREGLADO" eran
+ * hallazgos que el release wp/32-release corrigió (A2: ed5d167 y 8530cce) y ahora fijan el
+ * arreglo. La prueba unitaria previa del motor está en src/lib/academia.test.ts.
+ *
+ * Desde 8530cce las opciones de cada pregunta se BARAJAN por lectura: la respuesta que se
+ * manda es la posición MOSTRADA. `correctasMostradas` hace lo que haría quien sí leyó:
+ * busca en las opciones que le sirvieron el texto de la respuesta correcta.
  */
 import { describe, it, expect, beforeEach, afterEach, afterAll, vi } from "vitest";
 import fs from "node:fs";
@@ -35,6 +40,7 @@ vi.mock("@/lib/session", () => ({ getSession: async () => sesion.actual }));
 import { openDb, type DB } from "../db";
 import { seedIfEmpty } from "../seed";
 import { currentEpoch, GENOME_DEFAULTS } from "../genome";
+import { ACADEMIA_ESPERA_TRAS_FALLO_MS, ACADEMIA_FALLOS_MAX_24H } from "../academia";
 import { listAcademia, getAcademiaBySlug, academiaAwardsToday, academiaAlreadyAwarded, pointsByBucket } from "../repo";
 import { POST as postStart } from "../../../app/api/academia/start/route";
 import { POST as postHeartbeat } from "../../../app/api/academia/heartbeat/route";
@@ -118,8 +124,19 @@ async function leerHastaElQuiz(contentId: number): Promise<{ token: string; preg
   return { token, preguntas: ((await q.json()) as { questions: Pregunta[] }).questions };
 }
 
-function correctas(ids: number[]): number[] {
-  return ids.map((id) => (db.prepare(`SELECT correct FROM academia_quiz WHERE id = ?`).get(id) as { correct: number }).correct);
+/** Posición MOSTRADA de la respuesta correcta de cada pregunta servida (las opciones vienen barajadas). */
+function correctasMostradas(preguntas: Pregunta[]): number[] {
+  return preguntas.map((p) => {
+    const q = db.prepare(`SELECT options, correct FROM academia_quiz WHERE id = ?`).get(p.id) as { options: string; correct: number };
+    const i = p.options.indexOf((JSON.parse(q.options) as string[])[q.correct]);
+    expect(i).toBeGreaterThanOrEqual(0);
+    return i;
+  });
+}
+
+/** Una posición mostrada que NO es la correcta, para cada pregunta. */
+function incorrectasMostradas(preguntas: Pregunta[]): number[] {
+  return correctasMostradas(preguntas).map((x, k) => (x + 1) % preguntas[k].options.length);
 }
 
 async function responder(token: string, quizIds: number[], answers: number[]) {
@@ -176,26 +193,37 @@ describe("flujo principal · leer, pasar el quiz y recibir puntos de Academia", 
     }
     expect(activos).toEqual([15, 30, 45]);
 
-    // 4. El quiz: 3 preguntas del contenido, sin la respuesta correcta.
+    // 4. El quiz: 3 preguntas del contenido, sin la respuesta correcta, con las opciones
+    //    barajadas para ESTA lectura (8530cce) y guardadas en la sesión (ed5d167).
     const q = await getQuizRuta(get(`/api/academia/quiz?token=${inicio.token}`));
     expect(q.status).toBe(200);
-    const { questions } = (await q.json()) as { questions: Array<Record<string, unknown>> };
+    const { questions } = (await q.json()) as { questions: Pregunta[] };
     expect(questions).toHaveLength(3);
     for (const p of questions) {
       expect(Object.keys(p).sort()).toEqual(["id", "options", "question"]);
       expect(Array.isArray(p.options)).toBe(true);
     }
+    const servido = db.prepare(`SELECT quiz_ids, quiz_orden FROM reading_sessions WHERE token = ?`).get(inicio.token) as {
+      quiz_ids: string;
+      quiz_orden: string;
+    };
+    expect(JSON.parse(servido.quiz_ids)).toEqual(questions.map((p) => p.id));
+    expect((JSON.parse(servido.quiz_orden) as number[][]).map((o) => [...o].sort())).toEqual(questions.map((p) => p.options.map((_, i) => i)));
+    // Pedirlo otra vez devuelve exactamente lo mismo (no recorre el pool ni rebaraja).
+    const otraVez = await getQuizRuta(get(`/api/academia/quiz?token=${inicio.token}`));
+    expect(((await otraVez.json()) as { questions: Pregunta[] }).questions).toEqual(questions);
 
     // 5. Responder bien las 3: aprueba y gana los puntos completos (1.º del día = 100 %).
-    const ids = questions.map((p) => p.id as number);
-    const r = await responder(inicio.token, ids, correctas(ids));
+    const ids = questions.map((p) => p.id);
+    const r = await responder(inicio.token, ids, correctasMostradas(questions));
     expect(r).toEqual({ status: 200, cuerpo: { ok: true, passed: true, correct: 3, points: 150 } });
 
     // 6. Lo que queda escrito.
     const periodo = currentEpoch(db);
-    expect(db.prepare(`SELECT completed, passed FROM reading_sessions WHERE token = ?`).get(inicio.token)).toEqual({
+    expect(db.prepare(`SELECT completed, passed, graded_at FROM reading_sessions WHERE token = ?`).get(inicio.token)).toEqual({
       completed: 1,
       passed: 1,
+      graded_at: reloj,
     });
     expect(db.prepare(`SELECT content_id, day, ord_of_day, points FROM academia_awards WHERE wallet = ?`).all(wallet)).toEqual([
       { content_id: c.id, day: "2026-10-21", ord_of_day: 0, points: 150 },
@@ -221,7 +249,7 @@ describe("flujo principal · leer, pasar el quiz y recibir puntos de Academia", 
     for (const c of lista.slice(0, 3)) {
       const { token, preguntas } = await leerHastaElQuiz(c.id);
       const ids = preguntas.map((p) => p.id);
-      const r = await responder(token, ids, correctas(ids));
+      const r = await responder(token, ids, correctasMostradas(preguntas));
       expect(r.status).toBe(200);
       puntos.push(r.cuerpo.points as number);
     }
@@ -229,20 +257,24 @@ describe("flujo principal · leer, pasar el quiz y recibir puntos de Academia", 
 
     const { token, preguntas } = await leerHastaElQuiz(lista[3].id);
     const ids = preguntas.map((p) => p.id);
-    const cuarto = await responder(token, ids, correctas(ids));
+    const cuarto = await responder(token, ids, correctasMostradas(preguntas));
     expect(cuarto).toEqual({ status: 409, cuerpo: { error: "Alcanzaste el máximo de contenidos con puntos por hoy." } });
     expect(academiaAwardsToday(wallet, "2026-10-21")).toBe(3);
   });
 
-  it("menos de 2 correctas: no aprueba, 0 puntos y nada en el ledger", async () => {
+  it("menos de 2 correctas: no aprueba, 0 puntos, nada en el ledger y no dice cuántas acertó", async () => {
     const c = listAcademia()[0];
     const { token, preguntas } = await leerHastaElQuiz(c.id);
     const ids = preguntas.map((p) => p.id);
-    const malas = correctas(ids).map((x) => (x + 1) % 4);
-    const r = await responder(token, ids, malas);
-    expect(r).toEqual({ status: 200, cuerpo: { ok: true, passed: false, correct: 0, points: 0 } });
+    const r = await responder(token, ids, incorrectasMostradas(preguntas));
+    // ed5d167: un intento fallido no revela los aciertos (`correct: null`) y dice cuánto esperar.
+    expect(r).toEqual({ status: 200, cuerpo: { ok: true, passed: false, correct: null, points: 0, reintentarEnMin: 15 } });
     expect(db.prepare(`SELECT COUNT(*) AS n FROM points_ledger WHERE wallet = ?`).get(wallet)).toEqual({ n: 0 });
-    expect(db.prepare(`SELECT completed, passed FROM reading_sessions WHERE token = ?`).get(token)).toEqual({ completed: 1, passed: 0 });
+    expect(db.prepare(`SELECT completed, passed, graded_at FROM reading_sessions WHERE token = ?`).get(token)).toEqual({
+      completed: 1,
+      passed: 0,
+      graded_at: reloj,
+    });
   });
 
   it("un contenido ya premiado no vuelve a dar puntos (200 con points: 0)", async () => {
@@ -250,7 +282,7 @@ describe("flujo principal · leer, pasar el quiz y recibir puntos de Academia", 
     for (const esperado of [150, 0]) {
       const { token, preguntas } = await leerHastaElQuiz(c.id);
       const ids = preguntas.map((p) => p.id);
-      const r = await responder(token, ids, correctas(ids));
+      const r = await responder(token, ids, correctasMostradas(preguntas));
       expect(r.cuerpo).toMatchObject({ passed: true, points: esperado });
     }
     expect(db.prepare(`SELECT COUNT(*) AS n FROM points_ledger WHERE wallet = ?`).get(wallet)).toEqual({ n: 1 });
@@ -311,7 +343,7 @@ describe("puertas y fallas", () => {
     );
     const { token, preguntas } = await leerHastaElQuiz(listAcademia()[0].id);
     const ids = preguntas.map((p) => p.id);
-    const r = await responder(token, ids, correctas(ids));
+    const r = await responder(token, ids, correctasMostradas(preguntas));
     expect(r).toEqual({ status: 409, cuerpo: { error: "Presupuesto de Academia de la época agotado." } });
     expect(db.prepare(`SELECT COUNT(*) AS n FROM academia_awards WHERE wallet = ?`).get(wallet)).toEqual({ n: 0 });
   });
@@ -325,23 +357,80 @@ function pointsByBucketDeEpoca(periodo: number): number {
   ).n;
 }
 
-describe("rarezas actuales (HALLAZGOS de la auditoría)", () => {
-  it("HALLAZGO: el quiz acepta la MISMA pregunta repetida tres veces (no exige ids distintos ni los servidos)", async () => {
+describe("rarezas actuales (HALLAZGOS de la auditoría) y arreglos de A2", () => {
+  it("ARREGLADO: el quiz exige exactamente las preguntas servidas, distintas (ni repetidas ni del resto del pool)", async () => {
+    // ed5d167: antes la MISMA pregunta repetida tres veces aprobaba (+150).
     const c = listAcademia()[0];
     const { token, preguntas } = await leerHastaElQuiz(c.id);
     const una = preguntas[0].id;
-    const r = await responder(token, [una, una, una], correctas([una, una, una]));
-    expect(r.cuerpo).toMatchObject({ passed: true, correct: 3, points: 150 });
+    const buena = correctasMostradas([preguntas[0]])[0];
+    const NO_CORRESPONDEN = { error: "Las respuestas no corresponden a las preguntas de esta lectura." };
+    expect(await responder(token, [una, una, una], [buena, buena, buena])).toEqual({ status: 400, cuerpo: NO_CORRESPONDEN });
+    // Una pregunta del mismo contenido que NO se sirvió en esta lectura tampoco vale.
+    const ids = preguntas.map((p) => p.id);
+    const fuera = (
+      db.prepare(`SELECT id FROM academia_quiz WHERE content_id = ? AND id NOT IN (${ids.join(",")}) LIMIT 1`).get(c.id) as { id: number }
+    ).id;
+    expect(await responder(token, [fuera, ids[1], ids[2]], [0, 0, 0])).toEqual({ status: 400, cuerpo: NO_CORRESPONDEN });
+    // Esos envíos no gastan la lectura: con las servidas, aprueba.
+    expect((await responder(token, ids, correctasMostradas(preguntas))).cuerpo).toMatchObject({ passed: true, correct: 3, points: 150 });
   });
 
-  it("HALLAZGO: una sesión ya calificada y reprobada se puede volver a calificar con el mismo token", async () => {
+  it("ARREGLADO: una lectura se califica UNA vez; tras fallar hay que esperar 15 min y volver a leer (máx. 3 fallos en 24 h)", async () => {
+    // ed5d167: antes una sesión reprobada se volvía a calificar con el mismo token.
     const c = listAcademia()[0];
     const { token, preguntas } = await leerHastaElQuiz(c.id);
     const ids = preguntas.map((p) => p.id);
-    const malas = correctas(ids).map((x) => (x + 1) % 4);
-    expect((await responder(token, ids, malas)).cuerpo).toMatchObject({ passed: false });
-    // Sin volver a leer: el mismo token, otra vez, ahora con las correctas.
-    expect((await responder(token, ids, correctas(ids))).cuerpo).toMatchObject({ passed: true, points: 150 });
+    expect((await responder(token, ids, incorrectasMostradas(preguntas))).cuerpo).toMatchObject({ passed: false });
+    // El mismo token, otra vez, ahora con las correctas: 409 y sin puntos.
+    expect(await responder(token, ids, correctasMostradas(preguntas))).toEqual({
+      status: 409,
+      cuerpo: { error: "Esta lectura ya se calificó. Para intentarlo de nuevo, vuelve a leer el contenido." },
+    });
+    expect(db.prepare(`SELECT COUNT(*) AS n FROM points_ledger WHERE wallet = ?`).get(wallet)).toEqual({ n: 0 });
+
+    // Volver a leer enseguida: 429 hasta que pasen los 15 minutos.
+    expect(ACADEMIA_ESPERA_TRAS_FALLO_MS).toBe(15 * 60_000);
+    const pronto = await postStart(post("/api/academia/start", { contentId: c.id }));
+    expect(pronto.status).toBe(429);
+    expect(((await pronto.json()) as { error: string }).error).toMatch(/^No aprobaste el intento anterior\..*15 min\.$/);
+
+    // Dos fallos más (con su espera) agotan los 3 del día para ese contenido.
+    expect(ACADEMIA_FALLOS_MAX_24H).toBe(3);
+    for (let k = 0; k < 2; k++) {
+      avanzar(15 * 60);
+      const otra = await leerHastaElQuiz(c.id);
+      expect((await responder(otra.token, otra.preguntas.map((p) => p.id), incorrectasMostradas(otra.preguntas))).cuerpo).toMatchObject({
+        passed: false,
+      });
+    }
+    avanzar(15 * 60);
+    const agotado = await postStart(post("/api/academia/start", { contentId: c.id }));
+    expect(agotado.status).toBe(429);
+    expect(((await agotado.json()) as { error: string }).error).toMatch(/^Llegaste al máximo de 3 intentos de este contenido en 24 horas\./);
+    // Otro contenido sí se puede leer.
+    expect((await postStart(post("/api/academia/start", { contentId: listAcademia()[1].id }))).status).toBe(200);
+  });
+
+  it("ARREGLADO: pedir el quiz tiene límite (20 por minuto) y siempre trae lo mismo para la misma lectura", async () => {
+    const { token, preguntas } = await leerHastaElQuiz(listAcademia()[0].id); // ya hizo 1 pedido
+    for (let i = 0; i < 19; i++) {
+      const r = await getQuizRuta(get(`/api/academia/quiz?token=${token}`));
+      expect(r.status).toBe(200);
+      expect(((await r.json()) as { questions: Pregunta[] }).questions).toEqual(preguntas);
+    }
+    const vigesimoPrimero = await getQuizRuta(get(`/api/academia/quiz?token=${token}`));
+    expect(vigesimoPrimero.status).toBe(429);
+    expect(await vigesimoPrimero.json()).toEqual({ error: "Demasiadas solicitudes." });
+  });
+
+  it("ARREGLADO: en la siembra ninguna posición concentra las respuestas correctas (máx. 2 por contenido)", () => {
+    // 8530cce: antes la correcta era la segunda opción en 15 de las 20 preguntas sembradas.
+    const porPosicion = db
+      .prepare(`SELECT content_id, correct, COUNT(*) AS n FROM academia_quiz GROUP BY content_id, correct`)
+      .all() as Array<{ content_id: number; correct: number; n: number }>;
+    expect(porPosicion.length).toBeGreaterThan(0);
+    expect(Math.max(...porPosicion.map((f) => f.n))).toBeLessThanOrEqual(2);
   });
 
   it("HALLAZGO: el día del tope diario es el día UTC, no el de Bogotá (BUSINESS_TZ del genoma)", async () => {
@@ -350,7 +439,7 @@ describe("rarezas actuales (HALLAZGOS de la auditoría)", () => {
     vi.setSystemTime(reloj);
     const { token, preguntas } = await leerHastaElQuiz(listAcademia()[0].id);
     const ids = preguntas.map((p) => p.id);
-    await responder(token, ids, correctas(ids));
+    await responder(token, ids, correctasMostradas(preguntas));
     expect(db.prepare(`SELECT day FROM academia_awards WHERE wallet = ?`).get(wallet)).toEqual({ day: "2026-10-22" });
   });
 });

@@ -1,7 +1,7 @@
 {
   "feature": "sitio-publico-y-formularios",
   "titulo": "Sitio público y formularios (landing, manifiesto, método, empresas, contacto, encuentros, legales, menú y pie)",
-  "commit": "0e07d8f",
+  "commit": "4032c7c",
   "elementos": [
     {
       "id": "u",
@@ -114,13 +114,13 @@
     {
       "id": "p_api_contacto",
       "tipo": "proceso",
-      "nombre": "POST /api/empresas/contacto",
+      "nombre": "POST /api/empresas/contacto (exige la autorización de datos)",
       "codigo": "apps/web/app/api/empresas/contacto/route.ts#POST"
     },
     {
       "id": "p_api_aviso",
       "tipo": "proceso",
-      "nombre": "POST /api/encuentros/aviso",
+      "nombre": "POST /api/encuentros/aviso (exige la autorización de datos)",
       "codigo": "apps/web/app/api/encuentros/aviso/route.ts#POST"
     },
     {
@@ -134,6 +134,12 @@
       "tipo": "almacen",
       "nombre": "Tabla leads (SQLite)",
       "codigo": "apps/web/src/lib/schema.sql#leads"
+    },
+    {
+      "id": "s_consents",
+      "tipo": "almacen",
+      "nombre": "Tabla lead_consents: prueba de la autorización (versión y huella del aviso, fecha UTC; solo inserción, sin IP)",
+      "codigo": "apps/web/src/lib/schema.sql#lead_consents"
     },
     {
       "id": "s_db",
@@ -176,6 +182,12 @@
       "tipo": "almacen",
       "nombre": "Configuración del despliegue (ZELENA_LEGAL_NAME, ZELENA_PRIVACY_EMAIL)",
       "codigo": "apps/web/src/lib/legal.ts#responsableTratamiento"
+    },
+    {
+      "id": "s_aviso",
+      "tipo": "almacen",
+      "nombre": "Texto y versión del aviso de privacidad (constante)",
+      "codigo": "apps/web/src/lib/aviso-privacidad.ts#AVISO_PRIVACIDAD, AVISO_PRIVACIDAD_VERSION, textoCanonicoAviso"
     }
   ],
   "flujos": [
@@ -185,7 +197,7 @@
       "a": "p_redir",
       "nombre": "Pide una ruta vieja",
       "protocolo": "HTTPS",
-      "datos": "GET /ecosistema, /academia/por-que-sas-dao o /whitepaper",
+      "datos": "GET /ecosistema, /academia/por-que-sas-dao, /whitepaper o /equipo/seguimiento",
       "sensible": false
     },
     {
@@ -194,7 +206,7 @@
       "a": "u",
       "nombre": "Redirección permanente",
       "protocolo": "HTTPS",
-      "datos": "308 Location: /metodo, /academia/construir-sin-riesgo o /manifiesto",
+      "datos": "308 Location: /metodo, /academia/construir-sin-riesgo, /manifiesto o /equipo/dashboard",
       "sensible": false
     },
     {
@@ -248,7 +260,7 @@
       "a": "p_landing",
       "nombre": "Cifras en vivo y próximo rito",
       "protocolo": "SQL",
-      "datos": "COUNT de projects abiertos, milestones aprobados, assignment_events 'aprobar' de cuentas no demo; tx_id de cla_signatures; próximo rite_session de comunidad",
+      "datos": "COUNT de projects abiertos y publicados (draft = 0), milestones aprobados de proyectos publicados, assignment_events 'aprobar' de cuentas no demo; tx_id de cla_signatures; próximo rite_session de comunidad",
       "sensible": false
     },
     {
@@ -410,7 +422,7 @@
       "a": "p_api_contacto",
       "nombre": "Envía la solicitud",
       "protocolo": "HTTPS",
-      "datos": "POST JSON {nombre, email, empresa, interes, mensaje, sitio}; la casilla NO viaja",
+      "datos": "POST JSON {nombre, email, empresa, interes, mensaje, sitio, acepto, aviso}: la casilla viaja (acepto) con la versión del aviso",
       "sensible": true
     },
     {
@@ -419,7 +431,7 @@
       "a": "s_rl",
       "nombre": "Cuenta el envío",
       "protocolo": "Memoria del proceso",
-      "datos": "clave lead:<IP> (primer valor de X-Forwarded-For), 5 por 10 min",
+      "datos": "clave lead:<IP> (último valor de X-Forwarded-For, o X-Azure-ClientIP con el X-Azure-FDID de nuestro Front Door), 5 por 10 min",
       "sensible": true
     },
     {
@@ -437,7 +449,7 @@
       "a": "s_leads",
       "nombre": "Guarda la solicitud",
       "protocolo": "SQL",
-      "datos": "INSERT nombre, email, empresa, interes, mensaje (estado 'nuevo' por defecto)",
+      "datos": "INSERT nombre, email, empresa, interes, mensaje, created_at UTC (estado 'nuevo' por defecto), en la misma transacción que lead_consents",
       "sensible": true
     },
     {
@@ -446,7 +458,7 @@
       "a": "p_form_contacto",
       "nombre": "Respuesta",
       "protocolo": "HTTPS",
-      "datos": "200 {ok:true} | 400 {error} | 429 {error}",
+      "datos": "200 {ok:true} | 400 {error} (también sin la casilla) | 409 {error} (el aviso cambió) | 429 {error}",
       "sensible": false
     },
     {
@@ -491,7 +503,7 @@
       "a": "p_api_aviso",
       "nombre": "Envía el aviso",
       "protocolo": "HTTPS",
-      "datos": "POST JSON {nombre, email, ciudad, sitio}; la casilla NO viaja",
+      "datos": "POST JSON {nombre, email, ciudad, sitio, acepto, aviso}: la casilla viaja (acepto) con la versión del aviso",
       "sensible": true
     },
     {
@@ -500,7 +512,7 @@
       "a": "s_rl",
       "nombre": "Cuenta el envío",
       "protocolo": "Memoria del proceso",
-      "datos": "clave aviso:<IP>, 5 por 10 min",
+      "datos": "clave aviso:<IP> (misma regla de IP que el contacto), 5 por 10 min",
       "sensible": true
     },
     {
@@ -509,7 +521,7 @@
       "a": "s_leads",
       "nombre": "Guarda el aviso",
       "protocolo": "SQL",
-      "datos": "INSERT nombre, email, empresa NULL, interes 'encuentros', mensaje 'Ciudad: …'",
+      "datos": "INSERT nombre, email, empresa NULL, interes 'encuentros', mensaje 'Ciudad: …', created_at UTC, en la misma transacción que lead_consents",
       "sensible": true
     },
     {
@@ -518,7 +530,7 @@
       "a": "p_form_aviso",
       "nombre": "Respuesta",
       "protocolo": "HTTPS",
-      "datos": "200 {ok:true} | 400 {error} | 429 {error}",
+      "datos": "200 {ok:true} | 400 {error} (también sin la casilla) | 409 {error} (el aviso cambió) | 429 {error}",
       "sensible": false
     },
     {
@@ -545,7 +557,7 @@
       "a": "u",
       "nombre": "HTML del aviso",
       "protocolo": "HTTPS",
-      "datos": "qué datos, para qué, qué no se hace, derechos y canal",
+      "datos": "qué datos, para qué, qué no se hace, derechos, canal, cómo se prueba la autorización, versión y huella del aviso",
       "sensible": false
     },
     {
@@ -601,6 +613,51 @@
       "protocolo": "HTTPS",
       "datos": "nombre, correo (mailto), empresa, interés, mensaje o ciudad, fecha UTC",
       "sensible": true
+    },
+    {
+      "id": "f48",
+      "de": "p_api_contacto",
+      "a": "s_consents",
+      "nombre": "Guarda la prueba de la autorización",
+      "protocolo": "SQL",
+      "datos": "INSERT lead_id, formulario 'empresas/contacto', aviso_version, aviso_sha256, accepted_at (UTC); sin IP ni navegador",
+      "sensible": true
+    },
+    {
+      "id": "f49",
+      "de": "p_api_aviso",
+      "a": "s_consents",
+      "nombre": "Guarda la prueba de la autorización",
+      "protocolo": "SQL",
+      "datos": "INSERT lead_id, formulario 'encuentros', aviso_version, aviso_sha256, accepted_at (UTC); sin IP ni navegador",
+      "sensible": true
+    },
+    {
+      "id": "f50",
+      "de": "s_aviso",
+      "a": "p_privacidad",
+      "nombre": "Texto del aviso",
+      "protocolo": "Import de módulo",
+      "datos": "AVISO_PRIVACIDAD (bloques) y AVISO_PRIVACIDAD_VERSION",
+      "sensible": false
+    },
+    {
+      "id": "f51",
+      "de": "s_aviso",
+      "a": "p_api_contacto",
+      "nombre": "Versión vigente y huella",
+      "protocolo": "Import de módulo",
+      "datos": "AVISO_PRIVACIDAD_VERSION; sha256 del texto canónico (con el responsable)",
+      "sensible": false
+    },
+    {
+      "id": "f52",
+      "de": "s_aviso",
+      "a": "p_api_aviso",
+      "nombre": "Versión vigente y huella",
+      "protocolo": "Import de módulo",
+      "datos": "AVISO_PRIVACIDAD_VERSION; sha256 del texto canónico (con el responsable)",
+      "sensible": false
     }
   ],
   "fronteras": [
@@ -641,13 +698,15 @@
         "s_rl",
         "s_catalogo",
         "s_encuentros",
-        "s_pruebas"
+        "s_pruebas",
+        "s_aviso"
       ]
     },
     {
       "nombre": "Almacenamiento persistente (SQLite y archivos del paquete)",
       "contiene": [
         "s_leads",
+        "s_consents",
         "s_db",
         "s_cla"
       ]

@@ -9,9 +9,11 @@
  *   3. el founder aprueba la aplicación (asigna)              → POST /api/admin approveApplication
  *   4. el founder aprueba un hito: 1 USD = 1 punto            → POST /api/admin approveMilestone
  *
- * Protege el comportamiento ACTUAL (commit 0e07d8f): no lo corrige. Donde el
- * comportamiento actual es discutible se dice en el nombre del caso y en los
- * hallazgos de la ficha, para que quien lo arregle cambie la prueba a propósito.
+ * Protege el comportamiento ACTUAL: no lo corrige. Escrita contra 0e07d8f y
+ * actualizada al release wp/32-release (roster como plantilla de roles, A8, b97448a;
+ * proyectos con `draft`/`origin`, 2c049eb). Donde el comportamiento actual es
+ * discutible se dice en el nombre del caso y en los hallazgos de la ficha, para que
+ * quien lo arregle cambie la prueba a propósito.
  *
  * Cómo se aísla: `@/lib/session` devuelve la sesión que fija cada caso (no hay
  * cookies), y `globalThis.__zelenaDb` apunta a la base temporal, así `getDb()` nunca
@@ -37,6 +39,8 @@ vi.mock("@/lib/admin", async () => await import("../admin"));
 vi.mock("@/lib/epochs", async () => await import("../epochs"));
 vi.mock("@/lib/mutation", async () => await import("../mutation"));
 vi.mock("@/lib/audits", async () => await import("../audits"));
+vi.mock("@/lib/agora-borradores", async () => await import("../agora-borradores"));
+vi.mock("@/lib/state-machine", async () => await import("../state-machine"));
 
 import { POST as publicarPOST } from "../../../app/api/equipo/publicar/route";
 import { POST as aplicarPOST } from "../../../app/api/apply/route";
@@ -45,12 +49,14 @@ import { createAssignment, getAssignment, seedTeam } from "../team";
 import { pendingPrincipal } from "../roles";
 import { emitirPorAprobacion } from "../gamificacion";
 import { FOUNDER_WALLET } from "../config";
+import { getProject, listProjects } from "../repo";
 
 const g = globalThis as unknown as { __zelenaDb?: DB };
 const dbOriginal = g.__zelenaDb;
 
-const JOHN = pendingPrincipal("john"); // founder del roster (role = founder)
-const VALE = pendingPrincipal("vale"); // core + supervisora
+// Roster como PLANTILLA de roles (A8): slugs de rol, nunca nombres de personas.
+const FOUNDER = pendingPrincipal("founder"); // role = founder
+const OPERACIONES = pendingPrincipal("operaciones"); // core + supervisora
 const ADA = "GADACONTRIBUIDORAFICTICIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"; // contribuidora externa
 
 const HITOS = [
@@ -65,7 +71,7 @@ function freshDb(): DB {
   const db = openDb(":memory:");
   db.pragma("foreign_keys = ON");
   db.exec(fs.readFileSync(path.join(process.cwd(), "src", "lib", "schema.sql"), "utf8"));
-  seedTeam(db); // roster como datos: pending:john (founder), pending:vale (core, supervisora)…
+  seedTeam(db); // plantilla de roles: pending:founder (founder), pending:operaciones (core, supervisora)…
   // La contribuidora entró con una invitación emitida por la wallet del founder (dato).
   db.prepare(
     `INSERT INTO users (wallet, display_name, tier, invited_by, status, is_demo, cla_signed, role, is_supervisor)
@@ -110,6 +116,7 @@ describe("Ágora y hitos · flujo principal (publicar → aplicar → asignar �
   let piezaId: number;
 
   beforeEach(() => {
+    vi.stubEnv("ZELENA_TEAM_ROSTER", ""); // sin roster del entorno: la plantilla de roles del código
     db = freshDb();
     g.__zelenaDb = db;
     estado.sesion = null;
@@ -117,12 +124,13 @@ describe("Ágora y hitos · flujo principal (publicar → aplicar → asignar �
   });
 
   afterAll(() => {
+    vi.unstubAllEnvs();
     g.__zelenaDb = dbOriginal;
   });
 
   it("recorre el flujo completo y emite exactamente amount_usd puntos al aprobar un hito", async () => {
     // 1. Publicar desde el backlog (founder del roster).
-    estado.sesion = sesionDe(JOHN, { isFounder: true, role: "founder", isSupervisor: true, claSigned: false });
+    estado.sesion = sesionDe(FOUNDER, { isFounder: true, role: "founder", isSupervisor: true, claSigned: false });
     const rPub = await publicarPOST(req("/api/equipo/publicar", entradaPublicar(piezaId)));
     expect(rPub.status).toBe(200);
     const { projectId } = (await rPub.json()) as { projectId: number };
@@ -132,8 +140,10 @@ describe("Ágora y hitos · flujo principal (publicar → aplicar → asignar �
       state: "Open",
       type: "DAO", // "comunidad" → valor interno (agora-labels.ts)
       budget_usd: 1000,
-      supervisor_wallet: JOHN, // el actor que publica queda como supervisor
+      supervisor_wallet: FOUNDER, // el actor que publica queda como supervisor
       assignee_wallet: null,
+      draft: 0, // lo publicado desde el tablero no es borrador (2c049eb)
+      origin: "agora",
     });
     const hitos = db.prepare(`SELECT code, amount_usd FROM milestones WHERE project_id = ? ORDER BY ord`).all(projectId) as Array<{
       code: string;
@@ -157,7 +167,7 @@ describe("Ágora y hitos · flujo principal (publicar → aplicar → asignar �
     expect(app.status).toBe("pending");
 
     // 3. El founder aprueba la aplicación: Open → Assigned con ejecutora.
-    estado.sesion = sesionDe(JOHN, { isFounder: true, role: "founder", isSupervisor: true });
+    estado.sesion = sesionDe(FOUNDER, { isFounder: true, role: "founder", isSupervisor: true });
     const rAsig = await adminPOST(req("/api/admin", { action: "approveApplication", applicationId: app.id }));
     expect(rAsig.status).toBe(200);
     expect(db.prepare(`SELECT state, assignee_wallet FROM projects WHERE id = ?`).get(projectId)).toEqual({
@@ -192,8 +202,8 @@ describe("Ágora y hitos · flujo principal (publicar → aplicar → asignar �
     // aunque alguien del equipo la tome y se la aprueben: guarda contra el doble pago.
     const r = emitirPorAprobacion(db, {
       assignmentId: piezaId,
-      ownerWallet: VALE,
-      aprobadorWallet: JOHN,
+      ownerWallet: OPERACIONES,
+      aprobadorWallet: FOUNDER,
       size: "S",
       aTiempo: false,
     });
@@ -209,7 +219,7 @@ describe("Ágora y hitos · flujo principal (publicar → aplicar → asignar �
     expect((await publicarPOST(req("/api/equipo/publicar", entradaPublicar(piezaId)))).status).toBe(403);
 
     // Supervisora (core) sí publica.
-    estado.sesion = sesionDe(VALE, { role: "core", isSupervisor: true });
+    estado.sesion = sesionDe(OPERACIONES, { role: "core", isSupervisor: true });
     const rPub = await publicarPOST(req("/api/equipo/publicar", entradaPublicar(piezaId)));
     expect(rPub.status).toBe(200);
     const { projectId } = (await rPub.json()) as { projectId: number };
@@ -222,38 +232,61 @@ describe("Ágora y hitos · flujo principal (publicar → aplicar → asignar �
     const sinCla = await aplicarPOST(req("/api/apply", { projectId, approach: "x".repeat(25), timeline: "2 semanas" }));
     expect(sinCla.status).toBe(401);
 
-    // Aplicar dos veces → 409 por UNIQUE(project_id, wallet). El texto aún dice "bounty".
+    // Aplicar dos veces → 409 por UNIQUE(project_id, wallet). Desde 2c049eb el texto ya no dice "bounty".
     estado.sesion = sesionDe(ADA);
     expect((await aplicarPOST(req("/api/apply", { projectId, approach: "x".repeat(25), timeline: "2 semanas" }))).status).toBe(200);
     const dup = await aplicarPOST(req("/api/apply", { projectId, approach: "x".repeat(25), timeline: "2 semanas" }));
     expect(dup.status).toBe(409);
-    expect(await dup.json()).toEqual({ error: "Ya aplicaste a este bounty." });
+    expect(await dup.json()).toEqual({ error: "Ya aplicaste a este proyecto." });
 
     // /api/admin: la supervisora NO administra (solo rol founder leído de la base).
-    estado.sesion = sesionDe(VALE, { role: "core", isSupervisor: true });
+    estado.sesion = sesionDe(OPERACIONES, { role: "core", isSupervisor: true });
     const noAdmin = await adminPOST(req("/api/admin", { action: "advanceState", projectId }));
     expect(noAdmin.status).toBe(403);
   });
 
   it("regla B8 en approveMilestone: compara cadenas crudas y exime solo a FOUNDER_WALLET (comportamiento actual)", async () => {
     // La supervisora publica; la ejecutora entró con una invitación de ESA MISMA cadena.
-    db.prepare(`UPDATE users SET invited_by = ? WHERE wallet = ?`).run(VALE, ADA);
-    estado.sesion = sesionDe(VALE, { role: "core", isSupervisor: true });
+    db.prepare(`UPDATE users SET invited_by = ? WHERE wallet = ?`).run(OPERACIONES, ADA);
+    estado.sesion = sesionDe(OPERACIONES, { role: "core", isSupervisor: true });
     const { projectId } = (await (await publicarPOST(req("/api/equipo/publicar", entradaPublicar(piezaId)))).json()) as {
       projectId: number;
     };
     db.prepare(`UPDATE projects SET assignee_wallet = ?, state = 'Assigned' WHERE id = ?`).run(ADA, projectId);
     const h1 = db.prepare(`SELECT id FROM milestones WHERE project_id = ? AND ord = 1`).get(projectId) as { id: number };
 
-    estado.sesion = sesionDe(JOHN, { isFounder: true, role: "founder", isSupervisor: true });
+    estado.sesion = sesionDe(FOUNDER, { isFounder: true, role: "founder", isSupervisor: true });
     const r = await adminPOST(req("/api/admin", { action: "approveMilestone", milestoneId: h1.id }));
     expect(r.status).toBe(400);
     expect(await r.json()).toEqual({ error: "Regla B8: un supervisor no puede evaluar a su invitado directo." });
     expect(contar(db, `SELECT COUNT(*) AS n FROM points_ledger`)).toBe(0);
   });
 
+  it("borrador (2c049eb): no aparece en el Ágora, su ficha no existe y /api/apply responde 404 hasta que el founder lo publica", async () => {
+    estado.sesion = sesionDe(FOUNDER, { isFounder: true, role: "founder", isSupervisor: true });
+    const { projectId } = (await (await publicarPOST(req("/api/equipo/publicar", entradaPublicar(piezaId)))).json()) as {
+      projectId: number;
+    };
+    // Lo que el seed hace con sus ejemplos (y la migración con los de una base vieja).
+    db.prepare(`UPDATE projects SET draft = 1 WHERE id = ?`).run(projectId);
+    expect(listProjects().map((p) => p.id)).not.toContain(projectId);
+    expect(getProject(projectId)).toBeUndefined();
+    expect(getProject(projectId, { incluirBorradores: true })?.id).toBe(projectId);
+
+    estado.sesion = sesionDe(ADA);
+    const borrador = await aplicarPOST(req("/api/apply", { projectId, approach: "x".repeat(25), timeline: "2 semanas" }));
+    expect(borrador.status).toBe(404);
+    expect(await borrador.json()).toEqual({ error: "Proyecto no encontrado." });
+
+    estado.sesion = sesionDe(FOUNDER, { isFounder: true, role: "founder", isSupervisor: true });
+    expect((await adminPOST(req("/api/admin", { action: "publishProject", projectId }))).status).toBe(200);
+    expect(listProjects().map((p) => p.id)).toContain(projectId);
+    estado.sesion = sesionDe(ADA);
+    expect((await aplicarPOST(req("/api/apply", { projectId, approach: "x".repeat(25), timeline: "2 semanas" }))).status).toBe(200);
+  });
+
   it("comportamiento actual discutible: 'Avanzar' lleva un proyecto Open a Assigned sin ejecutor", async () => {
-    estado.sesion = sesionDe(JOHN, { isFounder: true, role: "founder", isSupervisor: true });
+    estado.sesion = sesionDe(FOUNDER, { isFounder: true, role: "founder", isSupervisor: true });
     const { projectId } = (await (await publicarPOST(req("/api/equipo/publicar", entradaPublicar(piezaId)))).json()) as {
       projectId: number;
     };
@@ -267,5 +300,6 @@ describe("Ágora y hitos · flujo principal (publicar → aplicar → asignar �
     estado.sesion = sesionDe(ADA);
     const tarde = await aplicarPOST(req("/api/apply", { projectId, approach: "x".repeat(25), timeline: "2 semanas" }));
     expect(tarde.status).toBe(409);
+    expect(await tarde.json()).toEqual({ error: "Este proyecto ya no recibe aplicaciones." });
   });
 });

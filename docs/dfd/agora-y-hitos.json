@@ -1,28 +1,29 @@
 {
   "feature": "agora-y-hitos",
-  "titulo": "Ágora y hitos: publicar desde el backlog, aplicar, asignar y aprobar hitos (1 USD = 1 punto)",
-  "commit": "0e07d8f",
+  "titulo": "Ágora y hitos: publicar desde el backlog, publicar borradores, aplicar, asignar y aprobar hitos (1 USD = 1 punto)",
+  "commit": "4032c7c",
   "elementos": [
     { "id": "u_visit", "tipo": "actor", "nombre": "Visitante público (navegador)", "codigo": "apps/web/app/agora/page.tsx#AgoraPage" },
     { "id": "u_pub", "tipo": "actor", "nombre": "Founder o supervisor que publica (navegador, PublicarAgoraForm)", "codigo": "apps/web/src/components/PublicarAgoraForm.tsx#PublicarAgoraForm, publicar" },
     { "id": "u_contrib", "tipo": "actor", "nombre": "Contribuidor con acuerdo firmado (navegador, ApplyForm)", "codigo": "apps/web/src/components/ApplyForm.tsx#ApplyForm, submit" },
     { "id": "u_founder", "tipo": "actor", "nombre": "Founder en /admin (navegador, AdminAction)", "codigo": "apps/web/src/components/AdminAction.tsx#AdminAction, run" },
 
-    { "id": "p_agora", "tipo": "proceso", "nombre": "Páginas /agora y /agora/[id] (server components)", "codigo": "apps/web/app/agora/[id]/page.tsx#ProjectDetail, getProject, getMilestones" },
+    { "id": "p_agora", "tipo": "proceso", "nombre": "Páginas /agora y /agora/[id] (server components; sin borradores)", "codigo": "apps/web/app/agora/[id]/page.tsx#ProjectDetail, getProject, getMilestones" },
     { "id": "p_mw", "tipo": "proceso", "nombre": "Middleware de sesión (/equipo y /admin)", "codigo": "apps/web/middleware.ts#middleware, PROTECTED_CLA, PROTECTED_SESSION" },
     { "id": "p_pubpage", "tipo": "proceso", "nombre": "Página /equipo/publicar/[id] (borrador y vista previa)", "codigo": "apps/web/app/equipo/publicar/[id]/page.tsx#PublicarEnAgoraPage, borradorPublicacion" },
     { "id": "p_pubapi", "tipo": "proceso", "nombre": "POST /api/equipo/publicar", "codigo": "apps/web/app/api/equipo/publicar/route.ts#POST" },
     { "id": "p_authz", "tipo": "proceso", "nombre": "Puertas por rol leído de la base (equipoActor, adminActor)", "codigo": "apps/web/src/lib/authz.ts#equipoActor, adminActor" },
     { "id": "p_publicar", "tipo": "proceso", "nombre": "Puente al Ágora (publicarEnAgora)", "codigo": "apps/web/src/lib/agora-publicar.ts#publicarEnAgora, montosDeHitos, validarHitos, motivoNoPublicable" },
-    { "id": "p_apply", "tipo": "proceso", "nombre": "POST /api/apply (lógica en la ruta)", "codigo": "apps/web/app/api/apply/route.ts#POST, applySchema" },
+    { "id": "p_apply", "tipo": "proceso", "nombre": "POST /api/apply (lógica en la ruta; borrador = 404)", "codigo": "apps/web/app/api/apply/route.ts#POST, applySchema, recibeAplicaciones" },
     { "id": "p_adminpage", "tipo": "proceso", "nombre": "Panel /admin: Aplicaciones y Proyectos", "codigo": "apps/web/app/admin/page.tsx#AdminPage, approveApplication, approveMilestone" },
-    { "id": "p_adminapi", "tipo": "proceso", "nombre": "POST /api/admin (despacha la acción)", "codigo": "apps/web/app/api/admin/route.ts#POST, adminActionSchema" },
-    { "id": "p_asignar", "tipo": "proceso", "nombre": "Aprobar aplicación y asignar (approveApplication)", "codigo": "apps/web/src/lib/admin.ts#approveApplication" },
+    { "id": "p_adminapi", "tipo": "proceso", "nombre": "POST /api/admin (despacha la acción, incluida publishProject)", "codigo": "apps/web/app/api/admin/route.ts#POST, adminActionSchema" },
+    { "id": "p_asignar", "tipo": "proceso", "nombre": "Aprobar aplicación y asignar (approveApplication; no asigna borradores)", "codigo": "apps/web/src/lib/admin.ts#approveApplication" },
     { "id": "p_avanzar", "tipo": "proceso", "nombre": "Avanzar estado (advanceState)", "codigo": "apps/web/src/lib/admin.ts#advanceState" },
-    { "id": "p_sm", "tipo": "proceso", "nombre": "Máquina de estados del Ágora (función pura)", "codigo": "apps/web/src/lib/state-machine.ts#transition, nextAction" },
+    { "id": "p_sm", "tipo": "proceso", "nombre": "Máquina de estados del Ágora (función pura) y marca de borrador", "codigo": "apps/web/src/lib/state-machine.ts#transition, nextAction, esBorrador, recibeAplicaciones" },
     { "id": "p_hito", "tipo": "proceso", "nombre": "Aprobar hito: 1 USD = 1 punto (approveMilestone)", "codigo": "apps/web/src/lib/admin.ts#approveMilestone, violatesB8, withinEpochBudget, puntosDeEpoca" },
+    { "id": "p_borrador", "tipo": "proceso", "nombre": "Publicar un borrador (publicarProyecto)", "codigo": "apps/web/src/lib/agora-borradores.ts#publicarProyecto" },
 
-    { "id": "d_projects", "tipo": "almacen", "nombre": "SQLite · projects (estado, presupuesto, supervisor, ejecutor)", "codigo": "apps/web/src/lib/schema.sql#projects, assignee_wallet, supervisor_wallet" },
+    { "id": "d_projects", "tipo": "almacen", "nombre": "SQLite · projects (estado, presupuesto, supervisor, ejecutor, draft, origin)", "codigo": "apps/web/src/lib/schema.sql#projects, assignee_wallet, supervisor_wallet, draft, origin" },
     { "id": "d_milestones", "tipo": "almacen", "nombre": "SQLite · milestones (pct, amount_usd, approved)", "codigo": "apps/web/src/lib/schema.sql#milestones, amount_usd, approved" },
     { "id": "d_apps", "tipo": "almacen", "nombre": "SQLite · applications (enfoque, plazo, estado)", "codigo": "apps/web/src/lib/schema.sql#applications" },
     { "id": "d_assign", "tipo": "almacen", "nombre": "SQLite · assignments y assignment_events (backlog interno)", "codigo": "apps/web/src/lib/schema.sql#assignments, published_as_project_id, assignment_events" },
@@ -33,7 +34,7 @@
   ],
   "flujos": [
     { "id": "f1", "de": "u_visit", "a": "p_agora", "nombre": "Ver proyectos abiertos", "protocolo": "HTTPS", "datos": "GET /agora?tipo=&state= y /agora/<id>", "sensible": false },
-    { "id": "f2", "de": "p_agora", "a": "d_projects", "nombre": "Listar y leer proyectos", "protocolo": "SQL", "datos": "SELECT projects (listProjects, getProject)", "sensible": false },
+    { "id": "f2", "de": "p_agora", "a": "d_projects", "nombre": "Listar y leer proyectos", "protocolo": "SQL", "datos": "SELECT projects WHERE draft = 0 (listProjects, getProject)", "sensible": false },
     { "id": "f3", "de": "p_agora", "a": "d_milestones", "nombre": "Leer hitos", "protocolo": "SQL", "datos": "SELECT milestones por proyecto (getMilestones)", "sensible": false },
     { "id": "f4", "de": "p_agora", "a": "u_visit", "nombre": "Ficha pública", "protocolo": "HTTPS", "datos": "HTML: título, presupuesto USD (red de pruebas), hitos, criterio, supervisor abreviado", "sensible": false },
 
@@ -45,13 +46,13 @@
     { "id": "f10", "de": "p_authz", "a": "d_users", "nombre": "Rol leído de la base", "protocolo": "SQL", "datos": "role, is_supervisor, status, cla_signed", "sensible": false },
     { "id": "f11", "de": "p_pubapi", "a": "p_publicar", "nombre": "Entrada validada", "protocolo": "Llamada en proceso", "datos": "actor + PublicarInput", "sensible": true },
     { "id": "f12", "de": "p_publicar", "a": "d_genoma", "nombre": "Hitos por defecto y zona horaria", "protocolo": "SQL", "datos": "AGORA_HITOS_DEFAULT, BUSINESS_TZ", "sensible": false },
-    { "id": "f13", "de": "p_publicar", "a": "d_projects", "nombre": "Crear proyecto Open", "protocolo": "SQL", "datos": "INSERT projects (campaign, title, type, budget_usd, weeks, supervisor_wallet, textos públicos)", "sensible": true },
+    { "id": "f13", "de": "p_publicar", "a": "d_projects", "nombre": "Crear proyecto Open", "protocolo": "SQL", "datos": "INSERT projects (campaign, title, type, budget_usd, weeks, supervisor_wallet, textos públicos, origin = 'agora'; draft = 0)", "sensible": true },
     { "id": "f14", "de": "p_publicar", "a": "d_milestones", "nombre": "Crear hitos con montos", "protocolo": "SQL", "datos": "INSERT milestones (H1..Hn, pct, amount_usd que suman el presupuesto)", "sensible": true },
     { "id": "f15", "de": "p_publicar", "a": "d_assign", "nombre": "Enlazar y dejar evento", "protocolo": "SQL", "datos": "UPDATE assignments SET published_as_project_id (con guarda de carrera) + INSERT assignment_events 'publicar'", "sensible": false },
     { "id": "f16", "de": "p_pubapi", "a": "u_pub", "nombre": "Proyecto publicado", "protocolo": "HTTPS", "datos": "{ ok, projectId } o error 400/403/404/409/429", "sensible": false },
 
     { "id": "f17", "de": "u_contrib", "a": "p_apply", "nombre": "Aplicar", "protocolo": "HTTPS", "datos": "POST { projectId, approach, timeline } + cookie (claSigned)", "sensible": true },
-    { "id": "f18", "de": "p_apply", "a": "d_projects", "nombre": "¿Sigue Open?", "protocolo": "SQL", "datos": "SELECT id, state", "sensible": false },
+    { "id": "f18", "de": "p_apply", "a": "d_projects", "nombre": "¿Publicado y Open?", "protocolo": "SQL", "datos": "SELECT id, state, draft", "sensible": false },
     { "id": "f19", "de": "p_apply", "a": "d_apps", "nombre": "Guardar aplicación", "protocolo": "SQL", "datos": "INSERT applications (project_id, wallet, approach, timeline)", "sensible": true },
     { "id": "f20", "de": "p_apply", "a": "u_contrib", "nombre": "Resultado", "protocolo": "HTTPS", "datos": "{ ok } o 401/404/409/429", "sensible": false },
 
@@ -59,7 +60,7 @@
     { "id": "f22", "de": "p_mw", "a": "p_adminpage", "nombre": "Petición con JWT verificado", "protocolo": "Llamada interna de Next.js", "datos": "ruta y cookie", "sensible": true },
     { "id": "f23", "de": "p_adminpage", "a": "d_apps", "nombre": "Aplicaciones", "protocolo": "SQL", "datos": "SELECT applications JOIN projects (wallet, enfoque, plazo, estado)", "sensible": true },
     { "id": "f24", "de": "p_adminpage", "a": "d_milestones", "nombre": "Hitos por proyecto", "protocolo": "SQL", "datos": "SELECT milestones (code, amount_usd, approved)", "sensible": false },
-    { "id": "f25", "de": "u_founder", "a": "p_adminapi", "nombre": "Acción de administración", "protocolo": "HTTPS", "datos": "POST { action: approveApplication | advanceState | approveMilestone, id } + cookie", "sensible": true },
+    { "id": "f25", "de": "u_founder", "a": "p_adminapi", "nombre": "Acción de administración", "protocolo": "HTTPS", "datos": "POST { action: publishProject | approveApplication | advanceState | approveMilestone, id } + cookie", "sensible": true },
     { "id": "f26", "de": "p_adminapi", "a": "p_authz", "nombre": "¿Rol founder?", "protocolo": "Llamada en proceso", "datos": "wallet de la sesión", "sensible": true },
     { "id": "f27", "de": "p_adminapi", "a": "p_asignar", "nombre": "approveApplication(id)", "protocolo": "Llamada en proceso", "datos": "applicationId (sin el actor)", "sensible": false },
     { "id": "f28", "de": "p_asignar", "a": "p_sm", "nombre": "transition(Open, assign)", "protocolo": "Llamada en proceso", "datos": "estado actual y acción", "sensible": false },
@@ -75,12 +76,14 @@
     { "id": "f38", "de": "p_hito", "a": "d_genoma", "nombre": "Tope de la época", "protocolo": "SQL", "datos": "periods (época actual), EPOCH_BUDGET", "sensible": false },
     { "id": "f39", "de": "p_hito", "a": "d_ledger", "nombre": "Sumar y emitir puntos", "protocolo": "SQL", "datos": "SUM(points) de la época en bucket ejecucion; INSERT points = amount_usd", "sensible": true },
     { "id": "f40", "de": "p_hito", "a": "d_rep", "nombre": "Emitir reputación", "protocolo": "SQL", "datos": "INSERT eje ejecucion, delta = max(1, round(puntos/10))", "sensible": true },
-    { "id": "f41", "de": "p_adminapi", "a": "u_founder", "nombre": "Resultado", "protocolo": "HTTPS", "datos": "{ ok, points, wallet } | { ok, state } o { error } 400/403", "sensible": true }
+    { "id": "f41", "de": "p_adminapi", "a": "u_founder", "nombre": "Resultado", "protocolo": "HTTPS", "datos": "{ ok, points, wallet } | { ok, state } o { error } 400/403", "sensible": true },
+    { "id": "f42", "de": "p_adminapi", "a": "p_borrador", "nombre": "publicarProyecto(id)", "protocolo": "Llamada en proceso", "datos": "projectId (sin el actor)", "sensible": false },
+    { "id": "f43", "de": "p_borrador", "a": "d_projects", "nombre": "Quitar la marca de borrador", "protocolo": "SQL", "datos": "UPDATE projects SET draft = 0 WHERE id = ? AND draft = 1 (el estado no cambia)", "sensible": false }
   ],
   "fronteras": [
     { "nombre": "Navegador (no confiable)", "contiene": ["u_visit", "u_pub", "u_contrib", "u_founder"] },
     { "nombre": "Servidor Next.js en Azure App Service (público y equipo)", "contiene": ["p_agora", "p_mw", "p_pubpage", "p_pubapi", "p_authz", "p_publicar", "p_apply"] },
-    { "nombre": "Zona founder (rol leído de la base)", "contiene": ["p_adminpage", "p_adminapi", "p_asignar", "p_avanzar", "p_sm", "p_hito"] },
+    { "nombre": "Zona founder (rol leído de la base)", "contiene": ["p_adminpage", "p_adminapi", "p_asignar", "p_avanzar", "p_sm", "p_hito", "p_borrador"] },
     { "nombre": "Base SQLite (/home/data/zelena.db)", "contiene": ["d_projects", "d_milestones", "d_apps", "d_assign", "d_users", "d_genoma", "d_ledger", "d_rep"] }
   ]
 }

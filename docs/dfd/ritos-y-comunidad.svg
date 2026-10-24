@@ -26,8 +26,8 @@
 <text x="609" y="409" text-anchor="middle" font-size="11" fill="#b03a2e">f6 Abrir y cerrar *</text>
 <path d="M845,150 Q913,442 1085,690" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="939" y="431" text-anchor="middle" font-size="11" fill="#b03a2e">f7 Pedir el código (cada 15 s) *</text>
-<path d="M1415,1910 Q1349,1383 1175,880" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
-<text x="1322" y="1389" text-anchor="middle" font-size="11" fill="#b03a2e">f8 Secreto de los ritos *</text>
+<path d="M1415,2100 Q1349,1480 1175,880" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1322" y="1485" text-anchor="middle" font-size="11" fill="#b03a2e">f8 Secreto de los ritos *</text>
 <path d="M1085,690 Q1017,398 845,150" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="991" y="409" text-anchor="middle" font-size="11" fill="#b03a2e">f9 Código vigente *</text>
 <path d="M845,150 Q965,206 1085,150" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
@@ -90,6 +90,8 @@
 <text x="661" y="431" text-anchor="middle" font-size="11" fill="#555">f38 Estado de la sesión</text>
 <path d="M1745,880 Q1679,497 1505,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
 <text x="1652" y="506" text-anchor="middle" font-size="11" fill="#555">f39 Página /encuentros</text>
+<path d="M1175,1260 Q1243,1605 1415,1910" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1269" y="1595" text-anchor="middle" font-size="11" fill="#b03a2e">f40 Guardar la prueba de la autorización *</text>
 <rect x="90" y="100" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
 <text x="140" y="130" text-anchor="middle" fill="#222">Founder o</text>
 <text x="140" y="146" text-anchor="middle" fill="#222">supervisor</text>
@@ -158,13 +160,15 @@
 <text x="1790" y="876" text-anchor="middle" fill="#222">Página</text>
 <text x="1790" y="892" text-anchor="middle" fill="#222">/encuentros</text>
 <circle cx="1130" cy="1260" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
-<text x="1130" y="1256" text-anchor="middle" fill="#222">API</text>
-<text x="1130" y="1272" text-anchor="middle" fill="#222">/api/encuentros/aviso</text>
+<text x="1130" y="1232" text-anchor="middle" fill="#222">API</text>
+<text x="1130" y="1248" text-anchor="middle" fill="#222">/api/encuentros/aviso</text>
+<text x="1130" y="1264" text-anchor="middle" fill="#222">(exige la</text>
+<text x="1130" y="1280" text-anchor="middle" fill="#222">autorización</text>
 <circle cx="1460" cy="1450" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
-<text x="1460" y="1430" text-anchor="middle" fill="#222">Pasada de</text>
-<text x="1460" y="1446" text-anchor="middle" fill="#222">anclaje (botón</text>
-<text x="1460" y="1462" text-anchor="middle" fill="#222">de /admin o</text>
-<text x="1460" y="1478" text-anchor="middle" fill="#222">cron externo)</text>
+<text x="1460" y="1414" text-anchor="middle" fill="#222">Pasada de</text>
+<text x="1460" y="1430" text-anchor="middle" fill="#222">anclaje</text>
+<text x="1460" y="1446" text-anchor="middle" fill="#222">(workflow</text>
+<text x="1460" y="1462" text-anchor="middle" fill="#222">anclaje.yml</text>
 <circle cx="2120" cy="690" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
 <text x="2120" y="670" text-anchor="middle" fill="#222">Participación</text>
 <text x="2120" y="686" text-anchor="middle" fill="#222">para el</text>
@@ -207,6 +211,13 @@
 <text x="800" y="1708" text-anchor="middle" fill="#222">leads (interes</text>
 <text x="800" y="1724" text-anchor="middle" fill="#222">=</text>
 <text x="800" y="1740" text-anchor="middle" fill="#222">'encuentros')</text>
+<rect x="1410" y="1880" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1410" y1="1880" x2="1510" y2="1880" stroke="#222" stroke-width="1.5"/>
+<line x1="1410" y1="1940" x2="1510" y2="1940" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="1890" text-anchor="middle" fill="#222">lead_consents</text>
+<text x="1460" y="1906" text-anchor="middle" fill="#222">(prueba de la</text>
+<text x="1460" y="1922" text-anchor="middle" fill="#222">autorización</text>
+<text x="1460" y="1938" text-anchor="middle" fill="#222">del aviso)</text>
 <rect x="2070" y="2720" width="100" height="60" fill="#fdfefe" stroke="none"/>
 <line x1="2070" y1="2720" x2="2170" y2="2720" stroke="#222" stroke-width="1.5"/>
 <line x1="2070" y1="2780" x2="2170" y2="2780" stroke="#222" stroke-width="1.5"/>
@@ -220,12 +231,12 @@
 <text x="1790" y="1058" text-anchor="middle" fill="#222">proceso</text>
 <text x="1790" y="1074" text-anchor="middle" fill="#222">(límites de</text>
 <text x="1790" y="1090" text-anchor="middle" fill="#222">tasa y fallos</text>
-<rect x="1410" y="1880" width="100" height="60" fill="#fdfefe" stroke="none"/>
-<line x1="1410" y1="1880" x2="1510" y2="1880" stroke="#222" stroke-width="1.5"/>
-<line x1="1410" y1="1940" x2="1510" y2="1940" stroke="#222" stroke-width="1.5"/>
-<text x="1460" y="1882" text-anchor="middle" fill="#222">Variables de</text>
-<text x="1460" y="1898" text-anchor="middle" fill="#222">entorno</text>
-<text x="1460" y="1914" text-anchor="middle" fill="#222">(RITES_SECRET</text>
-<text x="1460" y="1930" text-anchor="middle" fill="#222">o</text>
-<text x="90" y="2920" font-size="11" fill="#777">Ritos y comunidad: código rotativo, asistencia, /comunidad y aviso de encuentros · docs/dfd/ritos-y-comunidad.json · commit 0e07d8f · * = flujo con datos sensibles</text>
+<rect x="1410" y="2070" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1410" y1="2070" x2="1510" y2="2070" stroke="#222" stroke-width="1.5"/>
+<line x1="1410" y1="2130" x2="1510" y2="2130" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="2072" text-anchor="middle" fill="#222">Variables de</text>
+<text x="1460" y="2088" text-anchor="middle" fill="#222">entorno</text>
+<text x="1460" y="2104" text-anchor="middle" fill="#222">(RITES_SECRET</text>
+<text x="1460" y="2120" text-anchor="middle" fill="#222">o</text>
+<text x="90" y="2920" font-size="11" fill="#777">Ritos y comunidad: código rotativo, asistencia, /comunidad y aviso de encuentros · docs/dfd/ritos-y-comunidad.json · commit 4032c7c · * = flujo con datos sensibles</text>
 </svg>
