@@ -1,0 +1,170 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1640 2400" width="1640" height="2400" font-family="Segoe UI, Arial, sans-serif" font-size="13">
+<title>Dashboard de seguimiento (/equipo/dashboard) y digest diario</title>
+<defs><marker id="punta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker></defs>
+<rect width="1640" height="2400" fill="#ffffff"/>
+<rect x="50" y="45" width="510" height="195" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="58" y="63" fill="#c0392b">Navegador (fuera de nuestro control)</text>
+<rect x="380" y="315" width="840" height="955" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="388" y="333" fill="#c0392b">Servidor Next.js (Azure App Service)</text>
+<rect x="1040" y="1345" width="510" height="955" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="1048" y="1363" fill="#c0392b">Base de datos SQLite de la app</text>
+<path d="M185,150 Q263,323 425,420" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="284" y="304" text-anchor="middle" font-size="11" fill="#b03a2e">f1 Abrir el dashboard *</text>
+<path d="M470,465 Q414,515 470,565" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="442" y="515" text-anchor="middle" font-size="11" fill="#b03a2e">f2 Petición con sesión válida *</text>
+<path d="M515,610 Q669,559 755,420" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="652" y="537" text-anchor="middle" font-size="11" fill="#b03a2e">f3 ¿Quién es y qué alcance tiene? *</text>
+<path d="M845,420 Q911,947 1085,1450" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="941" text-anchor="middle" font-size="11" fill="#b03a2e">f4 Leer la fila del usuario *</text>
+<path d="M845,420 Q911,1040 1085,1640" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="1035" text-anchor="middle" font-size="11" fill="#555">f5 Leer membresías e identidades</text>
+<path d="M755,420 Q601,471 515,610" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="618" y="493" text-anchor="middle" font-size="11" fill="#555">f6 Actor resuelto</text>
+<path d="M515,610 Q635,666 755,610" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="635" y="638" text-anchor="middle" font-size="11" fill="#555">f7 Armar el tablero</text>
+<path d="M845,610 Q999,559 1085,420" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="982" y="537" text-anchor="middle" font-size="11" fill="#555">f8 Bloqueos, bandeja e iniciativas visibles</text>
+<path d="M1130,465 Q1074,1125 1130,1785" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1102" y="1125" text-anchor="middle" font-size="11" fill="#555">f9 Leer piezas y eventos</text>
+<path d="M1130,465 Q1074,1030 1130,1595" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1102" y="1030" text-anchor="middle" font-size="11" fill="#555">f10 Leer reglas de visibilidad</text>
+<path d="M845,610 Q911,1230 1085,1830" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="1225" text-anchor="middle" font-size="11" fill="#555">f11 Contar carga, cierres y bloqueos</text>
+<path d="M845,610 Q911,1046 1085,1450" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="1038" text-anchor="middle" font-size="11" fill="#b03a2e">f12 Leer el roster activo *</text>
+<path d="M845,610 Q909,1325 1085,2020" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="937" y="1320" text-anchor="middle" font-size="11" fill="#b03a2e">f13 Contar check-ins de la semana *</text>
+<path d="M845,610 Q909,1418 1085,2210" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="937" y="1414" text-anchor="middle" font-size="11" fill="#555">f14 Leer época y fitness</text>
+<path d="M755,610 Q635,554 515,610" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="635" y="582" text-anchor="middle" font-size="11" fill="#b03a2e">f15 Datos del tablero *</text>
+<path d="M515,610 Q601,749 755,800" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="618" y="727" text-anchor="middle" font-size="11" fill="#555">f16 Pedir el semáforo</text>
+<path d="M845,800 Q1013,640 1085,420" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="989" y="625" text-anchor="middle" font-size="11" fill="#555">f17 Piezas visibles abiertas</text>
+<path d="M845,800 Q999,749 1085,610" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="982" y="727" text-anchor="middle" font-size="11" fill="#555">f18 Evaluar plazos</text>
+<path d="M1130,655 Q1074,1220 1130,1785" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1102" y="1220" text-anchor="middle" font-size="11" fill="#555">f19 Leer reloj de cada pieza</text>
+<path d="M1175,610 Q1241,1046 1415,1450" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1268" y="1038" text-anchor="middle" font-size="11" fill="#555">f20 Leer parámetros del genoma</text>
+<path d="M515,610 Q587,830 755,990" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="611" y="815" text-anchor="middle" font-size="11" fill="#555">f21 Digest de hoy</text>
+<path d="M845,990 Q911,1517 1085,2020" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="1511" text-anchor="middle" font-size="11" fill="#b03a2e">f22 Leer check-ins del día *</text>
+<path d="M845,990 Q1017,727 1085,420" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="991" y="716" text-anchor="middle" font-size="11" fill="#555">f23 Eventos del día visibles</text>
+<path d="M425,610 Q355,354 185,150" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="330" y="367" text-anchor="middle" font-size="11" fill="#b03a2e">f24 HTML del tablero *</text>
+<path d="M470,565 Q526,380 470,195" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="498" y="380" text-anchor="middle" font-size="11" fill="#b03a2e">f25 Texto del digest *</text>
+<path d="M185,150 Q305,206 425,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="305" y="178" text-anchor="middle" font-size="11" fill="#555">f26 Copiar o descargar</text>
+<path d="M425,150 Q305,94 185,150" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="305" y="122" text-anchor="middle" font-size="11" fill="#b03a2e">f27 Texto al portapapeles *</text>
+<path d="M515,150 Q581,677 755,1180" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="608" y="671" text-anchor="middle" font-size="11" fill="#b03a2e">f28 Descargar el .txt *</text>
+<path d="M845,1180 Q1013,1020 1085,800" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="989" y="1005" text-anchor="middle" font-size="11" fill="#b03a2e">f29 Contar la solicitud *</text>
+<path d="M800,1135 Q856,800 800,465" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="828" y="800" text-anchor="middle" font-size="11" fill="#b03a2e">f30 Puerta de la ruta *</text>
+<path d="M800,1135 Q856,1085 800,1035" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="828" y="1085" text-anchor="middle" font-size="11" fill="#555">f31 Digest de un día</text>
+<path d="M755,1180 Q689,653 515,150" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="662" y="659" text-anchor="middle" font-size="11" fill="#b03a2e">f32 Archivo del digest *</text>
+<rect x="90" y="100" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="140" y="138" text-anchor="middle" fill="#222">Founder o</text>
+<text x="140" y="154" text-anchor="middle" fill="#222">supervisión</text>
+<text x="140" y="170" text-anchor="middle" fill="#222">(navegador)</text>
+<circle cx="470" cy="150" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="122" text-anchor="middle" fill="#222">DigestPanel:</text>
+<text x="470" y="138" text-anchor="middle" fill="#222">copiar o</text>
+<text x="470" y="154" text-anchor="middle" fill="#222">descargar el</text>
+<text x="470" y="170" text-anchor="middle" fill="#222">digest</text>
+<circle cx="470" cy="420" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="400" text-anchor="middle" fill="#222">Middleware de</text>
+<text x="470" y="416" text-anchor="middle" fill="#222">sesión</text>
+<text x="470" y="432" text-anchor="middle" fill="#222">(verifica el</text>
+<text x="470" y="448" text-anchor="middle" fill="#222">JWT)</text>
+<circle cx="470" cy="610" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="590" text-anchor="middle" fill="#222">Página</text>
+<text x="470" y="606" text-anchor="middle" fill="#222">/equipo/dashboard</text>
+<text x="470" y="622" text-anchor="middle" fill="#222">(server</text>
+<text x="470" y="638" text-anchor="middle" fill="#222">component)</text>
+<circle cx="800" cy="420" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="400" text-anchor="middle" fill="#222">Puerta de</text>
+<text x="800" y="416" text-anchor="middle" fill="#222">/equipo</text>
+<text x="800" y="432" text-anchor="middle" fill="#222">(equipoActor,</text>
+<text x="800" y="448" text-anchor="middle" fill="#222">lee la base)</text>
+<circle cx="800" cy="610" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="598" text-anchor="middle" fill="#222">Agregaciones</text>
+<text x="800" y="614" text-anchor="middle" fill="#222">del dashboard</text>
+<text x="800" y="630" text-anchor="middle" fill="#222">(buildDashboard)</text>
+<circle cx="1130" cy="420" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="392" text-anchor="middle" fill="#222">Consultas y</text>
+<text x="1130" y="408" text-anchor="middle" fill="#222">visibilidad</text>
+<text x="1130" y="424" text-anchor="middle" fill="#222">del módulo</text>
+<text x="1130" y="440" text-anchor="middle" fill="#222">equipo</text>
+<circle cx="800" cy="800" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="788" text-anchor="middle" fill="#222">Semáforo de</text>
+<text x="800" y="804" text-anchor="middle" fill="#222">plazos</text>
+<text x="800" y="820" text-anchor="middle" fill="#222">(plazosDelEquipo)</text>
+<circle cx="1130" cy="610" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="598" text-anchor="middle" fill="#222">SLA en horas</text>
+<text x="1130" y="614" text-anchor="middle" fill="#222">hábiles</text>
+<text x="1130" y="630" text-anchor="middle" fill="#222">(sla-db + sla)</text>
+<circle cx="800" cy="990" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="978" text-anchor="middle" fill="#222">Digest del día</text>
+<text x="800" y="994" text-anchor="middle" fill="#222">(buildDailyDigest,</text>
+<text x="800" y="1010" text-anchor="middle" fill="#222">renderDigestText)</text>
+<circle cx="800" cy="1180" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="1168" text-anchor="middle" fill="#222">GET</text>
+<text x="800" y="1184" text-anchor="middle" fill="#222">/api/equipo/digest</text>
+<text x="800" y="1200" text-anchor="middle" fill="#222">(route.ts)</text>
+<rect x="1080" y="770" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="770" x2="1180" y2="770" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="830" x2="1180" y2="830" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="780" text-anchor="middle" fill="#222">Límite de</text>
+<text x="1130" y="796" text-anchor="middle" fill="#222">solicitudes en</text>
+<text x="1130" y="812" text-anchor="middle" fill="#222">memoria del</text>
+<text x="1130" y="828" text-anchor="middle" fill="#222">proceso</text>
+<rect x="1080" y="1420" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="1420" x2="1180" y2="1420" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="1480" x2="1180" y2="1480" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="1422" text-anchor="middle" fill="#222">SQLite · users</text>
+<text x="1130" y="1438" text-anchor="middle" fill="#222">(rol,</text>
+<text x="1130" y="1454" text-anchor="middle" fill="#222">supervisión,</text>
+<text x="1130" y="1470" text-anchor="middle" fill="#222">estado,</text>
+<rect x="1080" y="1610" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="1610" x2="1180" y2="1610" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="1670" x2="1180" y2="1670" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="1612" text-anchor="middle" fill="#222">SQLite ·</text>
+<text x="1130" y="1628" text-anchor="middle" fill="#222">initiatives,</text>
+<text x="1130" y="1644" text-anchor="middle" fill="#222">project_members,</text>
+<text x="1130" y="1660" text-anchor="middle" fill="#222">client_members,</text>
+<rect x="1080" y="1800" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="1800" x2="1180" y2="1800" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="1860" x2="1180" y2="1860" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="1818" text-anchor="middle" fill="#222">SQLite ·</text>
+<text x="1130" y="1834" text-anchor="middle" fill="#222">assignments +</text>
+<text x="1130" y="1850" text-anchor="middle" fill="#222">assignment_events</text>
+<rect x="1080" y="1990" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="1990" x2="1180" y2="1990" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="2050" x2="1180" y2="2050" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="2016" text-anchor="middle" fill="#222">SQLite ·</text>
+<text x="1130" y="2032" text-anchor="middle" fill="#222">checkins</text>
+<rect x="1080" y="2180" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="2180" x2="1180" y2="2180" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="2240" x2="1180" y2="2240" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="2198" text-anchor="middle" fill="#222">SQLite ·</text>
+<text x="1130" y="2214" text-anchor="middle" fill="#222">periods +</text>
+<text x="1130" y="2230" text-anchor="middle" fill="#222">epoch_fitness</text>
+<rect x="1410" y="1420" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1410" y1="1420" x2="1510" y2="1420" stroke="#222" stroke-width="1.5"/>
+<line x1="1410" y1="1480" x2="1510" y2="1480" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="1430" text-anchor="middle" fill="#222">SQLite ·</text>
+<text x="1460" y="1446" text-anchor="middle" fill="#222">genome_versions</text>
+<text x="1460" y="1462" text-anchor="middle" fill="#222">(SLA y zona</text>
+<text x="1460" y="1478" text-anchor="middle" fill="#222">horaria)</text>
+<text x="90" y="2380" font-size="11" fill="#777">Dashboard de seguimiento (/equipo/dashboard) y digest diario · docs/dfd/dashboard.json · commit 0e07d8f · * = flujo con datos sensibles</text>
+</svg>

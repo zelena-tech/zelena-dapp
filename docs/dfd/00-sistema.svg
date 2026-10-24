@@ -1,0 +1,147 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1930 1520" width="1930" height="1520" font-family="Segoe UI, Arial, sans-serif" font-size="13">
+<title>Zelena DAO - DFD nivel 0 del sistema</title>
+<defs><marker id="punta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker></defs>
+<rect width="1930" height="1520" fill="#ffffff"/>
+<rect x="380" y="45" width="840" height="195" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="388" y="63" fill="#c0392b">Navegador de la persona</text>
+<rect x="710" y="315" width="840" height="955" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="718" y="333" fill="#c0392b">Azure App Service (Next.js 14, Node 22)</text>
+<path d="M185,150 Q305,206 425,150" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="305" y="178" text-anchor="middle" font-size="11" fill="#b03a2e">f1 Uso del sitio *</text>
+<path d="M425,150 Q305,94 185,150" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="305" y="122" text-anchor="middle" font-size="11" fill="#b03a2e">f2 Pantallas *</text>
+<path d="M515,150 Q593,323 755,420" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="614" y="304" text-anchor="middle" font-size="11" fill="#555">f3 Petición a ruta protegida</text>
+<path d="M1085,150 Q923,247 845,420" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="944" y="266" text-anchor="middle" font-size="11" fill="#b03a2e">f4 Cookie de sesión *</text>
+<path d="M755,420 Q677,247 515,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="656" y="266" text-anchor="middle" font-size="11" fill="#555">f5 Redirección a /entrar</text>
+<path d="M515,150 Q585,406 755,610" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="610" y="393" text-anchor="middle" font-size="11" fill="#555">f6 Petición de página</text>
+<path d="M755,610 Q685,354 515,150" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="660" y="367" text-anchor="middle" font-size="11" fill="#b03a2e">f7 HTML renderizado *</text>
+<path d="M515,150 Q635,206 755,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="635" y="178" text-anchor="middle" font-size="11" fill="#555">f8 Pedir firma del CLA</text>
+<path d="M755,150 Q635,94 515,150" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="635" y="122" text-anchor="middle" font-size="11" fill="#b03a2e">f9 Firma y llave pública *</text>
+<path d="M515,150 Q583,495 755,800" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="609" y="485" text-anchor="middle" font-size="11" fill="#b03a2e">f10 Entrar o darse de alta *</text>
+<path d="M845,800 Q1017,495 1085,150" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="991" y="485" text-anchor="middle" font-size="11" fill="#b03a2e">f11 Emitir sesión *</text>
+<path d="M470,195 Q414,312 470,430" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="442" y="312" text-anchor="middle" font-size="11" fill="#b03a2e">f12 Login corporativo *</text>
+<path d="M515,475 Q589,670 755,800" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="612" y="654" text-anchor="middle" font-size="11" fill="#b03a2e">f13 Callback OIDC *</text>
+<path d="M845,800 Q1013,640 1085,420" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="989" y="625" text-anchor="middle" font-size="11" fill="#b03a2e">f14 Identidad y firmas *</text>
+<path d="M1085,610 Q931,661 845,800" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="948" y="683" text-anchor="middle" font-size="11" fill="#555">f15 Texto del CLA</text>
+<path d="M1085,420 Q931,471 845,610" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="948" y="493" text-anchor="middle" font-size="11" fill="#b03a2e">f16 Lecturas para pantallas *</text>
+<path d="M515,150 Q581,586 755,990" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="608" y="578" text-anchor="middle" font-size="11" fill="#b03a2e">f17 Acciones del equipo y del público *</text>
+<path d="M845,990 Q1017,727 1085,420" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="991" y="716" text-anchor="middle" font-size="11" fill="#b03a2e">f18 Escrituras con rol leído de la base *</text>
+<path d="M845,990 Q999,939 1085,800" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="982" y="917" text-anchor="middle" font-size="11" fill="#555">f19 Errores de rutas</text>
+<path d="M845,610 Q931,749 1085,800" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="948" y="727" text-anchor="middle" font-size="11" fill="#555">f20 Arranque y migraciones</text>
+<path d="M515,150 Q581,677 755,1180" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="608" y="671" text-anchor="middle" font-size="11" fill="#b03a2e">f21 Disparar anclaje *</text>
+<path d="M845,1180 Q1019,816 1085,420" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="992" y="808" text-anchor="middle" font-size="11" fill="#555">f22 Cola de anclaje</text>
+<path d="M845,1180 Q931,1319 1085,1370" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="948" y="1297" text-anchor="middle" font-size="11" fill="#555">f23 Transacción manageData</text>
+<path d="M1085,1370 Q999,1231 845,1180" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="982" y="1253" text-anchor="middle" font-size="11" fill="#555">f24 Hash de la transacción</text>
+<path d="M1745,483 Q1639,396 1505,420" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1632" y="424" text-anchor="middle" font-size="11" fill="#b03a2e">f25 Update del bot *</text>
+<path d="M1505,420 Q1611,506 1745,483" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1618" y="479" text-anchor="middle" font-size="11" fill="#b03a2e">f26 Respuesta del bot *</text>
+<path d="M1505,420 Q1645,426 1745,325" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1635" y="399" text-anchor="middle" font-size="11" fill="#b03a2e">f27 Consulta al modelo *</text>
+<path d="M1745,325 Q1605,320 1505,420" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1615" y="346" text-anchor="middle" font-size="11" fill="#555">f28 Respuesta del modelo</text>
+<path d="M1415,420 Q1295,364 1175,420" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1295" y="392" text-anchor="middle" font-size="11" fill="#b03a2e">f29 Vínculos y bitácora del bot *</text>
+<path d="M1745,705 Q1645,604 1505,610" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1635" y="631" text-anchor="middle" font-size="11" fill="#b03a2e">f30 Disparo programado *</text>
+<path d="M1175,420 Q1261,559 1415,610" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1278" y="537" text-anchor="middle" font-size="11" fill="#b03a2e">f31 Entregas con SLA vencido *</text>
+<path d="M1505,610 Q1651,596 1745,483" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1638" y="571" text-anchor="middle" font-size="11" fill="#b03a2e">f32 Recordatorio de SLA *</text>
+<rect x="90" y="100" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="140" y="146" text-anchor="middle" fill="#222">Persona</text>
+<text x="140" y="162" text-anchor="middle" fill="#222">usuaria</text>
+<circle cx="470" cy="150" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="146" text-anchor="middle" fill="#222">Cliente web en</text>
+<text x="470" y="162" text-anchor="middle" fill="#222">el navegador</text>
+<rect x="750" y="100" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="138" text-anchor="middle" fill="#222">Freighter</text>
+<text x="800" y="154" text-anchor="middle" fill="#222">(extensión de</text>
+<text x="800" y="170" text-anchor="middle" fill="#222">wallet)</text>
+<rect x="1080" y="120" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="120" x2="1180" y2="120" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="180" x2="1180" y2="180" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="146" text-anchor="middle" fill="#222">Cookie</text>
+<text x="1130" y="162" text-anchor="middle" fill="#222">zelena_session</text>
+<circle cx="800" cy="420" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="416" text-anchor="middle" fill="#222">Middleware de</text>
+<text x="800" y="432" text-anchor="middle" fill="#222">sesión</text>
+<circle cx="800" cy="610" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="606" text-anchor="middle" fill="#222">Páginas (App</text>
+<text x="800" y="622" text-anchor="middle" fill="#222">Router)</text>
+<circle cx="800" cy="800" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="796" text-anchor="middle" fill="#222">Rutas de</text>
+<text x="800" y="812" text-anchor="middle" fill="#222">acceso</text>
+<circle cx="800" cy="990" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="986" text-anchor="middle" fill="#222">Rutas de</text>
+<text x="800" y="1002" text-anchor="middle" fill="#222">negocio</text>
+<circle cx="800" cy="1180" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="1176" text-anchor="middle" fill="#222">Anclaje en</text>
+<text x="800" y="1192" text-anchor="middle" fill="#222">testnet</text>
+<circle cx="1460" cy="420" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="408" text-anchor="middle" fill="#222">Webhook del</text>
+<text x="1460" y="424" text-anchor="middle" fill="#222">bot de</text>
+<text x="1460" y="440" text-anchor="middle" fill="#222">Telegram</text>
+<circle cx="1460" cy="610" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="598" text-anchor="middle" fill="#222">Motor de</text>
+<text x="1460" y="614" text-anchor="middle" fill="#222">recordatorios</text>
+<text x="1460" y="630" text-anchor="middle" fill="#222">de SLA</text>
+<rect x="1080" y="390" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="390" x2="1180" y2="390" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="450" x2="1180" y2="450" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="416" text-anchor="middle" fill="#222">Base SQLite</text>
+<text x="1130" y="432" text-anchor="middle" fill="#222">zelena.db</text>
+<rect x="1080" y="580" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="580" x2="1180" y2="580" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="640" x2="1180" y2="640" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="606" text-anchor="middle" fill="#222">Archivo CLA.md</text>
+<text x="1130" y="622" text-anchor="middle" fill="#222">del paquete</text>
+<rect x="1080" y="770" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="770" x2="1180" y2="770" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="830" x2="1180" y2="830" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="788" text-anchor="middle" fill="#222">Logs del App</text>
+<text x="1130" y="804" text-anchor="middle" fill="#222">Service</text>
+<text x="1130" y="820" text-anchor="middle" fill="#222">(stdout)</text>
+<rect x="420" y="425" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="463" text-anchor="middle" fill="#222">Microsoft</text>
+<text x="470" y="479" text-anchor="middle" fill="#222">Entra ID</text>
+<text x="470" y="495" text-anchor="middle" fill="#222">(opcional)</text>
+<rect x="1080" y="1320" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="1350" text-anchor="middle" fill="#222">Stellar</text>
+<text x="1130" y="1366" text-anchor="middle" fill="#222">testnet</text>
+<text x="1130" y="1382" text-anchor="middle" fill="#222">(Horizon y</text>
+<text x="1130" y="1398" text-anchor="middle" fill="#222">Friendbot)</text>
+<rect x="1740" y="433" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1790" y="479" text-anchor="middle" fill="#222">Telegram Bot</text>
+<text x="1790" y="495" text-anchor="middle" fill="#222">API</text>
+<rect x="1740" y="275" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1790" y="313" text-anchor="middle" fill="#222">API de</text>
+<text x="1790" y="329" text-anchor="middle" fill="#222">Anthropic</text>
+<text x="1790" y="345" text-anchor="middle" fill="#222">(opcional)</text>
+<rect x="1740" y="655" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1790" y="701" text-anchor="middle" fill="#222">GitHub Actions</text>
+<text x="1790" y="717" text-anchor="middle" fill="#222">(cron)</text>
+<text x="90" y="1500" font-size="11" fill="#777">Zelena DAO - DFD nivel 0 del sistema · docs/dfd/00-sistema.json · commit 0e07d8f · * = flujo con datos sensibles</text>
+</svg>
