@@ -14,6 +14,7 @@ import {
   RUTA_AVISOS,
   RUTA_COMUNIDAD,
   RUTA_PUBLICAR,
+  RUTA_SEGUIMIENTO,
   URL_LICENCIA,
   esEnlaceExterno,
   esRutaEmpresas,
@@ -39,21 +40,71 @@ describe("menuPara (E1-2)", () => {
     expect(m).toEqual([...MENU_PUBLICO]);
   });
 
-  it("con sesión de equipo: Mi día y Proyectos primero; Clientes solo si es interno", () => {
-    const m = menuPara({ ruta: "/", conSesion: true, accesoEquipo: true, esInterno: true, puedeVerTodo: false });
+  it("con sesión de equipo: Mi día y Proyectos primero; Clientes solo si es interno y hay clientes", () => {
+    const m = menuPara({ ruta: "/", conSesion: true, accesoEquipo: true, esInterno: true, puedeVerTodo: false, conClientes: true });
     const labels = m.map((e) => e.label);
     expect(labels.slice(0, 2)).toEqual(["Mi día", "Proyectos"]);
     expect(labels).toContain("Clientes");
     expect(labels).not.toContain("Talento");
+    expect(labels).not.toContain("Seguimiento");
     expect(labels.slice(-3)).toEqual(["Ágora", "Academia", "Comunidad"]);
     expect(m.find((e) => e.label === "Mi día")?.href).toBe("/equipo/hoy");
     expect(m.find((e) => e.label === "Proyectos")?.href).toBe("/equipo/proyectos");
   });
 
-  it("con sesión de founder o supervisor: además Talento", () => {
-    const m = menuPara({ ruta: "/", conSesion: true, accesoEquipo: true, esInterno: true, puedeVerTodo: true, conAvisos: false });
-    expect(m.map((e) => e.label)).toEqual(["Mi día", "Proyectos", "Talento", "Clientes", "Ágora", "Academia", "Comunidad"]);
+  it("con sesión de founder o supervisor: además Seguimiento (el dashboard) y Talento", () => {
+    const m = menuPara({
+      ruta: "/",
+      conSesion: true,
+      accesoEquipo: true,
+      esInterno: true,
+      puedeVerTodo: true,
+      conAvisos: false,
+      conClientes: true,
+    });
+    expect(m.map((e) => e.label)).toEqual([
+      "Mi día",
+      "Proyectos",
+      "Seguimiento",
+      "Talento",
+      "Clientes",
+      "Ágora",
+      "Academia",
+      "Comunidad",
+    ]);
     expect(m.find((e) => e.label === "Talento")?.href).toBe("/equipo/talento");
+    expect(m.find((e) => e.label === "Seguimiento")?.href).toBe("/equipo/dashboard");
+    expect(RUTA_SEGUIMIENTO).toBe("/equipo/dashboard");
+  });
+
+  // Hallazgo de la verificación final: /equipo/dashboard no tenía enlace en ninguna parte.
+  it("Seguimiento solo para quien ve todo el equipo, y su página existe", () => {
+    expect(fs.existsSync(path.join(process.cwd(), "app", "equipo", "dashboard", "page.tsx"))).toBe(true);
+    for (const puedeVerTodo of [false, true]) {
+      const m = menuPara({ ruta: "/", conSesion: true, accesoEquipo: true, esInterno: true, puedeVerTodo });
+      expect(m.some((e) => e.href === RUTA_SEGUIMIENTO)).toBe(puedeVerTodo);
+    }
+    expect(menuPara({ ruta: "/", conSesion: false, accesoEquipo: true, esInterno: true, puedeVerTodo: true }).some((e) => e.href === RUTA_SEGUIMIENTO)).toBe(false);
+  });
+
+  // Hallazgo de la verificación final: /clientes salía en el menú aunque no hubiera clientes
+  // ni forma de crearlos desde la web. Sin clientes visibles, no se dibuja.
+  it("Clientes se oculta mientras no haya clientes que ver (también para el founder)", () => {
+    const base = { ruta: "/", conSesion: true, accesoEquipo: true, esInterno: true, puedeVerTodo: true };
+    expect(menuPara(base).map((e) => e.label)).not.toContain("Clientes");
+    expect(menuPara({ ...base, conClientes: false }).map((e) => e.label)).not.toContain("Clientes");
+    expect(menuPara({ ...base, conClientes: true }).map((e) => e.label)).toContain("Clientes");
+    // Con clientes, pero sin ser del equipo interno: tampoco.
+    expect(menuPara({ ...base, esInterno: false, conClientes: true }).map((e) => e.label)).not.toContain("Clientes");
+  });
+
+  it("Nav resuelve si hay clientes contra la base, con la regla de la página de /clientes", () => {
+    const src = fs.readFileSync(path.join(process.cwd(), "src", "components", "Nav.tsx"), "utf8");
+    expect(src).toMatch(/clientActor\(session, db\)/);
+    expect(src).toMatch(/listClientsFor\(db, actor\)\.length > 0/);
+    expect(src).toContain("conClientes={conClientes}");
+    const ctx = fs.readFileSync(path.join(process.cwd(), "src", "components", "NavContextual.tsx"), "utf8");
+    expect(ctx).toContain("menuPara({ ruta, conSesion, accesoEquipo, esInterno, puedeVerTodo, conClientes })");
   });
 
   it("con sesión de comunidad (sin acceso al trabajo): solo Ágora, Academia y Comunidad", () => {
@@ -89,10 +140,11 @@ describe("menú con acceso real al trabajo (criterio I6 de WP31)", () => {
   // acuerdo firmado y una membresía tiene acceso aunque no sea del equipo interno.
   const CONTRIBUTOR_MIEMBRO = { conSesion: true, accesoEquipo: true, esInterno: false, puedeVerTodo: false };
 
-  it("un contributor miembro ve Mi día y Proyectos, pero no Talento ni Clientes", () => {
-    const m = menuPara({ ruta: "/", ...CONTRIBUTOR_MIEMBRO });
+  it("un contributor miembro ve Mi día y Proyectos, pero no Seguimiento, Talento ni Clientes", () => {
+    const m = menuPara({ ruta: "/", ...CONTRIBUTOR_MIEMBRO, conClientes: true });
     const labels = m.map((e) => e.label);
     expect(labels.slice(0, 2)).toEqual(["Mi día", "Proyectos"]);
+    expect(labels).not.toContain("Seguimiento");
     expect(labels).not.toContain("Talento");
     expect(labels).not.toContain("Clientes");
     expect(labels.slice(-3)).toEqual(["Ágora", "Academia", "Comunidad"]);
@@ -169,13 +221,27 @@ describe("pie y aviso legal (E1-6)", () => {
     expect(URL_LICENCIA).not.toMatch(/\/blob\/(main|master|develop)\//);
   });
 
-  it("incluye Ágora, Academia, Decisiones, Whitepaper, Servicios y Contacto", () => {
-    for (const h of ["/agora", "/academia", "/gobernanza", "/whitepaper", "/empresas/servicios", "/empresas/contacto"]) {
+  it("incluye Ágora, Academia, Decisiones, Manifiesto, Servicios y Contacto", () => {
+    for (const h of ["/agora", "/academia", "/gobernanza", "/manifiesto", "/empresas/servicios", "/empresas/contacto"]) {
       expect(hrefs).toContain(h);
     }
     const etiquetas = FOOTER_GRUPOS.flatMap((g) => g.enlaces.map((e) => e.label));
     expect(etiquetas).toContain("Decisiones");
     expect(etiquetas).toContain("Proyectos abiertos");
+  });
+
+  // Decisión del founder: el manifiesto cumple la función del whitepaper y es más claro.
+  // /whitepaper solo existe como redirección 308 a /manifiesto (next.config.mjs).
+  it("ni el menú ni el pie enlazan el whitepaper", () => {
+    const todos = [
+      ...hrefs,
+      ...MENU_PUBLICO.map((e) => e.href),
+      ...MENU_EMPRESAS.map((e) => e.href),
+      ...menuPara({ ruta: "/", conSesion: true, accesoEquipo: true, esInterno: true, puedeVerTodo: true }).map((e) => e.href),
+    ];
+    expect(todos.filter((h) => /whitepaper/i.test(h))).toEqual([]);
+    const etiquetas = FOOTER_GRUPOS.flatMap((g) => g.enlaces.map((e) => e.label));
+    expect(etiquetas.filter((l) => /whitepaper/i.test(l))).toEqual([]);
   });
 
   it("AVISO_LEGAL es el texto nuevo y no dice 'sin dinero real'", () => {

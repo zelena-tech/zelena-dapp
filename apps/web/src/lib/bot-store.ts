@@ -112,7 +112,7 @@ function isoPlusMinutes(now: Date, minutes: number): string {
 }
 
 // ---------------------------------------------------------------------------
-// Autorización de escritura (v1: solo John)
+// Autorización de escritura (v1: solo el founder)
 // ---------------------------------------------------------------------------
 
 /**
@@ -142,7 +142,7 @@ export function canAuthorizeWrite(db: DB, wallet: string): boolean {
  * Identidad de EQUIPO del founder, que es a la que se vincula el bot.
  *
  * Por qué no basta la wallet de la sesión: el trabajo de John vive bajo su fila del
- * roster (`pending:john`, WP14) y ahí lo dejará también el login de Entra (WP13
+ * roster (`pending:<slug>`, WP14) y ahí lo dejará también el login de Entra (WP13
  * vincula la identidad a esa fila SIN mutar la PK). La sesión de la puerta de
  * invitación, en cambio, trae la wallet demo del founder. Si el bot se colgara de
  * esa, `/pendientes` saldría vacío aunque el tablero esté lleno.
@@ -182,7 +182,7 @@ export interface IssuedLinkCode {
   /** Texto plano. Se muestra UNA vez en la dapp; la base solo guarda su hash. */
   code: string;
   expiresAt: string;
-  /** Si al consumirse quedará con permiso de escritura (v1: solo John). */
+  /** Si al consumirse quedará con permiso de escritura (v1: solo el founder). */
   willAuthorizeWrite: boolean;
 }
 

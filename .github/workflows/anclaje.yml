@@ -1,0 +1,31 @@
+name: Anclaje en testnet
+# Procesa la cola de anclaje (firmas del acuerdo, raíces de época y huellas de ritos)
+# llamando a POST /api/anchor/run con el secreto ANCHOR_RUN_SECRET (mismo valor en los
+# secrets del repo y en App Settings, 32 caracteres o más). Sin pendientes, la ruta
+# responde sin tocar la red. La app necesita además SERVICE_ACCOUNT_SECRET (testnet).
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}
+permissions: {}
+concurrency:
+  group: anclaje
+  cancel-in-progress: false
+jobs:
+  anclar:
+    if: github.repository == 'zelena-tech/zelena-dapp'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Anclar pendientes
+        env:
+          ANCHOR_RUN_SECRET: ${{ secrets.ANCHOR_RUN_SECRET }}
+          APP_URL: ${{ vars.ZELENA_APP_URL || 'https://www.zelena.tech' }}
+        run: |
+          test -n "$ANCHOR_RUN_SECRET" || { echo "Falta el secret ANCHOR_RUN_SECRET"; exit 1; }
+          code=$(curl -sS --max-time 90 -o respuesta.json -w '%{http_code}' -X POST \
+            "$APP_URL/api/anchor/run" -H "x-anchor-secret: $ANCHOR_RUN_SECRET")
+          echo "HTTP $code"
+          # Solo los conteos (y el error, si lo hay): ni el detalle de cada fila ni la cuenta de servicio.
+          jq -c '{pendientes, anclados, fallidos, error}' respuesta.json 2>/dev/null || true
+          test "$code" = 200 || exit 1

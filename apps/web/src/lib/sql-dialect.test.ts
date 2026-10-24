@@ -3,7 +3,7 @@
  *
  * El traductor es PURO, así que se puede probar por completo sin Azure. Lo que NO
  * se puede probar aquí es que Azure SQL acepte el T-SQL resultante: eso exige la
- * instancia real (paso 6 del despliegue, John).
+ * instancia real (paso 6 del despliegue, Founder).
  */
 import { describe, it, expect } from "vitest";
 import fs from "node:fs";

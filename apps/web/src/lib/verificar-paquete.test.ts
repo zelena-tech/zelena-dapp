@@ -1,8 +1,8 @@
 /**
  * `scripts/verificar-paquete.mjs` (hallazgo de verificación, 2026-09-30): el paquete
  * de producción hecho "como la última vez" (zip de apps/web sin node_modules,
- * reutilizando el node_modules de Oryx con next 14.2.15, y docs/whitepaper.md
- * tomado de apps/web/docs/, que está en .gitignore) no sirve con el código de v1.
+ * reutilizando el node_modules de Oryx con next 14.2.15) no sirve con el código de v1.
+ * docs/whitepaper.md ya no forma parte del paquete: el sitio no lo sirve.
  * Estos tests fijan que el verificador lo rechaza con un motivo claro y acepta un
  * paquete correcto, en las dos formas: `next start` y standalone.
  */
@@ -54,14 +54,13 @@ afterEach(() => {
  * Paquete `next start` como lo deja App Service: /home/site/wwwroot. Así
  * `cwd/../../CLA.md` cae en /home, fuera del paquete, igual que en Azure.
  */
-function paqueteNextStart(opts: { nodeModules?: "linux" | "oryx-viejo" | "ninguno"; whitepaper?: boolean; cla?: Buffer | null } = {}) {
+function paqueteNextStart(opts: { nodeModules?: "linux" | "oryx-viejo" | "ninguno"; cla?: Buffer | null } = {}) {
   const app = path.join(base, "home", "site", "wwwroot");
   escribir(path.join(app, "package.json"), JSON.stringify(PKG));
   escribir(path.join(app, ".next", "BUILD_ID"), "abc123");
   fs.mkdirSync(path.join(app, ".next", "static"), { recursive: true });
   escribir(path.join(app, "src", "lib", "schema.sql"), "-- schema");
   if (opts.cla !== null) escribir(path.join(app, "CLA.md"), opts.cla ?? CLA);
-  if (opts.whitepaper !== false) escribir(path.join(app, "docs", "whitepaper.md"), "# Whitepaper");
   const nm = opts.nodeModules ?? "linux";
   if (nm === "linux") {
     for (const [n, r] of Object.entries(PKG.dependencies)) instalar(app, n, minima(r));
@@ -81,7 +80,6 @@ function paqueteStandalone(opts: { static?: boolean } = {}) {
   const app = path.join(raiz, "apps", "web");
   instalar(raiz, "next", "14.2.35");
   escribir(path.join(raiz, "CLA.md"), CLA);
-  escribir(path.join(raiz, "docs", "whitepaper.md"), "# Whitepaper");
   escribir(path.join(app, "server.js"), "// next standalone");
   escribir(path.join(app, "package.json"), JSON.stringify(PKG));
   escribir(path.join(app, ".next", "BUILD_ID"), "abc123");
@@ -114,14 +112,21 @@ describe("verificarPaquete — `next start` (lo que arranca start-azure.sh)", ()
     expect(r.modo).toBe("next-start");
   });
 
-  it("el paquete 'como la última vez' (node_modules de Oryx, sin whitepaper) se rechaza con motivos claros", () => {
-    const r = verificarPaquete(paqueteNextStart({ nodeModules: "oryx-viejo", whitepaper: false }));
+  it("el paquete 'como la última vez' (node_modules de Oryx) se rechaza con motivos claros", () => {
+    const r = verificarPaquete(paqueteNextStart({ nodeModules: "oryx-viejo" }));
     expect(r.ok).toBe(false);
     const texto = r.errores.join("\n");
     expect(texto).toMatch(/next instalado es 14\.2\.15 y package\.json pide \^14\.2\.35/);
     expect(texto).toMatch(/falta node_modules\/next-auth/);
     expect(texto).toMatch(new RegExp(`menor que ${NEXT_MINIMO.replace(/\./g, "\\.")}`));
-    expect(texto).toMatch(/falta docs\/whitepaper\.md/);
+  });
+
+  it("sin docs/whitepaper.md el paquete está listo: el sitio ya no lo sirve", () => {
+    const app = paqueteNextStart();
+    expect(fs.existsSync(path.join(app, "docs", "whitepaper.md"))).toBe(false);
+    const r = verificarPaquete(app);
+    expect(r.ok).toBe(true);
+    expect([...r.errores, ...r.avisos, ...r.detalles].join(" ")).not.toMatch(/whitepaper/);
   });
 
   it("sin node_modules no arranca", () => {
@@ -188,7 +193,7 @@ describe("verificarPaquete — standalone (build Linux de GitHub Actions)", () =
 });
 
 describe("el repo y el arranque", () => {
-  it("el checkout encuentra lo mismo que la app: CLA con su hash, whitepaper de la raíz, schema y next del lockfile", () => {
+  it("el checkout encuentra lo mismo que la app: CLA con su hash, schema y next del lockfile", () => {
     const r = verificarPaquete(WEB);
     // La build puede no existir cuando corre la suite (CI la hace después), y en el
     // monorepo next está izado a la raíz: el checkout NO es un paquete de `next start`.

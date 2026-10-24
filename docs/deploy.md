@@ -11,7 +11,7 @@
 ```bash
 # Desde la raíz del monorepo (zelena-dapp/)
 npm install
-cp apps/web/.env.example apps/web/.env.local   # ajusta SESSION_SECRET
+cp apps/web/.env.example apps/web/.env.local   # opcional: nombres y comentarios, sin valores
 npm run dev                                     # http://localhost:3000
 ```
 
@@ -19,7 +19,7 @@ La base SQLite se crea, migra y siembra sola en el primer arranque
 (`apps/web/data/zelena.db`, gitignored). Códigos de invitación seed, **solo fuera de
 producción**: `GENESIS-0001` … `GENESIS-0006` (en producción no se siembran y, si la base ya
 los tiene, cada arranque vence los que sigan sin usar). La wallet founder por defecto está en
-`.env.example`, pero es una wallet demo con la que nadie puede firmar. Para entrar como
+el código (sin `FOUNDER_WALLET`), pero es una wallet demo con la que nadie puede firmar. Para entrar como
 founder, cambia `FOUNDER_WALLET` a la public key de tu wallet de prueba tras onboardearte y
 **reinicia** la app: en cada arranque la fila de esa wallet queda `founder` (los gates leen
 `users.role`). O entra con `FOUNDER_BOOTSTRAP_CODE`.
@@ -35,16 +35,23 @@ npx --workspace apps/web next start   # sirve el build en :3000
 
 ## Correr el anchor-worker (en tu máquina)
 
-El sandbox de desarrollo NO alcanza la red Stellar, por eso el anclaje es una **cola**.
-El worker corre localmente y ancla los hashes pendientes:
+El anclaje es una **cola** (`anchor_queue`). En el despliegue la procesa el workflow programado
+`.github/workflows/anclaje.yml`, que llama a `POST /api/anchor/run` cada 15 minutos. En local, el
+worker hace lo mismo sobre la base SQLite de `npm run dev`, cargando **la misma lógica**
+(`apps/web/src/lib/anchor.ts`, con su tope de intentos y su reserva de filas) con el type-stripping
+de Node (Node ≥ 22.6):
 
 ```bash
-# La cuenta de servicio se genera y se fondea con friendbot en el primer arranque,
+# La cuenta de servicio se genera en el primer arranque (y anchor.ts la fondea con friendbot),
 # o exporta la tuya:
 export SERVICE_ACCOUNT_SECRET=S....         # opcional (testnet)
-node packages/scripts/anchor-worker.mjs      # una pasada
-node packages/scripts/anchor-worker.mjs --watch   # en bucle cada 15s
+node packages/scripts/anchor-worker.mjs               # una pasada
+node packages/scripts/anchor-worker.mjs --watch       # en bucle cada 60 s
+node packages/scripts/anchor-worker.mjs --pendientes  # solo cuenta, sin red
 ```
+
+Una fila que falla `ANCLAJE_MAX_INTENTOS` veces (8) queda `failed` y no se reintenta sola;
+reintentarla es `UPDATE anchor_queue SET status = 'pending', attempts = 0 WHERE id = <id>`.
 
 Cada firma de CLA encolada se ancla con `manageData` en testnet; el `txId` queda visible en
 el perfil con link a stellar.expert. El secreto de la cuenta de servicio nunca va al repo
@@ -101,7 +108,7 @@ Variables de entorno de producción: `SESSION_SECRET`, `FOUNDER_WALLET`, `TURSO_
 
 # Azure (producción v1) — WP16
 
-Coherente con el tenant de Microsoft (Entra ID, WP13) y con el FMS que ya corre ahí.
+Coherente con el tenant de Microsoft (Entra ID, WP13) y con el WMS que ya corre ahí.
 Todo lo de esta sección **excepto crear los recursos** está implementado y probado en
 la suite; crear la suscripción/recursos y el smoke test son el paso 6 de `docs/DESPLIEGUE-V1.md`.
 
@@ -155,7 +162,8 @@ SQLite local en producción es el fallo exacto que esto existe para evitar.
 | `SEED_COHORT` | no | `1` siembra el código de cohorte `ESPECIALIZACION-2026` y alarga su plazo en cada arranque. |
 | `ZELENA_OMITIR_VERIFICACION` | no | `1` hace que `start-azure.sh` arranque sin `scripts/verificar-paquete.mjs`. Solo para una emergencia consciente. |
 | `STELLAR_NETWORK` | sí | `testnet`. **Nunca** mainnet en v1. |
-| `SERVICE_ACCOUNT_SECRET` | worker | cuenta de **testnet** del anclaje. Vive SOLO donde corre el worker, jamás en el frontend. |
+| `SERVICE_ACCOUNT_SECRET` | worker / anclaje | cuenta de **testnet** del anclaje. Vive SOLO en el servidor (App Settings o donde corre el worker), jamás en el frontend. Sin ella, `POST /api/anchor/run` responde 500 y el workflow `anclaje.yml` falla a la vista. |
+| `ANCHOR_RUN_SECRET` | anclaje programado | 32 caracteres o más (`openssl rand -hex 32`). El mismo valor va en **App Settings** y en los **secrets del repo** de GitHub: `.github/workflows/anclaje.yml` lo manda en `x-anchor-secret` cada 15 minutos a `POST /api/anchor/run` (comparación en tiempo constante). Más corto o ausente, solo el founder con sesión puede disparar el anclaje. El workflow corre desde la rama por defecto: hay que llevarlo allí. |
 | `ZELENA_DB_WORKER` | no | ruta alternativa al worker del puente (por defecto `src/lib/db-query.worker.mjs`). |
 
 ### Puerta corporativa Entra ID (WP13)
@@ -233,7 +241,7 @@ pero el App Service **sí** debe instalarlos.
 
 ## Recursos y configuración de Azure
 
-- **Resource group** `rg-zelena-workspace`.
+- **Resource group** (su nombre vive en la configuración de Azure, no en el repo).
 - **App Service** Linux, **Node 20**, plan **B1** (el free tier duerme la app).
   Arranque: `npm --workspace apps/web run build && npx --workspace apps/web next start`.
   El árbol de `apps/web/src/lib` debe existir en el destino: en tiempo de ejecución se
@@ -338,10 +346,10 @@ punta contra un backend asíncrono falso. **No** cubre —porque necesita la sus
    la suite con `DATABASE_DRIVER=mssql` apuntando a la instancia).
 2. Managed identity de verdad (token de Entra, permisos del usuario externo).
 3. Latencia real y el timeout del puente (`callTimeoutMs`, 30 s por defecto).
-4. El **worker de anclaje** (`packages/scripts/anchor-worker.mjs`) abre **SQLite
-   directamente**, sin pasar por `lib/db.ts`. Tal cual **no** lee Azure SQL: hay que
-   migrarlo a la capa `db.ts` (o darle su propio cliente `mssql` asíncrono, que ahí sí es
-   trivial porque es un script suelto). **Pendiente declarado**, no cubierto por WP16.
+4. El **worker de anclaje local** (`packages/scripts/anchor-worker.mjs`) abre **SQLite
+   directamente** (reutiliza `lib/anchor.ts`, no `lib/db.ts`). Tal cual **no** lee Azure SQL;
+   en el despliegue el anclaje lo hace la app misma (`/api/anchor/run`, que sí pasa por
+   `lib/db.ts`), así que el worker solo hace falta en desarrollo.
 
 ## Notas
 

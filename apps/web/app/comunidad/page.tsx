@@ -7,7 +7,15 @@ import { listAcademia } from "@/lib/repo";
 import { fechaLarga, proximosEncuentros } from "@/lib/encuentros";
 import { huellaCorta } from "@/lib/agora-labels";
 import { EXPLORADOR_TX } from "@/lib/pruebas-testnet";
-import { actorDeRitos, asistenciaPropia, decisionesPublicas, detalleRito, ritosPublicos, zonaRitos } from "@/lib/ritos";
+import {
+  actorDeRitos,
+  asistenciaPropia,
+  decisionesPublicas,
+  detalleRito,
+  proximoRitoPreparado,
+  ritosPublicos,
+  zonaRitos,
+} from "@/lib/ritos";
 import {
   AUDIENCIA_LABEL,
   ESTADO_RITO_LABEL,
@@ -18,6 +26,7 @@ import {
   duracionTexto,
   fechaRito,
   horaRito,
+  llamadaParticipar,
   zonaTexto,
 } from "@/lib/ritos-labels";
 
@@ -65,6 +74,9 @@ export default async function ComunidadPage() {
     }
   }
   const encuentros = proximosEncuentros().slice(0, 2);
+  // "Ven a una demo" lleva a algo concreto: un encuentro, un rito ya preparado (con fecha y
+  // lugar) o el aviso de encuentros. Nunca a una fecha de la cadencia sin preparar.
+  const llamada = llamadaParticipar(encuentros[0] ?? null, proximoRitoPreparado(db), tz);
   const academia = listAcademia().slice(0, 3);
   const decisiones = decisionesPublicas(db, 3);
   const asistencia = session ? asistenciaPropia(db, session.wallet) : null;
@@ -134,12 +146,12 @@ export default async function ComunidadPage() {
           Cómo participar
         </h2>
         <p className="max-w-2xl text-base leading-8 text-muted">
-          La entrada es por invitación. El camino más corto: ven a una demo abierta o a un{" "}
-          <Link href="/encuentros" className={ENLACE}>
-            encuentro
-          </Link>
-          .
+          La entrada es por invitación, y las invitaciones salen de construir junto a alguien. El camino más
+          corto: ven a una demo abierta o a un encuentro.
         </p>
+        <Link href={llamada.href} className="btn btn-primary w-fit normal-case tracking-normal">
+          {llamada.texto}
+        </Link>
       </section>
 
       {/* ===== PRÓXIMOS ===== */}

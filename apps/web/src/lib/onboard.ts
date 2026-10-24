@@ -10,8 +10,10 @@ import type { DB } from "./db";
 import { consumeInvite, InviteConsumeError } from "./invites";
 import { claCanonicalHash } from "./cla";
 import { claSigningPayload } from "./cla-signing";
+import { loginSigningPayload, sitioDesdeUrl } from "./login-signing";
+import { almacenRetos, type AlmacenRetos } from "./login-reto";
 import { verifyWalletSignature } from "./crypto";
-import { CLA_VERSION, isBootstrapCode } from "./config";
+import { CLA_VERSION, esCodigoDemo, isBootstrapCode } from "./config";
 import { effectiveRole, isRole, type Role } from "./roles";
 
 export class OnboardError extends Error {
@@ -35,7 +37,12 @@ export interface OnboardInput {
   code: string;
   wallet: string;
   name: string;
-  isDemo: boolean;
+  /**
+   * Lo que declara el navegador. Se IGNORA: si la cuenta es de demostración lo decide el
+   * servidor por el código de invitación (`esCodigoDemo`). Se acepta para no romper un
+   * cliente viejo que todavía lo mande.
+   */
+  isDemo?: boolean;
   claHash: string;
   signature: string;
 }
@@ -68,7 +75,12 @@ function consumirCupo(db: DB, code: string, wallet: string): string {
 }
 
 export function performOnboard(db: DB, input: OnboardInput): OnboardResult {
-  const { code, wallet, name, isDemo, claHash, signature } = input;
+  const { code, wallet, name, claHash, signature } = input;
+  // Cuenta REAL o de demostración (decisión del founder, 2026-10-21). La decide el código,
+  // nunca el navegador: quien entra con una invitación válida y firma el acuerdo con la
+  // wallet que creó en su navegador tiene una cuenta real (se suma a proyectos y registra
+  // asistencia). `is_demo` queda para las cuentas sembradas y los códigos de demostración.
+  const isDemo = esCodigoDemo(code);
 
   // 1. El hash recibido debe coincidir con el texto canónico del servidor.
   if (claHash !== claCanonicalHash()) {
@@ -144,9 +156,20 @@ export function performOnboard(db: DB, input: OnboardInput): OnboardResult {
   return tx();
 }
 
+/**
+ * Sitio que nombra el mensaje de entrada: el host de `SITE_URL` o `www.zelena.tech`
+ * (lib/login-signing.ts). Lo usan `/api/login/reto` (lo manda con el reto) y
+ * `performLogin` (verifica la firma sobre ese mismo texto).
+ */
+export function sitioDeEntrada(env: NodeJS.ProcessEnv = process.env): string {
+  return sitioDesdeUrl(env.SITE_URL);
+}
+
 export interface LoginInput {
   wallet: string;
-  claHash: string;
+  /** Reto de un solo uso emitido por `/api/login/reto` (lib/login-reto.ts). */
+  nonce: string;
+  /** Firma ed25519 (base64) de `loginSigningPayload(sitio, nonce)`. */
   signature: string;
 }
 
@@ -165,21 +188,40 @@ export interface LoginResult {
 
 /**
  * Reingreso de una wallet ya registrada (WP-demo). No consume invitación ni
- * escribe nada: firma la sesión si —y solo si— la firma ed25519 sobre el payload
- * del CLA corresponde a esa wallet. Es autenticación real, no un bypass: quien
- * no tenga la llave privada no puede producir la firma.
+ * escribe en la base: firma la sesión si —y solo si— la wallet firmó un RETO
+ * vigente y sin usar que emitió el servidor (`/api/login/reto`).
+ *
+ * Reto-respuesta (hallazgo de la verificación final). Antes se aceptaba la firma del
+ * CLA, que es siempre la misma y vive en `cla_signatures`: quien la capturara, o
+ * leyera una copia de la base, entraba para siempre con esa wallet (también la del
+ * founder). Ahora:
+ *   1. el reto se CONSUME antes de mirar la firma: un solo intento por reto, así una
+ *      firma vieja o repetida ya no entra;
+ *   2. la firma tiene que ser sobre `zelena-login-testnet-v1:<sitio>:<reto>`; una firma del
+ *      CLA (`zelena-cla-testnet-v1:…`) no sirve aquí por su separador de dominio;
+ *   3. un reto pedido para otra wallet tampoco sirve.
+ * La firma del CLA en el alta (`performOnboard`) sigue igual: es legal y está anclada.
  *
  * Existe porque el onboarding es de un solo uso por wallet (409) y sin esto
  * nadie podía volver a entrar tras perder la cookie — en un despliegue nuevo,
  * ni el propio fundador.
  */
-export function performLogin(db: DB, input: LoginInput): LoginResult {
-  const { wallet, claHash, signature } = input;
+export function performLogin(
+  db: DB,
+  input: LoginInput,
+  retos: AlmacenRetos = almacenRetos(),
+  sitio: string = sitioDeEntrada()
+): LoginResult {
+  const { wallet, nonce, signature } = input;
 
-  if (claHash !== claCanonicalHash()) {
-    throw new OnboardError(400, "El hash del CLA no coincide con la versión oficial.", "cla_desactualizado");
+  if (retos.consumir(nonce, wallet) !== "ok") {
+    throw new OnboardError(
+      401,
+      "El reto de entrada caducó o ya se usó. Vuelve a intentarlo.",
+      "reto_invalido"
+    );
   }
-  if (!verifyWalletSignature(wallet, claSigningPayload(claHash), signature)) {
+  if (!verifyWalletSignature(wallet, loginSigningPayload(sitio, nonce), signature)) {
     throw new OnboardError(401, "Firma inválida: no corresponde a la wallet declarada.", "firma_invalida");
   }
   const user = db

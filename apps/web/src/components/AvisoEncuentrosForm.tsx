@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import { AVISO_PRIVACIDAD_VERSION } from "@/lib/aviso-privacidad";
 
 // Mismo patrón que ContactoForm: estados explícitos, el error de la API se
 // muestra tal cual y el éxito reemplaza al formulario.
@@ -12,15 +13,19 @@ export default function AvisoEncuentrosForm() {
   const [estado, setEstado] = useState<"idle" | "loading" | "ok" | "error">("idle");
   const [error, setError] = useState("");
 
-  async function enviar(e: React.FormEvent) {
+  async function enviar(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    // La casilla viaja al servidor (Ley 1581, hallazgo A3): sin ella la API responde 400
+    // y no guarda nada. Va con la versión del aviso que esta página enlaza.
+    const casilla = e.currentTarget.elements.namedItem("acepto") as HTMLInputElement | null;
+    const acepto = casilla?.checked === true;
     setEstado("loading");
     setError("");
     try {
       const res = await fetch("/api/encuentros/aviso", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre, email, ciudad, sitio }),
+        body: JSON.stringify({ nombre, email, ciudad, sitio, acepto, aviso: AVISO_PRIVACIDAD_VERSION }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {

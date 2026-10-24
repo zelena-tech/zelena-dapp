@@ -310,9 +310,9 @@ export const LOAD_PURPOSE =
  * filas de la cohorte demo (`is_demo = 1`).
  *
  * Por qué hace falta el filtro: el seed de la cohorte demo crea un founder de
- * demostración ("John (Founder)", `is_demo = 1`) y `seedTeamRoster` lo promueve a
- * `role='founder'` por su `is_founder`. Sin filtrar, John aparece DOS VECES en la
- * carga —su fila demo y su fila real `pending:john`— y el denominador de la salud
+ * demostración ("Founder (demo)", `is_demo = 1`) y `seedTeamRoster` lo promueve a
+ * `role='founder'` por su `is_founder`. Sin filtrar, el founder aparece DOS VECES en la
+ * carga —su fila demo y su fila real `pending:<slug>`— y el denominador de la salud
  * del rito cuenta 7 personas donde hay 6. Una fila de demostración no escribe
  * check-ins ni recibe asignaciones.
  *

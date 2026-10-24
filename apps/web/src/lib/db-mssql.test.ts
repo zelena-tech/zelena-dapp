@@ -14,7 +14,7 @@
  *
  * Lo que NO se puede probar aquí: el cable real `tedious → instancia Azure SQL`
  * (T-SQL aceptado por el motor, managed identity, latencia). Eso es el paso 6 del
- * despliegue y necesita la suscripción de John.
+ * despliegue y necesita la suscripción de Founder.
  */
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import fs from "node:fs";
@@ -100,14 +100,14 @@ describe("puente síncrono sobre backend asíncrono (WP16)", () => {
   it("parámetros NULL, unicode y payloads mayores que un chunk cruzan intactos", () => {
     db.prepare(
       `INSERT INTO users (wallet, display_name, invited_by, is_demo) VALUES (?, ?, ?, 1)`
-    ).run("GBRIDGEUNICODE00000000000000000000000000000000000000000AA", "Ángela ✅ 中文", null);
+    ).run("GBRIDGEUNICODE00000000000000000000000000000000000000000AA", "Contenido ✅ 中文", null);
     const row = db
       .prepare(`SELECT display_name, invited_by FROM users WHERE wallet = ?`)
       .get("GBRIDGEUNICODE00000000000000000000000000000000000000000AA") as {
       display_name: string;
       invited_by: string | null;
     };
-    expect(row.display_name).toBe("Ángela ✅ 中文");
+    expect(row.display_name).toBe("Contenido ✅ 中文");
     expect(row.invited_by).toBeNull();
   });
 

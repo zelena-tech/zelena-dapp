@@ -14,6 +14,23 @@ export const FOUNDER_WALLET = founderWallet();
 // CLA_VERSION es legal, no evolutivo: NO va en el genoma (WP02).
 export const CLA_VERSION = 1;
 
+/**
+ * Las 6 invitaciones de demostración del seed (`GENESIS-0001..0006`). Exactas: /admin
+ * genera códigos reales con el MISMO prefijo. Viven aquí (módulo hoja) porque las usan el
+ * seed, que las siembra o las vence, y `performOnboard`, que decide con ellas si una cuenta
+ * nueva es de demostración (decisión del founder, 2026-10-21: `is_demo` queda SOLO para
+ * las cuentas sembradas y para quien entra con uno de estos códigos).
+ */
+export const DEMO_INVITE_CODES: readonly string[] = Array.from(
+  { length: 6 },
+  (_, i) => "GENESIS-" + String(i + 1).padStart(4, "0")
+);
+
+/** ¿Este código de invitación es uno de los de demostración? (Mayúsculas, como lo manda /entrar.) */
+export function esCodigoDemo(code: string): boolean {
+  return DEMO_INVITE_CODES.includes(code.trim().toUpperCase());
+}
+
 // NOTA (WP02): los parámetros EVOLUTIVOS del sistema (EPOCH_BUDGET, ACADEMIA_*,
 // TIER_INVITE_CAPS) ya NO viven aquí. Son configuración versionada en DB: léelos
 // SIEMPRE vía getActiveGenome() de lib/genome.ts. Nunca hardcodees valores nuevos.
@@ -260,6 +277,20 @@ export const CRON_SECRET_MIN = 32;
 export function cronSecret(env: NodeJS.ProcessEnv = process.env): string | null {
   const v = (env.CRON_SECRET ?? "").trim();
   return v.length >= CRON_SECRET_MIN ? v : null;
+}
+
+/** Largo mínimo del secreto del anclaje programado (`ANCHOR_RUN_SECRET`), igual que el del cron. */
+export const ANCHOR_RUN_SECRET_MIN = 32;
+
+/**
+ * Secreto que el workflow programado `anclaje.yml` manda en `x-anchor-secret` a
+ * `POST /api/anchor/run`. `null` si falta o tiene menos de `ANCHOR_RUN_SECRET_MIN`
+ * caracteres: entonces solo el founder con sesión puede disparar el anclaje. Nunca se
+ * registra en logs ni se devuelve.
+ */
+export function anchorRunSecret(env: NodeJS.ProcessEnv = process.env): string | null {
+  const v = (env.ANCHOR_RUN_SECRET ?? "").trim();
+  return v.length >= ANCHOR_RUN_SECRET_MIN ? v : null;
 }
 
 /** Host canónico de los enlaces de los mensajes (`ZELENA_APP_URL`), sin barra final. */

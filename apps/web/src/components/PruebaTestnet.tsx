@@ -1,8 +1,10 @@
+import Link from "next/link";
 import {
   EXPLORADOR_CONTRATO,
   EXPLORADOR_TX,
   PRUEBAS_TESTNET,
   contenidoTarjeta,
+  pruebasVisibles,
   type PruebasTestnet,
 } from "@/lib/pruebas-testnet";
 import { fechaLarga } from "@/lib/encuentros";
@@ -29,6 +31,8 @@ export default function PruebaTestnet({
   const contenido = contenidoTarjeta(pruebas, respaldo);
   if (!contenido) return null;
   const { tx, contratos } = contenido;
+  // La tarjeta muestra la última; /metodo#compruebalo, todas (hallazgo: casi no se veían).
+  const total = pruebasVisibles(pruebas).transacciones.length;
 
   return (
     <section className="card flex flex-col gap-6 border-primary/30 p-8 md:p-10" aria-labelledby="compruebalo">
@@ -79,6 +83,15 @@ export default function PruebaTestnet({
             ))}
           </ul>
         </div>
+      ) : null}
+
+      {total > 1 ? (
+        <Link
+          href="/metodo#compruebalo"
+          className="inline-flex min-h-[44px] w-fit items-center gap-2 text-sm text-primary hover:underline"
+        >
+          Ver las {total} transacciones <span aria-hidden>→</span>
+        </Link>
       ) : null}
     </section>
   );

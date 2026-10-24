@@ -2,7 +2,9 @@
  * Fusión v1 ← línea desplegada (2026-09-30) · plan §4.4.1.
  *
  * La base de PRODUCCIÓN nació con el esquema de 58ee2fd (fixture
- * `__fixtures__/schema-58ee2fd.sql`, copia byte a byte del desplegado). Estos tests
+ * `__fixtures__/schema-58ee2fd.sql`: el DDL del desplegado, con los comentarios que
+ * nombraban clientes o detalles de producción cambiados por genéricos, hallazgo A8;
+ * las filas de estos tests son ficticias). Estos tests
  * arrancan `prepararSqlite` — la MISMA secuencia que corre `init()` — sobre una
  * base con esa forma y con filas, y comprueban:
  *  (a) arranca y deja intactos los datos reales (huella por tabla) + respaldo;
@@ -27,9 +29,9 @@ const LIB = path.join(process.cwd(), "src", "lib");
 const FIXTURE = fs.readFileSync(path.join(LIB, "__fixtures__", "schema-58ee2fd.sql"), "utf8");
 
 const FOUNDER_DEMO = "GA7ZELENAFOUNDERDEMOWALLET000000000000000000000000000AAA";
-const JOHN_REAL = "GJOHNREALFOUNDERWALLETAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+const FUNDADOR_REAL = "GFUNDREALFOUNDERWALLETAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 const CONTRIB = "GCONTRIBUIDORREALAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-const DAVID = "GDAVIDREALAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+const PRODUCTO = "GPRODUREALAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 
 /** Columnas toleradas de más en una base migrada (legado de la línea desplegada). */
 const LEGADO_TOLERADO = ["users.email", "users.recovery_email"];
@@ -41,8 +43,13 @@ const HUELLA: Record<string, string> = {
     "SELECT wallet, display_name, tier, invited_by, status, is_demo, is_founder, cla_signed, email, recovery_email, created_at FROM users WHERE wallet NOT LIKE 'pending:%' ORDER BY wallet",
   invites: "SELECT code, issuer_wallet, used_by, expires_at, max_uses, uses, created_at FROM invites ORDER BY code",
   cla_signatures: "SELECT * FROM cla_signatures ORDER BY id",
-  anchor_queue: "SELECT * FROM anchor_queue ORDER BY id",
-  projects: "SELECT * FROM projects ORDER BY id",
+  // Columnas originales: `claimed_at` es nueva (reserva de la cola de anclaje, 2026-10-21).
+  anchor_queue:
+    "SELECT id, kind, ref, data_key, payload_hash, status, tx_id, attempts, last_error, created_at FROM anchor_queue ORDER BY id",
+  // Columnas originales: `draft` y `origin` son nuevas (borradores del Ágora, 2026-10-21) y el
+  // fixture no tiene proyectos sembrados (sus hitos empiezan en 1), así que ninguna fila cambia.
+  projects:
+    "SELECT id, campaign, title, type, budget_usd, weeks, state, supervisor_wallet, assignee_wallet, summary, description, acceptance, created_at FROM projects ORDER BY id",
   milestones: "SELECT * FROM milestones ORDER BY id",
   applications: "SELECT * FROM applications ORDER BY id",
   reputation_events: "SELECT * FROM reputation_events ORDER BY id",
@@ -109,18 +116,18 @@ function baseDesplegada(file: string, opts: { prioridadRara?: boolean } = {}): D
   db.exec(`
     INSERT INTO users (wallet, display_name, is_demo, is_founder, cla_signed, created_at) VALUES
       ('${FOUNDER_DEMO}', 'Founder demo', 1, 1, 1, '2026-08-01 10:00:00'),
-      ('${JOHN_REAL}', 'John', 0, 0, 1, '2026-08-02 10:00:00'),
+      ('${FUNDADOR_REAL}', 'Founder', 0, 0, 1, '2026-08-02 10:00:00'),
       ('${CONTRIB}', 'Contribuidora', 0, 0, 1, '2026-08-03 10:00:00'),
-      ('${DAVID}', 'David', 0, 0, 1, '2026-08-04 10:00:00');
+      ('${PRODUCTO}', 'Producto', 0, 0, 1, '2026-08-04 10:00:00');
     INSERT INTO invites (code, issuer_wallet, used_by, expires_at, max_uses, uses) VALUES
       ('COHORTE-X', '${FOUNDER_DEMO}', NULL, '2026-10-25 00:00:00', 400, 7),
       ('UNO-SOLO', '${FOUNDER_DEMO}', '${CONTRIB}', '2026-09-01 00:00:00', NULL, 0);
     INSERT INTO cla_signatures (wallet, cla_hash, signature, anchor_status, tx_id) VALUES
-      ('${JOHN_REAL}', '03293c9378146cbd7fcbd49a0df467134a118d7a7e0379664c5d069c0398edb9', 'sig-john', 'anchored', 'tx1'),
+      ('${FUNDADOR_REAL}', '03293c9378146cbd7fcbd49a0df467134a118d7a7e0379664c5d069c0398edb9', 'sig-fundador', 'anchored', 'tx1'),
       ('${CONTRIB}', '03293c9378146cbd7fcbd49a0df467134a118d7a7e0379664c5d069c0398edb9', 'sig-c', 'pending', NULL);
     INSERT INTO anchor_queue (kind, ref, data_key, payload_hash) VALUES ('cla', '${CONTRIB}', 'cla:c', 'abc');
     INSERT INTO projects (campaign, title, type, budget_usd, weeks, supervisor_wallet, summary, description, acceptance)
-      VALUES ('LUMA', 'Bounty', 'SAS', 500, 2, '${FOUNDER_DEMO}', 's', 'd', 'a');
+      VALUES ('CAMPAÑA A', 'Bounty', 'SAS', 500, 2, '${FOUNDER_DEMO}', 's', 'd', 'a');
     INSERT INTO milestones (project_id, ord, code, name, week, pct, amount_usd) VALUES (1, 1, 'M1', 'Hito', 'S1', 100, 500);
     INSERT INTO applications (project_id, wallet, approach, timeline) VALUES (1, '${CONTRIB}', 'enfoque', '2 semanas');
     INSERT INTO periods (name, epoch_budget, academia_budget) VALUES ('Época Génesis', 100000, 5000);
@@ -132,27 +139,27 @@ function baseDesplegada(file: string, opts: { prioridadRara?: boolean } = {}): D
     INSERT INTO votes (proposal_id, wallet, choice) VALUES (1, '${CONTRIB}', 'favor');
     INSERT INTO leads (nombre, email, interes) VALUES ('Prospecto', 'p@empresa.co', 'wms');
 
-    INSERT INTO clients (id, slug, name) VALUES (1, 'montoc', 'Montoc');
-    INSERT INTO client_members (client_id, wallet, access_level) VALUES (1, '${DAVID}', 'lead');
+    INSERT INTO clients (id, slug, name) VALUES (1, 'cliente-uno', 'Cliente Uno');
+    INSERT INTO client_members (client_id, wallet, access_level) VALUES (1, '${PRODUCTO}', 'lead');
     INSERT INTO initiatives (id, slug, name, horizon, client_id, notes) VALUES
-      (1, 'wms-montoc', 'WMS Montoc', 'siguiente', 1, 'nota'),
+      (1, 'wms-cliente-uno', 'WMS Cliente Uno', 'siguiente', 1, 'nota'),
       (2, 'interno', 'Interno', 'parqueado', NULL, NULL);
     INSERT INTO assignments (id, title, description, initiative_id, client_id, owner_wallet, status, priority, size,
         acceptance_criteria, graph_node_id, blocked_reason, created_by, created_at, updated_at) VALUES
-      (10, 'Bloqueada', NULL, 1, 1, '${DAVID}', 'Bloqueada', '${opts.prioridadRara ? "urgentisima" : "alta"}', 'M',
-        NULL, 'montoc.x', 'falta acceso', '${JOHN_REAL}', '2026-08-30 09:00:00', '2026-09-01 10:00:00'),
-      (11, 'Hecha', 'desc', 2, NULL, '${DAVID}', 'Hecha', 'media', 'S',
-        'criterio', NULL, NULL, '${JOHN_REAL}', '2026-08-30 09:00:00', '2026-09-02 12:00:00'),
+      (10, 'Bloqueada', NULL, 1, 1, '${PRODUCTO}', 'Bloqueada', '${opts.prioridadRara ? "urgentisima" : "alta"}', 'M',
+        NULL, 'cliente-uno.x', 'falta acceso', '${FUNDADOR_REAL}', '2026-08-30 09:00:00', '2026-09-01 10:00:00'),
+      (11, 'Hecha', 'desc', 2, NULL, '${PRODUCTO}', 'Hecha', 'media', 'S',
+        'criterio', NULL, NULL, '${FUNDADOR_REAL}', '2026-08-30 09:00:00', '2026-09-02 12:00:00'),
       (12, 'Sin dueño', NULL, NULL, NULL, NULL, 'Backlog', 'baja', 'L',
-        NULL, NULL, NULL, '${JOHN_REAL}', '2026-08-30 09:00:00', '2026-08-30 09:00:00');
+        NULL, NULL, NULL, '${FUNDADOR_REAL}', '2026-08-30 09:00:00', '2026-08-30 09:00:00');
     INSERT INTO assignment_events (id, assignment_id, from_status, to_status, action, actor_wallet, reason, created_at) VALUES
-      (100, 10, NULL, 'Asignada', 'crear', '${JOHN_REAL}', NULL, '2026-08-30 09:00:00'),
-      (101, 10, 'Asignada', 'En curso', 'empezar', '${DAVID}', NULL, '2026-08-31 09:00:00'),
-      (102, 10, 'En curso', 'Bloqueada', 'bloquear', '${DAVID}', 'falta acceso', '2026-09-01 10:00:00'),
-      (103, 11, 'En curso', 'En revisión', 'a_revision', '${DAVID}', NULL, '2026-09-02 09:00:00'),
-      (104, 11, 'En revisión', 'Hecha', 'aprobar', '${JOHN_REAL}', NULL, '2026-09-02 12:00:00');
+      (100, 10, NULL, 'Asignada', 'crear', '${FUNDADOR_REAL}', NULL, '2026-08-30 09:00:00'),
+      (101, 10, 'Asignada', 'En curso', 'empezar', '${PRODUCTO}', NULL, '2026-08-31 09:00:00'),
+      (102, 10, 'En curso', 'Bloqueada', 'bloquear', '${PRODUCTO}', 'falta acceso', '2026-09-01 10:00:00'),
+      (103, 11, 'En curso', 'En revisión', 'a_revision', '${PRODUCTO}', NULL, '2026-09-02 09:00:00'),
+      (104, 11, 'En revisión', 'Hecha', 'aprobar', '${FUNDADOR_REAL}', NULL, '2026-09-02 12:00:00');
     INSERT INTO checkins (id, wallet, day, done, doing, blocked, updated_at) VALUES
-      (5, '${DAVID}', '2026-09-01', 'a', 'b', NULL, '2026-09-01 18:00:00');
+      (5, '${PRODUCTO}', '2026-09-01', 'a', 'b', NULL, '2026-09-01 18:00:00');
   `);
   return db;
 }
@@ -181,10 +188,22 @@ describe("migración de la base de producción (forma 58ee2fd → v1)", () => {
     const topes = topesDe(db);
     const filasAntes = { dl: cuenta(db, "decision_log"), gv: cuenta(db, "genome_versions") };
 
-    const inf = prepararSqlite(db, { archivo: file, founderWallet: JOHN_REAL, ahora: AHORA });
+    const inf = prepararSqlite(db, { archivo: file, founderWallet: FUNDADOR_REAL, ahora: AHORA });
 
     expect(inf.migro).toBe(true);
-    expect(inf.preColumnas).toEqual(["users.role", "users.entra_oid", "users.auth_provider"]);
+    expect(inf.preColumnas).toEqual([
+      "users.role",
+      "users.entra_oid",
+      "users.auth_provider",
+      "projects.draft",
+      "projects.origin",
+      "anchor_queue.claimed_at",
+      "reading_sessions.quiz_ids",
+      "reading_sessions.graded_at",
+      "reading_sessions.quiz_orden",
+    ]);
+    // El proyecto del fixture no es sembrado (hitos desde 1): sigue publicado.
+    expect(db.prepare(`SELECT draft, origin FROM projects`).all()).toEqual([{ draft: 0, origin: null }]);
     expect(inf.apartado).toBe(true);
     expect(inf.copiado).toEqual({ assignment_events: 5, checkins: 1, assignments: 3, initiatives: 2 });
     // decision_log y genome_versions como prefijo: lo previo, idéntico…
@@ -225,10 +244,10 @@ describe("migración de la base de producción (forma 58ee2fd → v1)", () => {
 
     // Backfill del founder: el gate de antes (wallet === FOUNDER_WALLET) queda como DATO.
     const rol = (w: string) => db.prepare(`SELECT role, is_supervisor FROM users WHERE wallet = ?`).get(w);
-    expect(rol(JOHN_REAL)).toEqual({ role: "founder", is_supervisor: 1 });
+    expect(rol(FUNDADOR_REAL)).toEqual({ role: "founder", is_supervisor: 1 });
     expect(rol(FOUNDER_DEMO)).toEqual({ role: "founder", is_supervisor: 1 });
     expect(rol(CONTRIB)).toEqual({ role: "contributor", is_supervisor: 0 });
-    expect(rol(DAVID)).toEqual({ role: "contributor", is_supervisor: 0 });
+    expect(rol(PRODUCTO)).toEqual({ role: "contributor", is_supervisor: 0 });
 
     // La siembra corrió sobre la base migrada: roster pending:* + iniciativas fijas.
     expect(cuenta(db, "users")).toBe(4 + 6);
@@ -237,11 +256,11 @@ describe("migración de la base de producción (forma 58ee2fd → v1)", () => {
 
   it("(b) el segundo arranque no hace nada: ni respaldo, ni columnas, ni copia, ni cambios", () => {
     const db = baseDesplegada(file);
-    prepararSqlite(db, { archivo: file, founderWallet: JOHN_REAL, ahora: AHORA });
+    prepararSqlite(db, { archivo: file, founderWallet: FUNDADOR_REAL, ahora: AHORA });
     const tras1 = { h: huella(db), eq: db.prepare(`SELECT * FROM assignments ORDER BY id`).all() };
     const respaldos1 = fs.readdirSync(dir).filter((f) => f.includes(".pre-fusion-")).length;
 
-    const inf2 = prepararSqlite(db, { archivo: file, founderWallet: JOHN_REAL, ahora: new Date() });
+    const inf2 = prepararSqlite(db, { archivo: file, founderWallet: FUNDADOR_REAL, ahora: new Date() });
     expect(inf2).toEqual({
       migro: false,
       respaldo: null,
@@ -260,7 +279,7 @@ describe("migración de la base de producción (forma 58ee2fd → v1)", () => {
 
   it("(b') una base NUEVA no migra ni respalda", () => {
     const db = openDb(file);
-    const inf = prepararSqlite(db, { archivo: file, founderWallet: JOHN_REAL, sembrar: false });
+    const inf = prepararSqlite(db, { archivo: file, founderWallet: FUNDADOR_REAL, sembrar: false });
     expect(inf.migro).toBe(false);
     expect(inf.respaldo).toBeNull();
     expect(fs.readdirSync(dir).filter((f) => f.includes(".pre-fusion-"))).toEqual([]);
@@ -268,7 +287,7 @@ describe("migración de la base de producción (forma 58ee2fd → v1)", () => {
 
   it("(c) mapea prioridad, horizonte, estados, eventos y check-ins a los valores de v1, conservando ids", () => {
     const db = baseDesplegada(file);
-    prepararSqlite(db, { archivo: file, founderWallet: JOHN_REAL, sembrar: false, ahora: AHORA });
+    prepararSqlite(db, { archivo: file, founderWallet: FUNDADOR_REAL, sembrar: false, ahora: AHORA });
 
     const a = (id: number) =>
       db
@@ -288,8 +307,8 @@ describe("migración de la base de producción (forma 58ee2fd → v1)", () => {
       description: "",
       acceptance_criteria: "",
       client_id: 1,
-      graph_node_id: "montoc.x",
-      owner_wallet: DAVID,
+      graph_node_id: "cliente-uno.x",
+      owner_wallet: PRODUCTO,
       needs_founder: 0,
       import_key: null,
     });
@@ -321,7 +340,7 @@ describe("migración de la base de producción (forma 58ee2fd → v1)", () => {
 
   it("(d) paridad con una base nueva: mismas tablas, columnas e índices, salvo el legado tolerado", () => {
     const db = baseDesplegada(file);
-    prepararSqlite(db, { archivo: file, founderWallet: JOHN_REAL, sembrar: false, ahora: AHORA });
+    prepararSqlite(db, { archivo: file, founderWallet: FUNDADOR_REAL, sembrar: false, ahora: AHORA });
     const nueva = openDb(":memory:");
     prepararSqlite(nueva, { archivo: null, sembrar: false });
 
@@ -342,7 +361,7 @@ describe("migración de la base de producción (forma 58ee2fd → v1)", () => {
     const db = baseDesplegada(file, { prioridadRara: true });
     const antes = huella(db);
 
-    expect(() => prepararSqlite(db, { archivo: file, founderWallet: JOHN_REAL, sembrar: false, ahora: AHORA })).toThrow(
+    expect(() => prepararSqlite(db, { archivo: file, founderWallet: FUNDADOR_REAL, sembrar: false, ahora: AHORA })).toThrow(
       MigracionEquipoError
     );
     // Nada se copió a medias: las tablas v1 quedan vacías y el legado apartado, intacto.
@@ -356,7 +375,7 @@ describe("migración de la base de producción (forma 58ee2fd → v1)", () => {
 
     // Una persona corrige la fila en el legado apartado; el siguiente arranque termina la copia.
     db.prepare(`UPDATE _legado_assignments SET priority = 'alta' WHERE id = 10`).run();
-    const inf = prepararSqlite(db, { archivo: file, founderWallet: JOHN_REAL, sembrar: false, ahora: AHORA });
+    const inf = prepararSqlite(db, { archivo: file, founderWallet: FUNDADOR_REAL, sembrar: false, ahora: AHORA });
     expect(inf.copiado).toEqual({ assignment_events: 5, checkins: 1, assignments: 3, initiatives: 2 });
     expect(tablas(db).filter((t) => t.startsWith("_legado_"))).toEqual([]);
     expect(huella(db)).toEqual(antes);
@@ -365,7 +384,7 @@ describe("migración de la base de producción (forma 58ee2fd → v1)", () => {
   it("(e') un dueño que no está en users también aborta con un mensaje claro", () => {
     const db = baseDesplegada(file);
     db.prepare(`UPDATE assignments SET owner_wallet = 'GFANTASMA' WHERE id = 12`).run();
-    expect(() => prepararSqlite(db, { archivo: file, founderWallet: JOHN_REAL, sembrar: false, ahora: AHORA })).toThrow(
+    expect(() => prepararSqlite(db, { archivo: file, founderWallet: FUNDADOR_REAL, sembrar: false, ahora: AHORA })).toThrow(
       /dueño que no está en users/
     );
     expect(cuenta(db, "assignments")).toBe(0);
@@ -376,7 +395,7 @@ describe("migración de la base de producción (forma 58ee2fd → v1)", () => {
     const antes = huella(db);
     // Directorio inexistente: VACUUM INTO no puede escribir el respaldo.
     const imposible = path.join(dir, "no-existe", "zelena.db");
-    expect(() => prepararSqlite(db, { archivo: imposible, founderWallet: JOHN_REAL, sembrar: false })).toThrow(
+    expect(() => prepararSqlite(db, { archivo: imposible, founderWallet: FUNDADOR_REAL, sembrar: false })).toThrow(
       /No se pudo respaldar/
     );
     expect(columnas(db, "users")).not.toContain("users.role");
@@ -411,31 +430,31 @@ describe("founder en producción: FOUNDER_WALLET se aplica en cada arranque", ()
 
   it("una wallet que se registra DESPUÉS del arranque que migró queda founder en el siguiente arranque", () => {
     const db = baseDesplegada(file);
-    const john = Keypair.random().publicKey();
+    const fundador = Keypair.random().publicKey();
 
-    const inf1 = prepararSqlite(db, { archivo: file, founderWallet: john, ahora: AHORA });
+    const inf1 = prepararSqlite(db, { archivo: file, founderWallet: fundador, ahora: AHORA });
     expect(inf1.migro).toBe(true);
     // Como en la copia de prod: el único founder es la wallet demo, que no es una
     // llave Stellar válida, así que nadie puede entrar a /admin por firma.
     expect(inf1.founder).toEqual({ registrada: false, conFirma: 0 });
 
-    // John entra después del despliegue con el código de cohorte: nace contributor.
-    db.prepare(`INSERT INTO users (wallet, display_name, cla_signed) VALUES (?, 'John', 1)`).run(john);
-    expect(rol(db, john)).toEqual({ role: "contributor", is_supervisor: 0 });
-    expect(adminActor({ wallet: john }, db)).toBeNull();
+    // Founder entra después del despliegue con el código de cohorte: nace contributor.
+    db.prepare(`INSERT INTO users (wallet, display_name, cla_signed) VALUES (?, 'Founder', 1)`).run(fundador);
+    expect(rol(db, fundador)).toEqual({ role: "contributor", is_supervisor: 0 });
+    expect(adminActor({ wallet: fundador }, db)).toBeNull();
 
     // Reiniciar la app lo arregla (antes: migro=false ⇒ 0 promovidos, fuera de /admin).
-    const inf2 = prepararSqlite(db, { archivo: file, founderWallet: john });
+    const inf2 = prepararSqlite(db, { archivo: file, founderWallet: fundador });
     expect(inf2.migro).toBe(false);
     expect(inf2.founderPromovidos).toBe(1);
-    expect(rol(db, john)).toEqual({ role: "founder", is_supervisor: 1 });
-    expect(adminActor({ wallet: john }, db)?.role).toBe("founder");
+    expect(rol(db, fundador)).toEqual({ role: "founder", is_supervisor: 1 });
+    expect(adminActor({ wallet: fundador }, db)?.role).toBe("founder");
     expect(inf2.founder).toEqual({ registrada: true, conFirma: 1 });
   });
 
   it("cambiar FOUNDER_WALLET después del primer arranque promueve la nueva y no degrada la anterior", () => {
     const db = baseDesplegada(file);
-    prepararSqlite(db, { archivo: file, founderWallet: JOHN_REAL, ahora: AHORA });
+    prepararSqlite(db, { archivo: file, founderWallet: FUNDADOR_REAL, ahora: AHORA });
     expect(rol(db, CONTRIB)).toEqual({ role: "contributor", is_supervisor: 0 });
 
     const inf2 = prepararSqlite(db, { archivo: file, founderWallet: CONTRIB });
@@ -443,7 +462,7 @@ describe("founder en producción: FOUNDER_WALLET se aplica en cada arranque", ()
     expect(rol(db, CONTRIB)).toEqual({ role: "founder", is_supervisor: 1 });
     // Retirar un founder es una decisión explícita (UPDATE documentado), nunca un efecto
     // secundario de cambiar una variable.
-    expect(rol(db, JOHN_REAL)).toEqual({ role: "founder", is_supervisor: 1 });
+    expect(rol(db, FUNDADOR_REAL)).toEqual({ role: "founder", is_supervisor: 1 });
 
     // Idempotente: el tercer arranque no cambia nada.
     expect(prepararSqlite(db, { archivo: file, founderWallet: CONTRIB }).founderPromovidos).toBe(0);
@@ -454,17 +473,17 @@ describe("founder en producción: FOUNDER_WALLET se aplica en cada arranque", ()
     prepararSqlite(real, { archivo: null, sembrar: false });
     const vistos: string[] = [];
     const espia: DB = { ...real, prepare: (sql: string) => (vistos.push(sql), real.prepare(sql)) };
-    backfillFounder(espia, JOHN_REAL);
+    backfillFounder(espia, FUNDADOR_REAL);
     expect(vistos).toHaveLength(1);
     expect(() => translate(vistos[0])).not.toThrow();
   });
 
   it("solo promueve la fila de FOUNDER_WALLET: el resto de la base no cambia de rol", () => {
     const db = baseDesplegada(file);
-    prepararSqlite(db, { archivo: file, founderWallet: JOHN_REAL, ahora: AHORA });
+    prepararSqlite(db, { archivo: file, founderWallet: FUNDADOR_REAL, ahora: AHORA });
     const roles = () => db.prepare(`SELECT wallet, role, is_supervisor FROM users ORDER BY wallet`).all();
     const antes = roles();
-    prepararSqlite(db, { archivo: file, founderWallet: JOHN_REAL });
+    prepararSqlite(db, { archivo: file, founderWallet: FUNDADOR_REAL });
     prepararSqlite(db, { archivo: file, founderWallet: null });
     expect(roles()).toEqual(antes);
   });

@@ -32,7 +32,7 @@ import {
 } from "./gamificacion";
 
 const SESION = "GFOUNDERSESIONAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"; // wallet de sesión del founder
-const PRINCIPAL = "pending:john"; // su fila de equipo (roster)
+const PRINCIPAL = "pending:founder"; // su fila de equipo (roster)
 const DUENA = "GDUENAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 const REVISA = "GREVISAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 const INVITA = "GINVITAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
@@ -119,7 +119,7 @@ describe("emitirPorAprobacion (criterio B4)", () => {
   beforeEach(() => {
     db = freshDb();
     periodo(db, 1);
-    seedTeam(db); // pending:john (founder del roster), …
+    seedTeam(db); // pending:founder (founder del roster), …
     usuario(db, SESION, { role: "founder" });
     usuario(db, DUENA, { role: "contributor" });
     usuario(db, REVISA);
@@ -236,15 +236,15 @@ describe("emitirPorAprobacion (criterio B4)", () => {
   it("B8 mira todas las identidades: la invitación de la fila de equipo cuenta para la cuenta vinculada", () => {
     // DUENA es la cuenta real de un slug del roster cuya fila de equipo entró invitada por
     // INVITA: la puerta no deja aprobar a INVITA, y la emisión tampoco paga.
-    db.prepare(`UPDATE users SET invited_by = ? WHERE wallet = ?`).run(INVITA, "pending:juan");
-    db.prepare(`INSERT INTO roster_links (slug, wallet, linked_by) VALUES ('juan', ?, ?)`).run(DUENA, SESION);
+    db.prepare(`UPDATE users SET invited_by = ? WHERE wallet = ?`).run(INVITA, "pending:finanzas");
+    db.prepare(`INSERT INTO roster_links (slug, wallet, linked_by) VALUES ('finanzas', ?, ?)`).run(DUENA, SESION);
     const id = asignacion(db, DUENA);
     expect(
       emitirPorAprobacion(db, { assignmentId: id, ownerWallet: DUENA, aprobadorWallet: INVITA, size: "S", aTiempo: false }).motivo
     ).toBe("invitacion");
     // Al revés: si DUENA aprueba a quien entró con la invitación de su fila de equipo, no se emite.
     const deSuInvitada = asignacion(db, INVITADA);
-    db.prepare(`UPDATE users SET invited_by = ? WHERE wallet = ?`).run("pending:juan", INVITADA);
+    db.prepare(`UPDATE users SET invited_by = ? WHERE wallet = ?`).run("pending:finanzas", INVITADA);
     expect(
       emitirPorAprobacion(db, { assignmentId: deSuInvitada, ownerWallet: INVITADA, aprobadorWallet: DUENA, size: "S", aTiempo: false })
         .motivo

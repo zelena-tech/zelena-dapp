@@ -71,14 +71,14 @@ describe("parseo de updates", () => {
   it("normaliza un mensaje de texto", () => {
     const u = parseUpdate({
       update_id: 9,
-      message: { from: { id: 42 }, chat: chatPrivado, text: "asigna a David el dashboard" },
+      message: { from: { id: 42 }, chat: chatPrivado, text: "asigna a Producto el dashboard" },
     });
     expect(u).toMatchObject({
       updateId: 9,
       kind: "texto",
       chatId: 555,
       telegramUserId: "42",
-      text: "asigna a David el dashboard",
+      text: "asigna a Producto el dashboard",
       isGroup: false,
     });
   });

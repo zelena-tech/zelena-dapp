@@ -6,11 +6,14 @@
  */
 import type { DB } from "./db"; // solo tipo: sin ciclo en runtime
 import { sha256Hex } from "./crypto";
-import { FOUNDER_WALLET, BOOTSTRAP_CODE_MAX, BOOTSTRAP_CODE_MIN, bootstrapInviteCode } from "./config";
+import { FOUNDER_WALLET, BOOTSTRAP_CODE_MAX, BOOTSTRAP_CODE_MIN, DEMO_INVITE_CODES, bootstrapInviteCode } from "./config";
 import { GENOME_V1, seedGenomeV1, seedGenomeV2 } from "./genome";
 import { seedTeam } from "./team";
 import { createCohortInvite } from "./invites";
-import { ACADEMIA_S1, aplicarContenidoPublico } from "./contenido-publico";
+import { ACADEMIA_S1, aplicarContenidoPublico, reordenarOpcionesAcademia } from "./contenido-publico";
+import { ORIGEN_SEMBRADO, marcarSembradosComoBorrador } from "./agora-borradores";
+import { vincularReemplazosConocidos } from "./decisiones";
+import { marcarCuentasDeNavegadorComoReales } from "./cuentas-reales";
 
 const DELINA = "GDELINACONTRIBUTORDEMOAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 const MARCOS = "GMARCOSDEVDEMOBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB";
@@ -38,11 +41,8 @@ export function demoInvitesAllowed(env: NodeJS.ProcessEnv = process.env): boolea
 // rol de founder. Se re-exporta aquí para no romper importaciones existentes.
 export { bootstrapInviteCode };
 
-/** Las 6 invitaciones demo del seed. Exactas: /admin genera códigos reales con el MISMO prefijo. */
-export const DEMO_INVITE_CODES: readonly string[] = Array.from(
-  { length: 6 },
-  (_, i) => "GENESIS-" + String(i + 1).padStart(4, "0")
-);
+/** Las 6 invitaciones demo del seed (viven en config.ts; se re-exportan por compatibilidad). */
+export { DEMO_INVITE_CODES };
 
 /**
  * Vence las invitaciones demo `GENESIS-0001..0006` que sigan sin usar cuando el
@@ -80,10 +80,11 @@ export function seedIfEmpty(db: DB, env: NodeJS.ProcessEnv = process.env): void 
   // Invitaciones demo publicadas: en producción, las que existan se vencen (no
   // basta con no sembrarlas). Va fuera del `if` por la misma razón que la escotilla.
   retirarInvitacionesDemo(db, env);
-  // Roster real del equipo + iniciativas (WP14). A diferencia del seed de la cohorte
-  // demo, esto SÍ corre en cada arranque porque es idempotente: los 6 del plano 07
-  // deben existir con su principal `pending:<slug>` aunque la base ya tenga usuarios
-  // (WP13 vinculará su identidad real). No escribe correos ni datos personales.
+  // Roster del equipo + iniciativas (WP14). A diferencia del seed de la cohorte demo,
+  // esto corre en cada arranque porque es idempotente. Sin `ZELENA_TEAM_ROSTER` solo
+  // siembra la PLANTILLA de roles en una base que aún no tiene roster: una base con sus
+  // filas `pending:<slug>` o `roster_links` (producción) no recibe filas nuevas
+  // (hallazgo A8). No escribe correos ni datos personales.
   const txTeam = db.transaction(() => seedTeam(db));
   txTeam();
   try { seedGenomeV2(db); } catch (e) { console.error("[seed] genoma v2", e); }
@@ -100,6 +101,25 @@ export function seedIfEmpty(db: DB, env: NodeJS.ProcessEnv = process.env): void 
   // Contenido público (WP31-E2): lleva una base con el contenido viejo a la forma que
   // `seed()` siembra hoy. Idempotente; si falla, el arranque sigue y se reintenta.
   try { aplicarContenidoPublico(db); } catch (e) { console.error("[seed] contenido público", e); }
+
+  // Academia (revisión del hallazgo A2): las respuestas correctas del quiz sembrado dejan
+  // de estar casi todas en la segunda opción. Solo reordena filas con la forma anterior
+  // exacta (después de S1, que ya escribe el orden nuevo). Idempotente; si falla, el
+  // arranque sigue y se reintenta.
+  try { reordenarOpcionesAcademia(db); } catch (e) { console.error("[seed] orden de opciones de la Academia", e); }
+
+  // Decisiones (decisión del founder, 2026-10-21): registra que la decisión histórica de
+  // las etiquetas viejas la reemplaza la de S2. Solo inserta en decision_replacements; el
+  // original sigue intacto en decision_log. Idempotente; si falla, el arranque sigue.
+  try { vincularReemplazosConocidos(db); } catch (e) { console.error("[seed] reemplazos de decisiones", e); }
+
+  // Ágora (decisión del founder, 2026-10-21): los proyectos sembrados de una base que ya
+  // existía pasan a borrador. Idempotente; si falla, el arranque sigue y se reintenta.
+  try { marcarSembradosComoBorrador(db); } catch (e) { console.error("[seed] borradores del Ágora", e); }
+
+  // Cuentas (decisión del founder, 2026-10-21): quien entró con una invitación válida y la
+  // wallet de su navegador tiene una cuenta real. Solo promueve; si falla, el arranque sigue.
+  try { marcarCuentasDeNavegadorComoReales(db); } catch (e) { console.error("[seed] cuentas reales", e); }
 }
 
 /**
@@ -182,7 +202,7 @@ function seed(db: DB, env: NodeJS.ProcessEnv = process.env): void {
     `INSERT INTO users (wallet, display_name, tier, invited_by, status, is_demo, is_founder, cla_signed, role, is_supervisor)
      VALUES (?, ?, ?, ?, 'active', ?, ?, 1, ?, ?)`
   );
-  insUser.run(FOUNDER_WALLET, "John (Founder)", "Gold", null, 1, 1, "founder", 1);
+  insUser.run(FOUNDER_WALLET, "Founder (demo)", "Gold", null, 1, 1, "founder", 1);
   insUser.run(DELINA, "Delina", "Silver", FOUNDER_WALLET, 1, 0, "contributor", 0);
   insUser.run(MARCOS, "Marcos", "Bronze", FOUNDER_WALLET, 1, 0, "contributor", 0);
   insUser.run(SOFIA, "Sofía", "Bronze", FOUNDER_WALLET, 1, 0, "contributor", 0);
@@ -213,9 +233,12 @@ function seed(db: DB, env: NodeJS.ProcessEnv = process.env): void {
   ).run(MARCOS, "cla:v1:" + MARCOS.slice(0, 12), sha256Hex(claText + MARCOS));
 
   // ---- Proyectos + hitos ----
+  // Nacen en BORRADOR y con `origin = 'seed'` (decisión del founder, 2026-10-21): son
+  // ejemplos y no se muestran en público hasta que el founder los publique desde
+  // /admin. Una base que ya los tenía los pasa a borrador `marcarSembradosComoBorrador`.
   const insProject = db.prepare(
-    `INSERT INTO projects (campaign, title, type, budget_usd, weeks, state, supervisor_wallet, summary, description, acceptance)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO projects (campaign, title, type, budget_usd, weeks, state, supervisor_wallet, summary, description, acceptance, draft, origin)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`
   );
   const insMs = db.prepare(
     `INSERT INTO milestones (project_id, ord, code, name, week, pct, amount_usd) VALUES (?, ?, ?, ?, ?, ?, ?)`
@@ -244,7 +267,8 @@ function seed(db: DB, env: NodeJS.ProcessEnv = process.env): void {
       FOUNDER_WALLET,
       p.summary,
       p.description,
-      p.acceptance
+      p.acceptance,
+      ORIGEN_SEMBRADO
     );
     const pid = info.lastInsertRowid as number;
     ms.forEach((m, i) => insMs.run(pid, i, m[0], m[1], m[2], m[3], m[4]));
@@ -253,20 +277,20 @@ function seed(db: DB, env: NodeJS.ProcessEnv = process.env): void {
 
   addProject(
     {
-      campaign: "LUMA",
-      title: "LUMA — Diseñador UX/UI",
+      campaign: "CAMPAÑA A",
+      title: "Campaña A — Diseño UX/UI",
       type: "SAS",
       budget: 500,
       weeks: 8,
-      summary: "Diseño de la PWA de LUMA: login, KYC, subida de documentos, dashboard y panel admin.",
+      summary: "Diseño de una app web de ejemplo: registro, verificación de identidad, carga de documentos, panel de usuario y panel de administración.",
       description:
-        "Responsable del sistema visual y la experiencia de la PWA de LUMA. Entrega flujos de login/KYC, subida de documentos, dashboard de usuario y panel de administración, con handoff a desarrollo. Trabajo remoto, entregas parciales visibles.",
+        "Responsable del sistema visual y la experiencia de una app web de ejemplo. Entrega los flujos de registro y verificación de identidad, carga de documentos, panel de usuario y panel de administración, con handoff a desarrollo. Trabajo remoto, entregas parciales visibles.",
       acceptance:
         "Prototipos navegables por hito, componentes documentados, contraste AA, handoff con specs. QA de usabilidad aprobado por el supervisor antes de cada pago.",
     },
     [
       ["ANT", "Anticipo", "Sem 0", 20, 100],
-      ["H1", "UX PWA: login + KYC + subida de documentos", "Sem 3", 30, 150],
+      ["H1", "UX: registro + verificación + carga de documentos", "Sem 3", 30, 150],
       ["H2", "Dashboard de usuario + panel admin", "Sem 6", 25, 125],
       ["H3", "Ajustes + QA de usabilidad", "Sem 8", 15, 75],
       ["RET", "Retención", "Sem 8", 10, 50],
@@ -275,24 +299,24 @@ function seed(db: DB, env: NodeJS.ProcessEnv = process.env): void {
 
   addProject(
     {
-      campaign: "LUMA",
-      title: "LUMA — Desarrollador Full-Stack",
+      campaign: "CAMPAÑA A",
+      title: "Campaña A — Desarrollo full-stack",
       type: "SAS",
       budget: 1000,
       weeks: 8,
-      summary: "Backend + frontend de la PWA de LUMA sobre Azure: auth, KYC, QR, pagos y pantalla en vivo.",
+      summary: "Backend y frontend de la app web de ejemplo en la nube: autenticación, verificación, QR, pagos y pantalla en vivo.",
       description:
-        "Construye la PWA de LUMA de extremo a extremo: infraestructura en Azure, base de datos, autenticación con KYC y QR, módulo de usuario, panel de administración y moderación, pagos con Wompi/PSE y pantalla en vivo para el piloto.",
+        "Construye la app web de ejemplo de extremo a extremo: infraestructura en la nube, base de datos, autenticación con verificación de identidad y QR, módulo de usuario, panel de administración y moderación, pagos con una pasarela local y pantalla en vivo para el piloto.",
       acceptance:
         "Cada hito con demo funcional en ambiente de pruebas, tests básicos verdes, y checklist de seguridad. El piloto debe correr con datos reales controlados.",
     },
     [
       ["ANT", "Anticipo", "Sem 0", 20, 200],
-      ["M1", "Infra Azure + base de datos", "Sem 2", 10, 100],
-      ["M2", "Login + KYC + QR", "Sem 4", 10, 100],
+      ["M1", "Infraestructura + base de datos", "Sem 2", 10, 100],
+      ["M2", "Registro + verificación + QR", "Sem 4", 10, 100],
       ["M3", "Módulo de usuario", "Sem 5", 10, 100],
       ["M4", "Panel admin + moderación", "Sem 6", 10, 100],
-      ["M5", "Pagos Wompi + PSE", "Sem 7", 15, 150],
+      ["M5", "Pagos con pasarela local", "Sem 7", 15, 150],
       ["M6", "Pantalla en vivo", "Sem 7", 10, 100],
       ["M7", "Piloto", "Sem 8", 5, 50],
       ["RET", "Retención", "Sem 8", 10, 100],
@@ -301,14 +325,14 @@ function seed(db: DB, env: NodeJS.ProcessEnv = process.env): void {
 
   addProject(
     {
-      campaign: "CREDIFONO",
-      title: "CREDIFONO — Dev A Core financiero",
+      campaign: "CAMPAÑA B",
+      title: "Campaña B — Desarrollo del núcleo financiero",
       type: "SAS",
       budget: 1000,
       weeks: 12,
-      summary: "Núcleo financiero del crédito de celulares (modelo PayJoy): originación, scoring, cuotas, pagos y cobranza.",
+      summary: "Núcleo financiero de un producto de crédito de ejemplo: originación, scoring, cuotas, pagos y cobranza.",
       description:
-        "Diseña y construye el core financiero de CREDIFONO: arquitectura, originación de créditos y scoring, motor de cuotas, registro de pagos, cobranza y reportes de cartera para el piloto. Modelo PayJoy: celulares a crédito con bloqueo por mora.",
+        "Diseña y construye el núcleo financiero de un producto de crédito de ejemplo: arquitectura, originación de créditos y scoring, motor de cuotas, registro de pagos, cobranza y reportes de cartera para el piloto.",
       acceptance:
         "Motor de cuotas reproducible y auditado, pruebas de originación y cobranza, y reporte de cartera consistente. Cada pago requiere demo y revisión del supervisor.",
     },
@@ -326,14 +350,14 @@ function seed(db: DB, env: NodeJS.ProcessEnv = process.env): void {
 
   addProject(
     {
-      campaign: "CREDIFONO",
-      title: "CREDIFONO — Dev B Device & cliente",
+      campaign: "CAMPAÑA B",
+      title: "Campaña B — Desarrollo de dispositivo y portal",
       type: "SAS",
       budget: 1000,
       weeks: 12,
       summary: "Capa de dispositivo (Device Policy Controller) y portal de cliente: bloqueo por mora y hardening.",
       description:
-        "Construye la capa de dispositivo del modelo PayJoy: spike de Device Policy Controller, agente de bloqueo, flujo mora→lock, portal del cliente y hardening de seguridad para el piloto.",
+        "Construye la capa de dispositivo del producto de ejemplo: spike de Device Policy Controller, agente de bloqueo, flujo mora→lock, portal del cliente y hardening de seguridad para el piloto.",
       acceptance:
         "Agente de bloqueo confiable en dispositivos de prueba, flujo mora→lock verificable, portal de cliente usable y checklist de hardening cumplido.",
     },
@@ -350,14 +374,14 @@ function seed(db: DB, env: NodeJS.ProcessEnv = process.env): void {
 
   addProject(
     {
-      campaign: "CREDIFONO",
-      title: "CREDIFONO — Diseñador",
+      campaign: "CAMPAÑA B",
+      title: "Campaña B — Diseño",
       type: "SAS",
       budget: 500,
       weeks: 12,
-      summary: "Identidad y experiencia de CREDIFONO: UX de originación, dashboards y pantallas del agente.",
+      summary: "Identidad y experiencia del producto de crédito de ejemplo: UX de originación, dashboards y pantallas del agente.",
       description:
-        "Define la identidad visual y la experiencia de CREDIFONO: UX del flujo de originación, dashboards de cartera y las pantallas operativas del agente de campo.",
+        "Define la identidad visual y la experiencia del producto de crédito de ejemplo: UX del flujo de originación, dashboards de cartera y las pantallas operativas del agente de campo.",
       acceptance:
         "Sistema visual consistente, prototipos navegables por hito y handoff documentado. Validación de usabilidad con el supervisor antes de cada pago.",
     },
@@ -395,8 +419,8 @@ function seed(db: DB, env: NodeJS.ProcessEnv = process.env): void {
     ],
     [
       "2026-07-01",
-      "Publicación de campañas LUMA + CREDIFONO",
-      "Se abren al Ágora las dos primeras campañas (5 proyectos) etiquetadas como proyectos de cliente, con hitos y criterios de aceptación públicos.",
+      "Publicación de las primeras campañas de ejemplo",
+      "Se abren al Ágora las dos primeras campañas de ejemplo (5 proyectos) etiquetadas como proyectos de cliente, con hitos y criterios de aceptación públicos.",
     ],
   ];
   for (const d of decisions) insDec.run(d[0], d[1], d[2], sha256Hex(d.join("|")));
@@ -431,11 +455,11 @@ function seed(db: DB, env: NodeJS.ProcessEnv = process.env): void {
     `INSERT INTO reputation_events (wallet, axis, delta, ref) VALUES (?, ?, ?, ?)`
   );
   const rep: Array<[string, string, number, string]> = [
-    [DELINA, "ejecucion", 42, "LUMA H1 entregado"],
+    [DELINA, "ejecucion", 42, "Campaña A · H1 entregado"],
     [DELINA, "investigacion", 12, "Academia: triángulo de activos"],
-    [MARCOS, "ejecucion", 28, "LUMA M1 Azure+DB"],
+    [MARCOS, "ejecucion", 28, "Campaña A · M1 infraestructura"],
     [MARCOS, "comunidad", 8, "Check-in demo day"],
-    [SOFIA, "ejecucion", 24, "CREDIFONO D1 identidad"],
+    [SOFIA, "ejecucion", 24, "Campaña B · D1 identidad"],
     [SOFIA, "investigacion", 18, "Academia: cómo se mide el valor"],
     [FOUNDER_WALLET, "gobernanza", 20, "Publicación decision log"],
     [FOUNDER_WALLET, "comunidad", 10, "Facilitación demo day"],
@@ -446,9 +470,9 @@ function seed(db: DB, env: NodeJS.ProcessEnv = process.env): void {
   const insPts = db.prepare(
     `INSERT INTO points_ledger (wallet, points, period_id, bucket, ref) VALUES (?, ?, 1, ?, ?)`
   );
-  insPts.run(DELINA, 1200, "ejecucion", "Score LUMA H1");
-  insPts.run(MARCOS, 900, "ejecucion", "Score LUMA M1");
-  insPts.run(SOFIA, 700, "ejecucion", "Score CREDIFONO D1");
+  insPts.run(DELINA, 1200, "ejecucion", "Score Campaña A · H1");
+  insPts.run(MARCOS, 900, "ejecucion", "Score Campaña A · M1");
+  insPts.run(SOFIA, 700, "ejecucion", "Score Campaña B · D1");
   insPts.run(SOFIA, 150, "academia", "Academia: cómo se mide el valor");
   insPts.run(DELINA, 150, "academia", "Academia: triángulo de activos");
 
@@ -536,10 +560,10 @@ Esto evita generar expectativa de inversión, evita dinámicas de "farm-and-dump
     },
     [
       ["¿Qué activo paga el trabajo?", ["ZWORK", "Reputación", "USDC", "Ninguno"], 2],
-      ["¿ZWORK es transferible en la fase actual?", ["Sí, libremente", "No, son puntos no transferibles", "Solo en mainnet", "Solo los fines de semana"], 1],
-      ["¿Qué activo otorga voto?", ["USDC", "La reputación", "ZWORK", "El CLA"], 1],
+      ["¿ZWORK es transferible en la fase actual?", ["Sí, libremente", "Solo los fines de semana", "Solo en mainnet", "No, son puntos no transferibles"], 3],
+      ["¿Qué activo otorga voto?", ["La reputación", "USDC", "ZWORK", "El CLA"], 0],
       ["La emisión de ZWORK sigue...", ["Sin límite", "Un presupuesto por época con techo duro", "El precio de mercado", "La inflación"], 1],
-      ["Un token que es 'ownership de nada'...", ["Es lo ideal", "Es el error que el diseño evita", "Da más voto", "Es obligatorio"], 1],
+      ["Un token que es 'ownership de nada'...", ["Es lo ideal", "Es obligatorio", "Da más voto", "Es el error que el diseño evita"], 3],
     ]
   );
 
@@ -571,9 +595,9 @@ El supervisor cierra el periodo y genera un **score compuesto** por entrega: cal
 Cada proyecto alimenta el perfil append-only del contribuidor. Más historial habilita mejores proyectos: así gira el flywheel.`,
     },
     [
-      ["¿Cuál es el orden correcto de la máquina de estados?", ["Open→Delivered→Assigned", "Open→Assigned→Delivered→Scored→Distributed", "Assigned→Open→Scored", "Scored→Open→Delivered"], 1],
-      ["¿Puede un supervisor evaluar a su invitado directo?", ["Sí", "No (regla B8)", "Solo con permiso", "Siempre"], 1],
-      ["El score compuesto es...", ["Subjetivo", "Calculado, transparente y verificable", "Secreto", "Aleatorio"], 1],
+      ["¿Cuál es el orden correcto de la máquina de estados?", ["Open→Delivered→Assigned", "Scored→Open→Delivered", "Assigned→Open→Scored", "Open→Assigned→Delivered→Scored→Distributed"], 3],
+      ["¿Puede un supervisor evaluar a su invitado directo?", ["No (regla B8)", "Sí", "Solo con permiso", "Siempre"], 0],
+      ["El score compuesto es...", ["Subjetivo", "Secreto", "Calculado, transparente y verificable", "Aleatorio"], 2],
       ["¿Cuántos pasos tiene la metodología del Ágora?", ["4", "6", "8", "12"], 2],
       ["La revisión cruzada sirve para...", ["Acelerar pagos", "Contener la colusión supervisor–ejecutor", "Subir el presupuesto", "Eliminar el CLA"], 1],
     ]
@@ -591,11 +615,11 @@ Cada proyecto alimenta el perfil append-only del contribuidor. Más historial ha
       videoId: "aqz-KE-bpKQ",
     },
     [
-      ["La tesis central de Zelena es...", ["La antigüedad manda", "El valor que entregas determina lo que recibes", "El título importa más", "Las horas registradas"], 1],
+      ["La tesis central de Zelena es...", ["La antigüedad manda", "Las horas registradas", "El título importa más", "El valor que entregas determina lo que recibes"], 3],
       ["Zelena se construye sobre...", ["Bitcoin", "Ethereum L2", "Stellar / Soroban", "Una base de datos central"], 2],
-      ["El onboarding es...", ["Abierto a todos", "Por invitación con CLA", "Solo por pago", "Automático"], 1],
+      ["El onboarding es...", ["Por invitación con CLA", "Abierto a todos", "Solo por pago", "Automático"], 0],
       ["¿Dónde corre todo hoy?", ["Mainnet", "Testnet", "Un servidor privado", "En papel"], 1],
-      ["El tagline de Zelena es...", ["Move fast", "Real work, Real rewards", "Code is law", "To the moon"], 1],
+      ["El tagline de Zelena es...", ["Move fast", "To the moon", "Code is law", "Real work, Real rewards"], 3],
     ]
   );
 }

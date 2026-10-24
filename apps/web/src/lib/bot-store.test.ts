@@ -3,7 +3,7 @@
  *
  * Criterios que cubre:
  *  - Alta con código de UN SOLO USO: se consume, vence y se guarda hasheado.
- *  - v1 = solo John: una única vinculación con permiso de escritura.
+ *  - v1 = solo Founder: una única vinculación con permiso de escritura.
  *  - Cero secretos en la base: ni el código en claro, ni tokens, ni API keys.
  *  - La wallet (PK de `users`) nunca muta: se vincula, no se reescribe (WP13).
  */
@@ -39,9 +39,9 @@ import {
   walletParaVinculo,
 } from "./bot-store";
 
-const JOHN = pendingPrincipal("john");
-const VALE = pendingPrincipal("vale");
-const DAVID = pendingPrincipal("david");
+const FUNDADOR = pendingPrincipal("founder");
+const OPERACIONES = pendingPrincipal("operaciones");
+const PRODUCTO = pendingPrincipal("producto");
 
 const AHORA = new Date(2026, 6, 30, 9, 0, 0);
 
@@ -60,10 +60,10 @@ describe("alta con código de un solo uso", () => {
   });
 
   it("emite un código legible y guarda solo su hash (cero secretos en la base)", () => {
-    const emitido = issueLinkCode(db, JOHN, AHORA);
+    const emitido = issueLinkCode(db, FUNDADOR, AHORA);
     expect(emitido.code.startsWith(LINK_CODE_PREFIX)).toBe(true);
 
-    const fila = linkForWallet(db, JOHN)!;
+    const fila = linkForWallet(db, FUNDADOR)!;
     expect(fila.link_code_hash).toBe(hashLinkCode(emitido.code));
     expect(fila.link_code_hash).not.toContain(emitido.code.replace(LINK_CODE_PREFIX, ""));
     expect(fila.telegram_user_id).toBeNull();
@@ -75,12 +75,12 @@ describe("alta con código de un solo uso", () => {
   });
 
   it("el código se consume una sola vez y vincula el telegram_user_id", () => {
-    const { code } = issueLinkCode(db, JOHN, AHORA);
+    const { code } = issueLinkCode(db, FUNDADOR, AHORA);
     const primero = consumeLinkCode(db, code, "42", AHORA);
     expect(primero.ok).toBe(true);
 
     const fila = linkForTelegramUser(db, "42")!;
-    expect(fila.wallet).toBe(JOHN);
+    expect(fila.wallet).toBe(FUNDADOR);
     expect(fila.link_code_hash).toBeNull(); // gastado
     expect(fila.linked_at).not.toBeNull();
 
@@ -91,64 +91,64 @@ describe("alta con código de un solo uso", () => {
   });
 
   it("acepta el código con espacios y en minúsculas (lo que escribe una persona)", () => {
-    const { code } = issueLinkCode(db, JOHN, AHORA);
+    const { code } = issueLinkCode(db, FUNDADOR, AHORA);
     const res = consumeLinkCode(db, `  ${code.toLowerCase()} `, "42", AHORA);
     expect(res.ok).toBe(true);
   });
 
   it("un código vencido no vincula", () => {
-    const { code } = issueLinkCode(db, JOHN, AHORA);
+    const { code } = issueLinkCode(db, FUNDADOR, AHORA);
     const tarde = new Date(AHORA.getTime() + 61 * 60_000);
     expect(consumeLinkCode(db, code, "42", tarde)).toEqual({ ok: false, reason: "codigo_vencido" });
     expect(linkForTelegramUser(db, "42")).toBeUndefined();
   });
 
   it("emitir de nuevo invalida el código anterior", () => {
-    const viejo = issueLinkCode(db, JOHN, AHORA).code;
-    const nuevo = issueLinkCode(db, JOHN, AHORA).code;
+    const viejo = issueLinkCode(db, FUNDADOR, AHORA).code;
+    const nuevo = issueLinkCode(db, FUNDADOR, AHORA).code;
     expect(consumeLinkCode(db, viejo, "42", AHORA)).toEqual({ ok: false, reason: "codigo_invalido" });
     expect(consumeLinkCode(db, nuevo, "42", AHORA).ok).toBe(true);
   });
 
   it("un telegram_user_id ya vinculado no se puede reasignar a otra wallet", () => {
-    consumeLinkCode(db, issueLinkCode(db, JOHN, AHORA).code, "42", AHORA);
-    const deVale = issueLinkCode(db, VALE, AHORA).code;
+    consumeLinkCode(db, issueLinkCode(db, FUNDADOR, AHORA).code, "42", AHORA);
+    const deVale = issueLinkCode(db, OPERACIONES, AHORA).code;
     expect(consumeLinkCode(db, deVale, "42", AHORA)).toEqual({ ok: false, reason: "telegram_ya_vinculado" });
-    expect(linkForTelegramUser(db, "42")!.wallet).toBe(JOHN);
+    expect(linkForTelegramUser(db, "42")!.wallet).toBe(FUNDADOR);
   });
 
   it("no emite código para una cuenta ya vinculada ni para una que no existe", () => {
-    consumeLinkCode(db, issueLinkCode(db, JOHN, AHORA).code, "42", AHORA);
-    expect(() => issueLinkCode(db, JOHN, AHORA)).toThrow(BotStoreError);
+    consumeLinkCode(db, issueLinkCode(db, FUNDADOR, AHORA).code, "42", AHORA);
+    expect(() => issueLinkCode(db, FUNDADOR, AHORA)).toThrow(BotStoreError);
     expect(() => issueLinkCode(db, "GNOEXISTE0001", AHORA)).toThrow(BotStoreError);
   });
 
   it("la wallet NUNCA muta: desvincular deja intacta la PK de users", () => {
-    consumeLinkCode(db, issueLinkCode(db, JOHN, AHORA).code, "42", AHORA);
-    unlinkTelegram(db, JOHN);
+    consumeLinkCode(db, issueLinkCode(db, FUNDADOR, AHORA).code, "42", AHORA);
+    unlinkTelegram(db, FUNDADOR);
     expect(linkForTelegramUser(db, "42")).toBeUndefined();
-    expect(linkForWallet(db, JOHN)!.wallet).toBe(JOHN);
-    expect(db.prepare(`SELECT wallet FROM users WHERE wallet = ?`).get(JOHN)).toEqual({ wallet: JOHN });
+    expect(linkForWallet(db, FUNDADOR)!.wallet).toBe(FUNDADOR);
+    expect(db.prepare(`SELECT wallet FROM users WHERE wallet = ?`).get(FUNDADOR)).toEqual({ wallet: FUNDADOR });
   });
 });
 
-describe("v1 = solo John escribe", () => {
+describe("v1 = solo Founder escribe", () => {
   let db: DB;
   beforeEach(() => {
     db = freshDb();
   });
 
   it("solo el founder puede quedar autorizado a escribir", () => {
-    expect(canAuthorizeWrite(db, JOHN)).toBe(true);
-    expect(canAuthorizeWrite(db, VALE)).toBe(false); // core Y supervisora, pero no es John
-    expect(canAuthorizeWrite(db, DAVID)).toBe(false);
+    expect(canAuthorizeWrite(db, FUNDADOR)).toBe(true);
+    expect(canAuthorizeWrite(db, OPERACIONES)).toBe(false); // core Y supervisora, pero no es Founder
+    expect(canAuthorizeWrite(db, PRODUCTO)).toBe(false);
   });
 
   it("una segunda persona se vincula pero SIN permiso de escritura", () => {
-    consumeLinkCode(db, issueLinkCode(db, JOHN, AHORA).code, "42", AHORA);
-    const vale = issueLinkCode(db, VALE, AHORA);
-    expect(vale.willAuthorizeWrite).toBe(false);
-    consumeLinkCode(db, vale.code, "77", AHORA);
+    consumeLinkCode(db, issueLinkCode(db, FUNDADOR, AHORA).code, "42", AHORA);
+    const operaciones = issueLinkCode(db, OPERACIONES, AHORA);
+    expect(operaciones.willAuthorizeWrite).toBe(false);
+    consumeLinkCode(db, operaciones.code, "77", AHORA);
 
     expect(linkForTelegramUser(db, "42")!.is_authorized).toBe(1);
     expect(linkForTelegramUser(db, "77")!.is_authorized).toBe(0);
@@ -156,9 +156,9 @@ describe("v1 = solo John escribe", () => {
   });
 
   it("nunca hay más de una vinculación autorizada", () => {
-    issueLinkCode(db, JOHN, AHORA);
-    issueLinkCode(db, VALE, AHORA);
-    issueLinkCode(db, DAVID, AHORA);
+    issueLinkCode(db, FUNDADOR, AHORA);
+    issueLinkCode(db, OPERACIONES, AHORA);
+    issueLinkCode(db, PRODUCTO, AHORA);
     expect(authorizedLinkCount(db)).toBe(1);
   });
 });
@@ -167,7 +167,7 @@ describe("el bot se cuelga de la identidad de equipo del founder", () => {
   it("resuelve la fila del roster, que es donde vive su trabajo (WP14/WP13)", () => {
     const db = freshDb();
     // La sesión de la puerta de invitación trae otra wallet; el vínculo va al roster.
-    expect(founderTeamWallet(db, "GA7ZELENAFOUNDERDEMO")).toBe(JOHN);
+    expect(founderTeamWallet(db, "GA7ZELENAFOUNDERDEMO")).toBe(FUNDADOR);
   });
 
   it("sin fila de roster cae a la wallet de la sesión: no inventa identidades", () => {
@@ -184,10 +184,10 @@ describe("el bot se cuelga de la identidad de equipo del founder", () => {
 
 // Personas ficticias (wallets de prueba): nada de este bloque nombra a un cliente real.
 const SESION_FOUNDER = "GFOUNDERSESIONAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-const CUENTA_JOHN = "GJOHNREALAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+const CUENTA_FUNDADOR = "GFUNDREALAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 const ANA = "GANAEJECUTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 const BETO = "GBETOSINPROYECTOAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-const ACTOR_JOHN: TeamActor = { wallet: JOHN, name: "John", role: "founder", isSupervisor: true };
+const ACTOR_FUNDADOR: TeamActor = { wallet: FUNDADOR, name: "Founder", role: "founder", isSupervisor: true };
 
 function usuario(db: DB, wallet: string, role: string, cla = 1): void {
   db.prepare(
@@ -198,17 +198,17 @@ function usuario(db: DB, wallet: string, role: string, cla = 1): void {
 describe("C2-2 · founderTeamWallet = principalFounder (respeta roster_links)", () => {
   it("sin vincular, es la fila del roster del founder", () => {
     const db = freshDb();
-    expect(founderTeamWallet(db, SESION_FOUNDER)).toBe(JOHN);
+    expect(founderTeamWallet(db, SESION_FOUNDER)).toBe(FUNDADOR);
     expect(founderTeamWallet(db, SESION_FOUNDER)).toBe(principalFounder(db));
   });
 
   it("con la fila vinculada a la cuenta real, el bot va a esa cuenta (adonde se movió su trabajo)", () => {
     const db = freshDb();
-    usuario(db, CUENTA_JOHN, "founder");
-    db.prepare(`INSERT INTO roster_links (slug, wallet, linked_by) VALUES ('john', ?, ?)`).run(CUENTA_JOHN, JOHN);
-    expect(principalFounder(db)).toBe(CUENTA_JOHN);
-    expect(founderTeamWallet(db, SESION_FOUNDER)).toBe(CUENTA_JOHN);
-    expect(founderTeamWallet(db, JOHN)).toBe(CUENTA_JOHN);
+    usuario(db, CUENTA_FUNDADOR, "founder");
+    db.prepare(`INSERT INTO roster_links (slug, wallet, linked_by) VALUES ('founder', ?, ?)`).run(CUENTA_FUNDADOR, FUNDADOR);
+    expect(principalFounder(db)).toBe(CUENTA_FUNDADOR);
+    expect(founderTeamWallet(db, SESION_FOUNDER)).toBe(CUENTA_FUNDADOR);
+    expect(founderTeamWallet(db, FUNDADOR)).toBe(CUENTA_FUNDADOR);
   });
 });
 
@@ -219,23 +219,23 @@ describe("C2-1 · cualquier equipoActor emite SU código; solo el founder escrib
     usuario(db, SESION_FOUNDER, "founder");
     usuario(db, ANA, "contributor");
     usuario(db, BETO, "contributor");
-    const p = crearProyecto(db, ACTOR_JOHN, { name: "Proyecto Abierto Demo" });
-    agregarMiembro(db, ACTOR_JOHN, { initiativeId: p.id, wallet: ANA, rol: "ejecuta" });
+    const p = crearProyecto(db, ACTOR_FUNDADOR, { name: "Proyecto Abierto Demo" });
+    agregarMiembro(db, ACTOR_FUNDADOR, { initiativeId: p.id, wallet: ANA, rol: "ejecuta" });
   });
 
   it("walletParaVinculo: el founder (cualquiera de sus identidades) va a su fila de equipo; el resto, a la suya", () => {
-    expect(walletParaVinculo(db, SESION_FOUNDER)).toBe(JOHN);
-    expect(walletParaVinculo(db, JOHN)).toBe(JOHN);
-    expect(walletParaVinculo(db, VALE)).toBe(VALE);
-    expect(walletParaVinculo(db, DAVID)).toBe(DAVID);
+    expect(walletParaVinculo(db, SESION_FOUNDER)).toBe(FUNDADOR);
+    expect(walletParaVinculo(db, FUNDADOR)).toBe(FUNDADOR);
+    expect(walletParaVinculo(db, OPERACIONES)).toBe(OPERACIONES);
+    expect(walletParaVinculo(db, PRODUCTO)).toBe(PRODUCTO);
     expect(walletParaVinculo(db, ANA)).toBe(ANA);
   });
 
   it("un contributor miembro, un core y una supervisora emiten su código y quedan en lectura", () => {
     for (const [wallet, tg] of [
       [ANA, "201"],
-      [DAVID, "202"],
-      [VALE, "203"],
+      [PRODUCTO, "202"],
+      [OPERACIONES, "203"],
     ] as const) {
       expect(equipoActor({ wallet }, db)).not.toBeNull(); // la puerta de la ruta
       const emitido = issueLinkCode(db, walletParaVinculo(db, wallet), AHORA);
@@ -251,7 +251,7 @@ describe("C2-1 · cualquier equipoActor emite SU código; solo el founder escrib
     const emitido = issueLinkCode(db, walletParaVinculo(db, SESION_FOUNDER), AHORA);
     expect(emitido.willAuthorizeWrite).toBe(true);
     consumeLinkCode(db, emitido.code, "302", AHORA);
-    expect(linkForTelegramUser(db, "302")).toMatchObject({ wallet: JOHN, is_authorized: 1 });
+    expect(linkForTelegramUser(db, "302")).toMatchObject({ wallet: FUNDADOR, is_authorized: 1 });
     expect(authorizedLinkCount(db)).toBe(1);
   });
 
@@ -299,15 +299,15 @@ describe("borradores: el candado del «nada sin confirmación»", () => {
   });
 
   it("guarda la pieza estructurada y queda pendiente", () => {
-    const id = createDraft(db, JOHN, "crear_asignacion", { titulo: "Dashboard de bloqueos" });
+    const id = createDraft(db, FUNDADOR, "crear_asignacion", { titulo: "Dashboard de bloqueos" });
     const row = getDraft(db, id)!;
     expect(row.status).toBe("pendiente");
     expect(draftPayload<{ titulo: string }>(row).titulo).toBe("Dashboard de bloqueos");
-    expect(pendingDrafts(db, JOHN)).toHaveLength(1);
+    expect(pendingDrafts(db, FUNDADOR)).toHaveLength(1);
   });
 
   it("se resuelve una sola vez (un doble clic no ejecuta dos veces)", () => {
-    const id = createDraft(db, JOHN, "crear_asignacion", { titulo: "X" });
+    const id = createDraft(db, FUNDADOR, "crear_asignacion", { titulo: "X" });
     expect(resolveDraft(db, id, "confirmado", AHORA)).toBe(true);
     expect(resolveDraft(db, id, "confirmado", AHORA)).toBe(false);
     expect(resolveDraft(db, id, "descartado", AHORA)).toBe(false);
@@ -315,7 +315,7 @@ describe("borradores: el candado del «nada sin confirmación»", () => {
   });
 
   it("un borrador no escribe nada en el tablero por existir", () => {
-    createDraft(db, JOHN, "crear_asignacion", { titulo: "Fantasma" });
+    createDraft(db, FUNDADOR, "crear_asignacion", { titulo: "Fantasma" });
     expect(db.prepare(`SELECT COUNT(*) AS n FROM assignments`).get()).toEqual({ n: 0 });
     expect(db.prepare(`SELECT COUNT(*) AS n FROM checkins`).get()).toEqual({ n: 0 });
     expect(db.prepare(`SELECT COUNT(*) AS n FROM notes`).get()).toEqual({ n: 0 });
@@ -329,21 +329,21 @@ describe("notas y log", () => {
   });
 
   it("guarda la nota resultante con su referencia de reunión", () => {
-    const nota = saveNote(db, { author: JOHN, text: "Acordamos revisar la propuesta", meetingRef: "Cliente Demo" });
+    const nota = saveNote(db, { author: FUNDADOR, text: "Acordamos revisar la propuesta", meetingRef: "Cliente Demo" });
     expect(nota.id).toBeGreaterThan(0);
     expect(nota.meeting_ref).toBe("Cliente Demo");
-    expect(listNotes(db, JOHN)).toHaveLength(1);
-    expect(() => saveNote(db, { author: JOHN, text: "   " })).toThrow(BotStoreError);
+    expect(listNotes(db, FUNDADOR)).toHaveLength(1);
+    expect(() => saveNote(db, { author: FUNDADOR, text: "   " })).toThrow(BotStoreError);
   });
 
   it("el log registra la acción sin guardar el mensaje del usuario", () => {
-    logBotAction(db, { wallet: JOHN, action: "crear_asignacion", outcome: "ok", target: "borrador:1", detail: "Dashboard" });
+    logBotAction(db, { wallet: FUNDADOR, action: "crear_asignacion", outcome: "ok", target: "borrador:1", detail: "Dashboard" });
     logBotAction(db, { senderRef: "999", action: "mensaje", outcome: "ignorado", detail: "telegram_user_id no registrado" });
     const filas = listBotActions(db);
     expect(filas).toHaveLength(2);
     expect(filas[0].outcome).toBe("ignorado");
     expect(filas[0].wallet).toBeNull();
-    expect(filas[1].wallet).toBe(JOHN);
+    expect(filas[1].wallet).toBe(FUNDADOR);
     // El log tiene columnas para qué se hizo, no para el texto recibido.
     const columnas = (db.prepare(`PRAGMA table_info(bot_actions)`).all() as Array<{ name: string }>).map((c) => c.name);
     expect(columnas).not.toContain("message");

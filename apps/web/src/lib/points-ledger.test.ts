@@ -112,7 +112,11 @@ describe("anti-confiscación del points_ledger (WP09)", () => {
       token
     );
     const quiz = getQuiz(db, W, token);
-    const answers = quiz.map((q) => (db.prepare(`SELECT correct FROM academia_quiz WHERE id = ?`).get(q.id) as { correct: number }).correct);
+    // La correcta guardada, buscada por su texto: las opciones se muestran barajadas (A2).
+    const answers = quiz.map((q) => {
+      const f = db.prepare(`SELECT options, correct FROM academia_quiz WHERE id = ?`).get(q.id) as { options: string; correct: number };
+      return q.options.indexOf((JSON.parse(f.options) as string[])[f.correct]);
+    });
     const r = gradeQuiz(db, W, token, quiz.map((q) => q.id), answers);
 
     expect(r.passed).toBe(true);

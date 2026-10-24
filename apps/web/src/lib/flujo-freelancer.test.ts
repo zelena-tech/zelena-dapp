@@ -41,7 +41,7 @@ import {
   TeamError,
 } from "./team";
 
-const JOHN = pendingPrincipal("john"); // founder (roster)
+const FUNDADOR = pendingPrincipal("founder"); // founder (roster)
 const G = GENOME_DEFAULTS;
 
 // Calendario (Bogotá = UTC−5): lunes 5 de octubre de 2026.
@@ -66,7 +66,7 @@ function freshDb(): DB {
 
 /** Alta real por la puerta de comunidad: invitación del founder + firma del acuerdo. */
 function altaConInvitacion(db: DB, nombre: string): string {
-  const code = generateInvite(db, JOHN, "Gold");
+  const code = generateInvite(db, FUNDADOR, "Gold");
   const kp = Keypair.random();
   const claHash = claCanonicalHash();
   const signature = Buffer.from(kp.sign(Buffer.from(claSigningPayload(claHash), "utf8"))).toString("base64");
@@ -110,7 +110,7 @@ function filas(db: DB, ref: string) {
 describe("I7 · flujo de un freelancer, de la invitación a sus puntos", () => {
   it("invitación con acuerdo → miembro → toma → entrega → otra persona aprueba → puntos y reputación una sola vez", () => {
     const db = freshDb();
-    const founder = equipo(db, JOHN);
+    const founder = equipo(db, FUNDADOR);
     const p = crearProyecto(db, founder, { name: "Proyecto Abierto" }).id;
     const q = crearProyecto(db, founder, { name: "Proyecto Ajeno" }).id;
 
@@ -121,7 +121,7 @@ describe("I7 · flujo de un freelancer, de la invitación a sus puntos", () => {
       cla_signed: number;
       invited_by: string;
     };
-    expect(fila).toEqual({ role: "contributor", cla_signed: 1, invited_by: JOHN });
+    expect(fila).toEqual({ role: "contributor", cla_signed: 1, invited_by: FUNDADOR });
     expect(db.prepare(`SELECT 1 AS x FROM cla_signatures WHERE wallet = ?`).get(externo)).toBeTruthy();
     // Sin membresía todavía no entra a /equipo.
     expect(equipoActor({ wallet: externo }, db)).toBeNull();

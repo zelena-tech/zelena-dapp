@@ -378,6 +378,51 @@ export function elegirProximo(encuentroDia: string | null, ritoInicio: Date | nu
   }
 }
 
+/** Formulario de /encuentros para dejar el correo (id="aviso" en la página). */
+export const RUTA_AVISO_ENCUENTROS = "/encuentros#aviso";
+
+const NOMBRE_CORTO: Record<RiteKind, string> = { sync: "sync", demo: "demo", retro: "retro" };
+
+/** Una llamada a la acción: a dónde lleva y qué dice. */
+export interface LlamadaParticipar {
+  href: string;
+  texto: string;
+}
+
+/**
+ * A dónde lleva "ven a una demo" (cierre de la landing y "Cómo participar" de /comunidad).
+ *
+ * Hallazgo de la verificación final: llevaba a fechas calculadas de la cadencia que no
+ * tienen lugar ni enlace, y de ahí a "Entra para ver el enlace", que exige invitación:
+ * un camino circular para quien llega nuevo. Ahora solo lleva a algo concreto:
+ *  - el encuentro publicado, si llega antes (o el mismo día) que el rito;
+ *  - el próximo rito de comunidad YA PREPARADO en /admin (tiene sesión, fecha y lugar);
+ *  - si no hay ninguno de los dos, al formulario de /encuentros para dejar el correo.
+ * Una fecha de la cadencia sin preparar no cuenta: ahí no hay nada a lo que ir.
+ */
+export function llamadaParticipar(
+  encuentro: { fecha: string } | null,
+  ritoPreparado: { kind: RiteKind; inicio: Date; sessionId: number | null } | null,
+  tz: string
+): LlamadaParticipar {
+  const rito = ritoPreparado && ritoPreparado.sessionId ? ritoPreparado : null;
+  const lo = elegirProximo(encuentro?.fecha ?? null, rito?.inicio ?? null, tz);
+  if (lo === "encuentro") return { href: "/encuentros#proximos", texto: "Ven a un encuentro" };
+  if (lo === "rito" && rito) {
+    let fecha = "";
+    try {
+      fecha = proximoRitoTexto(rito.kind, rito.inicio, tz).fecha;
+    } catch {
+      fecha = ""; // zona ilegible: se invita igual, sin inventar el día
+    }
+    return {
+      href: `/comunidad/ritos/${rito.sessionId}`,
+      texto: fecha ? `Ven a la ${NOMBRE_CORTO[rito.kind]} del ${fecha}` : `Ven a la próxima ${NOMBRE_CORTO[rito.kind]}`,
+    };
+  }
+  return { href: RUTA_AVISO_ENCUENTROS, texto: "Te avisamos de la próxima fecha" };
+}
+
 // ---------------------------------------------------------------------------
 // Gestión en /admin (corte 2): lo que el panel de cliente recibe ya armado
 // ---------------------------------------------------------------------------

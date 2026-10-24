@@ -61,7 +61,8 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const summary = importTasks(db, parsed.data.csv, actor.wallet);
+    // Con el actor: solo toca proyectos que ve (aislamiento por cliente, §4.A.12).
+    const summary = importTasks(db, parsed.data.csv, actor.wallet, new Date(), actor);
     return NextResponse.json({ ok: true, ...summary });
   } catch (e) {
     if (e instanceof TeamError) return NextResponse.json({ error: e.message }, { status: e.status });

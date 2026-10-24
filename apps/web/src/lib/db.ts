@@ -300,6 +300,16 @@ export const COLUMNAS_NUEVAS: ReadonlyArray<{ tabla: string; columna: string; dd
   // Codigo de cohorte multiuso: NULL en max_uses = un solo uso (semantica original).
   { tabla: "invites", columna: "max_uses", ddl: "INTEGER" },
   { tabla: "invites", columna: "uses", ddl: "INTEGER NOT NULL DEFAULT 0" },
+  // Ágora: borrador y origen de la fila (decisión del founder, 2026-10-21; ver agora-borradores.ts).
+  { tabla: "projects", columna: "draft", ddl: "INTEGER NOT NULL DEFAULT 0" },
+  { tabla: "projects", columna: "origin", ddl: "TEXT" },
+  // Cola de anclaje: reserva de la fila por una pasada (lib/anchor.ts, hallazgo M23).
+  { tabla: "anchor_queue", columna: "claimed_at", ddl: "TEXT" },
+  // Academia (hallazgo A2): preguntas servidas en la lectura y su única calificación.
+  { tabla: "reading_sessions", columna: "quiz_ids", ddl: "TEXT" },
+  { tabla: "reading_sessions", columna: "graded_at", ddl: "INTEGER" },
+  // Academia (revisión de A2): orden barajado de las opciones servidas en la lectura.
+  { tabla: "reading_sessions", columna: "quiz_orden", ddl: "TEXT" },
 ];
 
 /** Columnas de una tabla (vacío si no existe). */
@@ -593,7 +603,7 @@ export interface EstadoFounder {
   /**
    * Filas `founder` por las que alguien puede entrar HOY firmando con su wallet
    * (`/api/login`): llave Stellar válida y CLA firmado. La wallet demo del seed no
-   * cuenta (no es una llave real) ni `pending:john` (solo entra por Entra).
+   * cuenta (no es una llave real) ni `pending:<slug>` (solo entra por Entra).
    */
   conFirma: number;
 }

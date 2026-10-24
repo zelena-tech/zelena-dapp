@@ -4,7 +4,7 @@
  * Criterios que cubre:
  *  - Mensaje de un telegram_id NO registrado: se ignora y queda en el log.
  *  - Baja confianza o herramienta inventada → el bot pregunta, no adivina.
- *  - v1 = solo John escribe: otra persona registrada no consigue escritura.
+ *  - v1 = solo Founder escribe: otra persona registrada no consigue escritura.
  *  - Flujo completo: mensaje → propuesta → Confirmar → visible en /equipo/hoy del
  *    asignado y en los agregados del dashboard.
  *  - Minimización: el mensaje crudo no queda en ninguna tabla.
@@ -38,14 +38,14 @@ import {
   type ClaudeRequest,
 } from "./bot-agent";
 
-const JOHN = pendingPrincipal("john");
-const VALE = pendingPrincipal("vale");
-const DAVID = pendingPrincipal("david");
+const FUNDADOR = pendingPrincipal("founder");
+const OPERACIONES = pendingPrincipal("operaciones");
+const PRODUCTO = pendingPrincipal("producto");
 
 const AHORA = new Date(2026, 6, 30, 9, 0, 0);
 const CHAT = 555;
-const TG_JOHN = "42";
-const TG_VALE = "77";
+const TG_FUNDADOR = "42";
+const TG_OPERACIONES = "77";
 const TG_DESCONOCIDO = "666";
 
 function freshDb(): DB {
@@ -92,11 +92,11 @@ const claudeProhibido: ClaudeClient = {
   },
 };
 
-function mensaje(text: string, telegramUserId = TG_JOHN, chatType = "private") {
+function mensaje(text: string, telegramUserId = TG_FUNDADOR, chatType = "private") {
   return { update_id: 1, message: { from: { id: Number(telegramUserId) }, chat: { id: CHAT, type: chatType }, text } };
 }
 
-function boton(data: string, telegramUserId = TG_JOHN) {
+function boton(data: string, telegramUserId = TG_FUNDADOR) {
   return {
     update_id: 2,
     callback_query: {
@@ -108,7 +108,7 @@ function boton(data: string, telegramUserId = TG_JOHN) {
   };
 }
 
-function audio(fileId = "AwAC", telegramUserId = TG_JOHN) {
+function audio(fileId = "AwAC", telegramUserId = TG_FUNDADOR) {
   return {
     update_id: 3,
     message: {
@@ -120,11 +120,11 @@ function audio(fileId = "AwAC", telegramUserId = TG_JOHN) {
 }
 
 function vincularJohn(db: DB): void {
-  consumeLinkCode(db, issueLinkCode(db, JOHN, AHORA).code, TG_JOHN, AHORA);
+  consumeLinkCode(db, issueLinkCode(db, FUNDADOR, AHORA).code, TG_FUNDADOR, AHORA);
 }
 
 function vincularVale(db: DB): void {
-  consumeLinkCode(db, issueLinkCode(db, VALE, AHORA).code, TG_VALE, AHORA);
+  consumeLinkCode(db, issueLinkCode(db, OPERACIONES, AHORA).code, TG_OPERACIONES, AHORA);
 }
 
 function countAssignments(db: DB): number {
@@ -143,7 +143,7 @@ describe("criterio — un telegram_id no registrado se ignora y se registra", ()
     const t = fakeTransport();
     const res = await handleUpdate(
       { db, transport: t, claude: claudeProhibido, now: AHORA },
-      mensaje("asigna a David el dashboard", TG_DESCONOCIDO)
+      mensaje("asigna a Producto el dashboard", TG_DESCONOCIDO)
     );
 
     expect(res.attended).toBe(false);
@@ -162,7 +162,7 @@ describe("criterio — un telegram_id no registrado se ignora y se registra", ()
     const t = fakeTransport();
     const res = await handleUpdate(
       { db, transport: t, claude: claudeProhibido, now: AHORA },
-      mensaje("hola", TG_JOHN, "supergroup")
+      mensaje("hola", TG_FUNDADOR, "supergroup")
     );
     expect(res.attended).toBe(false);
     expect(res.reason).toBe("grupo");
@@ -171,7 +171,7 @@ describe("criterio — un telegram_id no registrado se ignora y se registra", ()
   });
 
   it("un `/start` con código bueno vincula; con código malo se rechaza y se registra", async () => {
-    const { code } = issueLinkCode(db, JOHN, AHORA);
+    const { code } = issueLinkCode(db, FUNDADOR, AHORA);
     const t = fakeTransport();
     const deps = { db, transport: t, claude: claudeProhibido, now: AHORA };
 
@@ -179,7 +179,7 @@ describe("criterio — un telegram_id no registrado se ignora y se registra", ()
     expect(malo.outcome).toBe("rechazado");
     expect(textosEnviados(t)).toEqual([BOT_COPY.codigoInvalido]);
 
-    const bueno = await handleUpdate(deps, mensaje(`/start ${code}`, TG_JOHN));
+    const bueno = await handleUpdate(deps, mensaje(`/start ${code}`, TG_FUNDADOR));
     expect(bueno.outcome).toBe("ok");
     expect(textosEnviados(t)[1]).toContain(BOT_COPY.bienvenida);
     expect(listBotActions(db).map((l) => l.outcome)).toEqual(["ok", "rechazado"]);
@@ -213,7 +213,7 @@ describe("criterio — baja confianza y herramientas inventadas: pregunta, no ad
   it("una herramienta que no existe se rechaza y se registra", async () => {
     const t = fakeTransport();
     const claude = fakeClaude({ tool: "pagar_nomina", input: { monto: 5000 } });
-    const res = await handleUpdate({ db, transport: t, claude, now: AHORA }, mensaje("págale a Juan"));
+    const res = await handleUpdate({ db, transport: t, claude, now: AHORA }, mensaje("págale a Finanzas"));
 
     expect(res.outcome).toBe("rechazado");
     expect(res.tool).toBeNull();
@@ -255,7 +255,7 @@ describe("criterio — baja confianza y herramientas inventadas: pregunta, no ad
 
 // ---------------------------------------------------------------------------
 
-describe("criterio — v1 = solo John escribe", () => {
+describe("criterio — v1 = solo Founder escribe", () => {
   let db: DB;
   beforeEach(() => {
     db = freshDb();
@@ -265,8 +265,8 @@ describe("criterio — v1 = solo John escribe", () => {
 
   it("otra persona registrada NO obtiene acceso de escritura", async () => {
     const t = fakeTransport();
-    const claude = fakeClaude({ tool: "crear_asignacion", input: { titulo: "Tarea de Vale", confianza: 0.95 } });
-    const res = await handleUpdate({ db, transport: t, claude, now: AHORA }, mensaje("crea una tarea", TG_VALE));
+    const claude = fakeClaude({ tool: "crear_asignacion", input: { titulo: "Tarea de Operaciones", confianza: 0.95 } });
+    const res = await handleUpdate({ db, transport: t, claude, now: AHORA }, mensaje("crea una tarea", TG_OPERACIONES));
 
     expect(res.outcome).toBe("rechazado");
     expect(textosEnviados(t)).toEqual([BOT_COPY.soloLectura]);
@@ -275,12 +275,12 @@ describe("criterio — v1 = solo John escribe", () => {
   });
 
   it("y tampoco puede avanzar ni repriorizar piezas", async () => {
-    const id = createAssignment(db, { title: "Pieza de Vale", ownerWallet: VALE, status: "Asignada" });
+    const id = createAssignment(db, { title: "Pieza de Operaciones", ownerWallet: OPERACIONES, status: "Asignada" });
     const t = fakeTransport();
     const deps = { db, transport: t, claude: claudeProhibido, now: AHORA };
 
-    expect((await handleUpdate(deps, mensaje(`/avanzar ${id}`, TG_VALE))).outcome).toBe("rechazado");
-    expect((await handleUpdate(deps, mensaje(`/prioridad ${id}`, TG_VALE))).outcome).toBe("rechazado");
+    expect((await handleUpdate(deps, mensaje(`/avanzar ${id}`, TG_OPERACIONES))).outcome).toBe("rechazado");
+    expect((await handleUpdate(deps, mensaje(`/prioridad ${id}`, TG_OPERACIONES))).outcome).toBe("rechazado");
     expect(db.prepare(`SELECT status, priority FROM assignments WHERE id = ?`).get(id)).toEqual({
       status: "Asignada",
       priority: "Normal",
@@ -288,14 +288,14 @@ describe("criterio — v1 = solo John escribe", () => {
   });
 
   it("pero sí puede leer lo suyo (lectura no es escritura)", async () => {
-    createAssignment(db, { title: "Lo de Vale", ownerWallet: VALE, status: "Asignada" });
+    createAssignment(db, { title: "Lo de Operaciones", ownerWallet: OPERACIONES, status: "Asignada" });
     const t = fakeTransport();
     const res = await handleUpdate(
       { db, transport: t, claude: claudeProhibido, now: AHORA },
-      mensaje("/pendientes", TG_VALE)
+      mensaje("/pendientes", TG_OPERACIONES)
     );
     expect(res.outcome).toBe("ok");
-    expect(textosEnviados(t)[0]).toContain("Lo de Vale");
+    expect(textosEnviados(t)[0]).toContain("Lo de Operaciones");
   });
 });
 
@@ -309,13 +309,13 @@ describe("flujo completo: captura → propuesta → confirmación → tablero", 
     vincularJohn(db);
   });
 
-  it("de un mensaje a una asignación visible en el día de David y en el dashboard", async () => {
+  it("de un mensaje a una asignación visible en el día de Producto y en el dashboard", async () => {
     const t = fakeTransport();
     const claude = fakeClaude({
       tool: "crear_asignacion",
       input: {
         titulo: "Dashboard de bloqueos",
-        responsable: "David",
+        responsable: "Producto",
         iniciativa: "WMS",
         prioridad: "High",
         fecha_limite: "2026-08-07",
@@ -324,7 +324,7 @@ describe("flujo completo: captura → propuesta → confirmación → tablero", 
     });
     const deps = { db, transport: t, claude, now: AHORA };
 
-    const propuesta = await handleUpdate(deps, mensaje("asigna a David: dashboard de bloqueos para el viernes"));
+    const propuesta = await handleUpdate(deps, mensaje("asigna a Producto: dashboard de bloqueos para el viernes"));
     expect(propuesta.tool).toBe("crear_asignacion");
     expect(countAssignments(db)).toBe(0); // todavía nada
     const draftId = (db.prepare(`SELECT id FROM bot_drafts ORDER BY id DESC LIMIT 1`).get() as { id: number }).id;
@@ -333,12 +333,12 @@ describe("flujo completo: captura → propuesta → confirmación → tablero", 
     expect(confirmado.outcome).toBe("ok");
     expect(t.calls.some((c) => c.method === "answerCallbackQuery")).toBe(true);
 
-    // Visible donde lo ve el equipo: /equipo/hoy de David y la carga del dashboard.
-    const deDavid = assignmentsForOwner(db, DAVID);
+    // Visible donde lo ve el equipo: /equipo/hoy de Producto y la carga del dashboard.
+    const deDavid = assignmentsForOwner(db, PRODUCTO);
     expect(deDavid.map((a) => a.title)).toEqual(["Dashboard de bloqueos"]);
     expect(deDavid[0].due_date).toBe("2026-08-07");
     const carga = loadByPerson(db);
-    expect(carga.people.find((p) => p.wallet === DAVID)!.open).toBe(1);
+    expect(carga.people.find((p) => p.wallet === PRODUCTO)!.open).toBe(1);
     expect(carga.totalOpen).toBe(1);
   });
 
@@ -373,11 +373,11 @@ describe("flujo completo: captura → propuesta → confirmación → tablero", 
     const claude = fakeClaude({ tool: "registrar_checkin", input: { hecho: "cerré la propuesta", confianza: 0.9 } });
     const deps = { db, transport: t, claude, now: AHORA };
     await handleUpdate(deps, mensaje("hoy cerré la propuesta"));
-    expect(getCheckin(db, JOHN, "2026-07-30")).toBeUndefined();
+    expect(getCheckin(db, FUNDADOR, "2026-07-30")).toBeUndefined();
 
     const draftId = (db.prepare(`SELECT id FROM bot_drafts ORDER BY id DESC LIMIT 1`).get() as { id: number }).id;
     await handleUpdate(deps, boton(`ok:${draftId}`));
-    expect(getCheckin(db, JOHN, "2026-07-30")!.done).toBe("cerré la propuesta");
+    expect(getCheckin(db, FUNDADOR, "2026-07-30")!.done).toBe("cerré la propuesta");
   });
 
   it("/nota fuerza la herramienta de notas y devuelve el resumen", async () => {
@@ -397,11 +397,11 @@ describe("flujo completo: captura → propuesta → confirmación → tablero", 
     });
     const deps = { db, transport: t, claude, now: AHORA };
     await handleUpdate(deps, mensaje("/nota Cliente Demo pidió la propuesta de analítica"));
-    expect(listNotes(db, JOHN)).toHaveLength(0);
+    expect(listNotes(db, FUNDADOR)).toHaveLength(0);
 
     const draftId = (db.prepare(`SELECT id FROM bot_drafts ORDER BY id DESC LIMIT 1`).get() as { id: number }).id;
     await handleUpdate(deps, boton(`ok:${draftId}`));
-    const notas = listNotes(db, JOHN);
+    const notas = listNotes(db, FUNDADOR);
     expect(notas).toHaveLength(1);
     expect(notas[0].meeting_ref).toBe("Cliente Demo");
     expect(textosEnviados(t).at(-1)).toContain("Revisar la propuesta de analítica");
@@ -435,14 +435,14 @@ describe("audio: la costura de transcripción, sin fingir", () => {
       expect(req.message).toContain("dashboard de bloqueos");
       return {
         tool: "crear_asignacion",
-        input: { titulo: "Dashboard de bloqueos", responsable: "David", confianza: 0.9 },
+        input: { titulo: "Dashboard de bloqueos", responsable: "Producto", confianza: 0.9 },
       };
     });
     const deps = {
       db,
       transport: t,
       claude,
-      transcriber: fixedTranscriber("asigna a David el dashboard de bloqueos para el viernes"),
+      transcriber: fixedTranscriber("asigna a Producto el dashboard de bloqueos para el viernes"),
       now: AHORA,
     };
 
@@ -452,7 +452,7 @@ describe("audio: la costura de transcripción, sin fingir", () => {
 
     const draftId = (db.prepare(`SELECT id FROM bot_drafts ORDER BY id DESC LIMIT 1`).get() as { id: number }).id;
     await handleUpdate(deps, boton(`ok:${draftId}`));
-    expect(assignmentsForOwner(db, DAVID).map((a) => a.title)).toEqual(["Dashboard de bloqueos"]);
+    expect(assignmentsForOwner(db, PRODUCTO).map((a) => a.title)).toEqual(["Dashboard de bloqueos"]);
   });
 
   it("MINIMIZACIÓN: ni el audio ni el texto crudo quedan en ninguna tabla", async () => {
@@ -460,7 +460,7 @@ describe("audio: la costura de transcripción, sin fingir", () => {
     const t = fakeTransport();
     const claude = fakeClaude({
       tool: "crear_asignacion",
-      input: { titulo: "Dashboard de bloqueos", responsable: "David", confianza: 0.9 },
+      input: { titulo: "Dashboard de bloqueos", responsable: "Producto", confianza: 0.9 },
     });
     const deps = { db, transport: t, claude, transcriber: fixedTranscriber(CRUDO), now: AHORA };
     await handleUpdate(deps, audio("FILE-ID-DEL-AUDIO"));
@@ -490,8 +490,8 @@ describe("comandos deterministas: no pasan por el modelo", () => {
   });
 
   it("/pendientes, /focos, /ayuda y el reordenado no llaman al modelo", async () => {
-    createAssignment(db, { title: "Revisar propuesta", ownerWallet: JOHN, status: "Asignada", priority: "High" });
-    createAssignment(db, { title: "Otra cosa", ownerWallet: JOHN, status: "Asignada", priority: "Low" });
+    createAssignment(db, { title: "Revisar propuesta", ownerWallet: FUNDADOR, status: "Asignada", priority: "High" });
+    createAssignment(db, { title: "Otra cosa", ownerWallet: FUNDADOR, status: "Asignada", priority: "Low" });
     const t = fakeTransport();
     const deps = { db, transport: t, claude: claudeProhibido, now: AHORA };
 
@@ -515,7 +515,7 @@ describe("comandos deterministas: no pasan por el modelo", () => {
   });
 
   it("«ciérralo» sin número pregunta cuál, en vez de cerrar algo al azar", async () => {
-    const id = createAssignment(db, { title: "Algo", ownerWallet: JOHN, status: "Asignada" });
+    const id = createAssignment(db, { title: "Algo", ownerWallet: FUNDADOR, status: "Asignada" });
     const t = fakeTransport();
     const res = await handleUpdate({ db, transport: t, claude: claudeProhibido, now: AHORA }, mensaje("eso ya está, ciérralo"));
     expect(res.outcome).toBe("no_entendido");
@@ -524,7 +524,7 @@ describe("comandos deterministas: no pasan por el modelo", () => {
   });
 
   it("«cierra N» y «sube la prioridad de N» sí actúan, sobre la fuente de WP14", async () => {
-    const id = createAssignment(db, { title: "Propuesta", ownerWallet: JOHN, status: "Asignada", priority: "Normal" });
+    const id = createAssignment(db, { title: "Propuesta", ownerWallet: FUNDADOR, status: "Asignada", priority: "Normal" });
     const t = fakeTransport();
     const deps = { db, transport: t, claude: claudeProhibido, now: AHORA };
 
@@ -536,7 +536,7 @@ describe("comandos deterministas: no pasan por el modelo", () => {
   });
 
   it("consultas de estado responden desde los agregados del dashboard", async () => {
-    const id = createAssignment(db, { title: "Integración", ownerWallet: DAVID, status: "Asignada", needsFounder: true });
+    const id = createAssignment(db, { title: "Integración", ownerWallet: PRODUCTO, status: "Asignada", needsFounder: true });
     const t = fakeTransport();
     const claude = fakeClaude({ tool: "consultar_estado", input: { alcance: "esperando_a_mi" } });
     const res = await handleUpdate({ db, transport: t, claude, now: AHORA }, mensaje("¿qué me está esperando?"));
@@ -556,11 +556,11 @@ describe("log: toda acción del bot queda registrada (visible en admin)", () => 
     const t = fakeTransport();
     const claude = fakeClaude({
       tool: "crear_asignacion",
-      input: { titulo: "Dashboard de bloqueos", responsable: "David", confianza: 0.9 },
+      input: { titulo: "Dashboard de bloqueos", responsable: "Producto", confianza: 0.9 },
     });
     const deps = { db, transport: t, claude, now: AHORA };
 
-    await handleUpdate(deps, mensaje("MENSAJE-CRUDO-DE-JOHN sobre el dashboard"));
+    await handleUpdate(deps, mensaje("MENSAJE-CRUDO-DE-FUNDADOR sobre el dashboard"));
     const draftId = (db.prepare(`SELECT id FROM bot_drafts ORDER BY id DESC LIMIT 1`).get() as { id: number }).id;
     await handleUpdate(deps, boton(`ok:${draftId}`));
     await handleUpdate(deps, mensaje("/pendientes"));
@@ -568,8 +568,8 @@ describe("log: toda acción del bot queda registrada (visible en admin)", () => 
     // Más reciente primero. El alta se hizo desde la dapp, no por el bot.
     const log = listBotActions(db);
     expect(log.map((l) => l.action)).toEqual(["pendientes", "borrador_confirmar", "crear_asignacion"]);
-    expect(log.every((l) => l.wallet === JOHN)).toBe(true);
-    expect(JSON.stringify(log)).not.toContain("MENSAJE-CRUDO-DE-JOHN");
+    expect(log.every((l) => l.wallet === FUNDADOR)).toBe(true);
+    expect(JSON.stringify(log)).not.toContain("MENSAJE-CRUDO-DE-FUNDADOR");
   });
 
   it("un error del modelo se registra y no rompe la conversación", async () => {
@@ -587,12 +587,12 @@ describe("log: toda acción del bot queda registrada (visible en admin)", () => 
 // WP31-C2 · Telegram para todo el equipo
 // ---------------------------------------------------------------------------
 
-const ACTOR_JOHN: TeamActor = { wallet: JOHN, name: "John", role: "founder", isSupervisor: true };
+const ACTOR_FUNDADOR: TeamActor = { wallet: FUNDADOR, name: "Founder", role: "founder", isSupervisor: true };
 // Personas ficticias (wallets de prueba): nada de este bloque nombra a un cliente real.
 const ANA = "GANAEJECUTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 const BETO = "GBETOEJECUTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 const TG_ANA = "88";
-const TG_DAVID = "99";
+const TG_PRODUCTO = "99";
 
 function contributor(db: DB, wallet: string, nombre: string): void {
   db.prepare(
@@ -611,11 +611,11 @@ describe("C2-3 · sin ANTHROPIC_API_KEY el bot atiende comandos (claude = null)"
   });
 
   it("/start CODIGO vincula, /pendientes responde y el texto libre recibe soloComandos", async () => {
-    createAssignment(db, { title: "Revisar propuesta", ownerWallet: JOHN, status: "Asignada" });
+    createAssignment(db, { title: "Revisar propuesta", ownerWallet: FUNDADOR, status: "Asignada" });
     const t = fakeTransport();
     const deps = { db, transport: t, claude: null, now: AHORA };
 
-    const { code } = issueLinkCode(db, JOHN, AHORA);
+    const { code } = issueLinkCode(db, FUNDADOR, AHORA);
     expect((await handleUpdate(deps, mensaje(`/start ${code}`))).outcome).toBe("ok");
     expect(textosEnviados(t)[0]).toContain(BOT_COPY.bienvenida);
 
@@ -623,11 +623,11 @@ describe("C2-3 · sin ANTHROPIC_API_KEY el bot atiende comandos (claude = null)"
     expect(pendientes.outcome).toBe("ok");
     expect(textosEnviados(t)[1]).toContain("Revisar propuesta");
 
-    const libre = await handleUpdate(deps, mensaje("asigna a David el dashboard de bloqueos"));
+    const libre = await handleUpdate(deps, mensaje("asigna a Producto el dashboard de bloqueos"));
     expect(libre.reply?.text).toBe(BOT_COPY.soloComandos);
     expect(textosEnviados(t)[2]).toBe(BOT_COPY.soloComandos);
     expect(contarBorradores(db)).toBe(0);
-    expect(listBotActions(db)[0]).toMatchObject({ action: "texto_libre", outcome: "rechazado", wallet: JOHN });
+    expect(listBotActions(db)[0]).toMatchObject({ action: "texto_libre", outcome: "rechazado", wallet: FUNDADOR });
     // Minimización: el log no guarda el texto.
     expect(JSON.stringify(listBotActions(db))).not.toContain("dashboard de bloqueos");
   });
@@ -639,11 +639,11 @@ describe("C2-3 · sin ANTHROPIC_API_KEY el bot atiende comandos (claude = null)"
     const res = await handleUpdate(deps, mensaje("/nota Acordamos revisar la propuesta con Cliente Demo"));
     expect(res.tool).toBe("guardar_nota");
     expect(res.reply?.keyboard).toBeDefined();
-    expect(listNotes(db, JOHN)).toHaveLength(0);
+    expect(listNotes(db, FUNDADOR)).toHaveLength(0);
 
     const draftId = (db.prepare(`SELECT id FROM bot_drafts ORDER BY id DESC LIMIT 1`).get() as { id: number }).id;
     await handleUpdate(deps, boton(`ok:${draftId}`));
-    const notas = listNotes(db, JOHN);
+    const notas = listNotes(db, FUNDADOR);
     expect(notas).toHaveLength(1);
     expect(notas[0].text).toBe("Acordamos revisar la propuesta con Cliente Demo");
   });
@@ -652,8 +652,8 @@ describe("C2-3 · sin ANTHROPIC_API_KEY el bot atiende comandos (claude = null)"
     vincularVale(db);
     const t = fakeTransport();
     const deps = { db, transport: t, claude: null, now: AHORA };
-    await handleUpdate(deps, mensaje("¿qué está bloqueado?", TG_VALE));
-    await handleUpdate(deps, mensaje("/ayuda", TG_VALE));
+    await handleUpdate(deps, mensaje("¿qué está bloqueado?", TG_OPERACIONES));
+    await handleUpdate(deps, mensaje("/ayuda", TG_OPERACIONES));
     expect(textosEnviados(t)).toEqual([BOT_COPY.soloComandosLectura, BOT_COPY.soloComandosLectura]);
     expect(BOT_COPY.soloComandosLectura).not.toContain("/nota");
     expect(BOT_COPY.soloComandos).toContain("/nota");
@@ -663,7 +663,7 @@ describe("C2-3 · sin ANTHROPIC_API_KEY el bot atiende comandos (claude = null)"
     vincularVale(db);
     const t = fakeTransport();
     const claude = fakeClaude({ tool: "guardar_nota", input: { texto: "x" } });
-    const res = await handleUpdate({ db, transport: t, claude, now: AHORA }, mensaje("/nota algo de la reunión", TG_VALE));
+    const res = await handleUpdate({ db, transport: t, claude, now: AHORA }, mensaje("/nota algo de la reunión", TG_OPERACIONES));
     expect(res.outcome).toBe("rechazado");
     expect(textosEnviados(t)).toEqual([BOT_COPY.soloLectura]);
     expect(claude.requests).toHaveLength(0);
@@ -675,17 +675,17 @@ describe("C2-5 · Telegram sin fugas para quien no ve todo el equipo", () => {
   beforeEach(() => {
     db = freshDb();
     contributor(db, ANA, "Ana");
-    const p = crearProyecto(db, ACTOR_JOHN, { name: "Proyecto Abierto Demo" });
-    agregarMiembro(db, ACTOR_JOHN, { initiativeId: p.id, wallet: ANA, rol: "ejecuta" });
+    const p = crearProyecto(db, ACTOR_FUNDADOR, { name: "Proyecto Abierto Demo" });
+    agregarMiembro(db, ACTOR_FUNDADOR, { initiativeId: p.id, wallet: ANA, rol: "ejecuta" });
     createAssignment(db, { title: "Lo de Ana", initiativeId: p.id, ownerWallet: ANA, status: "Asignada" });
-    createAssignment(db, { title: "Lo de David", ownerWallet: DAVID, status: "Asignada" });
-    createAssignment(db, { title: "Gate del founder", ownerWallet: VALE, status: "En curso", needsFounder: true });
+    createAssignment(db, { title: "Lo de Producto", ownerWallet: PRODUCTO, status: "Asignada" });
+    createAssignment(db, { title: "Gate del founder", ownerWallet: OPERACIONES, status: "En curso", needsFounder: true });
     consumeLinkCode(db, issueLinkCode(db, ANA, AHORA).code, TG_ANA, AHORA);
-    consumeLinkCode(db, issueLinkCode(db, DAVID, AHORA).code, TG_DAVID, AHORA);
+    consumeLinkCode(db, issueLinkCode(db, PRODUCTO, AHORA).code, TG_PRODUCTO, AHORA);
   });
 
   it("su texto libre nunca llega al modelo, aunque haya clave: responde soloComandosLectura", async () => {
-    for (const tg of [TG_ANA, TG_DAVID]) {
+    for (const tg of [TG_ANA, TG_PRODUCTO]) {
       const t = fakeTransport();
       const claude = fakeClaude({ tool: "consultar_estado", input: { alcance: "carga" } });
       for (const texto of [
@@ -694,7 +694,7 @@ describe("C2-5 · Telegram sin fugas para quien no ve todo el equipo", () => {
         "¿qué espera una decisión del founder?",
         "resumen del día",
         "/nota algo de la reunión",
-        "crea una tarea para Vale",
+        "crea una tarea para Operaciones",
       ]) {
         const res = await handleUpdate({ db, transport: t, claude, now: AHORA }, mensaje(texto, tg));
         expect(res.reply?.text, `${tg}: ${texto}`).toBe(BOT_COPY.soloComandosLectura);
@@ -709,19 +709,19 @@ describe("C2-5 · Telegram sin fugas para quien no ve todo el equipo", () => {
     const deps = { db, transport: t, claude: claudeProhibido, now: AHORA };
     await handleUpdate(deps, mensaje("/pendientes", TG_ANA));
     await handleUpdate(deps, mensaje("/focos", TG_ANA));
-    await handleUpdate(deps, mensaje("/focos", TG_DAVID));
+    await handleUpdate(deps, mensaje("/focos", TG_PRODUCTO));
     const [pendientes, focosAna, focosDavid] = textosEnviados(t);
     expect(pendientes).toContain("Lo de Ana");
-    expect(pendientes).not.toContain("Lo de David");
+    expect(pendientes).not.toContain("Lo de Producto");
     expect(focosAna).toContain("Lo de Ana");
-    expect(focosDavid).toContain("Lo de David");
+    expect(focosDavid).toContain("Lo de Producto");
     for (const texto of [pendientes, focosAna, focosDavid]) expect(texto).not.toContain("Gate del founder");
   });
 
   it("al vincularse recibe la bienvenida de lectura, y su /ayuda no promete escribir", async () => {
     contributor(db, BETO, "Beto");
-    const p = crearProyecto(db, ACTOR_JOHN, { name: "Otro Proyecto Demo" });
-    agregarMiembro(db, ACTOR_JOHN, { initiativeId: p.id, wallet: BETO, rol: "ejecuta" });
+    const p = crearProyecto(db, ACTOR_FUNDADOR, { name: "Otro Proyecto Demo" });
+    agregarMiembro(db, ACTOR_FUNDADOR, { initiativeId: p.id, wallet: BETO, rol: "ejecuta" });
     const t = fakeTransport();
     const deps = { db, transport: t, claude: claudeProhibido, now: AHORA };
     const alta = await handleUpdate(deps, mensaje(`/start ${issueLinkCode(db, BETO, AHORA).code}`, "111"));
@@ -735,10 +735,10 @@ describe("C2-5 · Telegram sin fugas para quien no ve todo el equipo", () => {
 
   it("si deja de entrar a /equipo (pasa a alumni), por Telegram ve solo lo suyo y no llega al modelo", async () => {
     vincularVale(db);
-    db.prepare(`UPDATE users SET status = 'alumni' WHERE wallet = ?`).run(VALE);
+    db.prepare(`UPDATE users SET status = 'alumni' WHERE wallet = ?`).run(OPERACIONES);
     const t = fakeTransport();
     const claude = fakeClaude({ tool: "consultar_estado", input: { alcance: "bloqueos" } });
-    const res = await handleUpdate({ db, transport: t, claude, now: AHORA }, mensaje("¿qué está bloqueado?", TG_VALE));
+    const res = await handleUpdate({ db, transport: t, claude, now: AHORA }, mensaje("¿qué está bloqueado?", TG_OPERACIONES));
     expect(res.reply?.text).toBe(BOT_COPY.soloComandosLectura);
     expect(claude.requests).toHaveLength(0);
   });
@@ -757,13 +757,13 @@ describe("C2-5 · Telegram sin fugas para quien no ve todo el equipo", () => {
 describe("supervisión con modelo: las pistas solo nombran los proyectos que ve", () => {
   it("un proyecto de cliente donde no participa no llega al modelo", async () => {
     const db = freshDb();
-    crearProyecto(db, ACTOR_JOHN, { name: "Proyecto Interno Demo" });
+    crearProyecto(db, ACTOR_FUNDADOR, { name: "Proyecto Interno Demo" });
     const cliente = createClient(db, { name: "Cliente Demo" });
-    crearProyecto(db, ACTOR_JOHN, { name: "Proyecto Reservado Demo", clientId: cliente });
+    crearProyecto(db, ACTOR_FUNDADOR, { name: "Proyecto Reservado Demo", clientId: cliente });
     vincularVale(db);
     const t = fakeTransport();
     const claude = fakeClaude({ tool: "consultar_estado", input: { alcance: "bloqueos" } });
-    await handleUpdate({ db, transport: t, claude, now: AHORA }, mensaje("¿qué está bloqueado?", TG_VALE));
+    await handleUpdate({ db, transport: t, claude, now: AHORA }, mensaje("¿qué está bloqueado?", TG_OPERACIONES));
     expect(claude.requests).toHaveLength(1);
     expect(claude.requests[0].hints).toContain("Proyecto Interno Demo");
     expect(claude.requests[0].hints).not.toContain("Proyecto Reservado Demo");

@@ -31,8 +31,18 @@ function recorrer(dir: string, filtro: RegExp): string[] {
 
 /** Zonas de `app/` que no son sitio público (tienen su propia puerta). */
 const PRIVADAS = /^app\/(api|equipo|admin|clientes|perfil)\//;
-const COMPONENTES_PUBLICOS = ["Nav", "NavContextual", "Footer", "IntroEcosistema", "PruebaEnVivo", "PruebaTestnet", "ProximoEncuentro", "ui"];
-const LIBS_PUBLICAS = ["menu", "metodo", "servicios", "encuentros"];
+const COMPONENTES_PUBLICOS = [
+  "Nav",
+  "NavContextual",
+  "Footer",
+  "IntroEcosistema",
+  "PruebaEnVivo",
+  "PruebaTestnet",
+  "PruebasTestnetLista",
+  "ProximoEncuentro",
+  "ui",
+];
+const LIBS_PUBLICAS = ["menu", "metodo", "servicios", "encuentros", "aviso-privacidad"];
 
 /** Lista generada de archivos públicos (E1-1). */
 function archivosPublicos(): string[] {
@@ -87,6 +97,21 @@ describe("la lista generada de archivos públicos", () => {
 
   it("/ecosistema ya no es una página (redirige a /metodo)", () => {
     expect(fs.existsSync(path.join(WEB, "app", "ecosistema", "page.tsx"))).toBe(false);
+  });
+
+  // Decisión del founder: el manifiesto cumple la misma función que el whitepaper y es
+  // más claro. docs/whitepaper.md queda en el repo como documento interno, sin servirse.
+  it("/whitepaper ya no es una página (redirige a /manifiesto)", () => {
+    expect(fs.existsSync(path.join(WEB, "app", "whitepaper"))).toBe(false);
+  });
+
+  it("ninguna superficie pública enlaza ni nombra el whitepaper", () => {
+    expect(coincidencias(PUBLICOS, /whitepaper/i)).toEqual([]);
+  });
+
+  it("el paquete ya no lleva docs/whitepaper.md", () => {
+    expect(leer("next.config.mjs")).not.toMatch(/"[^"]*docs\/whitepaper\.md"/);
+    expect(leer("scripts/verificar-paquete.mjs")).not.toMatch(/falta docs\/whitepaper/);
   });
 });
 
@@ -168,6 +193,7 @@ describe("E1-3 · redirecciones permanentes (308)", () => {
     expect(typeof mod.default.redirects).toBe("function");
     const r = await mod.default.redirects!();
     expect(r).toContainEqual({ source: "/ecosistema", destination: "/metodo", permanent: true });
+    expect(r).toContainEqual({ source: "/whitepaper", destination: "/manifiesto", permanent: true });
     expect(r).toContainEqual({
       source: "/academia/por-que-sas-dao",
       destination: "/academia/construir-sin-riesgo",
@@ -218,9 +244,12 @@ describe("E1-8 · /metodo en lenguaje llano", () => {
 
 describe("E1-9 · aviso de privacidad y casilla de autorización", () => {
   it("/privacidad nombra los derechos y lee el responsable del entorno", () => {
+    // El texto vive en lib/aviso-privacidad.ts (versionado, hallazgo A3) y la página lo pinta.
     const src = leer("app/privacidad/page.tsx");
-    expect(src).toContain("conocer, actualizar, rectificar");
-    expect(src).toContain("revocar");
+    const aviso = leer("src/lib/aviso-privacidad.ts");
+    expect(aviso).toContain("conocer, actualizar, rectificar");
+    expect(aviso).toContain("revocar");
+    expect(src).toContain("AVISO_PRIVACIDAD.derechos");
     expect(src).toContain("responsableTratamiento()");
     expect(src).toContain('href="/empresas/contacto"');
   });
@@ -235,6 +264,9 @@ describe("E1-9 · aviso de privacidad y casilla de autorización", () => {
       expect(casillas[0]).toMatch(/\brequired\b/);
       expect(casillas[0]).not.toMatch(/defaultChecked|\bchecked\b/);
       expect(src).not.toContain("defaultChecked");
+      // La casilla viaja al servidor (hallazgo A3): sin ella la API responde 400.
+      expect(casillas[0]).toContain('name="acepto"');
+      expect(src).toMatch(/\bacepto, aviso: AVISO_PRIVACIDAD_VERSION\b/);
     });
   }
 
@@ -261,11 +293,22 @@ describe("E1-10 · la landing", () => {
     expect([...pos].sort((a, b) => a - b)).toEqual(pos);
   });
 
-  it("los 2 CTA del cierre: Entrar y, según haya encuentros, el encuentro o la próxima demo", () => {
+  it("los 2 CTA del cierre: Entrar y la llamada a un encuentro, a un rito preparado o al aviso", () => {
     expect(src).toContain("¿Construimos?");
     expect(src).toMatch(/href="\/entrar"[^>]*>\s*Entrar\s*</);
-    expect(src).toMatch(/href="\/encuentros"[^>]*>\s*Ven a un encuentro\s*</);
-    expect(src).toMatch(/href=\{`\$\{RUTA_COMUNIDAD\}#proximos`\}[^>]*>\s*Ven a la próxima demo\s*</);
+    // Hallazgo de la verificación final: "Ven a la próxima demo" llevaba a fechas de la
+    // cadencia sin lugar ni enlace. Ahora la decide llamadaParticipar (ritos-labels.ts).
+    expect(src).toMatch(/href=\{llamada\.href\}[^>]*>\s*\{llamada\.texto\}\s*</);
+    expect(src).toContain("llamadaParticipar(");
+    expect(src).toContain("proximoRitoPreparado(db)");
+    expect(src).not.toContain("#proximos`");
+  });
+
+  it("/comunidad: 'Cómo participar' lleva a la misma llamada, y /encuentros tiene el ancla del aviso", () => {
+    const comunidad = leer("app/comunidad/page.tsx");
+    expect(comunidad).toContain("llamadaParticipar(encuentros[0] ?? null, proximoRitoPreparado(db), tz)");
+    expect(comunidad).toMatch(/href=\{llamada\.href\}[^>]*>\s*\{llamada\.texto\}\s*</);
+    expect(leer("app/encuentros/page.tsx")).toMatch(/<div id="aviso" [^>]*>[\s\S]*<AvisoEncuentrosForm \/>/);
   });
 
   it("no importa Type ni lista proyectos", () => {
@@ -297,7 +340,9 @@ describe("lenguaje editorial en lo público", () => {
     expect(gob).toContain("Cada decisión se registra aquí con su razón y su huella, para que cualquiera pueda revisarla.");
     expect(gob).toContain("Lo que aprendimos de cada regla");
     expect(gob).toContain("huella:");
-    expect(gob).toContain("Reemplazada por:");
+    // Solo la versión vigente de una decisión reemplazada (decisión del founder, 2026-10-21).
+    expect(gob).toContain("decisionesVigentes(db)");
+    expect(gob).not.toContain("Reemplazada por:");
     expect(gob).toContain("esActaDeRito(");
     const aca = leer("app/academia/page.tsx");
     expect(aca).toContain("Se premia aprender, no acumular sin aprender.");
@@ -316,13 +361,12 @@ describe("lenguaje editorial en lo público", () => {
 });
 
 /**
- * La wallet de prueba se registra con `is_demo = 1`: no cuenta en las cifras de la
- * landing ("sin cuentas de prueba"), ni en el equipo ni en el dashboard, y su clave
- * vive solo en el navegador. Si fuera el botón principal, los invitados reales
- * quedarían como cuentas de prueba sin saberlo. El camino principal es la wallet
- * propia; la de prueba es la opción secundaria y lo dice.
+ * La wallet creada en el navegador es una cuenta REAL (decisión del founder, 2026-10-21:
+ * `is_demo` lo decide el servidor por el código de invitación), pero su llave vive solo
+ * en el navegador. El camino principal sigue siendo la wallet propia (Freighter); la del
+ * navegador es la opción secundaria y avisa, con claridad, de dónde vive la llave.
  */
-describe("/entrar · el camino principal es una cuenta real, no una de prueba", () => {
+describe("/entrar · el camino principal es la wallet propia; la del navegador avisa", () => {
   const src = leer("app/entrar/page.tsx");
 
   /** Etiqueta de apertura del botón que dispara `accion` (desde `<button` hasta el onClick). */
@@ -340,24 +384,39 @@ describe("/entrar · el camino principal es una cuenta real, no una de prueba", 
   }
 
   const CONECTAR = "onClick={connectFreighter}";
-  const PRUEBA = "onClick={() => void elegirWalletDemo()}";
+  const PRUEBA = "onClick={() => void elegirWalletNavegador()}";
 
   it("conectar tu propia wallet es el botón principal y está a la vista", () => {
     expect(boton(CONECTAR)).toContain("btn-primary");
     expect(trasVerDetalle(CONECTAR)).toBe(false);
   });
 
-  it("la wallet de prueba es la opción secundaria y avisa de lo que implica", () => {
+  it("la wallet del navegador es la opción secundaria, es una cuenta real y avisa de dónde vive la llave", () => {
     expect(boton(PRUEBA)).not.toContain("btn-primary");
     expect(src.indexOf(CONECTAR)).toBeLessThan(src.indexOf(PRUEBA));
     expect(src.replace(/\s+/g, " ")).toContain(
-      "Es una cuenta de prueba: vive solo en este navegador y no cuenta en las cifras públicas."
+      "Es tu cuenta de verdad: con ella te sumas a proyectos y registras tu asistencia."
     );
+    expect(src).toContain("<AvisoLlaveNavegador />");
+    const aviso = leer("src/components/AvisoLlaveNavegador.tsx").replace(/\s+/g, " ");
+    expect(aviso).toContain("la llave de esta wallet vive solo en este navegador");
+    expect(aviso).toContain("pierdes el acceso a tu cuenta");
+    expect(aviso).toContain("Freighter (freighter.app)");
+    expect(aviso).toContain("href={FREIGHTER_URL}");
+    expect(aviso).toContain('FREIGHTER_URL = "https://www.freighter.app/"');
   });
 
-  it("solo la wallet de prueba se registra como cuenta de prueba", () => {
-    expect(src.match(/setIsDemo\(true\)/g) ?? []).toHaveLength(2); // crear una nueva o usar la guardada
-    expect(src).toMatch(/async function connectFreighter\(\)[\s\S]*?setIsDemo\(false\)/);
+  it("el navegador ya no declara si la cuenta es de demostración: lo decide el servidor", () => {
+    expect(src).not.toMatch(/isDemo/);
+    expect(src.match(/setWalletLocal\(true\)/g) ?? []).toHaveLength(2); // crear una nueva o usar la guardada
+    expect(src).toMatch(/async function connectFreighter\(\)[\s\S]*?setWalletLocal\(false\)/);
+  });
+
+  it("/perfil avisa de la llave del navegador y lee is_demo de la base", () => {
+    const perfil = leer("app/perfil/page.tsx");
+    expect(perfil).toContain("<AvisoLlaveNavegador wallet={wallet} />");
+    expect(perfil).toContain("user.is_demo === 1");
+    expect(perfil).not.toMatch(/\{session\.isDemo \?/);
   });
 
   it("no le pone la etiqueta '(demo)' a nadie", () => {

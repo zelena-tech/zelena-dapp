@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS anchor_queue (
 
 CREATE TABLE IF NOT EXISTS projects (
   id            INTEGER PRIMARY KEY AUTOINCREMENT,
-  campaign      TEXT NOT NULL,        -- LUMA | CREDIFONO
+  campaign      TEXT NOT NULL,        -- nombre de la campaña
   title         TEXT NOT NULL,
   type          TEXT NOT NULL,        -- SAS | DAO  (inmutable tras intake)
   budget_usd    INTEGER NOT NULL,
@@ -328,7 +328,7 @@ CREATE TABLE IF NOT EXISTS brand_assets (
 );
 
 -- SIN columna de secreto. `location` es una REFERENCIA legible por humanos
--- ("Key Vault kv-zelena / secret azure-wms-prod"), nunca el valor.
+-- ("Key Vault <boveda> / secret <nombre-del-secreto>"), nunca el valor.
 CREATE TABLE IF NOT EXISTS credential_inventory (
   id           INTEGER PRIMARY KEY AUTOINCREMENT,
   client_id    INTEGER NOT NULL,
@@ -367,7 +367,7 @@ CREATE TABLE IF NOT EXISTS credential_access_log (
 CREATE TABLE IF NOT EXISTS graph_nodes (
   id             INTEGER PRIMARY KEY AUTOINCREMENT,
   client_id      INTEGER NOT NULL,
-  node_id        TEXT NOT NULL,        -- montoc.variante.facturacion-credito
+  node_id        TEXT NOT NULL,        -- <cliente>.variante.facturacion-credito
   kind           TEXT NOT NULL,        -- proceso | variante | sistema | modulo | ...
   name           TEXT NOT NULL,
   state          TEXT NOT NULL,        -- activo | propuesto | deprecado | roto

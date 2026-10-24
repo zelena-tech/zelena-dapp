@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
-import { listDecisions, getOpenProposal, voteTally, userVote } from "@/lib/repo";
+import { getOpenProposal, voteTally, userVote } from "@/lib/repo";
 import { getSession } from "@/lib/session";
 import { getDb } from "@/lib/db";
 import { listLatentAudits } from "@/lib/audits";
-import { REEMPLAZO_DECISION, esActaDeRito, esDecisionReemplazada, huellaCorta } from "@/lib/agora-labels";
+import { esActaDeRito, huellaCorta } from "@/lib/agora-labels";
+import { decisionesVigentes, vigenteDe } from "@/lib/decisiones";
 import { EmptyState } from "@/components/ui";
 import VoteForm from "@/components/VoteForm";
 
@@ -18,13 +19,20 @@ const TITULAR_H2 =
   "font-serif text-3xl font-normal normal-case leading-[1.15] tracking-normal text-paper sm:text-4xl";
 
 export default async function GobernanzaPage() {
-  // Las actas de cierre de los ritos se ven en Comunidad, no aquí. Lo más reciente, primero.
-  const decisions = listDecisions()
+  const db = getDb();
+  // Solo las decisiones VIGENTES (decisión del founder, 2026-10-21): de una reemplazada se
+  // muestra la que la reemplazó, nunca el texto original, que sigue intacto en el registro
+  // con su huella y lo ve el founder en /admin. Las actas de cierre de los ritos se ven en
+  // Comunidad, no aquí. Lo más reciente, primero.
+  const decisions = decisionesVigentes(db)
     .filter((d) => !esActaDeRito(d.title))
     .reverse();
-  const reemplazo = decisions.find((d) => d.title === REEMPLAZO_DECISION) ?? null;
   const proposal = getOpenProposal();
-  const audits = listLatentAudits(getDb());
+  // Una revisión enlazada a una decisión reemplazada lleva a la vigente (y su título).
+  const audits = listLatentAudits(db).map((a) => {
+    const vigente = a.decisionLogId ? vigenteDe(db, a.decisionLogId) : null;
+    return { ...a, decisionLogId: vigente?.id ?? null, decisionTitle: vigente?.title ?? null };
+  });
   const session = await getSession();
   const tally = proposal ? voteTally(proposal.id) : null;
   const myVote = proposal && session ? userVote(proposal.id, session.wallet)?.choice ?? null : null;
@@ -172,16 +180,11 @@ export default async function GobernanzaPage() {
                   <span className="text-xs text-faint">{d.date}</span>
                 </div>
                 <p className="mt-2 text-sm leading-6 text-muted">{d.reason}</p>
-                {esDecisionReemplazada(d.reason) ? (
+                {d.reemplazaA.length > 0 ? (
                   <p className="mt-3 border-l-2 border-primary pl-3 text-sm text-paper">
-                    Reemplazada por:{" "}
-                    {reemplazo ? (
-                      <a href={`#dec-${reemplazo.id}`} className="text-primary hover:underline">
-                        {REEMPLAZO_DECISION}
-                      </a>
-                    ) : (
-                      REEMPLAZO_DECISION
-                    )}
+                    Reemplaza {d.reemplazaA.length === 1 ? "una decisión" : "decisiones"} del{" "}
+                    {d.reemplazaA.map((r) => r.date).join(", ")}. El texto anterior se conserva sin cambios en el
+                    registro, con su huella.
                   </p>
                 ) : null}
                 <p className="mt-3 font-mono text-[11px] text-faint">huella: {huellaCorta(d, 32)}</p>

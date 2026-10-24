@@ -12,7 +12,7 @@ PRAGMA foreign_keys = ON;
 --
 -- role e is_supervisor (WP14): `role` es la posición en el registro de contribuidor
 -- (WP13: founder|core|contributor) y `is_supervisor` es un flag SEPARADO, porque
--- supervisor no es un rol (plano 07 §5: Vale es `core` Y supervisora del dashboard).
+-- supervisor no es un rol (plano 07 §5: Operaciones es `core` Y supervisora del dashboard).
 -- El default es conservador (contributor / no supervisor) y se deriva de is_founder
 -- al sembrar el roster, para no cambiar el significado de ninguna fila existente.
 CREATE TABLE IF NOT EXISTS users (
@@ -48,9 +48,10 @@ CREATE TABLE IF NOT EXISTS users (
 -- ES el registro; los correos son credenciales vinculadas, no la identidad).
 --
 --  - `kind = 'primary'`   → con el que entra. El corporativo entra SIEMPRE como primary.
---  - `kind = 'recovery'`  → segundo correo personal. Obligatorio para core: si la
---    persona sale de la organizacion pierde la puerta corporativa pero NO su
---    progreso, y sigue entrando por la puerta de comunidad con este correo.
+--  - `kind = 'recovery'`  → segundo correo personal, de CONTACTO: si la persona sale
+--    de la organizacion pierde la puerta corporativa pero NO su progreso, y este
+--    correo es por donde se la ubica. NO es una puerta: ningun login lo lee (no hay
+--    login con correo personal; sin la cuenta corporativa se entra con una wallet).
 --  - `is_corporate = 1`   → es del dominio del tenant (@zelena.tech). Un correo
 --    corporativo NO puede ser recovery: moriria con la baja.
 --
@@ -102,11 +103,12 @@ CREATE TABLE IF NOT EXISTS anchor_queue (
   ref          TEXT NOT NULL,        -- clave logica (ej. wallet o period id)
   data_key     TEXT NOT NULL,        -- key para manageData (<= 64 bytes)
   payload_hash TEXT NOT NULL,        -- hash a anclar (hex)
-  status       TEXT NOT NULL DEFAULT 'pending', -- pending | anchored | failed
+  status       TEXT NOT NULL DEFAULT 'pending', -- pending | processing | anchored | failed (lib/anchor.ts)
   tx_id        TEXT,
-  attempts     INTEGER NOT NULL DEFAULT 0,
+  attempts     INTEGER NOT NULL DEFAULT 0,    -- envíos; al llegar a ANCLAJE_MAX_INTENTOS queda 'failed'
   last_error   TEXT,
-  created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+  claimed_at   TEXT                           -- cuándo la reservó una pasada ('processing'); NULL si no
 );
 
 CREATE TABLE IF NOT EXISTS projects (
@@ -122,7 +124,13 @@ CREATE TABLE IF NOT EXISTS projects (
   summary       TEXT NOT NULL,
   description   TEXT NOT NULL,
   acceptance    TEXT NOT NULL,        -- criterios de aceptacion (texto)
-  created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  -- Borrador (decisión del founder, 2026-10-21): 1 = no se ve en público ni recibe
+  -- aplicaciones; su estado del ciclo (`state`) no cambia. Se publica desde /admin.
+  draft         INTEGER NOT NULL DEFAULT 0,
+  -- De dónde salió la fila: 'seed' (proyecto sembrado), 'agora' (puente desde el
+  -- tablero) o NULL (sin clasificar). Solo lo usa la migración de borradores.
+  origin        TEXT
 );
 
 CREATE TABLE IF NOT EXISTS milestones (
@@ -192,6 +200,18 @@ CREATE TABLE IF NOT EXISTS decision_log (
   reason      TEXT NOT NULL,
   hash        TEXT NOT NULL,
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Reemplazos de decisiones (decisión del founder, 2026-10-21). Solo inserción: la
+-- decisión reemplazada sigue INTACTA en decision_log (con su huella) y en lo público se
+-- muestra solo la vigente; el original lo ve el founder en /admin (lib/decisiones.ts).
+CREATE TABLE IF NOT EXISTS decision_replacements (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  decision_id     INTEGER NOT NULL UNIQUE,   -- la reemplazada
+  replaced_by_id  INTEGER NOT NULL,          -- la vigente que la reemplaza
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (decision_id) REFERENCES decision_log(id),
+  FOREIGN KEY (replaced_by_id) REFERENCES decision_log(id)
 );
 
 -- Reporte de fitness por epoca (WP07). Append-only: una fila por calculo de cierre.
@@ -303,6 +323,12 @@ CREATE TABLE IF NOT EXISTS academia_quiz (
 );
 
 -- Una sesion de lectura activa por wallet a la vez (server-side timing).
+-- Hallazgo A2: `quiz_ids` guarda las preguntas servidas (JSON) y la calificacion exige
+-- exactamente esas; `graded_at` (epoch ms) marca la UNICA calificacion de la sesion y
+-- cuenta para la espera tras un intento fallido. `quiz_orden` (revision de A2) guarda,
+-- alineado con `quiz_ids`, el orden barajado en que se mostraron las opciones de cada
+-- pregunta: la respuesta se traduce con el antes de calificar. Las tres van tambien en
+-- COLUMNAS_NUEVAS.
 CREATE TABLE IF NOT EXISTS reading_sessions (
   token         TEXT PRIMARY KEY,
   wallet        TEXT NOT NULL,
@@ -312,6 +338,9 @@ CREATE TABLE IF NOT EXISTS reading_sessions (
   last_beat     INTEGER NOT NULL,     -- epoch ms
   completed     INTEGER NOT NULL DEFAULT 0,
   passed        INTEGER NOT NULL DEFAULT 0,
+  quiz_ids      TEXT,                 -- JSON de los ids servidos (NULL = quiz no pedido)
+  graded_at     INTEGER,              -- epoch ms de la calificacion (NULL = sin calificar)
+  quiz_orden    TEXT,                 -- JSON: por pregunta, indice guardado de cada opcion mostrada
   FOREIGN KEY (content_id) REFERENCES academia_content(id)
 );
 
@@ -371,7 +400,7 @@ CREATE TABLE IF NOT EXISTS brand_assets (
 );
 
 -- SIN columna de secreto. `location` es una REFERENCIA legible por humanos
--- ("Key Vault kv-zelena / secret azure-wms-prod"), nunca el valor.
+-- ("Key Vault <boveda> / secret <nombre-del-secreto>"), nunca el valor.
 CREATE TABLE IF NOT EXISTS credential_inventory (
   id           INTEGER PRIMARY KEY AUTOINCREMENT,
   client_id    INTEGER NOT NULL,
@@ -410,7 +439,7 @@ CREATE TABLE IF NOT EXISTS credential_access_log (
 CREATE TABLE IF NOT EXISTS graph_nodes (
   id             INTEGER PRIMARY KEY AUTOINCREMENT,
   client_id      INTEGER NOT NULL,
-  node_id        TEXT NOT NULL,        -- montoc.variante.facturacion-credito
+  node_id        TEXT NOT NULL,        -- <cliente>.variante.facturacion-credito
   kind           TEXT NOT NULL,        -- proceso | variante | sistema | modulo | ...
   name           TEXT NOT NULL,
   state          TEXT NOT NULL,        -- activo | propuesto | deprecado | roto
@@ -730,6 +759,24 @@ CREATE TABLE IF NOT EXISTS leads (
 );
 
 CREATE INDEX IF NOT EXISTS idx_leads_creado ON leads(created_at);
+
+-- Prueba de la autorizacion de datos (Ley 1581, hallazgo A3): una fila por solicitud
+-- de `leads` que llego con la casilla del aviso marcada. Tabla NUEVA (no toca `leads`)
+-- y de SOLO INSERCION: guarda la version del aviso de /privacidad que se acepto, su
+-- huella (sha256 del texto canonico, lib/aviso-privacidad.ts) y el instante en UTC.
+-- No guarda la IP ni datos del navegador. La escribe lib/consentimiento.ts en la misma
+-- transaccion que la fila de `leads`.
+CREATE TABLE IF NOT EXISTS lead_consents (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  lead_id       INTEGER NOT NULL,
+  formulario    TEXT NOT NULL,            -- empresas/contacto | encuentros
+  aviso_version TEXT NOT NULL,            -- AVISO_PRIVACIDAD_VERSION aceptada
+  aviso_sha256  TEXT NOT NULL,            -- huella del texto aceptado
+  accepted_at   TEXT NOT NULL,            -- UTC, AAAA-MM-DD HH:MM:SS
+  FOREIGN KEY (lead_id) REFERENCES leads(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_lead_consents_lead ON lead_consents(lead_id);
 
 -- ============================================================================
 -- WP31 · RITOS — la cadencia vive en el genoma (RITES_CADENCE); aquí, lo que pasó.

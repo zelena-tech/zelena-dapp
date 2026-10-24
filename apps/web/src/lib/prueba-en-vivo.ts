@@ -3,7 +3,8 @@
  *
  * Primero lo real: no cuenta cuentas de prueba (`users.is_demo = 1`) ni las firmas
  * sembradas con un `tx_id` que no es un hash de Stellar (las `SEEDTX_…`). Con todo
- * en cero se muestra el cero.
+ * en cero se muestra el cero. Los proyectos en borrador del Ágora (`projects.draft = 1`,
+ * los sembrados que el founder ocultó) tampoco: no son públicos.
  */
 import type { DB } from "./db";
 import { txVerificable } from "./pruebas-testnet";
@@ -21,7 +22,7 @@ function contar(db: DB, sql: string): number {
 }
 
 export function cifrasEnVivo(db: DB): CifrasEnVivo {
-  const proyectosAbiertos = contar(db, `SELECT COUNT(*) AS n FROM projects WHERE state = 'Open'`);
+  const proyectosAbiertos = contar(db, `SELECT COUNT(*) AS n FROM projects WHERE state = 'Open' AND draft = 0`);
 
   // Hitos aprobados de proyectos del Ágora asignados a una cuenta real.
   const hitos = contar(
@@ -30,7 +31,7 @@ export function cifrasEnVivo(db: DB): CifrasEnVivo {
        FROM milestones m
        JOIN projects p ON p.id = m.project_id
        JOIN users u ON u.wallet = p.assignee_wallet
-      WHERE m.approved = 1 AND u.is_demo = 0`
+      WHERE m.approved = 1 AND u.is_demo = 0 AND p.draft = 0`
   );
   // Entregas del equipo aprobadas (evento `aprobar`) cuyo dueño es una cuenta real.
   const tareas = contar(

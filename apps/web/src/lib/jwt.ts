@@ -28,7 +28,7 @@ export interface SessionData extends JWTPayload {
    * debe seguir siendo válida. Léelos SIEMPRE con `effectiveRole` /
    * `effectiveIsSupervisor` de lib/roles.ts, que derivan el fallback de `isFounder`.
    * `role` ∈ founder | core | contributor (valores de WP13); `isSupervisor` es un
-   * flag independiente (plano 07 §5: Vale es `core` Y supervisora).
+   * flag independiente (plano 07 §5: Operaciones es `core` Y supervisora).
    *
    * La cookie es una PISTA, no la autoridad: para autorizar, lib/team.ts resuelve
    * role/is_supervisor contra la tabla `users`.

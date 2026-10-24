@@ -25,17 +25,19 @@ import { z } from "zod";
 import type { DB } from "./db";
 import {
   PENDING_PREFIX,
-  TEAM_ROSTER,
   effectiveRole,
+  findRosterMember,
   isPendingPrincipal,
   isRole,
+  normalizeName,
   pendingPrincipal,
   rosterByPrincipal,
+  rosterConfigurado,
   type Role,
   type RosterMember,
   type TeamActor,
 } from "./roles.ts";
-import { mismaPersona } from "./identidades.ts";
+import { mismaPersona, slugsFounder as slugsFounderDe } from "./identidades.ts";
 import { TeamError } from "./team.ts";
 
 // ---------------------------------------------------------------------------
@@ -103,8 +105,9 @@ export function cuentaActiva(db: DB, wallet: string): boolean {
   return r?.status === "active";
 }
 
-function slugsFounder(): string[] {
-  return TEAM_ROSTER.filter((m) => m.role === "founder").map((m) => m.slug);
+/** Slugs de la fila del founder, por datos de la base (ver `identidades.ts#slugsFounder`). */
+function slugsFounder(db: DB): string[] {
+  return slugsFounderDe(db);
 }
 
 function slugVinculado(db: DB, slug: string): string | null {
@@ -151,11 +154,58 @@ export function walletDeRoster(db: DB, slug: string): string | null {
   return db.prepare(`SELECT wallet FROM users WHERE wallet = ?`).get(pendiente) ? pendiente : null;
 }
 
-/** Miembro del roster de una wallet: por su principal `pending:<slug>` o por `roster_links`. */
+/**
+ * Fila del roster CONFIGURADO de una wallet: por su principal `pending:<slug>` o por
+ * `roster_links`. Con la plantilla de roles, las filas viejas de una base (otros slugs)
+ * no tienen ficha: es solo una etiqueta, las personas siguen siendo datos de la base.
+ */
 export function rosterMemberFor(db: DB, wallet: string): RosterMember | undefined {
   if (isPendingPrincipal(wallet)) return rosterByPrincipal(wallet);
   const r = db.prepare(`SELECT slug FROM roster_links WHERE wallet = ?`).get(wallet) as { slug: string } | undefined;
-  return r ? TEAM_ROSTER.find((m) => m.slug === r.slug) : undefined;
+  return r ? rosterConfigurado().miembros.find((m) => m.slug === r.slug) : undefined;
+}
+
+/**
+ * Slug del roster para un nombre, por DATOS (hallazgo A8: el roster del código es una
+ * plantilla de roles; las personas viven en la base):
+ *  1. alias o slug del roster configurado (plantilla o `ZELENA_TEAM_ROSTER`);
+ *  2. el nombre normalizado ES un slug que existe en la base: su fila `pending:<slug>`
+ *     o su vínculo en `roster_links` (p. ej. un CSV viejo con el slug de la fila).
+ * Solo devuelve slugs con fila o vínculo en la base. null si no hay ninguno.
+ */
+export function slugDelEquipo(db: DB, nombre: string): string | null {
+  const n = normalizeName(nombre ?? "");
+  if (!n) return null;
+  const existe = (slug: string) =>
+    !!db.prepare(`SELECT 1 AS x FROM users WHERE wallet = ?`).get(pendingPrincipal(slug)) ||
+    !!db.prepare(`SELECT 1 AS x FROM roster_links WHERE slug = ?`).get(slug);
+  const configurado = findRosterMember(nombre);
+  if (configurado && existe(configurado.slug)) return configurado.slug;
+  if (/^[a-z0-9][a-z0-9-]{0,59}$/.test(n) && existe(n)) return n;
+  return null;
+}
+
+/**
+ * Persona del equipo a partir de un nombre, por DATOS: su slug del roster
+ * (`slugDelEquipo` → `walletDeRoster`), o si no, la coincidencia ÚNICA de
+ * `display_name` normalizado entre cuentas activas que no son demo. null si no hay o
+ * si hay más de una (no se adivina).
+ */
+export function walletDelEquipoPorNombre(db: DB, nombre: string): string | null {
+  const slug = slugDelEquipo(db, nombre);
+  if (slug) {
+    const w = walletDeRoster(db, slug);
+    if (w) return w;
+  }
+  const n = normalizeName(nombre ?? "");
+  if (!n) return null;
+  const coinciden = (
+    db.prepare(`SELECT wallet, display_name FROM users WHERE status = 'active' AND is_demo = 0`).all() as Array<{
+      wallet: string;
+      display_name: string;
+    }>
+  ).filter((f) => normalizeName(f.display_name ?? "") === n);
+  return coinciden.length === 1 ? coinciden[0].wallet : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -298,7 +348,7 @@ export function candidatosAVincular(
   slug?: string,
   actorWallet?: string
 ): Array<{ wallet: string; nombre: string }> {
-  const delFounder = slug !== undefined && slugsFounder().includes(slug);
+  const delFounder = slug !== undefined && slugsFounder(db).includes(slug);
   const filas = db
     .prepare(
       `SELECT u.wallet, u.display_name, u.is_demo, u.is_founder, u.role FROM users u
@@ -572,7 +622,7 @@ export function vincularPrincipal(
   if (d.status !== "active") throw new TeamError(409, CUENTA_INACTIVA);
 
   // El founder se reconoce por rol en la base y por el roster, nunca por FOUNDER_WALLET.
-  const delFounder = slugsFounder().includes(slug);
+  const delFounder = slugsFounder(db).includes(slug);
   const rolD = rolDe(d);
   if (delFounder) {
     if (rolD !== "founder") {
@@ -733,6 +783,95 @@ export function describirVinculo(
 }
 
 // ---------------------------------------------------------------------------
+// Correo corporativo para entrar con Microsoft (solo founder)
+// ---------------------------------------------------------------------------
+
+/**
+ * Vincula el correo corporativo (UPN) EXACTO de una persona a su fila: así, al entrar con
+ * Microsoft, la puerta corporativa la reconoce (`resolveEntraLogin`, camino 2). Es la
+ * ÚNICA forma de que una cuenta de Microsoft llegue a una fila existente (la del roster
+ * `pending:<slug>` o la del founder): la puerta ya no adivina por nombre ni por prefijo
+ * del correo (hallazgo de la auditoría, 2026-10-21).
+ *
+ * Solo founder. Reglas:
+ *  - el correo es del dominio corporativo (`dominio`, el de `ZELENA_CORPORATE_DOMAIN`);
+ *  - la cuenta existe, está activa y no es de demostración;
+ *  - el correo no es de otra fila (409) y la cuenta no tiene ya otro correo corporativo;
+ *  - una cuenta founder solo la vincula su dueño: un correo mal escrito en la fila del
+ *    founder le daría su rol a otra persona del tenant.
+ * Deja `talent_events` (`correo_corporativo`), sin el correo en el detalle.
+ * Idempotente: el mismo correo en la misma fila devuelve `false` sin escribir.
+ */
+export function vincularCorreoCorporativo(
+  db: DB,
+  actor: TeamActor,
+  input: { wallet: string; email: string; dominio: string }
+): boolean {
+  exigirFounder(actor, "vincula correos corporativos");
+  const wallet = (input.wallet ?? "").trim();
+  const email = (input.email ?? "").trim().toLowerCase();
+  const dominio = (input.dominio ?? "").trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new TeamError(400, "Ese correo no tiene un formato válido.");
+  if (!dominio || email.slice(email.lastIndexOf("@") + 1) !== dominio) {
+    throw new TeamError(400, `Tiene que ser un correo corporativo @${dominio}.`);
+  }
+  const u = usuario(db, wallet);
+  if (!u) throw new TeamError(404, "Esa persona no está en el registro.");
+  if (u.status !== "active") throw new TeamError(409, CUENTA_INACTIVA);
+  if (u.is_demo) throw new TeamError(400, "Las cuentas de demostración no entran con Microsoft.");
+  if (rolDe(u) === "founder" && !mismaPersona(db, actor.wallet, wallet)) {
+    throw new TeamError(403, "El correo de una cuenta founder solo lo vincula su dueño.");
+  }
+
+  const dueno = db.prepare(`SELECT wallet FROM user_emails WHERE email = ?`).get(email) as { wallet: string } | undefined;
+  if (dueno) {
+    if (dueno.wallet === wallet) return false;
+    throw new TeamError(409, "Ese correo ya está vinculado a otra persona.");
+  }
+  const otro = db
+    .prepare(`SELECT email FROM user_emails WHERE wallet = ? AND is_corporate = 1`)
+    .get(wallet) as { email: string } | undefined;
+  if (otro) throw new TeamError(409, "Esa persona ya tiene un correo corporativo vinculado.");
+
+  const tx = db.transaction(() => {
+    db.prepare(
+      `INSERT INTO user_emails (wallet, email, kind, is_corporate, is_verified) VALUES (?, ?, 'primary', 1, 0)`
+    ).run(wallet, email);
+    registrarEvento(db, { actor: actor.wallet, target: wallet, action: "correo_corporativo", detail: { dominio } });
+  });
+  tx();
+  return true;
+}
+
+/** Correos corporativos vinculados, para /equipo/talento (solo founder). */
+export function correosCorporativos(
+  db: DB
+): Array<{ wallet: string; nombre: string; email: string; conMicrosoft: boolean }> {
+  const filas = db
+    .prepare(
+      `SELECT e.wallet, u.display_name, e.email, u.entra_oid FROM user_emails e
+         JOIN users u ON u.wallet = e.wallet
+        WHERE e.is_corporate = 1 ORDER BY u.display_name, e.email`
+    )
+    .all() as Array<{ wallet: string; display_name: string; email: string; entra_oid: string | null }>;
+  return filas.map((f) => ({ wallet: f.wallet, nombre: f.display_name, email: f.email, conMicrosoft: !!f.entra_oid }));
+}
+
+/** Cuentas a las que el founder puede vincular un correo corporativo: activas, no demo, sin correo corporativo. */
+export function cuentasParaCorreo(db: DB): Array<{ wallet: string; nombre: string }> {
+  return (
+    db
+      .prepare(
+        `SELECT u.wallet, u.display_name FROM users u
+          WHERE u.status = 'active' AND u.is_demo = 0
+            AND NOT EXISTS (SELECT 1 FROM user_emails e WHERE e.wallet = u.wallet AND e.is_corporate = 1)
+          ORDER BY u.display_name, u.wallet`
+      )
+      .all() as Array<{ wallet: string; display_name: string }>
+  ).map((u) => ({ wallet: u.wallet, nombre: u.display_name }));
+}
+
+// ---------------------------------------------------------------------------
 // Validación de entrada (ruta /api/equipo/talento)
 // ---------------------------------------------------------------------------
 
@@ -748,5 +887,6 @@ export const talentoAccionSchema = z.discriminatedUnion("action", [
     simular: z.boolean().optional(),
     conservarSellado: z.boolean().optional(),
   }),
+  z.object({ action: z.literal("correo"), wallet: walletCampo, email: z.string().trim().min(3).max(200) }),
 ]);
 export type TalentoAccion = z.infer<typeof talentoAccionSchema>;

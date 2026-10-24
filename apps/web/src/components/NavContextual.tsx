@@ -14,8 +14,8 @@ import { esRutaEmpresas, menuPara } from "@/lib/menu";
 // El botón de perfil (`accesoDao`) y "Admin" (solo founder, por rol) se conservan
 // aquí, fuera de `menuPara`.
 
-const ENLACE =
-  "whitespace-nowrap rounded-md px-2.5 py-1.5 text-sm text-muted transition-colors duration-150 hover:bg-glow hover:text-primary";
+const ENLACE_BASE =
+  "whitespace-nowrap rounded-md py-1.5 text-sm text-muted transition-colors duration-150 hover:bg-glow hover:text-primary";
 const ENLACE_MOVIL =
   "block whitespace-nowrap px-3 py-3 text-sm text-muted transition-colors hover:bg-glow hover:text-primary";
 
@@ -25,6 +25,7 @@ export default function NavContextual({
   accesoEquipo,
   esInterno,
   puedeVerTodo,
+  conClientes,
   accesoDao,
   salir,
 }: {
@@ -35,8 +36,10 @@ export default function NavContextual({
   accesoEquipo: boolean;
   /** Equipo interno (founder, core o supervisor): ve Clientes. */
   esInterno: boolean;
-  /** Founder o supervisor: ve Talento. */
+  /** Founder o supervisor: ve Seguimiento y Talento. */
   puedeVerTodo: boolean;
+  /** Hay algún cliente que pueda ver: sin clientes, "Clientes" no se dibuja. */
+  conClientes: boolean;
   /** Botón de sesión (Entrar o el perfil), renderizado en el servidor. */
   accesoDao: ReactNode;
   /** Botón de salir, solo si hay sesión. */
@@ -44,14 +47,21 @@ export default function NavContextual({
 }) {
   const ruta = usePathname() ?? "/";
   const enEmpresas = esRutaEmpresas(ruta);
-  const enlaces = menuPara({ ruta, conSesion, accesoEquipo, esInterno, puedeVerTodo });
+  const enlaces = menuPara({ ruta, conSesion, accesoEquipo, esInterno, puedeVerTodo, conClientes });
   const conAdmin = isFounder && !enEmpresas;
 
-  // Cuatro enlaces caben desde 1024 px; con la sesión del equipo (hasta siete y
-  // "Admin") hace falta más ancho para que ninguno se parta en dos líneas.
-  const muchos = enlaces.length + (conAdmin ? 1 : 0) > 5;
-  const escritorio = muchos ? "hidden items-center gap-1 xl:flex" : "hidden items-center gap-1 lg:flex";
+  // Cuatro enlaces caben desde 1024 px; con la sesión del equipo (hasta nueve y
+  // "Admin") hace falta más ancho para que ninguno se parta en dos líneas. Con diez
+  // (founder con Seguimiento y Clientes) se aprieta el espaciado: medido a 1280 px, con
+  // el de siempre la barra se pasaba 16 px del contenedor.
+  const total = enlaces.length + (conAdmin ? 1 : 0);
+  const muchos = total > 5;
+  const compacto = total >= 10;
+  const separacion = compacto ? "gap-0.5" : "gap-1";
+  const escritorio = muchos ? `hidden items-center ${separacion} xl:flex` : `hidden items-center ${separacion} lg:flex`;
   const movil = muchos ? "relative xl:hidden" : "relative lg:hidden";
+  const relleno = compacto ? "px-2" : "px-2.5";
+  const ENLACE = `${ENLACE_BASE} ${relleno}`;
 
   const cta = enEmpresas ? (
     <Link href="/empresas/contacto" className="btn btn-primary py-1.5 normal-case tracking-normal">
@@ -72,7 +82,7 @@ export default function NavContextual({
         {conAdmin ? (
           <Link
             href="/admin"
-            className="whitespace-nowrap rounded-md px-2.5 py-1.5 text-sm text-amber-300 transition-colors hover:bg-amber-950/30"
+            className={`whitespace-nowrap rounded-md ${relleno} py-1.5 text-sm text-amber-300 transition-colors hover:bg-amber-950/30`}
           >
             Admin
           </Link>

@@ -4,11 +4,15 @@
  *
  * PERSISTENTE, no bloqueante: no hay botón de "descartar" porque el correo es
  * obligatorio para el core, pero el banner NO tapa ni interrumpe el trabajo del día.
- * Lo único que dice que está bloqueado es recibir puntos o pagos — y ni eso confisca
- * nada de lo ya ganado (doc 16). El texto habla del trámite, nunca de la persona.
+ * El texto habla del trámite, nunca de la persona.
  *
- * Se autoconsulta a `/api/auth/entra/segundo-correo`: si ya hay correo vinculado no
- * se dibuja, así que se puede montar sin condicionales en cualquier página.
+ * El segundo correo es de CONTACTO, no una puerta: no existe el login con correo
+ * personal (hallazgo M1), así que el texto no lo promete. Sin la cuenta corporativa
+ * se entra con una wallet.
+ *
+ * Se autoconsulta a `/api/auth/entra/segundo-correo`: si ya hay correo vinculado, o la
+ * puerta de Microsoft está apagada (`AUTH_ENTRA_ENABLED`), no se dibuja; así que se
+ * puede montar sin condicionales en cualquier página.
  */
 import { useEffect, useState } from "react";
 
@@ -73,9 +77,9 @@ export function EntraSecondEmailBanner() {
     >
       <p className="font-bold text-amber-50">Falta tu segundo correo personal</p>
       <p className="mt-1">
-        Es tu llave de respaldo: si algún día sales de la organización pierdes el acceso corporativo,
-        pero no tu historial ni tus puntos — sigues entrando con este correo. Puedes seguir
-        trabajando con normalidad; lo único que queda en pausa es recibir puntos o pagos.
+        Es un correo de contacto fuera de la organización: si algún día sales, pierdes el acceso corporativo
+        pero no tu historial ni tus puntos, y por ahí te ubicamos. No sirve para entrar: sin la cuenta
+        corporativa se entra con una wallet. Puedes seguir trabajando con normalidad.
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <input

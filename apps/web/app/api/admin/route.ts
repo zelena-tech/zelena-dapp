@@ -13,6 +13,7 @@ import { getDb } from "@/lib/db";
 import { computeAndStoreEpochFitness, signEpochDecision } from "@/lib/epochs";
 import { proposeMutation, revertToVersion, recordNoMutation, type GeneChange } from "@/lib/mutation";
 import { createLatentAudit } from "@/lib/audits";
+import { publicarProyecto } from "@/lib/agora-borradores";
 
 export const dynamic = "force-dynamic";
 
@@ -67,6 +68,11 @@ export async function POST(req: NextRequest) {
         const r = approveMilestone(milestoneId);
         return NextResponse.json({ ok: true, ...r });
       }
+      case "publishProject":
+        // Borrador del Ágora → publicado (solo founder: adminActor arriba).
+        if (!projectId) throw new Error("Falta projectId.");
+        publicarProyecto(getDb(), projectId);
+        break;
       case "toggleContent":
         if (!contentId) throw new Error("Falta contentId.");
         toggleContent(contentId);

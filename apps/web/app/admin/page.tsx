@@ -5,7 +5,7 @@ import { adminActor } from "@/lib/authz";
 import { getDb } from "@/lib/db";
 import { listAcademia, listProjects, getMilestones } from "@/lib/repo";
 import { Tag, StateBadge, shortWallet, EmptyState } from "@/components/ui";
-import { nextAction, type ProjectState } from "@/lib/state-machine";
+import { esBorrador, nextAction, type ProjectState } from "@/lib/state-machine";
 import { currentEpoch, getActiveGenome } from "@/lib/genome";
 import { latestEpochFitness } from "@/lib/epochs";
 import { genomeLineage, pendingMutation } from "@/lib/mutation";
@@ -20,6 +20,7 @@ import { estadoCierreEpoca } from "@/lib/epocas";
 import { panelRitosAdmin, zonaRitos } from "@/lib/ritos";
 import EpocaPanel from "@/components/EpocaPanel";
 import RitosAdminPanel from "@/components/RitosAdminPanel";
+import { decisionesReemplazadas } from "@/lib/decisiones";
 
 export const dynamic = "force-dynamic";
 
@@ -46,7 +47,8 @@ export default async function AdminPage() {
     status: string;
     project_title: string;
   }>;
-  const projects = listProjects();
+  // Con los borradores: aquí el founder los ve y los publica.
+  const projects = listProjects({ incluirBorradores: true });
   const academia = listAcademia(true);
   const epoch = currentEpoch(db);
   const fitness = latestEpochFitness(db);
@@ -56,6 +58,8 @@ export default async function AdminPage() {
   const latestVersion = lineage.length ? lineage[lineage.length - 1].version : 1;
   const numericGenes: Array<keyof typeof genome> = ["EPOCH_BUDGET", "ACADEMIA_BUDGET", "ACADEMIA_DAILY_CAP", "ACADEMIA_VOTE_WEIGHT"];
   const audits = listLatentAudits(db);
+  // Originales de las decisiones reemplazadas: en lo público solo se ve la vigente.
+  const reemplazadas = decisionesReemplazadas(db);
   // WP19: log del asistente de Telegram + estado del alta.
   const botActions = listBotActions(db, 50);
   const botLink = linkForWallet(db, founderTeamWallet(db, session.wallet));
@@ -392,8 +396,17 @@ export default async function AdminPage() {
                     <span className="text-sm font-semibold text-white">{p.title}</span>
                     <Tag type={p.type} />
                     <StateBadge state={p.state} />
+                    {esBorrador(p) ? <span className="tag border-amber-700/50 text-amber-300">borrador</span> : null}
                   </div>
                   <div className="flex items-center gap-2">
+                    {esBorrador(p) ? (
+                      <AdminAction
+                        action="publishProject"
+                        payload={{ projectId: p.id }}
+                        label="Publicar"
+                        variant="primary"
+                      />
+                    ) : null}
                     {p.assignee_wallet ? (
                       <span className="text-xs text-faint">ejecutor: {shortWallet(p.assignee_wallet)}</span>
                     ) : null}
@@ -427,6 +440,38 @@ export default async function AdminPage() {
             );
           })}
         </div>
+      </section>
+
+      {/* Decisiones reemplazadas: el original, intacto y con su huella. Solo aquí (founder). */}
+      <section>
+        <h2 className="mb-4 font-head text-2xl font-bold text-white">Decisiones reemplazadas</h2>
+        <p className="mb-3 text-sm text-muted">
+          En Gobernanza y en Comunidad solo se ve la versión vigente. El original no se reescribe ni se borra: queda
+          en el registro con su huella completa, y solo se ve aquí.
+        </p>
+        {reemplazadas.length === 0 ? (
+          <EmptyState title="Ninguna" message="Cuando una decisión reemplace a otra, el original aparecerá aquí." />
+        ) : (
+          <div className="space-y-3">
+            {reemplazadas.map((d) => (
+              <div key={d.id} className="card p-5">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <span className="text-sm font-semibold text-white">
+                    #{d.id} · {d.title}
+                  </span>
+                  <span className="text-xs text-faint">{d.date}</span>
+                </div>
+                <p className="mt-2 text-sm text-muted">{d.reason}</p>
+                <p className="mt-2 break-all font-mono text-[11px] text-faint">hash: {d.hash}</p>
+                <p className="mt-2 text-xs text-paper">
+                  {d.reemplazadaPor
+                    ? `Reemplazada por #${d.reemplazadaPor.id} · ${d.reemplazadaPor.title} (${d.reemplazadaPor.date})`
+                    : "Oculta en lo público; su reemplazo todavía no está registrado."}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Academia */}

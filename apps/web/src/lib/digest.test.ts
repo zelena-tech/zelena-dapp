@@ -20,10 +20,10 @@ import {
   renderDigestText,
 } from "./digest";
 
-const JOHN = pendingPrincipal("john");
-const VALE = pendingPrincipal("vale");
-const FAUSTO = pendingPrincipal("fausto");
-const DAVID = pendingPrincipal("david");
+const FUNDADOR = pendingPrincipal("founder");
+const OPERACIONES = pendingPrincipal("operaciones");
+const PLATAFORMA = pendingPrincipal("plataforma");
+const PRODUCTO = pendingPrincipal("producto");
 
 /** Miércoles y jueves de la semana del lunes 2026-07-27, en hora local. */
 const AYER = new Date(2026, 6, 29, 12, 0, 0);
@@ -40,10 +40,10 @@ function freshDb(): DB {
 }
 
 const ACTORS: Record<string, TeamActor> = {
-  [JOHN]: { wallet: JOHN, name: "John", role: "founder", isSupervisor: true },
-  [VALE]: { wallet: VALE, name: "Vale", role: "core", isSupervisor: true },
-  [FAUSTO]: { wallet: FAUSTO, name: "Fausto", role: "core", isSupervisor: false },
-  [DAVID]: { wallet: DAVID, name: "David", role: "core", isSupervisor: false },
+  [FUNDADOR]: { wallet: FUNDADOR, name: "Founder", role: "founder", isSupervisor: true },
+  [OPERACIONES]: { wallet: OPERACIONES, name: "Operaciones", role: "core", isSupervisor: true },
+  [PLATAFORMA]: { wallet: PLATAFORMA, name: "Plataforma", role: "core", isSupervisor: false },
+  [PRODUCTO]: { wallet: PRODUCTO, name: "Producto", role: "core", isSupervisor: false },
 };
 
 describe("digest diario del equipo", () => {
@@ -55,28 +55,28 @@ describe("digest diario del equipo", () => {
 
   it("consolida hecho / en curso / bloqueado del día a partir de check-ins y eventos reales", () => {
     // --- Ayer: ruido que NO debe aparecer en el digest de hoy ---
-    upsertCheckin(db, DAVID, { done: "cosa de ayer", doing: "otra de ayer", blocked: "" }, AYER);
-    const deAyer = createAssignment(db, { title: "Tarea de ayer", ownerWallet: DAVID, status: "Asignada" });
-    applyAssignmentAction(db, { assignmentId: deAyer, action: "empezar", actor: ACTORS[DAVID], now: AYER });
+    upsertCheckin(db, PRODUCTO, { done: "cosa de ayer", doing: "otra de ayer", blocked: "" }, AYER);
+    const deAyer = createAssignment(db, { title: "Tarea de ayer", ownerWallet: PRODUCTO, status: "Asignada" });
+    applyAssignmentAction(db, { assignmentId: deAyer, action: "empezar", actor: ACTORS[PRODUCTO], now: AYER });
 
     // --- Hoy ---
-    const cerrada = createAssignment(db, { title: "Importador de CSV", ownerWallet: FAUSTO, status: "En revisión" });
-    applyAssignmentAction(db, { assignmentId: cerrada, action: "aprobar", actor: ACTORS[VALE], now: HOY });
+    const cerrada = createAssignment(db, { title: "Importador de CSV", ownerWallet: PLATAFORMA, status: "En revisión" });
+    applyAssignmentAction(db, { assignmentId: cerrada, action: "aprobar", actor: ACTORS[OPERACIONES], now: HOY });
 
-    const avanzada = createAssignment(db, { title: "Dashboard de seguimiento", ownerWallet: DAVID, status: "Asignada" });
-    applyAssignmentAction(db, { assignmentId: avanzada, action: "empezar", actor: ACTORS[DAVID], now: HOY });
+    const avanzada = createAssignment(db, { title: "Dashboard de seguimiento", ownerWallet: PRODUCTO, status: "Asignada" });
+    applyAssignmentAction(db, { assignmentId: avanzada, action: "empezar", actor: ACTORS[PRODUCTO], now: HOY });
 
-    const bloqueada = createAssignment(db, { title: "Integrar Odoo", ownerWallet: FAUSTO, status: "En curso" });
+    const bloqueada = createAssignment(db, { title: "Integrar Odoo", ownerWallet: PLATAFORMA, status: "En curso" });
     applyAssignmentAction(db, {
       assignmentId: bloqueada,
       action: "bloquear",
       reason: "Falta la credencial del cliente",
-      actor: ACTORS[FAUSTO],
+      actor: ACTORS[PLATAFORMA],
       now: HOY,
     });
 
-    upsertCheckin(db, VALE, { done: "cerré la spec de ritos", doing: "revisión de calidad", blocked: "" }, HOY);
-    upsertCheckin(db, FAUSTO, { done: "", doing: "", blocked: "espero credencial de Odoo" }, HOY);
+    upsertCheckin(db, OPERACIONES, { done: "cerré la spec de ritos", doing: "revisión de calidad", blocked: "" }, HOY);
+    upsertCheckin(db, PLATAFORMA, { done: "", doing: "", blocked: "espero credencial de Odoo" }, HOY);
 
     const d = buildDailyDigest(db, DIA_HOY);
 
@@ -84,12 +84,12 @@ describe("digest diario del equipo", () => {
     expect(d.empty).toBe(false);
 
     // Check-ins: exactamente los dos de hoy.
-    expect(d.checkins.map((c) => c.name).sort()).toEqual(["Fausto", "Vale"]);
+    expect(d.checkins.map((c) => c.name).sort()).toEqual(["Operaciones", "Plataforma"]);
     expect(d.counts.checkins).toBe(2);
 
     // Hecho: la entrega aprobada hoy.
     expect(d.done.map((e) => e.title)).toEqual(["Importador de CSV"]);
-    expect(d.done[0].actorName).toBe("Vale");
+    expect(d.done[0].actorName).toBe("Operaciones");
 
     // En curso: la que se movió hacia adelante hoy (no la de ayer).
     expect(d.advanced.map((e) => e.title)).toEqual(["Dashboard de seguimiento"]);
@@ -106,21 +106,21 @@ describe("digest diario del equipo", () => {
   });
 
   it("NO se cuela nada de otro día: cada digest solo trae su propio día", () => {
-    upsertCheckin(db, DAVID, { done: "ayer", doing: "", blocked: "" }, AYER);
-    upsertCheckin(db, VALE, { done: "hoy", doing: "", blocked: "" }, HOY);
+    upsertCheckin(db, PRODUCTO, { done: "ayer", doing: "", blocked: "" }, AYER);
+    upsertCheckin(db, OPERACIONES, { done: "hoy", doing: "", blocked: "" }, HOY);
 
-    const ayerTask = createAssignment(db, { title: "De ayer", ownerWallet: DAVID, status: "Asignada" });
-    applyAssignmentAction(db, { assignmentId: ayerTask, action: "empezar", actor: ACTORS[DAVID], now: AYER });
-    const hoyTask = createAssignment(db, { title: "De hoy", ownerWallet: VALE, status: "Asignada" });
-    applyAssignmentAction(db, { assignmentId: hoyTask, action: "empezar", actor: ACTORS[VALE], now: HOY });
+    const ayerTask = createAssignment(db, { title: "De ayer", ownerWallet: PRODUCTO, status: "Asignada" });
+    applyAssignmentAction(db, { assignmentId: ayerTask, action: "empezar", actor: ACTORS[PRODUCTO], now: AYER });
+    const hoyTask = createAssignment(db, { title: "De hoy", ownerWallet: OPERACIONES, status: "Asignada" });
+    applyAssignmentAction(db, { assignmentId: hoyTask, action: "empezar", actor: ACTORS[OPERACIONES], now: HOY });
 
     const hoy = buildDailyDigest(db, DIA_HOY);
-    expect(hoy.checkins.map((c) => c.name)).toEqual(["Vale"]);
+    expect(hoy.checkins.map((c) => c.name)).toEqual(["Operaciones"]);
     expect(hoy.checkins[0].done).toBe("hoy");
     expect(hoy.advanced.map((e) => e.title)).toEqual(["De hoy"]);
 
     const ayer = buildDailyDigest(db, DIA_AYER);
-    expect(ayer.checkins.map((c) => c.name)).toEqual(["David"]);
+    expect(ayer.checkins.map((c) => c.name)).toEqual(["Producto"]);
     expect(ayer.checkins[0].done).toBe("ayer");
     expect(ayer.advanced.map((e) => e.title)).toEqual(["De ayer"]);
 
@@ -131,17 +131,17 @@ describe("digest diario del equipo", () => {
   });
 
   it("editar el check-in el mismo día no lo duplica en el digest", () => {
-    upsertCheckin(db, VALE, { done: "primera versión", doing: "", blocked: "" }, HOY);
-    upsertCheckin(db, VALE, { done: "versión corregida", doing: "", blocked: "" }, HOY);
+    upsertCheckin(db, OPERACIONES, { done: "primera versión", doing: "", blocked: "" }, HOY);
+    upsertCheckin(db, OPERACIONES, { done: "versión corregida", doing: "", blocked: "" }, HOY);
     const d = buildDailyDigest(db, DIA_HOY);
     expect(d.checkins).toHaveLength(1);
     expect(d.checkins[0].done).toBe("versión corregida");
   });
 
   it("registra los desbloqueos del día como movimiento, no como cierre", () => {
-    const id = createAssignment(db, { title: "Marca de Harmony", ownerWallet: DAVID, status: "En curso" });
-    applyAssignmentAction(db, { assignmentId: id, action: "bloquear", reason: "espera diseño", actor: ACTORS[DAVID], now: AYER });
-    applyAssignmentAction(db, { assignmentId: id, action: "desbloquear", actor: ACTORS[DAVID], now: HOY });
+    const id = createAssignment(db, { title: "Marca de Harmony", ownerWallet: PRODUCTO, status: "En curso" });
+    applyAssignmentAction(db, { assignmentId: id, action: "bloquear", reason: "espera diseño", actor: ACTORS[PRODUCTO], now: AYER });
+    applyAssignmentAction(db, { assignmentId: id, action: "desbloquear", actor: ACTORS[PRODUCTO], now: HOY });
 
     const hoy = buildDailyDigest(db, DIA_HOY);
     expect(hoy.blocked).toHaveLength(0);
@@ -154,7 +154,7 @@ describe("digest diario del equipo", () => {
   });
 
   it("buildTodayDigest usa el día de la fecha que se le pasa", () => {
-    upsertCheckin(db, VALE, { done: "hoy", doing: "", blocked: "" }, HOY);
+    upsertCheckin(db, OPERACIONES, { done: "hoy", doing: "", blocked: "" }, HOY);
     const d = buildTodayDigest(db, HOY);
     expect(d.day).toBe(DIA_HOY);
     expect(d.counts.checkins).toBe(1);
@@ -168,28 +168,28 @@ describe("exportación en texto plano", () => {
   });
 
   it("rinde las tres secciones con los datos del día y no menciona ningún envío automático", () => {
-    const cerrada = createAssignment(db, { title: "Importador de CSV", ownerWallet: FAUSTO, status: "En revisión" });
-    applyAssignmentAction(db, { assignmentId: cerrada, action: "aprobar", actor: ACTORS[VALE], now: HOY });
-    const bloqueada = createAssignment(db, { title: "Integrar Odoo", ownerWallet: FAUSTO, status: "En curso" });
+    const cerrada = createAssignment(db, { title: "Importador de CSV", ownerWallet: PLATAFORMA, status: "En revisión" });
+    applyAssignmentAction(db, { assignmentId: cerrada, action: "aprobar", actor: ACTORS[OPERACIONES], now: HOY });
+    const bloqueada = createAssignment(db, { title: "Integrar Odoo", ownerWallet: PLATAFORMA, status: "En curso" });
     applyAssignmentAction(db, {
       assignmentId: bloqueada,
       action: "bloquear",
       reason: "Falta la credencial del cliente",
-      actor: ACTORS[FAUSTO],
+      actor: ACTORS[PLATAFORMA],
       now: HOY,
     });
-    upsertCheckin(db, VALE, { done: "cerré la spec", doing: "revisión de calidad", blocked: "" }, HOY);
+    upsertCheckin(db, OPERACIONES, { done: "cerré la spec", doing: "revisión de calidad", blocked: "" }, HOY);
 
     const text = renderDigestText(buildDailyDigest(db, DIA_HOY));
 
     expect(text).toContain(`Digest del equipo - ${DIA_HOY}`);
     expect(text).toContain("HECHO");
-    expect(text).toContain("Importador de CSV - entrega aprobada (Vale)");
-    expect(text).toContain("Vale: cerré la spec");
+    expect(text).toContain("Importador de CSV - entrega aprobada (Operaciones)");
+    expect(text).toContain("Operaciones: cerré la spec");
     expect(text).toContain("EN CURSO");
-    expect(text).toContain("Vale: revisión de calidad");
+    expect(text).toContain("Operaciones: revisión de calidad");
     expect(text).toContain("BLOQUEADO");
-    expect(text).toContain("Integrar Odoo - Falta la credencial del cliente (Fausto)");
+    expect(text).toContain("Integrar Odoo - Falta la credencial del cliente (Plataforma)");
     expect(text).toContain("1 check-ins - 1 entregas cerradas - 1 bloqueos nuevos");
     // Texto plano de verdad: sin markdown que estorbe al pegarlo.
     expect(text).not.toMatch(/[*#`|]/);
@@ -220,7 +220,7 @@ describe("puerta de acceso del digest (misma que el dashboard)", () => {
 
   it("un core normal recibe 403 al pedir el digest del equipo", () => {
     try {
-      dailyDigestFor(db, ACTORS[FAUSTO], DIA_HOY);
+      dailyDigestFor(db, ACTORS[PLATAFORMA], DIA_HOY);
       throw new Error("debió lanzar");
     } catch (e) {
       expect(e).toBeInstanceOf(TeamError);
@@ -239,7 +239,7 @@ describe("puerta de acceso del digest (misma que el dashboard)", () => {
   });
 
   it("founder y supervisora entran", () => {
-    expect(dailyDigestFor(db, ACTORS[JOHN], DIA_HOY).day).toBe(DIA_HOY);
-    expect(dailyDigestFor(db, ACTORS[VALE], DIA_HOY).day).toBe(DIA_HOY);
+    expect(dailyDigestFor(db, ACTORS[FUNDADOR], DIA_HOY).day).toBe(DIA_HOY);
+    expect(dailyDigestFor(db, ACTORS[OPERACIONES], DIA_HOY).day).toBe(DIA_HOY);
   });
 });

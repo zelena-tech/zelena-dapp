@@ -1,17 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/session";
-import { getQuiz, gradeQuiz } from "@/lib/academia";
+import { getQuiz, gradeQuiz, statusDeErrorAcademia } from "@/lib/academia";
 import { academiaQuizSchema } from "@/lib/validation";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
-// GET ?token=... → devuelve 3 preguntas (sin respuestas). Valida tiempo mínimo.
+// GET ?token=... → devuelve las 3 preguntas de ESTA lectura (sin respuestas). Valida el
+// tiempo mínimo. Siempre las mismas para la misma lectura (hallazgo A2: no recorre el pool).
 export async function GET(req: NextRequest) {
   const session = await getSession();
   if (!session || !session.claSigned) {
     return NextResponse.json({ error: "No autorizado." }, { status: 401 });
+  }
+  if (!rateLimit(`aca-quiz-get:${session.wallet}:${clientIp(req.headers)}`, 20, 60_000)) {
+    return NextResponse.json({ error: "Demasiadas solicitudes." }, { status: 429 });
   }
   const token = req.nextUrl.searchParams.get("token") ?? "";
   if (token.length < 8) return NextResponse.json({ error: "Token inválido." }, { status: 400 });
@@ -19,12 +23,12 @@ export async function GET(req: NextRequest) {
     const questions = getQuiz(getDb(), session.wallet, token);
     return NextResponse.json({ ok: true, questions });
   } catch (e) {
-    const code = (e as Error & { code?: string }).code;
-    return NextResponse.json({ error: (e as Error).message }, { status: code === "TOO_SOON" ? 403 : 400 });
+    return NextResponse.json({ error: (e as Error).message }, { status: statusDeErrorAcademia(e) });
   }
 }
 
-// POST → califica. Aprobar 2/3 desbloquea puntos.
+// POST → califica UNA vez las preguntas servidas en esta lectura. Aprobar 2/3 desbloquea
+// puntos; si no apruebas, no se dice cuántas acertaste y hay que esperar y volver a leer.
 export async function POST(req: NextRequest) {
   const session = await getSession();
   if (!session || !session.claSigned) {
@@ -41,8 +45,6 @@ export async function POST(req: NextRequest) {
     const r = gradeQuiz(getDb(), session.wallet, token, quizIds, answers);
     return NextResponse.json({ ok: true, ...r });
   } catch (e) {
-    const code = (e as Error & { code?: string }).code;
-    const status = code === "TOO_SOON" ? 403 : code === "DAILY_CAP" || code === "BUDGET" ? 409 : 400;
-    return NextResponse.json({ error: (e as Error).message }, { status });
+    return NextResponse.json({ error: (e as Error).message }, { status: statusDeErrorAcademia(e) });
   }
 }

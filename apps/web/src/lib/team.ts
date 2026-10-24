@@ -31,7 +31,7 @@ import {
   PENDING_PREFIX,
   ROLES_PROYECTO,
   SIN_PERMISOS,
-  TEAM_ROSTER,
+  rosterConfigurado,
   effectiveIsSupervisor,
   effectiveRole,
   esEquipoInterno,
@@ -64,7 +64,7 @@ import { cargarPiezaSla, slaConfig } from "./sla-db.ts";
 // Vocabularios
 // ---------------------------------------------------------------------------
 
-/** Horizonte de una iniciativa. `Después` del CSV de John se mapea a `Parqueado`. */
+/** Horizonte de una iniciativa. `Después` del CSV se mapea a `Parqueado`. */
 export const HORIZONS = ["Ahora", "Siguiente", "Parqueado"] as const;
 export type Horizon = (typeof HORIZONS)[number];
 
@@ -219,35 +219,55 @@ export function slugify(raw: string): string {
 }
 
 /**
- * Siembra los 6 del roster con su principal `pending:<slug>`. IDEMPOTENTE: se puede
- * llamar en cada arranque. No escribe correos ni ningún dato personal; la identidad
- * real (correo @zelena.tech, wallet) la vincula WP13.
+ * ¿La base ya tiene roster? Alguna fila `pending:<slug>` o algún vínculo en
+ * `roster_links` (una fila ya absorbida por una cuenta real).
+ */
+export function hayRosterEnLaBase(db: DB): boolean {
+  const pendiente = db.prepare(`SELECT 1 AS x FROM users WHERE wallet LIKE 'pending:%'`).get();
+  if (pendiente) return true;
+  return !!db.prepare(`SELECT 1 AS x FROM roster_links`).get();
+}
+
+/**
+ * Siembra las filas del roster con su principal `pending:<slug>`. IDEMPOTENTE: se
+ * puede llamar en cada arranque. No escribe correos ni ningún dato personal; la
+ * identidad real (correo @zelena.tech, wallet) la vincula WP13.
+ *
+ * De dónde salen las filas (hallazgo A8: el repo es público y no nombra personas):
+ *  - con `ZELENA_TEAM_ROSTER` (roster real, fuera del repo): se insertan las que faltan;
+ *  - sin ella, la PLANTILLA de roles del código (`TEAM_ROSTER`), y SOLO si la base
+ *    todavía no tiene roster (`hayRosterEnLaBase`). En una base que ya tiene sus filas
+ *    (producción, con los slugs viejos) no se inserta NADA: cambiar la plantilla nunca
+ *    crea filas nuevas ni duplica a nadie, y las filas existentes conservan su vínculo.
  *
  * También deriva role/is_supervisor de `is_founder` para las filas que ya existían
  * antes de WP14, para no cambiar el significado de ninguna de ellas.
  */
-export function seedTeamRoster(db: DB): void {
+export function seedTeamRoster(db: DB, env: Record<string, string | undefined> | undefined = process.env): void {
   // WP31-A2: el roster es DATO. Solo se insertan las filas que faltan; una fila que
   // ya existe conserva su rol y su supervisión (se cambian en /equipo/talento y el
   // cambio sobrevive al reinicio). Un slug presente en `roster_links` ya lo absorbió
   // una cuenta real (`vincularPrincipal`): su `pending:<slug>` no se vuelve a crear.
-  const ins = db.prepare(
-    `INSERT INTO users (wallet, display_name, tier, invited_by, status, is_demo, is_founder, cla_signed, role, is_supervisor)
-     VALUES (?, ?, 'Bronze', NULL, 'active', 0, 0, 0, ?, ?)`
-  );
-  const exists = db.prepare(`SELECT wallet FROM users WHERE wallet = ?`);
-  const vinculado = db.prepare(`SELECT wallet FROM roster_links WHERE slug = ?`);
-  for (const m of TEAM_ROSTER) {
-    if (vinculado.get(m.slug)) continue;
-    const principal = pendingPrincipal(m.slug);
-    if (exists.get(principal)) continue;
-    ins.run(principal, m.name, m.role, m.isSupervisor ? 1 : 0);
+  const { miembros, deEntorno } = rosterConfigurado(env);
+  if (deEntorno || !hayRosterEnLaBase(db)) {
+    const ins = db.prepare(
+      `INSERT INTO users (wallet, display_name, tier, invited_by, status, is_demo, is_founder, cla_signed, role, is_supervisor)
+       VALUES (?, ?, 'Bronze', NULL, 'active', 0, 0, 0, ?, ?)`
+    );
+    const exists = db.prepare(`SELECT wallet FROM users WHERE wallet = ?`);
+    const vinculado = db.prepare(`SELECT wallet FROM roster_links WHERE slug = ?`);
+    for (const m of miembros) {
+      if (vinculado.get(m.slug)) continue;
+      const principal = pendingPrincipal(m.slug);
+      if (exists.get(principal)) continue;
+      ins.run(principal, m.name, m.role, m.isSupervisor ? 1 : 0);
+    }
   }
   // Retrocompatibilidad: el founder ya existente pasa a role='founder' + supervisor.
   db.prepare(`UPDATE users SET role = 'founder', is_supervisor = 1 WHERE is_founder = 1`).run();
 }
 
-/** Iniciativas reales de los CSV de John (plano 07). Idempotente. */
+/** Iniciativas reales de los CSV del equipo (plano 07). Idempotente. */
 const SEED_INITIATIVES: Array<{ name: string; horizon: Horizon }> = [
   { name: "WMS", horizon: "Ahora" },
   { name: "Sistema Operativo", horizon: "Ahora" },
@@ -599,7 +619,7 @@ export function listBlocked(db: DB, actor?: TeamActor): AssignmentView[] {
   return actor ? piezasVisiblesPara(db, actor, rows) : rows;
 }
 
-/** Bandeja de gates de John: lo que espera una decisión suya (WP15). Con `actor`, solo lo que ve. */
+/** Bandeja de gates del founder: lo que espera una decisión suya (WP15). Con `actor`, solo lo que ve. */
 export function listNeedsFounder(db: DB, actor?: TeamActor): AssignmentView[] {
   const rows = db
     .prepare(`${VIEW_SELECT} WHERE a.needs_founder = 1 AND a.status <> 'Hecha' ${TODAY_ORDER}`)
@@ -1145,7 +1165,7 @@ export function actorFromSession(
  * no de la historia.
  *
  * `is_demo = 0` excluye al founder DEMO que crea `seed.ts`. Sin ese filtro esta
- * función devolvía 7 personas con John repetido (`pending:john` y la wallet demo),
+ * función devolvía 7 personas con el founder repetido (su `pending:<slug>` y la wallet demo),
  * lo que duplicaba su nombre en los desplegables de responsable y ponía el
  * denominador del rito en 7 en vez de 6. La causa de fondo —dos filas para el mismo
  * humano— es WP25; esto la contiene hasta que se unifique la identidad del founder.
@@ -1306,7 +1326,7 @@ function participaEnCliente(db: DB, ids: string[], clientId: number): boolean {
     .get(clientId, ...ids);
 }
 
-export function puedeVerProyecto(db: DB, actor: EquipoActor, initiativeId: number): boolean {
+export function puedeVerProyecto(db: DB, actor: EquipoActor | TeamActor, initiativeId: number): boolean {
   const ini = getInitiative(db, initiativeId);
   return !!ini && veIniciativa(db, actor, ini);
 }
@@ -1389,6 +1409,23 @@ function autorizarCambioDeRol(db: DB, actor: TeamActor, initiativeId: number, wa
  * Suma a una persona a un proyecto con un rol. Devuelve el id de la fila.
  * Vínculo por defecto: `externo` si `users.role = 'contributor'`, si no `interno`.
  */
+/**
+ * Por qué no se suma (ni recibe trabajo) una cuenta de demostración. Desde la decisión del
+ * founder (2026-10-21) solo lo son las cuentas sembradas y quien entró con un código de
+ * demostración: la wallet creada en el navegador con una invitación válida es una cuenta
+ * real (performOnboard).
+ */
+export const COPY_CUENTA_DE_PRUEBA =
+  "Esa es una cuenta de demostración (entró con un código de demostración): para trabajar en un proyecto necesita una invitación real.";
+
+const COPY_NO_ACTIVA = "Esa persona no está activa en el registro.";
+
+/** Lanza el 400 que corresponde si `u` no puede recibir trabajo: inexistente, inactiva o de prueba. */
+function exigirCuentaReal(u: { status: string; is_demo: number } | undefined): asserts u {
+  if (!u || u.status !== "active") throw new TeamError(400, COPY_NO_ACTIVA);
+  if (u.is_demo !== 0) throw new TeamError(400, COPY_CUENTA_DE_PRUEBA);
+}
+
 export function agregarMiembro(
   db: DB,
   actor: TeamActor,
@@ -1400,9 +1437,7 @@ export function agregarMiembro(
     throw new TeamError(400, "El vínculo es interno o externo.");
   }
   const u = usuarioBasico(db, wallet);
-  if (!u || u.status !== "active" || u.is_demo !== 0) {
-    throw new TeamError(400, "Esa persona no está activa en el registro.");
-  }
+  exigirCuentaReal(u);
   const vinculo: Vinculo = input.vinculo ?? (u.role === "contributor" ? "externo" : "interno");
   // Sin acuerdo de contribución no hay primer trabajo.
   if ((u.role === "contributor" || vinculo === "externo") && u.cla_signed !== 1) {
@@ -1644,9 +1679,7 @@ export function candidatosParaProyecto(
  * miembro del proyecto. Lanza 400 con el paso a seguir si no.
  */
 function validarDestino(db: DB, u: UsuarioBasico, initiativeId: number | null): void {
-  if (u.status !== "active" || u.is_demo !== 0) {
-    throw new TeamError(400, "Esa persona no está activa en el registro.");
-  }
+  exigirCuentaReal(u);
   if (esInternoActivo(u)) return;
   if (initiativeId !== null && esMiembroDe(db, identidadesDe(db, u.wallet), initiativeId)) return;
   throw new TeamError(400, "Primero súmale al proyecto.");

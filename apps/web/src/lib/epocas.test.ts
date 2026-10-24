@@ -269,7 +269,11 @@ describe("raíz reproducible tras el cierre (criterio B10b)", () => {
     const { token } = startReading(db, W, content.id);
     db.prepare(`UPDATE reading_sessions SET active_seconds = 999, started_at = ? WHERE token = ?`).run(Date.now() - 999_000, token);
     const quiz = getQuiz(db, W, token);
-    const respuestas = quiz.map((q) => (db.prepare(`SELECT correct FROM academia_quiz WHERE id = ?`).get(q.id) as { correct: number }).correct);
+    // La correcta guardada, buscada por su texto: las opciones se muestran barajadas (A2).
+    const respuestas = quiz.map((q) => {
+      const f = db.prepare(`SELECT options, correct FROM academia_quiz WHERE id = ?`).get(q.id) as { options: string; correct: number };
+      return q.options.indexOf((JSON.parse(f.options) as string[])[f.correct]);
+    });
     expect(gradeQuiz(db, W, token, quiz.map((q) => q.id), respuestas).points).toBeGreaterThan(0);
 
     // Todo cayó en la época abierta…

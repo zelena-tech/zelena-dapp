@@ -8,9 +8,11 @@ import { rateLimit, clientIp } from "@/lib/rate-limit";
 export const dynamic = "force-dynamic";
 
 /**
- * Reingreso de una wallet ya registrada. La autenticación es la firma ed25519
- * sobre el payload del CLA; no consume invitación ni escribe en la base.
- * El handler solo invoca a lib/onboard.performLogin (ver CLAUDE.md).
+ * Reingreso de una wallet ya registrada, por reto-respuesta: `{ wallet, nonce,
+ * signature }`, donde `nonce` lo emitió `/api/login/reto` y `signature` es la firma
+ * ed25519 de `zelena-login-testnet-v1:<sitio>:<nonce>`. El reto se consume en el intento (un
+ * solo uso). La firma fija del CLA ya NO sirve para entrar. No consume invitación ni
+ * escribe en la base. El handler solo invoca a lib/onboard.performLogin (ver CLAUDE.md).
  */
 export async function POST(req: NextRequest) {
   const ip = clientIp(req.headers);

@@ -13,13 +13,13 @@ export type Encuentro = {
   /** Texto tal cual se muestra: "Gratis", "$50.000 COP"… */
   precio: string;
   descripcion: string;
-  /** Página de inscripción (Luma, formulario, etc.). */
+  /** Página de inscripción (lu.ma, un formulario, etc.). */
   registro: string;
 };
 
 export const ENCUENTROS: Encuentro[] = [];
 
-// Cómo queremos que sean. Salen del calendario ritual del whitepaper (demo
+// Cómo queremos que sean. Salen del calendario de ritos de la comunidad (demo
 // quincenal, retro mensual pública) más la jornada abierta para construir.
 export const FORMATOS = [
   {

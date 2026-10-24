@@ -69,8 +69,12 @@ describe("cifrasEnVivo", () => {
     expect(c.firmasRegistradas).toBe(0);
     expect(c.entregasAprobadas).toBe(0);
     expect(c.ultimaFirmaAnclada).toBeNull();
+    // Los proyectos sembrados nacen en borrador (decisión del founder, 2026-10-21): no cuentan.
     const abiertos = (db.prepare(`SELECT COUNT(*) AS n FROM projects WHERE state = 'Open'`).get() as { n: number }).n;
-    expect(c.proyectosAbiertos).toBe(abiertos);
+    expect(abiertos).toBeGreaterThan(0);
+    expect(c.proyectosAbiertos).toBe(0);
+    db.prepare(`UPDATE projects SET draft = 0 WHERE id = 1`).run();
+    expect(cifrasEnVivo(db).proyectosAbiertos).toBe(1);
   });
 
   it("las firmas de cuentas reales con una tx de Stellar cuentan; demo y SEEDTX no", () => {

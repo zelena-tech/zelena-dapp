@@ -25,6 +25,12 @@ describe("esquema idempotente y migraciones (fusión v1)", () => {
       "users.auth_provider",
       "invites.max_uses",
       "invites.uses",
+      "projects.draft",
+      "projects.origin",
+      "anchor_queue.claimed_at",
+      "reading_sessions.quiz_ids",
+      "reading_sessions.graded_at",
+      "reading_sessions.quiz_orden",
     ]);
   });
 
@@ -44,7 +50,10 @@ describe("esquema idempotente y migraciones (fusión v1)", () => {
 
     expect(columnasFaltantes(db)).toHaveLength(6);
     const aplicadas = applyMigrations(db);
-    expect(aplicadas).toEqual(COLUMNAS_NUEVAS.map((c) => `${c.tabla}.${c.columna}`));
+    // Solo las de las tablas que existen (users e invites); el resto lo crea schema.sql.
+    expect(aplicadas).toEqual(
+      COLUMNAS_NUEVAS.filter((c) => c.tabla === "users" || c.tabla === "invites").map((c) => `${c.tabla}.${c.columna}`)
+    );
     expect(columnasFaltantes(db)).toEqual([]);
 
     // El dato preexistente sobrevive con los valores por defecto de v1.

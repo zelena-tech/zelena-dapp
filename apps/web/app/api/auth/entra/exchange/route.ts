@@ -21,28 +21,30 @@ import { getDb } from "@/lib/db";
 import { corporateDomain, entraSettings, isEntraEnabled } from "@/lib/config";
 import { entraLogin, EntraLinkError } from "@/lib/entra";
 import { signSession, SESSION_COOKIE } from "@/lib/jwt";
+import { COOKIES_NEXTAUTH, opcionesBorrado, urlPublica } from "@/lib/url-publica";
 import { AFTER_LOGIN_PATH, bridgeFromToken, LOGIN_PATH } from "../../entra-options";
 
 export const dynamic = "force-dynamic";
 
-/** Cookies que usa NextAuth v4 según el esquema (http/https). Se limpian ambas. */
-const NEXTAUTH_COOKIES = [
-  "next-auth.session-token",
-  "__Secure-next-auth.session-token",
-  "next-auth.callback-url",
-  "__Secure-next-auth.callback-url",
-  "next-auth.csrf-token",
-  "__Host-next-auth.csrf-token",
-];
+/**
+ * Borra las cookies de NextAuth (sesión efímera, CSRF, state, PKCE…). Con el `Secure`
+ * que exigen los prefijos `__Secure-`/`__Host-`: sin él, detrás de https el navegador
+ * ignora el borrado (ver lib/url-publica.ts).
+ */
+function borrarCookiesNextAuth(res: NextResponse): void {
+  for (const name of COOKIES_NEXTAUTH) res.cookies.set(name, "", opcionesBorrado(name));
+}
 
+/**
+ * Redirecciones con la URL PÚBLICA (`NEXTAUTH_URL`), nunca con `req.nextUrl`: detrás de
+ * Azure Front Door, `req.nextUrl` es el host interno del contenedor (`0.0.0.0:8080`).
+ */
 function backToLogin(req: NextRequest, reason: string, message?: string): NextResponse {
-  const url = req.nextUrl.clone();
-  url.pathname = LOGIN_PATH;
-  url.search = "";
+  const url = urlPublica(LOGIN_PATH, req.nextUrl.origin);
   url.searchParams.set("error", reason);
   if (message) url.searchParams.set("motivo", message);
   const res = NextResponse.redirect(url);
-  for (const name of NEXTAUTH_COOKIES) res.cookies.delete(name);
+  borrarCookiesNextAuth(res);
   return res;
 }
 
@@ -87,9 +89,7 @@ export async function GET(req: NextRequest) {
     isSupervisor: login.isSupervisor,
   });
 
-  const url = req.nextUrl.clone();
-  url.pathname = AFTER_LOGIN_PATH;
-  url.search = "";
+  const url = urlPublica(AFTER_LOGIN_PATH, req.nextUrl.origin);
   // El banner del segundo correo lo decide el servidor leyendo la base; esto es solo
   // para que la primera pantalla tras el alta lo señale sin esperar otra vuelta.
   if (login.needsRecoveryEmail) url.searchParams.set("segundo_correo", "pendiente");
@@ -102,6 +102,6 @@ export async function GET(req: NextRequest) {
     path: "/",
     maxAge: 60 * 60 * 24,
   });
-  for (const name of NEXTAUTH_COOKIES) res.cookies.delete(name);
+  borrarCookiesNextAuth(res);
   return res;
 }

@@ -1,6 +1,8 @@
 # Whitepaper — Zelena DAO
 
-Versión 1 · Julio de 2026 · Documento público del repositorio open source
+Versión 1 · Julio de 2026 · **Documento interno de referencia; el sitio ya no lo publica, ver el [manifiesto](https://www.zelena.tech/manifiesto).**
+
+> La página `/whitepaper` redirige al manifiesto, que cumple la misma función con más claridad, y la mecánica se explica en `/metodo` y `/comunidad`. Este archivo se conserva en el repositorio como respaldo de diseño: lo que diga el sitio manda sobre lo que diga aquí.
 
 > Este documento describe cómo funciona la comunidad Zelena. No es una oferta de valores, ni asesoría legal, financiera o de inversión. Todo lo aquí descrito corre hoy en **testnet**; el paso a mainnet está condicionado a auditoría, acuerdo de anchor y clasificación legal de los pagos. Muchas de las mecánicas están en fase de validación con una cohorte pequeña antes de codificarse en contratos.
 
@@ -36,7 +38,7 @@ Zelena parte de una creencia central: **el valor que entregas debería determina
 
 ### 3.1 Capa 1 — WMS (validado)
 
-El **Fulfillment Management System** es un sistema de gestión logística de extremo a extremo que controla el ciclo completo de fulfillment desde una sola plataforma. Nació resolviendo un problema real de un cliente real, y hoy opera con **clientes reales en Colombia**, llegados por recomendación, sin inversión en publicidad y sin capital externo.
+El **WMS** (sistema de gestión de bodega) es un sistema de gestión logística de extremo a extremo que controla el ciclo completo de la operación de bodega desde una sola plataforma. Nació resolviendo un problema real de un cliente real, y hoy opera con **clientes reales en Colombia**, llegados por recomendación, sin inversión en publicidad y sin capital externo.
 
 Cubre la operación completa: autenticación con roles, productos, órdenes, picking optimizado por ruta, packing, ubicaciones, recepción, reportes de avería, métricas de desempeño, facturación y traslados.
 

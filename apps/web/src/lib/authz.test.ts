@@ -3,7 +3,7 @@
  * auditoría v1).
  *
  * Las tres invariantes que fija este archivo:
- *  1. El founder que entra por la puerta corporativa (principal `pending:john`, NO
+ *  1. El founder que entra por la puerta corporativa (principal `pending:founder`, NO
  *     `FOUNDER_WALLET`) conserva la administración. Era el bug latente que detonaba
  *     al encender WP13.
  *  2. La autoridad es la tabla `users`, no la cookie: una cookie que MIENTE
@@ -30,6 +30,8 @@ import { FOUNDER_WALLET } from "./config";
 import { Keypair } from "@stellar/stellar-sdk";
 import { claCanonicalHash } from "./cla";
 import { claSigningPayload } from "./cla-signing";
+import { SITIO_ENTRADA_DEFAULT, loginSigningPayload } from "./login-signing";
+import { AlmacenRetos } from "./login-reto";
 import { performLogin, performOnboard } from "./onboard";
 import { agregarMiembro, crearProyecto, seedTeam } from "./team";
 
@@ -71,8 +73,8 @@ describe("adminActor: gate contra la base", () => {
     db = seededDb();
   });
 
-  it("D3-01 · el founder que entra por Entra (pending:john) SÍ administra", () => {
-    const principal = pendingPrincipal("john");
+  it("D3-01 · el founder que entra por Entra (pending:founder) SÍ administra", () => {
+    const principal = pendingPrincipal("founder");
     // Precondición del bug: su principal NO es FOUNDER_WALLET.
     expect(principal).not.toBe(FOUNDER_WALLET);
     const row = db.prepare(`SELECT role FROM users WHERE wallet = ?`).get(principal) as
@@ -90,14 +92,14 @@ describe("adminActor: gate contra la base", () => {
   });
 
   it("una cookie que MIENTE diciéndose founder no administra", () => {
-    const fausto = pendingPrincipal("fausto");
-    const actor = adminActor(sesion(fausto, { role: "founder", isFounder: true, isSupervisor: true }), db);
+    const plataforma = pendingPrincipal("plataforma");
+    const actor = adminActor(sesion(plataforma, { role: "founder", isFounder: true, isSupervisor: true }), db);
     expect(actor).toBeNull(); // la fila dice `core`, y la fila manda
   });
 
   it("un core y una supervisora no administran; sin sesión tampoco", () => {
-    expect(adminActor(sesion(pendingPrincipal("fausto")), db)).toBeNull();
-    expect(adminActor(sesion(pendingPrincipal("vale")), db)).toBeNull(); // core + supervisora
+    expect(adminActor(sesion(pendingPrincipal("plataforma")), db)).toBeNull();
+    expect(adminActor(sesion(pendingPrincipal("operaciones")), db)).toBeNull(); // core + supervisora
     expect(adminActor(null, db)).toBeNull();
   });
 });
@@ -109,7 +111,7 @@ describe("equipoInternoActor: gate de /equipo", () => {
   });
 
   it("los 6 del roster entran al módulo equipo", () => {
-    for (const slug of ["john", "vale", "juan", "david", "fausto", "angela"]) {
+    for (const slug of ["founder", "operaciones", "finanzas", "producto", "plataforma", "contenido"]) {
       expect(equipoInternoActor(sesion(pendingPrincipal(slug)), db), slug).not.toBeNull();
     }
   });
@@ -215,7 +217,7 @@ describe("demoInvitesAllowed: los códigos GENESIS no existen en producción", (
 // WP31 · A1, A9, A10, A11 — la puerta de /equipo con quien trabaja por proyecto
 // ---------------------------------------------------------------------------
 
-const JOHN_ACTOR = { wallet: pendingPrincipal("john"), name: "John", role: "founder" as const, isSupervisor: true };
+const FUNDADOR_ACTOR = { wallet: pendingPrincipal("founder"), name: "Founder", role: "founder" as const, isSupervisor: true };
 
 function dbEquipo(): DB {
   const db = openDb(":memory:");
@@ -238,7 +240,7 @@ describe("WP31 · A1 · equipoActor: la puerta de /equipo", () => {
   beforeEach(() => {
     db = dbEquipo();
     contributor(db, ANA);
-    p = crearProyecto(db, JOHN_ACTOR, { name: "Proyecto Abierto" }).id;
+    p = crearProyecto(db, FUNDADOR_ACTOR, { name: "Proyecto Abierto" }).id;
   });
 
   it("contributor sin membresía → null", () => {
@@ -247,7 +249,7 @@ describe("WP31 · A1 · equipoActor: la puerta de /equipo", () => {
   });
 
   it("contributor con membresía y acuerdo firmado → alcance 'proyectos' con sus proyectos", () => {
-    agregarMiembro(db, JOHN_ACTOR, { initiativeId: p, wallet: ANA, rol: "ejecuta" });
+    agregarMiembro(db, FUNDADOR_ACTOR, { initiativeId: p, wallet: ANA, rol: "ejecuta" });
     const a = equipoActor(sesion(ANA), db);
     expect(a?.alcance).toBe("proyectos");
     expect(a?.proyectos).toEqual([p]);
@@ -256,17 +258,17 @@ describe("WP31 · A1 · equipoActor: la puerta de /equipo", () => {
   });
 
   it("con membresía pero SIN acuerdo → null (aunque la fila exista)", () => {
-    agregarMiembro(db, JOHN_ACTOR, { initiativeId: p, wallet: ANA, rol: "ejecuta" });
+    agregarMiembro(db, FUNDADOR_ACTOR, { initiativeId: p, wallet: ANA, rol: "ejecuta" });
     db.prepare(`UPDATE users SET cla_signed = 0 WHERE wallet = ?`).run(ANA);
     expect(equipoActor(sesion(ANA), db)).toBeNull();
   });
 
   it("core → 'equipo'; founder → 'equipo'; alumni → null; sin sesión o sin fila → null", () => {
-    expect(equipoActor(sesion(pendingPrincipal("fausto")), db)?.alcance).toBe("equipo");
-    expect(equipoActor(sesion(pendingPrincipal("john")), db)?.alcance).toBe("equipo");
-    db.prepare(`UPDATE users SET status = 'alumni' WHERE wallet = ?`).run(pendingPrincipal("david"));
-    expect(equipoActor(sesion(pendingPrincipal("david")), db)).toBeNull();
-    agregarMiembro(db, JOHN_ACTOR, { initiativeId: p, wallet: ANA, rol: "ejecuta" });
+    expect(equipoActor(sesion(pendingPrincipal("plataforma")), db)?.alcance).toBe("equipo");
+    expect(equipoActor(sesion(pendingPrincipal("founder")), db)?.alcance).toBe("equipo");
+    db.prepare(`UPDATE users SET status = 'alumni' WHERE wallet = ?`).run(pendingPrincipal("producto"));
+    expect(equipoActor(sesion(pendingPrincipal("producto")), db)).toBeNull();
+    agregarMiembro(db, FUNDADOR_ACTOR, { initiativeId: p, wallet: ANA, rol: "ejecuta" });
     db.prepare(`UPDATE users SET status = 'alumni' WHERE wallet = ?`).run(ANA);
     expect(equipoActor(sesion(ANA), db)).toBeNull();
     expect(equipoActor(null, db)).toBeNull();
@@ -274,7 +276,7 @@ describe("WP31 · A1 · equipoActor: la puerta de /equipo", () => {
   });
 
   it("la cookie no concede nada: un contributor que se declara founder sigue siendo contributor", () => {
-    agregarMiembro(db, JOHN_ACTOR, { initiativeId: p, wallet: ANA, rol: "ejecuta" });
+    agregarMiembro(db, FUNDADOR_ACTOR, { initiativeId: p, wallet: ANA, rol: "ejecuta" });
     const a = equipoActor(sesion(ANA, { role: "founder", isFounder: true, isSupervisor: true }), db);
     expect(a?.role).toBe("contributor");
     expect(a?.isSupervisor).toBe(false);
@@ -282,7 +284,7 @@ describe("WP31 · A1 · equipoActor: la puerta de /equipo", () => {
   });
 
   it("A10 · un contributor miembro no entra a /clientes ni al equipo interno", () => {
-    agregarMiembro(db, JOHN_ACTOR, { initiativeId: p, wallet: ANA, rol: "estructura" });
+    agregarMiembro(db, FUNDADOR_ACTOR, { initiativeId: p, wallet: ANA, rol: "estructura" });
     expect(clientActor(sesion(ANA), db)).toBeNull();
     expect(equipoInternoActor(sesion(ANA), db)).toBeNull();
     expect(adminActor(sesion(ANA), db)).toBeNull();
@@ -294,16 +296,20 @@ describe("WP31 · A11 · reingreso: un contributor miembro vuelve a entrar y lle
     const db = dbEquipo();
     db.prepare(
       `INSERT INTO invites (code, issuer_wallet, expires_at) VALUES ('INVITA-PRUEBA', ?, datetime('now','+30 days'))`
-    ).run(pendingPrincipal("john"));
+    ).run(pendingPrincipal("founder"));
     const kp = Keypair.random();
     const wallet = kp.publicKey();
     const hash = claCanonicalHash();
     const firma = Buffer.from(kp.sign(Buffer.from(claSigningPayload(hash), "utf8"))).toString("base64");
     performOnboard(db, { code: "INVITA-PRUEBA", wallet, name: "Ana", isDemo: false, claHash: hash, signature: firma });
-    const p = crearProyecto(db, JOHN_ACTOR, { name: "Proyecto De Regreso" }).id;
-    agregarMiembro(db, JOHN_ACTOR, { initiativeId: p, wallet, rol: "ejecuta" });
+    const p = crearProyecto(db, FUNDADOR_ACTOR, { name: "Proyecto De Regreso" }).id;
+    agregarMiembro(db, FUNDADOR_ACTOR, { initiativeId: p, wallet, rol: "ejecuta" });
 
-    const login = performLogin(db, { wallet, claHash: hash, signature: firma });
+    // Reingreso por reto (lib/login-reto.ts): la firma del CLA ya no sirve para entrar.
+    const retos = new AlmacenRetos();
+    const { nonce } = retos.emitir(wallet);
+    const firmaEntrada = Buffer.from(kp.sign(Buffer.from(loginSigningPayload(SITIO_ENTRADA_DEFAULT, nonce), "utf8"))).toString("base64");
+    const login = performLogin(db, { wallet, nonce, signature: firmaEntrada }, retos);
     expect(login.role).toBe("contributor");
     // La cookie se firma con lo que devuelve el login; la puerta relee la base.
     const a = equipoActor({ wallet: login.wallet, name: login.name, role: login.role, isSupervisor: login.isSupervisor }, db);

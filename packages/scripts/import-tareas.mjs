@@ -12,7 +12,7 @@
  *
  * Ejemplo (paso 7 del despliegue, con los CSV reales de John, que viven FUERA
  * del repo y no se versionan):
- *   node packages/scripts/import-tareas.mjs "C:/Users/Omnia/Desktop/DAO/Zelena_Tareas_Import.csv"
+ *   node packages/scripts/import-tareas.mjs "<ruta>/tareas.csv"
  *
  * Columnas esperadas:
  *   Task Name, Description, Status, Priority, Assignee, Iniciativa, Horizonte,

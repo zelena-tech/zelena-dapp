@@ -30,10 +30,10 @@ import {
 import { instanteLocal } from "./zona-horaria";
 import { clearGenomeCache } from "./genome";
 
-const JOHN = pendingPrincipal("john");
-const VALE = pendingPrincipal("vale");
-const FAUSTO = pendingPrincipal("fausto");
-const DAVID = pendingPrincipal("david");
+const FUNDADOR = pendingPrincipal("founder");
+const OPERACIONES = pendingPrincipal("operaciones");
+const PLATAFORMA = pendingPrincipal("plataforma");
+const PRODUCTO = pendingPrincipal("producto");
 
 /** Lunes 2026-07-27. Jueves de esa semana = 2026-07-30. Construidos en hora local
  *  (mediodía) para que ningún desplazamiento de zona horaria corra el día. */
@@ -50,10 +50,10 @@ function freshDb(): DB {
 }
 
 const ACTORS: Record<string, TeamActor> = {
-  [JOHN]: { wallet: JOHN, name: "John", role: "founder", isSupervisor: true },
-  [VALE]: { wallet: VALE, name: "Vale", role: "core", isSupervisor: true },
-  [FAUSTO]: { wallet: FAUSTO, name: "Fausto", role: "core", isSupervisor: false },
-  [DAVID]: { wallet: DAVID, name: "David", role: "core", isSupervisor: false },
+  [FUNDADOR]: { wallet: FUNDADOR, name: "Founder", role: "founder", isSupervisor: true },
+  [OPERACIONES]: { wallet: OPERACIONES, name: "Operaciones", role: "core", isSupervisor: true },
+  [PLATAFORMA]: { wallet: PLATAFORMA, name: "Plataforma", role: "core", isSupervisor: false },
+  [PRODUCTO]: { wallet: PRODUCTO, name: "Producto", role: "core", isSupervisor: false },
 };
 
 describe("días de calendario", () => {
@@ -78,7 +78,7 @@ describe("bloqueos primero (criterio 1 y 2 de WP15)", () => {
     const id = createAssignment(db, {
       title: "Migrar inventario del WMS",
       initiativeId: wms,
-      ownerWallet: FAUSTO,
+      ownerWallet: PLATAFORMA,
       status: "Backlog",
     });
 
@@ -86,13 +86,13 @@ describe("bloqueos primero (criterio 1 y 2 de WP15)", () => {
     expect(blockedWithAge(db, JUEVES)).toHaveLength(0);
 
     // Recorrido REAL de la UI: tomar → empezar → bloquear con motivo.
-    applyAssignmentAction(db, { assignmentId: id, action: "asignar", actor: ACTORS[FAUSTO], now: LUNES });
-    applyAssignmentAction(db, { assignmentId: id, action: "empezar", actor: ACTORS[FAUSTO], now: LUNES });
+    applyAssignmentAction(db, { assignmentId: id, action: "asignar", actor: ACTORS[PLATAFORMA], now: LUNES });
+    applyAssignmentAction(db, { assignmentId: id, action: "empezar", actor: ACTORS[PLATAFORMA], now: LUNES });
     applyAssignmentAction(db, {
       assignmentId: id,
       action: "bloquear",
       reason: "Falta la credencial del cliente",
-      actor: ACTORS[FAUSTO],
+      actor: ACTORS[PLATAFORMA],
       now: LUNES,
     });
 
@@ -102,7 +102,7 @@ describe("bloqueos primero (criterio 1 y 2 de WP15)", () => {
     expect(items[0].assignment.id).toBe(id);
     expect(items[0].assignment.title).toBe("Migrar inventario del WMS");
     expect(items[0].reason).toBe("Falta la credencial del cliente");
-    expect(items[0].assignment.owner_name).toBe("Fausto");
+    expect(items[0].assignment.owner_name).toBe("Plataforma");
     expect(items[0].since).toBe("2026-07-27");
     expect(items[0].daysBlocked).toBe(3);
     // Los días salen del historial append-only, no de una columna nueva.
@@ -116,36 +116,36 @@ describe("bloqueos primero (criterio 1 y 2 de WP15)", () => {
   });
 
   it("desbloquear en /equipo/hoy lo saca del dashboard en el siguiente render", () => {
-    const id = createAssignment(db, { title: "Integrar Odoo", ownerWallet: DAVID, status: "Backlog" });
-    applyAssignmentAction(db, { assignmentId: id, action: "asignar", actor: ACTORS[DAVID], now: LUNES });
+    const id = createAssignment(db, { title: "Integrar Odoo", ownerWallet: PRODUCTO, status: "Backlog" });
+    applyAssignmentAction(db, { assignmentId: id, action: "asignar", actor: ACTORS[PRODUCTO], now: LUNES });
     applyAssignmentAction(db, {
       assignmentId: id,
       action: "bloquear",
       reason: "Espera decisión de alcance",
-      actor: ACTORS[DAVID],
+      actor: ACTORS[PRODUCTO],
       now: LUNES,
     });
     expect(blockedWithAge(db, JUEVES)).toHaveLength(1);
 
-    applyAssignmentAction(db, { assignmentId: id, action: "desbloquear", actor: ACTORS[DAVID], now: MARTES });
+    applyAssignmentAction(db, { assignmentId: id, action: "desbloquear", actor: ACTORS[PRODUCTO], now: MARTES });
     expect(blockedWithAge(db, JUEVES)).toHaveLength(0);
   });
 
   it("un re-bloqueo cuenta días desde el bloqueo VIGENTE, no desde el primero", () => {
-    const id = createAssignment(db, { title: "Definir marca de Harmony", ownerWallet: DAVID, status: "Asignada" });
+    const id = createAssignment(db, { title: "Definir marca de Harmony", ownerWallet: PRODUCTO, status: "Asignada" });
     applyAssignmentAction(db, {
       assignmentId: id,
       action: "bloquear",
       reason: "Primer bloqueo",
-      actor: ACTORS[DAVID],
+      actor: ACTORS[PRODUCTO],
       now: LUNES,
     });
-    applyAssignmentAction(db, { assignmentId: id, action: "desbloquear", actor: ACTORS[DAVID], now: LUNES });
+    applyAssignmentAction(db, { assignmentId: id, action: "desbloquear", actor: ACTORS[PRODUCTO], now: LUNES });
     applyAssignmentAction(db, {
       assignmentId: id,
       action: "bloquear",
       reason: "Segundo bloqueo, otro motivo",
-      actor: ACTORS[DAVID],
+      actor: ACTORS[PRODUCTO],
       now: MARTES,
     });
 
@@ -157,14 +157,14 @@ describe("bloqueos primero (criterio 1 y 2 de WP15)", () => {
   });
 
   it("ordena los bloqueos del más viejo al más nuevo y no inventa antigüedad cuando no hay registro", () => {
-    const viejo = createAssignment(db, { title: "Bloqueo viejo", ownerWallet: FAUSTO, status: "En curso" });
-    const nuevo = createAssignment(db, { title: "Bloqueo nuevo", ownerWallet: DAVID, status: "En curso" });
+    const viejo = createAssignment(db, { title: "Bloqueo viejo", ownerWallet: PLATAFORMA, status: "En curso" });
+    const nuevo = createAssignment(db, { title: "Bloqueo nuevo", ownerWallet: PRODUCTO, status: "En curso" });
     // Fila creada directamente como Bloqueada, sin evento y sin blocked_at:
     // el importador o un dato previo pueden verse así.
-    const sinRegistro = createAssignment(db, { title: "Sin registro", ownerWallet: DAVID, status: "Bloqueada" });
+    const sinRegistro = createAssignment(db, { title: "Sin registro", ownerWallet: PRODUCTO, status: "Bloqueada" });
 
-    applyAssignmentAction(db, { assignmentId: viejo, action: "bloquear", reason: "a", actor: ACTORS[FAUSTO], now: LUNES });
-    applyAssignmentAction(db, { assignmentId: nuevo, action: "bloquear", reason: "b", actor: ACTORS[DAVID], now: MARTES });
+    applyAssignmentAction(db, { assignmentId: viejo, action: "bloquear", reason: "a", actor: ACTORS[PLATAFORMA], now: LUNES });
+    applyAssignmentAction(db, { assignmentId: nuevo, action: "bloquear", reason: "b", actor: ACTORS[PRODUCTO], now: MARTES });
 
     const items = blockedWithAge(db, JUEVES);
     expect(items.map((i) => i.assignment.id)).toEqual([viejo, nuevo, sinRegistro]);
@@ -175,13 +175,13 @@ describe("bloqueos primero (criterio 1 y 2 de WP15)", () => {
   });
 });
 
-describe("esperando a John (bandeja de gates)", () => {
+describe("esperando a Founder (bandeja de gates)", () => {
   it("trae solo lo marcado needs_founder y no lo ya cerrado", () => {
     const db = freshDb();
-    createAssignment(db, { title: "Decidir presupuesto de Harmony", ownerWallet: JOHN, needsFounder: true });
-    createAssignment(db, { title: "Aprobar identidad visual", ownerWallet: DAVID, needsFounder: true });
-    createAssignment(db, { title: "Trabajo normal", ownerWallet: DAVID });
-    createAssignment(db, { title: "Gate ya resuelto", ownerWallet: DAVID, needsFounder: true, status: "Hecha" });
+    createAssignment(db, { title: "Decidir presupuesto de Harmony", ownerWallet: FUNDADOR, needsFounder: true });
+    createAssignment(db, { title: "Aprobar identidad visual", ownerWallet: PRODUCTO, needsFounder: true });
+    createAssignment(db, { title: "Trabajo normal", ownerWallet: PRODUCTO });
+    createAssignment(db, { title: "Gate ya resuelto", ownerWallet: PRODUCTO, needsFounder: true, status: "Hecha" });
 
     const inbox = founderInbox(db);
     expect(inbox.map((a) => a.title).sort()).toEqual([
@@ -198,46 +198,46 @@ describe("carga por persona: repartir, no rankear (doc 16)", () => {
   });
 
   it("cuenta abiertas y en curso por miembro y separa el trabajo sin responsable", () => {
-    createAssignment(db, { title: "A", ownerWallet: FAUSTO, status: "En curso" });
-    createAssignment(db, { title: "B", ownerWallet: FAUSTO, status: "En curso" });
-    createAssignment(db, { title: "C", ownerWallet: FAUSTO, status: "En revisión" });
-    createAssignment(db, { title: "D", ownerWallet: DAVID, status: "Asignada", needsFounder: true });
-    createAssignment(db, { title: "E", ownerWallet: DAVID, status: "Bloqueada" });
+    createAssignment(db, { title: "A", ownerWallet: PLATAFORMA, status: "En curso" });
+    createAssignment(db, { title: "B", ownerWallet: PLATAFORMA, status: "En curso" });
+    createAssignment(db, { title: "C", ownerWallet: PLATAFORMA, status: "En revisión" });
+    createAssignment(db, { title: "D", ownerWallet: PRODUCTO, status: "Asignada", needsFounder: true });
+    createAssignment(db, { title: "E", ownerWallet: PRODUCTO, status: "Bloqueada" });
     createAssignment(db, { title: "F", ownerWallet: null, status: "Backlog" });
-    createAssignment(db, { title: "G", ownerWallet: FAUSTO, status: "Hecha" }); // cerrada: no es carga
+    createAssignment(db, { title: "G", ownerWallet: PLATAFORMA, status: "Hecha" }); // cerrada: no es carga
 
     const load = loadByPerson(db);
-    const fausto = load.people.find((p) => p.name === "Fausto")!;
-    expect(fausto.open).toBe(3);
-    expect(fausto.inProgress).toBe(2);
-    expect(fausto.inReview).toBe(1);
-    expect(fausto.blocked).toBe(0);
+    const plataforma = load.people.find((p) => p.name === "Plataforma")!;
+    expect(plataforma.open).toBe(3);
+    expect(plataforma.inProgress).toBe(2);
+    expect(plataforma.inReview).toBe(1);
+    expect(plataforma.blocked).toBe(0);
 
-    const david = load.people.find((p) => p.name === "David")!;
-    expect(david.open).toBe(1);
-    expect(david.assigned).toBe(1);
-    expect(david.blocked).toBe(1);
-    expect(david.needsFounder).toBe(1);
+    const producto = load.people.find((p) => p.name === "Producto")!;
+    expect(producto.open).toBe(1);
+    expect(producto.assigned).toBe(1);
+    expect(producto.blocked).toBe(1);
+    expect(producto.needsFounder).toBe(1);
 
     expect(load.unassignedOpen).toBe(1);
-    expect(load.totalOpen).toBe(5); // 3 Fausto + 1 David + 1 sin responsable
+    expect(load.totalOpen).toBe(5); // 3 Plataforma + 1 Producto + 1 sin responsable
     expect(load.totalInProgress).toBe(2);
   });
 
   it("lista el roster completo en orden ALFABÉTICO, no por cantidad de trabajo", () => {
-    createAssignment(db, { title: "muchas", ownerWallet: VALE, status: "En curso" });
-    createAssignment(db, { title: "mas", ownerWallet: VALE, status: "En curso" });
-    createAssignment(db, { title: "una", ownerWallet: ACTORS[DAVID].wallet, status: "En curso" });
+    createAssignment(db, { title: "muchas", ownerWallet: OPERACIONES, status: "En curso" });
+    createAssignment(db, { title: "mas", ownerWallet: OPERACIONES, status: "En curso" });
+    createAssignment(db, { title: "una", ownerWallet: ACTORS[PRODUCTO].wallet, status: "En curso" });
 
     const load = loadByPerson(db);
     const names = load.people.map((p) => p.name);
     // Los 6 del roster aparecen, incluida la gente con cero: es un roster, no
     // una tabla de posiciones.
     expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b, "es")));
-    expect(names).toContain("Angela");
-    expect(load.people.find((p) => p.name === "Angela")!.open).toBe(0);
+    expect(names).toContain("Contenido");
+    expect(load.people.find((p) => p.name === "Contenido")!.open).toBe(0);
     // La persona con más carga NO queda primera por tener más carga.
-    expect(names[0]).not.toBe("Vale");
+    expect(names[0]).not.toBe("Operaciones");
   });
 
   it("declara su propósito explícitamente y no habla del valor de las personas", () => {
@@ -253,15 +253,15 @@ describe("carga por persona: repartir, no rankear (doc 16)", () => {
 describe("la cohorte demo no se cuela en las vistas del equipo", () => {
   /**
    * Regresión encontrada renderizando la página real: `seedIfEmpty` crea un
-   * founder de DEMOSTRACIÓN ("John (Founder)", is_demo = 1) y `seedTeamRoster` lo
-   * promueve a role='founder'. Sin filtrar, John salía DOS VECES en la carga y la
+   * founder de DEMOSTRACIÓN ("Founder (demo)", is_demo = 1) y `seedTeamRoster` lo
+   * promueve a role='founder'. Sin filtrar, Founder salía DOS VECES en la carga y la
    * salud del rito dividía entre 7 personas en vez de 6.
    */
   function dbWithDemoCohort(): DB {
     const db = freshDb();
     db.prepare(
       `INSERT INTO users (wallet, display_name, tier, invited_by, status, is_demo, is_founder, cla_signed, role, is_supervisor)
-       VALUES ('GDEMOFOUNDER', 'John (Founder)', 'Gold', NULL, 'active', 1, 1, 1, 'founder', 1)`
+       VALUES ('GDEMOFOUNDER', 'Founder (demo)', 'Gold', NULL, 'active', 1, 1, 1, 'founder', 1)`
     ).run();
     db.prepare(
       `INSERT INTO users (wallet, display_name, tier, invited_by, status, is_demo, is_founder, cla_signed, role, is_supervisor)
@@ -270,30 +270,30 @@ describe("la cohorte demo no se cuela en las vistas del equipo", () => {
     return db;
   }
 
-  it("no duplica a John ni infla el denominador del rito", () => {
+  it("no duplica a Founder ni infla el denominador del rito", () => {
     const db = dbWithDemoCohort();
     const load = loadByPerson(db);
-    const johns = load.people.filter((p) => p.name.startsWith("John"));
-    expect(johns).toHaveLength(1);
-    expect(johns[0].wallet).toBe(JOHN);
+    const founders = load.people.filter((p) => p.name.startsWith("Founder"));
+    expect(founders).toHaveLength(1);
+    expect(founders[0].wallet).toBe(FUNDADOR);
     expect(load.people).toHaveLength(6);
 
     const r = riteHealth(db, JUEVES);
     expect(r.members).toBe(6);
     expect(r.expected).toBe(24);
-    expect(r.perMember.filter((m) => m.name.startsWith("John"))).toHaveLength(1);
+    expect(r.perMember.filter((m) => m.name.startsWith("Founder"))).toHaveLength(1);
   });
 
   it("el trabajo de un dueño fuera del roster se cuenta en los totales, no se descarta en silencio", () => {
     const db = dbWithDemoCohort();
     createAssignment(db, { title: "De la cuenta demo", ownerWallet: "GDEMOFOUNDER", status: "En curso" });
     createAssignment(db, { title: "Bloqueada demo", ownerWallet: "GDEMOFOUNDER", status: "Bloqueada" });
-    createAssignment(db, { title: "Del roster", ownerWallet: FAUSTO, status: "En curso" });
+    createAssignment(db, { title: "Del roster", ownerWallet: PLATAFORMA, status: "En curso" });
 
     const load = loadByPerson(db);
     // No aparece como fila de persona…
     expect(load.people.some((p) => p.wallet === "GDEMOFOUNDER")).toBe(false);
-    // …pero el total sí lo cuenta: 1 de Fausto + 1 de fuera del roster.
+    // …pero el total sí lo cuenta: 1 de Plataforma + 1 de fuera del roster.
     expect(load.outsideRosterOpen).toBe(1);
     expect(load.outsideRosterBlocked).toBe(1);
     expect(load.totalOpen).toBe(2);
@@ -304,9 +304,9 @@ describe("salud de ritos", () => {
   it("calcula el % contra los días transcurridos de la semana, sin telemetría de presencia", () => {
     const db = freshDb();
     // Semana del lunes 2026-07-27; "hoy" es jueves 30 → 4 días transcurridos.
-    upsertCheckin(db, FAUSTO, { done: "a", doing: "b", blocked: "" }, LUNES);
-    upsertCheckin(db, FAUSTO, { done: "a", doing: "b", blocked: "" }, MARTES);
-    upsertCheckin(db, VALE, { done: "c", doing: "", blocked: "" }, MARTES);
+    upsertCheckin(db, PLATAFORMA, { done: "a", doing: "b", blocked: "" }, LUNES);
+    upsertCheckin(db, PLATAFORMA, { done: "a", doing: "b", blocked: "" }, MARTES);
+    upsertCheckin(db, OPERACIONES, { done: "c", doing: "", blocked: "" }, MARTES);
 
     const r = riteHealth(db, JUEVES);
     expect(r.weekStart).toBe("2026-07-27");
@@ -318,13 +318,13 @@ describe("salud de ritos", () => {
     expect(r.perMember.map((m) => m.name)).toEqual(
       [...r.perMember.map((m) => m.name)].sort((a, b) => a.localeCompare(b, "es"))
     );
-    expect(r.perMember.find((m) => m.name === "Fausto")!.checkins).toBe(2);
+    expect(r.perMember.find((m) => m.name === "Plataforma")!.checkins).toBe(2);
   });
 
   it("no cuenta check-ins de la semana anterior", () => {
     const db = freshDb();
     const domingoAnterior = new Date(2026, 6, 26, 12, 0, 0);
-    upsertCheckin(db, FAUSTO, { done: "de la semana pasada", doing: "", blocked: "" }, domingoAnterior);
+    upsertCheckin(db, PLATAFORMA, { done: "de la semana pasada", doing: "", blocked: "" }, domingoAnterior);
     const r = riteHealth(db, JUEVES);
     expect(r.actual).toBe(0);
     expect(r.pct).toBe(0);
@@ -348,10 +348,10 @@ describe("métricas de época (solo lectura de WP07)", () => {
        VALUES (1, 'Época Génesis', 1000, 100, 'Open', '2026-07-27 00:00:00')`
     ).run();
 
-    const cerrada = createAssignment(db, { title: "Cerrada en la época", ownerWallet: FAUSTO, status: "En revisión" });
-    applyAssignmentAction(db, { assignmentId: cerrada, action: "aprobar", actor: ACTORS[VALE], now: MARTES });
+    const cerrada = createAssignment(db, { title: "Cerrada en la época", ownerWallet: PLATAFORMA, status: "En revisión" });
+    applyAssignmentAction(db, { assignmentId: cerrada, action: "aprobar", actor: ACTORS[OPERACIONES], now: MARTES });
     // Cerrada ANTES de que abriera la época: no cuenta.
-    createAssignment(db, { title: "Vieja", ownerWallet: FAUSTO, status: "Backlog" });
+    createAssignment(db, { title: "Vieja", ownerWallet: PLATAFORMA, status: "Backlog" });
     db.prepare(`UPDATE assignments SET status='Hecha', closed_at='2026-07-01T10:00:00.000Z' WHERE title='Vieja'`).run();
 
     const snap = epochSnapshot(db);
@@ -368,9 +368,9 @@ describe("puerta de acceso: solo founder y supervisores (criterio 4 de WP15)", (
   });
 
   it("un core normal recibe 403", () => {
-    expect(() => buildDashboard(db, ACTORS[FAUSTO], JUEVES)).toThrowError(TeamError);
+    expect(() => buildDashboard(db, ACTORS[PLATAFORMA], JUEVES)).toThrowError(TeamError);
     try {
-      buildDashboard(db, ACTORS[FAUSTO], JUEVES);
+      buildDashboard(db, ACTORS[PLATAFORMA], JUEVES);
       throw new Error("debió lanzar");
     } catch (e) {
       expect(e).toBeInstanceOf(TeamError);
@@ -389,13 +389,13 @@ describe("puerta de acceso: solo founder y supervisores (criterio 4 de WP15)", (
   });
 
   it("el founder entra", () => {
-    const d = buildDashboard(db, ACTORS[JOHN], JUEVES);
+    const d = buildDashboard(db, ACTORS[FUNDADOR], JUEVES);
     expect(d.day).toBe("2026-07-30");
-    expect(d.actor.wallet).toBe(JOHN);
+    expect(d.actor.wallet).toBe(FUNDADOR);
   });
 
-  it("una core CON flag de supervisora entra (Vale, plano 07 §5)", () => {
-    const d = buildDashboard(db, ACTORS[VALE], JUEVES);
+  it("una core CON flag de supervisora entra (Operaciones, plano 07 §5)", () => {
+    const d = buildDashboard(db, ACTORS[OPERACIONES], JUEVES);
     expect(d.actor.role).toBe("core");
     expect(d.actor.isSupervisor).toBe(true);
     expect(d.rites.members).toBe(6);
@@ -405,7 +405,7 @@ describe("puerta de acceso: solo founder y supervisores (criterio 4 de WP15)", (
 describe("cero métricas inventadas", () => {
   it("una base sin trabajo devuelve ceros y nulls, no números de relleno", () => {
     const db = freshDb();
-    const d = buildDashboard(db, ACTORS[JOHN], JUEVES);
+    const d = buildDashboard(db, ACTORS[FUNDADOR], JUEVES);
     expect(d.blocked).toEqual([]);
     expect(d.waitingOnFounder).toEqual([]);
     expect(d.load.totalOpen).toBe(0);
@@ -434,7 +434,7 @@ describe("plazos del equipo (criterio I4 de WP31)", () => {
     const id = createAssignment(db, {
       title: o.title,
       initiativeId: wms,
-      ownerWallet: o.owner === undefined ? FAUSTO : o.owner,
+      ownerWallet: o.owner === undefined ? PLATAFORMA : o.owner,
       status: o.status ?? "En curso",
       priority: o.priority ?? "Normal",
       dueDate: o.due ?? null,
@@ -450,15 +450,15 @@ describe("plazos del equipo (criterio I4 de WP31)", () => {
 
   it("separa lo vencido de lo que está por vencer, cada lista por su vencimiento", () => {
     const vencidaAyer = pieza({ title: "Vencida ayer", priority: "High", due: "2026-07-28" });
-    const vencidaViernes = pieza({ title: "Vencida el viernes", owner: DAVID, due: "2026-07-24" });
+    const vencidaViernes = pieza({ title: "Vencida el viernes", owner: PRODUCTO, due: "2026-07-24" });
     const venceHoy = pieza({ title: "Vence hoy", due: "2026-07-29" });
-    const venceManana = pieza({ title: "Vence mañana temprano", owner: DAVID, due: "2026-07-30" });
+    const venceManana = pieza({ title: "Vence mañana temprano", owner: PRODUCTO, due: "2026-07-30" });
     pieza({ title: "A tiempo", due: "2026-08-14" });
     pieza({ title: "Sin plazo", priority: "Low", due: null });
     pieza({ title: "Bloqueada", status: "Bloqueada", due: "2026-07-01" });
     pieza({ title: "Hecha", status: "Hecha", due: "2026-07-01" });
 
-    const p = plazosDelEquipo(db, ACTORS[JOHN], AHORA);
+    const p = plazosDelEquipo(db, ACTORS[FUNDADOR], AHORA);
     expect(p.ahora).toBe(AHORA);
     expect(p.vencidas.map((x) => x.assignment.id)).toEqual([vencidaViernes, vencidaAyer]);
     expect(p.vencidas.every((x) => x.sla.estado === "vencida")).toBe(true);
@@ -481,19 +481,19 @@ describe("plazos del equipo (criterio I4 de WP31)", () => {
       JSON.stringify({ SLA_WARN_MAX_H: 20, SLA_WARN_PCT: 50 })
     );
     clearGenomeCache(db);
-    const p = plazosDelEquipo(db, ACTORS[JOHN], AHORA);
+    const p = plazosDelEquipo(db, ACTORS[FUNDADOR], AHORA);
     expect(p.porVencer.map((x) => x.assignment.id)).toEqual([venceManana]);
   });
 
   it("un core sin supervisión solo ve los plazos de lo suyo", () => {
-    pieza({ title: "De Fausto, vencida", due: "2026-07-28" });
-    pieza({ title: "De David, vencida", owner: DAVID, due: "2026-07-28" });
-    const p = plazosDelEquipo(db, ACTORS[DAVID], AHORA);
-    expect(p.vencidas.map((x) => x.assignment.title)).toEqual(["De David, vencida"]);
+    pieza({ title: "De Plataforma, vencida", due: "2026-07-28" });
+    pieza({ title: "De Producto, vencida", owner: PRODUCTO, due: "2026-07-28" });
+    const p = plazosDelEquipo(db, ACTORS[PRODUCTO], AHORA);
+    expect(p.vencidas.map((x) => x.assignment.title)).toEqual(["De Producto, vencida"]);
   });
 
   it("sin trabajo, listas vacías y ceros: no inventa plazos", () => {
-    const p = plazosDelEquipo(db, ACTORS[JOHN], AHORA);
+    const p = plazosDelEquipo(db, ACTORS[FUNDADOR], AHORA);
     expect(p.vencidas).toEqual([]);
     expect(p.porVencer).toEqual([]);
     expect(p.aTiempo + p.sinPlazo).toBe(0);

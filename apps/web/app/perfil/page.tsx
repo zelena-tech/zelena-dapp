@@ -32,6 +32,7 @@ import { EXPLORADOR_TX, txVerificable } from "@/lib/pruebas-testnet";
 import { ProgressBar, shortWallet } from "@/components/ui";
 import InviteGenerator from "@/components/InviteGenerator";
 import Insignias from "@/components/Insignias";
+import AvisoLlaveNavegador from "@/components/AvisoLlaveNavegador";
 
 /** Qué fue cada evento de reputación, en palabras (el `ref` técnico queda en el title). */
 function etiquetaRef(ref: string): string {
@@ -59,6 +60,9 @@ export default async function PerfilPage() {
   const points = totalPoints(wallet);
   const cla = claSignature(wallet);
   const tier = user?.tier ?? session.tier ?? "Bronze";
+  // De la base, no de la cookie: una cuenta que el arranque pasó a real (wallet del
+  // navegador con invitación válida) deja de verse como de demostración al instante.
+  const esDemo = user ? user.is_demo === 1 : session.isDemo;
   const cap = getActiveGenome(db).TIER_INVITE_CAPS[tier] ?? 2;
 
   const invites = db
@@ -96,7 +100,7 @@ export default async function PerfilPage() {
           <p className="mt-1 font-mono text-xs text-faint">{wallet}</p>
           <div className="mt-2 flex items-center gap-2">
             <span className="tag tag-sas">Tier {tier}</span>
-            {session.isDemo ? <span className="tag border-line text-faint">wallet de prueba</span> : null}
+            {esDemo ? <span className="tag border-line text-faint">cuenta de demostración</span> : null}
             {user?.status === "alumni" ? <span className="tag border-line text-faint">alumni</span> : null}
           </div>
         </div>
@@ -106,6 +110,18 @@ export default async function PerfilPage() {
           <div className="text-xs text-faint">no transferibles · fase Génesis</div>
         </div>
       </header>
+
+      {/* Cuenta de demostración (código de demostración o cuenta sembrada): se dice qué no
+          puede hacer, antes de que lo descubra con un error. */}
+      {esDemo ? (
+        <p className="border-l-2 border-primary-dim bg-surface-2 py-3 pl-4 pr-3 text-sm leading-6 text-muted">
+          Entraste con un código de demostración: sirve para mirar por dentro. Para trabajar en un proyecto o
+          registrar tu asistencia a un rito, entra con una invitación real.
+        </p>
+      ) : null}
+
+      {/* Wallet creada en este navegador: es una cuenta real, pero su llave vive solo aquí. */}
+      <AvisoLlaveNavegador wallet={wallet} />
 
       {/* Tu progreso — compites contigo mismo; mismo peso visual que cualquier comparación */}
       <section className="card p-6">
@@ -257,7 +273,9 @@ export default async function PerfilPage() {
                   Esta firma es de prueba: no tiene una transacción pública que se pueda abrir en el explorador.
                 </p>
               ) : (
-                <p className="text-xs text-faint">El anclaje en la red de pruebas se confirma en unos minutos.</p>
+                <p className="text-xs text-faint">
+                  Tu firma está en la cola de anclaje: se ancla sola en la red de pruebas, en menos de una hora.
+                </p>
               )}
             </div>
           ) : (

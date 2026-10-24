@@ -87,11 +87,11 @@ jobs:
           sh "$E/app/start.sh" > "$E/server.log" 2>&1 &
           for i in $(seq 1 40); do curl -sf -o /dev/null http://127.0.0.1:8080/api/cla && break; sleep 1; done
           falla() { echo "FALLA: $1"; tail -80 "$E/server.log"; exit 1; }
-          for p in / /manifiesto /metodo /comunidad /encuentros /empresas /empresas/servicios /empresas/contacto /agora /academia /gobernanza /whitepaper /entrar /privacidad /acuerdo; do
+          for p in / /manifiesto /metodo /comunidad /encuentros /empresas /empresas/servicios /empresas/contacto /agora /academia /gobernanza /entrar /privacidad /acuerdo; do
             c=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:8080$p"); echo "$p $c"; [ "$c" = 200 ] || falla "$p respondió $c"
           done
-          # Rutas que cambiaron de nombre: redirección permanente.
-          for p in /ecosistema /academia/por-que-sas-dao; do
+          # Rutas que cambiaron de nombre o salieron del sitio (el whitepaper): redirección permanente.
+          for p in /ecosistema /academia/por-que-sas-dao /whitepaper; do
             c=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:8080$p"); echo "$p $c"; [ "$c" = 308 ] || falla "$p respondió $c (se esperaba 308)"
           done
           for p in /equipo/hoy /equipo/proyectos /equipo/talento /equipo/avisos /admin /perfil /clientes; do

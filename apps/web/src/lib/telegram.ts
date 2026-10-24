@@ -325,7 +325,7 @@ export const BOT_COPY = {
   codigoConsumido: "Ese código ya se usó. Genera otro en la dapp.",
   yaVinculado: "Esta cuenta de Telegram ya está vinculada.",
   soloLectura:
-    "En esta versión solo John escribe en el tablero desde Telegram. Puedo mostrarte lo tuyo, pero no crear ni mover piezas.",
+    "En esta versión solo el founder escribe en el tablero desde Telegram. Puedo mostrarte lo tuyo, pero no crear ni mover piezas.",
   sinTranscripcion: [
     "Todavía no puedo convertir audio a texto: falta decidir el proveedor de transcripción.",
     "Escríbeme el mismo contenido y lo capturo igual.",

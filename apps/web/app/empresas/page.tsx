@@ -43,7 +43,7 @@ const PASOS = [
 const STELLAR = [
   { t: "Moneda local, última milla", d: "Los anchors de Stellar convierten USDC a COP, MXN y ARS y lo entregan como transferencias bancarias estándar, sin necesidad de conocimientos de cripto. En Zelena, piloto en testnet." },
   { t: "Comisiones de centavos", d: "Pagar a docenas de trabajadores por periodo se vuelve económicamente viable. A escala PyME, esta es la diferencia entre lo posible y lo imposible." },
-  { t: "Cero fricción cripto", d: "Autenticación con passkeys. Face ID o huella digital. Los trabajadores reciben recompensas sin saber jamás que hay blockchain de por medio." },
+  { t: "Una cuenta propia", d: "Cada persona entra con su wallet de Stellar: Freighter, o una que se crea en el navegador sin instalar nada. Hoy todo corre en la red de pruebas, sin dinero real." },
 ];
 
 export default function Empresas() {

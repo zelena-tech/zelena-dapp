@@ -6,6 +6,8 @@ import { openDb, type DB } from "./db";
 import { performOnboard, OnboardError } from "./onboard";
 import { claCanonicalHash } from "./cla";
 import { claSigningPayload } from "./cla-signing";
+import { SITIO_ENTRADA_DEFAULT, loginSigningPayload } from "./login-signing";
+import { AlmacenRetos } from "./login-reto";
 import { bootstrapInviteCode } from "./config";
 import { seedBootstrapInvite } from "./seed";
 import { onboardSchema } from "./validation";
@@ -157,7 +159,7 @@ describe("escotilla de arranque: el código de founder concede administración",
 
   it("entrar con el código de arranque crea un FOUNDER supervisor", () => {
     seedInvite(db, BOOT, "ISSUER");
-    performOnboard(db, { code: BOOT, wallet, name: "John", isDemo: true, claHash: hash, signature: goodSig });
+    performOnboard(db, { code: BOOT, wallet, name: "Founder", isDemo: true, claHash: hash, signature: goodSig });
     const r = rolDe(wallet);
     expect(r.role).toBe("founder");
     expect(r.is_supervisor).toBe(1);
@@ -192,18 +194,18 @@ describe("escotilla de arranque: el código de founder concede administración",
     expect(rolDe(wallet).role).toBe("contributor");
   });
 
-  // Hallazgo de verificación (2026-09-30): si la wallet de John ya estaba registrada
+  // Hallazgo de verificación (2026-09-30): si la wallet de Founder ya estaba registrada
   // (entró con la cohorte o con una invitación), la escotilla respondía 409
   // `wallet_registrada` ANTES de mirar el código, así que no servía justo para el
   // caso en que hace falta: una wallet real que nació contributor.
   it("la escotilla también promueve una wallet YA registrada (entró antes con otro código)", () => {
     seedInvite(db, "COHORTE-UNO", "ISSUER");
     seedInvite(db, BOOT, "ISSUER");
-    performOnboard(db, { code: "COHORTE-UNO", wallet, name: "John", isDemo: false, claHash: hash, signature: goodSig });
+    performOnboard(db, { code: "COHORTE-UNO", wallet, name: "Founder", isDemo: false, claHash: hash, signature: goodSig });
     expect(rolDe(wallet)).toEqual({ role: "contributor", is_supervisor: 0 });
 
     const r = performOnboard(db, { code: BOOT, wallet, name: "Otro", isDemo: true, claHash: hash, signature: goodSig });
-    expect(r).toMatchObject({ wallet, name: "John", isDemo: false, role: "founder", isSupervisor: true });
+    expect(r).toMatchObject({ wallet, name: "Founder", isDemo: false, role: "founder", isSupervisor: true });
     expect(rolDe(wallet)).toEqual({ role: "founder", is_supervisor: 1 });
     expect(inviteUsedBy(db, BOOT)).toBe(wallet);
     // No reescribe la fila ni duplica la firma del CLA ni su anclaje.
@@ -211,7 +213,7 @@ describe("escotilla de arranque: el código de founder concede administración",
     expect(n(`SELECT COUNT(*) AS n FROM cla_signatures WHERE wallet = ?`)).toBe(1);
     expect(n(`SELECT COUNT(*) AS n FROM anchor_queue WHERE ref = ?`)).toBe(1);
     expect(db.prepare(`SELECT display_name, is_demo FROM users WHERE wallet = ?`).get(wallet)).toEqual({
-      display_name: "John",
+      display_name: "Founder",
       is_demo: 0,
     });
   });
@@ -253,7 +255,7 @@ describe("escotilla de arranque: el código de founder concede administración",
     seedBootstrapInvite(db);
     const enviado = "ZELENA-ARRANQUE-2026-ABC";
     expect(db.prepare(`SELECT code FROM invites WHERE code = ?`).get(enviado)).toEqual({ code: enviado });
-    performOnboard(db, { code: enviado, wallet, name: "John", isDemo: true, claHash: hash, signature: goodSig });
+    performOnboard(db, { code: enviado, wallet, name: "Founder", isDemo: true, claHash: hash, signature: goodSig });
     expect(rolDe(wallet)).toEqual({ role: "founder", is_supervisor: 1 });
   });
 
@@ -323,9 +325,16 @@ describe("performOnboard — atomicidad del cupo (caso borde de la cohorte)", ()
 // comparando la wallet con FOUNDER_WALLET. Así un founder real conserva /admin y
 // un contribuidor no se vuelve founder por coincidir con una variable de entorno.
 describe("performLogin — devuelve rol y supervisión de la fila", () => {
+  /** Reingreso por reto: un reto nuevo y la firma de la wallet sobre él. */
+  function entrada(kp: Keypair, retos: AlmacenRetos) {
+    const { nonce } = retos.emitir(kp.publicKey());
+    return { wallet: kp.publicKey(), nonce, signature: b64(kp.sign(Buffer.from(loginSigningPayload(SITIO_ENTRADA_DEFAULT, nonce), "utf8"))) };
+  }
+
   it("contributor por invitación y founder por dato de la base", async () => {
     const { performLogin } = await import("./onboard");
     const db = freshDb();
+    const retos = new AlmacenRetos();
     const hash = claCanonicalHash();
     const kp = Keypair.random();
     const wallet = kp.publicKey();
@@ -333,12 +342,12 @@ describe("performLogin — devuelve rol y supervisión de la fila", () => {
     const code = seedInvite(db);
     performOnboard(db, { code, wallet, name: "Ada", isDemo: true, claHash: hash, signature: sig });
 
-    const r1 = performLogin(db, { wallet, claHash: hash, signature: sig });
+    const r1 = performLogin(db, entrada(kp, retos), retos);
     expect(r1.role).toBe("contributor");
     expect(r1.isSupervisor).toBe(false);
 
     db.prepare(`UPDATE users SET role = 'founder', is_supervisor = 1 WHERE wallet = ?`).run(wallet);
-    const r2 = performLogin(db, { wallet, claHash: hash, signature: sig });
+    const r2 = performLogin(db, entrada(kp, retos), retos);
     expect(r2.role).toBe("founder");
     expect(r2.isSupervisor).toBe(true);
   });
@@ -346,12 +355,13 @@ describe("performLogin — devuelve rol y supervisión de la fila", () => {
   it("un valor de rol corrupto cae a is_founder, nunca a la cookie", async () => {
     const { performLogin } = await import("./onboard");
     const db = freshDb();
+    const retos = new AlmacenRetos();
     const hash = claCanonicalHash();
     const kp = Keypair.random();
     const wallet = kp.publicKey();
     const sig = b64(kp.sign(Buffer.from(claSigningPayload(hash), "utf8")));
     performOnboard(db, { code: seedInvite(db), wallet, name: "Ada", isDemo: true, claHash: hash, signature: sig });
     db.prepare(`UPDATE users SET role = 'admin-de-mentira' WHERE wallet = ?`).run(wallet);
-    expect(performLogin(db, { wallet, claHash: hash, signature: sig }).role).toBe("contributor");
+    expect(performLogin(db, entrada(kp, retos), retos).role).toBe("contributor");
   });
 });

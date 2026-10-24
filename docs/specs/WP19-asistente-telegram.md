@@ -4,7 +4,7 @@ CONTEXTO — Decisión de John (actualizada): el equipo SÍ trabaja en el tabler
 
 PROBLEMA — John captura tareas en reuniones y se pierden; su backlog personal vive en la cabeza; priorizar requiere sentarse frente al computador.
 
-RESULTADO ESPERADO — John le habla al bot ("asigna a David: dashboard de bloqueos para el viernes", "pendiente con Cliente Demo: revisar propuesta de analítica") y la asignación/pendiente existe en la dapp, clasificada por cliente o proyecto; el bot le ayuda a revisar y priorizar su día.
+RESULTADO ESPERADO — John le habla al bot ("asigna a Producto: dashboard de bloqueos para el viernes", "pendiente con Cliente Demo: revisar propuesta de analítica") y la asignación/pendiente existe en la dapp, clasificada por cliente o proyecto; el bot le ayuda a revisar y priorizar su día.
 
 ## Arquitectura
 
@@ -61,5 +61,5 @@ El equipo hace su check-in diario en el tablero web (WP14). Extenderlo a Telegra
 - [ ] Webhook rechaza requests sin el secret token (test).
 - [ ] Grep de copys del bot: cero lenguaje de vigilancia o sobre personas.
 
-OWNER — Fausto (webhook + integración) + David (flujos y copys) · Vale: audita copys · John: crea el bot con @BotFather, provee token + ANTHROPIC_API_KEY, y lo usa a diario (el mejor test).
+OWNER — Plataforma (webhook + integración) + Producto (flujos y copys) · Operaciones: audita copys · John: crea el bot con @BotFather, provee token + ANTHROPIC_API_KEY, y lo usa a diario (el mejor test).
 TAMAÑO — M (v1 solo-John) · Estimado: 1,5–2 días. Depende: WP14 (modelo). WP15 recomendado antes (el bot consulta sus agregados). WP17 para clasificar por cliente.

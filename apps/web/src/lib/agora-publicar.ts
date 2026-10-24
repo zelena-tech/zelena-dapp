@@ -299,8 +299,8 @@ export function publicarEnAgora(
   const tx = db.transaction(() => {
     const info = db
       .prepare(
-        `INSERT INTO projects (campaign, title, type, budget_usd, weeks, state, supervisor_wallet, summary, description, acceptance)
-         VALUES (?, ?, ?, ?, ?, 'Open', ?, ?, ?, ?)`
+        `INSERT INTO projects (campaign, title, type, budget_usd, weeks, state, supervisor_wallet, summary, description, acceptance, origin)
+         VALUES (?, ?, ?, ?, ?, 'Open', ?, ?, ?, ?, 'agora')`
       )
       .run(
         datos.campana,

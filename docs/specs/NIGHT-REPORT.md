@@ -53,7 +53,7 @@ Y un hallazgo de WP15 que **sigue abierto** (ver §5): `seed.ts` crea un founder
 ## 3. Decisiones que conviene que ratifiques
 
 1. **`assignments.owner_wallet`, no `owner_id`.** El spec de WP14 pedía `owner_id`, pero la PK real de `users` es `wallet TEXT` y todo el esquema referencia usuarios así. Un id entero habría exigido una tabla puente.
-2. **`role` + `is_supervisor` como flag SEPARADO.** El plano 07 §5 dice que los supervisores del dashboard son John y Vale, pero **Vale es `core`**. Si supervisor fuera un valor de `role`, Vale no podría ser las dos cosas.
+2. **`role` + `is_supervisor` como flag SEPARADO.** El plano 07 §5 dice que los supervisores del dashboard son John y Operaciones, pero **Operaciones es `core`**. Si supervisor fuera un valor de `role`, Operaciones no podría ser las dos cosas.
 3. **La PK de `users` NUNCA muta.** Quien está en el roster se **vincula** a su fila `pending:<slug>` al entrar por Entra (se escribe `entra_oid` + correo en `user_emails`), no se le reescribe el principal: hay asignaciones, eventos y check-ins colgando de él. Es también lo que hace verdadero el criterio 5 de WP13 ("un humano = UN registro").
 4. **NextAuth v4 estable, no la v5 beta**, con el `id` del provider sobreescrito a `microsoft-entra-id` para que la Redirect URI sea **exactamente** la de tu paso A1 — no tienes que cambiar nada en el app registration. Además se sobreescribe `profile()` porque el provider por defecto **llama a Microsoft Graph** (foto de perfil) en cada login, y Graph está en el NO-alcance de v1.
 5. **Puente síncrono con `worker_threads` + `Atomics.wait` para Azure SQL.** `mssql`/tedious es solo asíncrono y no existe cliente síncrono de Azure SQL para Node; `lib/db.ts` es síncrono por contrato y el spec prohíbe tocar la lógica de negocio (la misma trampa que WP03 con `@libsql/client`). La alternativa era reescribir toda la app como asíncrona.
@@ -73,7 +73,7 @@ Y un hallazgo de WP15 que **sigue abierto** (ver §5): `seed.ts` crea un founder
 | A2 | Suscripción y recursos Azure (App Service, Azure SQL, firewall, managed identity) | Desplegar WP16 |
 | A3 | Bot con @BotFather + `ANTHROPIC_API_KEY` + `TELEGRAM_WEBHOOK_SECRET` | Encender WP19 |
 | A4 | Decisión: **proveedor de transcripción de audio** (ver §5) | Audio del bot |
-| A4 | Confirmar supervisores (el código asume **John + Vale**, plano 07 §5) | — |
+| A4 | Confirmar supervisores (el código asume **John + Operaciones**, plano 07 §5) | — |
 
 Todas las variables están documentadas en **`docs/deploy.md`** (secciones nuevas de WP13 y WP19), **nunca en `.env*`**.
 

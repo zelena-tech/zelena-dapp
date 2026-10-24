@@ -48,7 +48,7 @@ factura contra hito aprobado, como cualquier consultora.
 
 **La única obligación real de Modo A** es tributaria, no regulatoria: retención en
 la fuente por servicios al pagar a contribuidores independientes, y clasificación
-correcta de la relación (servicios vs. laboral) para cada quien. Dueño: Juan
+correcta de la relación (servicios vs. laboral) para cada quien. Dueño: Finanzas
 (FinOps/contratos). No bloquea construir; bloquea el primer pago — exactamente
 igual que hoy, sin este WP.
 
@@ -145,7 +145,7 @@ correcto del arranque de dos lados.
 - [ ] Cero campos financieros sensibles en el esquema: pasa
   `auditSchemaForSecretColumns` y la revisión de frontera con Odoo.
 
-OWNER — Fausto (modelo + permisos) · David (intake y vista de cliente) ·
-Juan (retención en la fuente y clasificación de contribuidores, antes del 1er pago) ·
-Vale (valida los tests de permisos: es la superficie crítica).
+OWNER — Plataforma (modelo + permisos) · Producto (intake y vista de cliente) ·
+Finanzas (retención en la fuente y clasificación de contribuidores, antes del 1er pago) ·
+Operaciones (valida los tests de permisos: es la superficie crítica).
 TAMAÑO — M · Depende: WP17 (clients + RBAC), WP14 (asignaciones). Sin gate regulatorio.

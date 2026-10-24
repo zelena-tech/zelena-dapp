@@ -30,7 +30,8 @@ import { currentEpoch, getActiveGenome, GENOME_DEFAULTS, type Genome, type RiteK
 import { identidadesDe, mismaPersona } from "./identidades";
 import { effectiveRole, isPendingPrincipal, isRole, puedeVerTodoElEquipo, type TeamActor } from "./roles";
 import { equipoActor } from "./authz";
-import { esActaDeRito, esDecisionReemplazada } from "./agora-labels";
+import { esActaDeRito } from "./agora-labels";
+import { decisionesVigentes } from "./decisiones";
 import { txVerificable } from "./pruebas-testnet";
 import { diaLocal, instanteDb, parseInstanteDb } from "./zona-horaria";
 import {
@@ -285,7 +286,7 @@ function comprobarPersona(db: DB, wallet: string): void {
   const u = usuario(db, wallet);
   if (!u) throw new RitoError(401, COPY_ASISTENCIA.sinSesion, "sin_cuenta");
   if (u.status !== "active") throw new RitoError(403, "Esta cuenta no está activa.", "inactiva");
-  if (u.is_demo) throw new RitoError(403, "Las cuentas de prueba no registran asistencia.", "demo");
+  if (u.is_demo) throw new RitoError(403, "Las cuentas de demostración no registran asistencia.", "demo");
   if (!u.cla_signed) throw new RitoError(403, COPY_ASISTENCIA.sinAcuerdo, "sin_acuerdo");
 }
 
@@ -964,8 +965,18 @@ export function proximoRitoDeComunidad(db: DB, ahora: Date = new Date()): RitoPr
 }
 
 /**
+ * El próximo rito de comunidad YA PREPARADO en /admin (tiene sesión: fecha, lugar y su
+ * página), o `null`. Es a donde lleva la llamada "ven a una demo" (`llamadaParticipar`):
+ * una fecha de la cadencia sin preparar no tiene nada a lo que ir.
+ */
+export function proximoRitoPreparado(db: DB, ahora: Date = new Date()): RitoProximo | null {
+  return ritosPublicos(db, ahora, 6).proximos.find((p) => p.sessionId !== null) ?? null;
+}
+
+/**
  * Las `n` decisiones más recientes para /comunidad: sin las actas de ritos ("Rito …",
- * que se ven en los pasados) ni la decisión reemplazada (la de las etiquetas viejas).
+ * que se ven en los pasados) y solo las VIGENTES: una decisión reemplazada no se muestra
+ * (ni su texto); el original sigue intacto en el registro (lib/decisiones.ts).
  */
 export function decisionesPublicas(
   db: DB,
@@ -973,14 +984,11 @@ export function decisionesPublicas(
 ): Array<{ id: number; date: string; title: string; reason: string; hash: string }> {
   const cuantas = Math.max(0, Math.floor(n) || 0);
   if (cuantas === 0) return [];
-  const filas = db.prepare(`SELECT id, date, title, reason, hash FROM decision_log ORDER BY id DESC`).all() as Array<{
-    id: number;
-    date: string;
-    title: string;
-    reason: string;
-    hash: string;
-  }>;
-  return filas.filter((d) => !esActaDeRito(d.title) && !esDecisionReemplazada(d.reason)).slice(0, cuantas);
+  return decisionesVigentes(db)
+    .reverse()
+    .filter((d) => !esActaDeRito(d.title))
+    .slice(0, cuantas)
+    .map(({ id, date, title, reason, hash }) => ({ id, date, title, reason, hash }));
 }
 
 // ---------------------------------------------------------------------------
