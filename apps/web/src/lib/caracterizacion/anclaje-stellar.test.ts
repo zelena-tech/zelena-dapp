@@ -308,7 +308,8 @@ describe("Anclaje en Stellar testnet · flujo principal (firma → cola → pasa
     expect([a.status, b.status]).toEqual([200, 200]);
     expect(red.enviadas).toHaveLength(1);
     expect(db.prepare(`SELECT status, attempts FROM anchor_queue`).get()).toEqual({ status: "anchored", attempts: 1 });
-  });
+    // Firma y dos pasadas enteras: en el runner de CI cargado rozó los 5 s por defecto.
+  }, 20_000);
 
   it("la raíz Merkle de una época (kind 'merkle_root', como la encola cerrarYAbrirEpoca) deja la época 'Anchored'", async () => {
     db.prepare(
