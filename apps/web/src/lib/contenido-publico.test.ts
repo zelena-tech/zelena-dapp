@@ -138,12 +138,11 @@ describe("E2-1 · el repo público no nombra la estructura societaria", () => {
  */
 const PREFIJO_VETADO = "zelena:nombre-vetado:";
 const NOMBRES_VETADOS_SHA256: readonly string[] = [
+  // El 2026-10-25 salieron tres clientes: el founder autorizó su logo en la home
+  // (CLIENTES en app/_landing/copy-home.ts).
   "cb11637384c207cb47dad0d725582c1ac262b99a34324eb33a6f8338648e3e10",
   "45d484b2517309481b60ad8b4c842301349b174d0c5e3e19d06388d84456ffe8",
   "4bcb54ed9d1ae83cd05c8f67ded005e9f2ed75dcbae8dc451136a3b2394f20b4",
-  "735debefefaf523e137f491faa226edfb7cdd18fba0196cc58834a384aef52f4",
-  "e9a303ac48dc9d4c740f9108b585fd5bc8e2eddb6135fa9feea9bbc377e243d8",
-  "5aee1132881efbf8c242dbc7ad8d7e1c8e8ddeb6063115ffb04a21da880397e4",
   "0a0e2c9cfbcdf6a99bfa8ecfcddc3c4fc08ef8dd38593bd415ffd6fdc9ef328e",
   "be1fa38ce4386fe4d2594befbb852094adc5983bef8cb12c293b9a8396b64084",
   "9977fd2393f4540c15a8b17715e8eaa90254ec3f4bf422fe8e2926aa9938bf1c",

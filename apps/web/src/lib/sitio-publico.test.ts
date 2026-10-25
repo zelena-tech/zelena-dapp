@@ -17,7 +17,7 @@ import { createHash } from "node:crypto";
 import { PASOS_METODO } from "./metodo";
 import { RUTA_VOTAR } from "./landing-datos";
 import { CABECERA, ENLACES } from "../../app/_landing/copy-comun";
-import { BENTO, HARMONY, HERO as HERO_INICIO } from "../../app/_landing/copy-home";
+import { BENTO, CLIENTES, HARMONY, HERO as HERO_INICIO } from "../../app/_landing/copy-home";
 import { CIFRAS, HERO as HERO_COMUNIDAD } from "../../app/_landing/copy-comunidad";
 
 const WEB = process.cwd(); // apps/web
@@ -438,6 +438,17 @@ describe("E1-10 · la landing en inglés (/ y /comunidad)", () => {
     expect(leer("app/_landing/comunidad/Cifras.tsx")).toContain("{d.valor === 0 ? <LineaDelCero cero={d.cero} /> : null}");
   });
 
+  it("los clientes de la home son los autorizados, cada logo enlaza a su Instagram y abre aparte", () => {
+    expect(CLIENTES.map((c) => c.nombre)).toEqual(["Bloomshell", "Montoc", "Burbay"]);
+    for (const c of CLIENTES) expect(c.instagram).toMatch(/^[a-z0-9_.]+$/);
+    const bento = leer("app/_landing/home/HeroBento.tsx");
+    expect(bento).toContain("href={`https://www.instagram.com/${cl.instagram}/`}");
+    expect(bento).toContain('rel="noopener noreferrer"');
+    // El avatar salió del hero de la home: ahora es la franja de clientes (sigue en /comunidad).
+    expect(bento).not.toContain("avatarDePie");
+    expect(BENTO.a.texto).toBe("impacting companies in Colombia.");
+  });
+
   it("/ no lee la base: sus cifras son ejemplos rotulados; los proyectos de /comunidad salen sin campaña ni valor interno", () => {
     for (const src of [inicio, ...LANDING.filter((r) => r.startsWith("app/_landing/home/")).map(leer)]) {
       expect(src).not.toMatch(/@\/lib\/db|getDb|listProjects|datosComunidad/);
@@ -621,14 +632,13 @@ describe("/entrar · el camino principal es la wallet propia; la del navegador a
  * Quien tenga la lista también puede pasarla por el entorno, separada por comas:
  *   ZELENA_NOMBRES_PRIVADOS="nombre uno,nombre dos" npx vitest run sitio-publico
  */
+// Tres clientes salieron de la lista el 2026-10-25: el founder autorizó mostrar su logo en la
+// home (CLIENTES en app/_landing/copy-home.ts).
 const HUELLAS_NOMBRES_PRIVADOS: ReadonlySet<string> = new Set([
   "05a39e5e50545963a87b2b2b8b69b0c1004fe12fe7d6651133d528bd6db5f475",
   "7530476f73a5e3be78b484df94bb8c3f030f9ad825e7567555e1cf7b2493450d",
   "845b0e4242fa32738120883aecd63c4baca45b8eef628896b7612a803a058544",
   "94f241e4ee6f3f84fffb77adf9fe9202c2c91090c5d2a949892983b66bc8df71",
-  "ce9ef553e37e13a7dce4f67d2a764ae657e7870d134d10507b47523a792f22b9",
-  "3bef3c5a199824a9fa9d23559ce94d930cb6ce18666649e3db9410858f31c1a2",
-  "eef361be4b662d571e7c44742a2449cf3c00a2f92c3fadf9488daacc062224d3",
   "3ae5c495a869ed787f1646a29f3c3b97334cb334bde8842a61423dd661a5c71d",
   "369058ca6eb45855eb9c67fad01f608d772e69a79f8c50d731f1f23aa53e893c",
   "4a83018c8c05a4d300ef66b301be50c2af389434634d284b54b795f9e1fe99e8",
@@ -681,7 +691,7 @@ describe("sin nombres privados en lo público", () => {
   });
 
   it("ninguna huella de la lista aparece en los archivos públicos ni en los datos públicos", () => {
-    expect(HUELLAS_NOMBRES_PRIVADOS.size).toBe(11);
+    expect(HUELLAS_NOMBRES_PRIVADOS.size).toBe(8);
     // La landing en inglés entra entera (componentes, copy y estilos), y los datos que pinta.
     for (const r of [...archivosLanding(), "src/lib/landing-datos.ts", "src/lib/seo.ts"]) {
       expect(REVISAR_NOMBRES).toContain(r);

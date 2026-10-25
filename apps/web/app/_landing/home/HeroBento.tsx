@@ -6,7 +6,7 @@ import Imagen from "../Imagen";
 import { IMG } from "../assets";
 import { PrimaryCta } from "../Ctas";
 import { ENLACES } from "../copy-comun";
-import { BENTO, CTA_DEMO, HERO } from "../copy-home";
+import { BENTO, CLIENTES, CTA_DEMO, HERO } from "../copy-home";
 import { IconoCheck, IconoFlechaArriba, IconoFlechaDiagonal } from "../Iconos";
 import { ONDAS } from "./ondas";
 
@@ -28,7 +28,8 @@ function Operador() {
 
 /**
  * Hero de la home (diseño "Bento"): chip, H1 en dos líneas, párrafo, CTA con una prueba
- * verificable y la rejilla A/B/C/D. Todo en el servidor; el movimiento es CSS (flotar y
+ * verificable y la rejilla A/B/C/D: A los clientes, B la tabla de ejemplo, C el lema y D lo
+ * que tarda el bono en llegar. Todo en el servidor; el movimiento es CSS (flotar y
  * mecerse, solo sin "menos movimiento"). Sin aparición al hacer scroll: es el hero.
  *
  * La rejilla cambia con CSS, nunca con JS: una columna en el teléfono, dos en tableta (A y
@@ -70,36 +71,36 @@ export default function HeroBento() {
       </div>
 
       <div className={h.bento}>
-        {/* A · el avatar en el piso (maqueta: se lee como una sola frase). */}
-        <div className={h.celdaA} role="img" aria-label={a.aria}>
-          <div className={h.brillo} />
-          <div className={h.sombraSuelo} />
-          <div className={h.avatarCaja}>
-            <div className={h.avatarVaiven}>
-              <Imagen img={IMG.avatarDePie} perezosa={false} className={h.avatar} />
-            </div>
-          </div>
-          <div className={`${h.chipPuntaje} ${s.flota}`}>
-            <div className={h.chipPuntajeCaja}>
-              <span className={h.puntajeCifra}>{a.puntaje}</span>
-              <span className={h.puntajeTextos}>
-                <span className={h.puntajeTitulo}>{a.puntajeTitulo}</span>
-                <span className={h.puntajeDetalle}>{a.puntajeDetalle}</span>
-              </span>
-            </div>
-          </div>
-          <Chip tono="blanco" tamano="sm" className={`${h.mayus} ${h.muestraA}`}>
-            {a.muestra}
+        {/* A · los años con empresas y los clientes, cada logo a su Instagram. */}
+        <div className={h.celdaA}>
+          <Chip tono="blanco" tamano="sm" punto className={`${h.mayus} ${h.etiquetaA}`}>
+            {a.etiqueta}
           </Chip>
-          <div className={`${s.vidrio} ${h.barraPago}`}>
-            <span className={h.check}>
-              <IconoCheck tamano={16} trazo={3} />
-            </span>
-            <span className={h.pagoTextos}>
-              <span className={h.pagoTitulo}>{a.pagoTitulo}</span>
-              <span className={h.pagoDetalle}>{a.pagoDetalle}</span>
-            </span>
+          <div className={h.anosA}>
+            <p className={`${s.display} ${h.anosACifra}`}>{a.cifra}</p>
+            <p className={h.anosATexto}>{a.texto}</p>
           </div>
+          <ul className={h.logos} aria-label={a.logosAria}>
+            {CLIENTES.map((cl) => (
+              <li key={cl.nombre} className={h.logoCelda}>
+                <a
+                  href={`https://www.instagram.com/${cl.instagram}/`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={h.logo}
+                  aria-label={`${cl.nombre} ${a.enInstagram}`}
+                >
+                  <span className={h.logoMarco}>
+                    <Imagen img={IMG[cl.logo]} perezosa={false} className={h.logoImg} />
+                  </span>
+                  <span className={h.logoUsuario} aria-hidden="true">
+                    {a.rotuloEnlace}
+                    <IconoFlechaDiagonal tamano={11} trazo={2.5} />
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
         </div>
 
         {/* B · tabla semanal de ejemplo. */}
@@ -132,15 +133,15 @@ export default function HeroBento() {
           </p>
         </div>
 
-        {/* D · la cifra de años y las píldoras inclinadas, sobre tinta. */}
+        {/* D · lo que tarda el bono en llegar y las píldoras inclinadas, sobre tinta. */}
         <div className={`${h.celdaD} ${s.superficieOscura}`}>
           <svg className={h.ondas} viewBox="0 0 600 300" preserveAspectRatio="none" aria-hidden="true" focusable="false">
             {ONDAS.map((dd, i) => (
               <path key={i} d={dd} />
             ))}
           </svg>
-          <span className={h.flechaArriba} aria-hidden="true">
-            <IconoFlechaArriba tamano={20} trazo={2.75} />
+          <span className={h.circuloLima} aria-hidden="true">
+            <IconoCheck tamano={20} trazo={3} />
           </span>
           <p className={`${s.display} ${h.anos}`}>{d.cifra}</p>
           <p className={h.anosTexto}>{d.texto}</p>

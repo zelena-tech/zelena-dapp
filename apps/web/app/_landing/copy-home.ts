@@ -7,7 +7,8 @@
  * LOGISTICS."; los años con operadores ("2 YEARS") y el país (Colombia) van como constantes
  * sueltas de este módulo; no se publica la cifra pagada, solo desde cuándo se paga; los
  * importes de ejemplo se rotulan como ejemplo; el pago a cuenta bancaria en moneda local es
- * lo que viene, no lo que ya funciona. El aviso legal de la página lo pinta el pie (copy-comun.ts).
+ * lo que viene, no lo que ya funciona; los clientes que salen con logo son los que el founder
+ * autorizó (CLIENTES). El aviso legal de la página lo pinta el pie (copy-comun.ts).
  *
  * Hechos que sostienen el copy: Harmony paga bonos reales en USDC en la red principal de
  * Stellar desde septiembre de 2026, a la billetera de cada operador; el contrato de Soroban
@@ -46,16 +47,27 @@ export const HERO = {
   prueba: "Real bonuses paid on Stellar mainnet since Sept 2026",
 } as const;
 
+/**
+ * Clientes que salen con logo en la home, con su Instagram. Autorizados por el founder el
+ * 2026-10-25: por eso sus nombres ya no están en la lista de nombres privados del repo.
+ * Los logos son monocromos (assets.ts): en una franja de clientes se leen más sobrios.
+ */
+export const CLIENTES = [
+  { nombre: "Bloomshell", instagram: "bloomshell_cosmetics", logo: "clienteBloomshell" },
+  { nombre: "Montoc", instagram: "montoccosmetictools", logo: "clienteMontoc" },
+  { nombre: "Burbay", instagram: "burbaybeauty", logo: "clienteBurbay" },
+] as const;
+
 export const BENTO = {
-  /** A: el avatar en el piso, su puntaje y el bono pagado (maqueta). */
+  /** A: los años con empresas y los logos de los clientes, cada uno a su Instagram. */
   a: {
-    aria: "Sample: an operator scores 96 this week, top 1 in picking, and gets a 20 USDC bonus, settled on Stellar in about 5 seconds.",
-    muestra: "Sample",
-    puntaje: "96",
-    puntajeTitulo: "Score this week",
-    puntajeDetalle: "picking · top 1",
-    pagoTitulo: "Bonus paid · +20 USDC",
-    pagoDetalle: "Measured on the floor, settled on Stellar in ~5\u00a0s.",
+    etiqueta: "Our clients",
+    cifra: ANOS_CON_OPERADORES,
+    texto: `impacting companies in ${PAISES}.`,
+    logosAria: "Companies we work with",
+    /** Rótulo visible bajo cada logo (el usuario no cabe en la ficha) y nombre accesible del enlace. */
+    rotuloEnlace: "Instagram",
+    enInstagram: "on Instagram",
   },
   /** B: tabla semanal de ejemplo (sin nombres de personas). */
   b: {
@@ -70,10 +82,10 @@ export const BENTO = {
   },
   /** C: el lema sobre lima, en dos líneas. */
   c: { linea1: "Fair, fast", linea2: "and verifiable." },
-  /** D: la cifra de años y las seis píldoras inclinadas. */
+  /** D: lo que tarda el bono en llegar y las seis píldoras inclinadas. */
   d: {
-    cifra: ANOS_CON_OPERADORES,
-    texto: "building alongside real logistics operators in Colombia.",
+    cifra: "~5 sec",
+    texto: "from an approved score to the operator’s Stellar wallet, in USDC.",
     pastillasAria: "What Zelena is",
     pastillas: ["Logistics SMEs", "Payroll", "USDC payouts", "On Stellar mainnet", "WMS", PAISES],
   },
