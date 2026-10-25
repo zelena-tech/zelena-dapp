@@ -178,11 +178,15 @@ describe("/metodo · Compruébalo tú mismo con todas las pruebas", () => {
     expect(html(VACIO)).toBe("");
   });
 
-  it("/metodo la incluye y la tarjeta de la landing enlaza a ella", () => {
-    const metodo = fs.readFileSync(path.join(process.cwd(), "app", "metodo", "page.tsx"), "utf8");
+  // WP33: la tarjeta "Compruébalo tú mismo" de la landing anterior salió con ella; la
+  // landing en inglés (pagos en "/" y tecnología en /comunidad) enlaza a la lista.
+  it("/metodo la incluye y la landing en inglés enlaza a ella", () => {
+    const leer = (...p: string[]) => fs.readFileSync(path.join(process.cwd(), ...p), "utf8");
+    const metodo = leer("app", "metodo", "page.tsx");
     expect(metodo).toContain('import PruebasTestnetLista from "@/components/PruebasTestnetLista"');
     expect(metodo).toContain("<PruebasTestnetLista />");
-    const tarjeta = fs.readFileSync(path.join(process.cwd(), "src", "components", "PruebaTestnet.tsx"), "utf8");
-    expect(tarjeta).toContain('href="/metodo#compruebalo"');
+    expect(leer("app", "_landing", "copy-comun.ts")).toContain('metodoPruebas: "/metodo#compruebalo"');
+    expect(leer("app", "_landing", "home", "Pagos.tsx")).toContain("href={ENLACES.metodoPruebas}");
+    expect(leer("app", "_landing", "copy-comunidad.ts")).toContain("href: ENLACES.metodoPruebas");
   });
 });

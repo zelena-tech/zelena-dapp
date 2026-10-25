@@ -87,9 +87,34 @@ jobs:
           sh "$E/app/start.sh" > "$E/server.log" 2>&1 &
           for i in $(seq 1 40); do curl -sf -o /dev/null http://127.0.0.1:8080/api/cla && break; sleep 1; done
           falla() { echo "FALLA: $1"; tail -80 "$E/server.log"; exit 1; }
-          for p in / /manifiesto /metodo /comunidad /comunidad/ritos /encuentros /empresas /empresas/servicios /empresas/contacto /agora /academia /gobernanza /entrar /privacidad /acuerdo /robots.txt /sitemap.xml /landing/avatar-beanie-cut.png; do
+          for p in / /manifiesto /metodo /comunidad /comunidad/ritos /encuentros /empresas /empresas/servicios /empresas/contacto /agora /academia /gobernanza /entrar /privacidad /acuerdo /robots.txt /sitemap.xml /landing/avatar-beanie-cut.png /landing/zelena-wordmark.svg; do
             c=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:8080$p"); echo "$p $c"; [ "$c" = 200 ] || falla "$p respondió $c"
           done
+          # La landing en inglés (WP33): public/ viajó en el paquete (imagen y wordmark con su
+          # tipo) y el titular sale en el HTML del servidor, no solo después de hidratar.
+          for par in "/landing/avatar-beanie-cut.png image/png" "/landing/zelena-wordmark.svg image/svg+xml"; do
+            p="${par%% *}"; tipo="${par##* }"
+            t=$(curl -s -o /dev/null -w "%{content_type}" "http://127.0.0.1:8080$p"); echo "$p $t"
+            case "$t" in "$tipo"*) ;; *) falla "$p con tipo '$t' (se esperaba $tipo)" ;; esac
+          done
+          curl -s http://127.0.0.1:8080/ > "$E/inicio.html"
+          grep -Eq '<h1 [^>]*>Performance-based payroll' "$E/inicio.html" || falla "/ sin el H1 en inglés en el HTML del servidor"
+          grep -q 'data-landing="" lang="en"' "$E/inicio.html" || falla "/ sin la raíz data-landing en inglés"
+          curl -s http://127.0.0.1:8080/comunidad > "$E/comunidad.html"
+          grep -Eq '<h1 [^>]*>The value you deliver' "$E/comunidad.html" || falla "/comunidad sin el H1 en inglés en el HTML del servidor"
+          # A archivo y después grep: con pipefail, un grep -q que corta antes puede tumbar al curl.
+          curl -s http://127.0.0.1:8080/robots.txt > "$E/robots.txt"
+          grep -q '^Sitemap: ' "$E/robots.txt" || falla "/robots.txt sin la línea Sitemap"
+          curl -s http://127.0.0.1:8080/sitemap.xml > "$E/sitemap.xml"
+          grep -q '<urlset' "$E/sitemap.xml" || falla "/sitemap.xml no es un sitemap"
+          # Host canónico: el dominio sin www va a www con su ruta y su consulta; lo que trae la
+          # cabecera de Front Door no se toca, y /.well-known/ queda fuera (certificado).
+          r=$(curl -s -o /dev/null -w "%{http_code} %{redirect_url}" -H "Host: zelena.tech" "http://127.0.0.1:8080/manifiesto?x=1"); echo "apex /manifiesto?x=1 $r"
+          [ "$r" = "308 https://www.zelena.tech/manifiesto?x=1" ] || falla "el dominio sin www respondió '$r'"
+          c=$(curl -s -o /dev/null -w "%{http_code}" -H "Host: zelena.tech" -H "x-azure-fdid: ensayo" "http://127.0.0.1:8080/manifiesto"); echo "apex con x-azure-fdid $c"
+          [ "$c" = 200 ] || falla "con x-azure-fdid respondió $c (se esperaba 200)"
+          c=$(curl -s -o /dev/null -w "%{http_code}" -H "Host: zelena.tech" "http://127.0.0.1:8080/.well-known/acme"); echo "apex /.well-known/acme $c"
+          [ "$c" != 308 ] || falla "/.well-known/ se redirigió"
           # Rutas que cambiaron de nombre o salieron del sitio (el whitepaper): redirección permanente.
           for p in /ecosistema /academia/por-que-sas-dao /whitepaper; do
             c=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:8080$p"); echo "$p $c"; [ "$c" = 308 ] || falla "$p respondió $c (se esperaba 308)"

@@ -24,8 +24,10 @@ import { translate } from "./sql-dialect";
 import {
   ACADEMIA_S1,
   DECISION_S2,
+  PREGUNTA_RED_S5,
   SLUG_S1,
   SLUG_S1_ANTERIOR,
+  aclararPreguntaDeRed,
   aplicarContenidoPublico,
 } from "./contenido-publico";
 
@@ -586,6 +588,49 @@ describe("E2-4 · seedIfEmpty siembra contenido limpio y no se cae por contenido
 });
 
 /* ------------------------------------------------------------------ *
+ * S5 (WP33) · La pregunta de la red en el quiz
+ * ------------------------------------------------------------------ */
+
+describe("S5 (WP33) · '¿Dónde corre todo hoy?' se acota a la plataforma de la comunidad", () => {
+  const OPCIONES = JSON.stringify(["Mainnet", "Testnet", "Un servidor privado", "En papel"]);
+
+  it("cambia solo el texto, en su sitio (mismo id, opciones y correcta), sin tocar lo ganado; la segunda vez no hace nada", () => {
+    const db = baseConContenidoAnterior();
+    const id = Number(
+      db
+        .prepare(`INSERT INTO academia_quiz (content_id, question, options, correct) VALUES (4, ?, ?, 1)`)
+        .run(PREGUNTA_RED_S5.antes, OPCIONES).lastInsertRowid
+    );
+    const ganado = huella(db, LO_GANADO);
+    vi.spyOn(console, "info").mockImplementation(() => {});
+
+    expect(aclararPreguntaDeRed(db)).toBe(1);
+    expect(db.prepare(`SELECT question, options, correct FROM academia_quiz WHERE id = ?`).get(id)).toEqual({
+      question: PREGUNTA_RED_S5.ahora,
+      options: OPCIONES,
+      correct: 1,
+    });
+    expect(huella(db, LO_GANADO)).toEqual(ganado);
+    expect(aclararPreguntaDeRed(db)).toBe(0);
+  });
+
+  it("una base nueva ya trae la pregunta nueva, y el arranque la aplica a una base con la vieja", () => {
+    const nueva = openDb(":memory:");
+    nueva.exec(ESQUEMA);
+    seedIfEmpty(nueva);
+    const preguntas = (db: DB) => (todas(db, `SELECT question FROM academia_quiz`) as Array<{ question: string }>).map((q) => q.question);
+    expect(preguntas(nueva)).toContain(PREGUNTA_RED_S5.ahora);
+    expect(preguntas(nueva)).not.toContain(PREGUNTA_RED_S5.antes);
+
+    nueva.prepare(`UPDATE academia_quiz SET question = ? WHERE question = ?`).run(PREGUNTA_RED_S5.antes, PREGUNTA_RED_S5.ahora);
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    seedIfEmpty(nueva);
+    expect(preguntas(nueva)).toContain(PREGUNTA_RED_S5.ahora);
+    expect(preguntas(nueva)).not.toContain(PREGUNTA_RED_S5.antes);
+  });
+});
+
+/* ------------------------------------------------------------------ *
  * E2-5 · Los documentos legales no se tocan
  * ------------------------------------------------------------------ */
 
@@ -819,7 +864,8 @@ describe.concurrent("E2-6 · smoke-wp31.sh contra un sitio de mentira", () => {
     if (redir) return void res.writeHead(redir[0], { location: prefijo + redir[1] }).end();
     if (PAGINAS.has(ruta) || (ruta === "/comunidad" && esc.comunidadExiste)) {
       const menu = [...esc.enlaces, ...(esc.enlacesEn?.[ruta] ?? [])].map((h) => `<a href="${h}">Enlace</a>`).join("");
-      const prueba = ruta === "/" ? `<a href="${TX}">Prueba en testnet</a>` : "";
+      // WP33: la transacción verificable vive en /metodo#compruebalo, no en la landing.
+      const prueba = ruta === "/metodo" ? `<a href="${TX}">Prueba en testnet</a>` : "";
       res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
       return void res.end(`<!DOCTYPE html><html><body><nav>${menu}</nav><main>Hola ${prueba}</main></body></html>`);
     }

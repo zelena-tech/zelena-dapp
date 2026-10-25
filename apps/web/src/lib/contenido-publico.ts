@@ -23,6 +23,10 @@
  * S4 (`reordenarOpcionesAcademia`, revisión del hallazgo A2) va aparte, con su propia
  * transacción y su propio `try/catch`: reparte entre las posiciones las respuestas
  * correctas del quiz sembrado, que estaban casi todas en la segunda opción.
+ *
+ * S5 (`aclararPreguntaDeRed`, WP33) también va aparte: la pregunta del quiz que decía que
+ * "todo" corre en la red de pruebas pasa a hablar de la plataforma de la comunidad, porque
+ * los bonos de Harmony ya se pagan en la red principal de Stellar.
  */
 import type { DB } from "./db"; // solo tipo: sin ciclo en runtime
 import { sha256Hex } from "./crypto";
@@ -335,5 +339,35 @@ export function reordenarOpcionesAcademia(db: DB): number {
   });
   const n = tx();
   if (n > 0) console.info(`[seed] Academia: ${n} pregunta(s) con las opciones reordenadas (revisión de A2).`);
+  return n;
+}
+
+/* ------------------------------------------------------------------ *
+ * S5 · La pregunta de la red en el quiz de la Academia (WP33)
+ * ------------------------------------------------------------------ */
+
+/**
+ * "¿Dónde corre todo hoy?" → "Testnet" dejó de ser cierto: Harmony paga bonos reales en
+ * USDC en la red principal de Stellar desde septiembre de 2026. Lo que corre en la red de
+ * pruebas es la plataforma de la comunidad, así que la pregunta se acota a ella y la
+ * respuesta (y su posición) no cambia. `seed()` siembra ya la pregunta nueva.
+ */
+export const PREGUNTA_RED_S5 = {
+  antes: "¿Dónde corre todo hoy?",
+  ahora: "¿Dónde corre hoy la plataforma de la comunidad?",
+} as const;
+
+/**
+ * S5. Cambia solo el texto de la pregunta, en su sitio (mismo id, mismas opciones y misma
+ * correcta): un quiz a medio responder se sigue calificando igual. Idempotente: la segunda
+ * corrida no encuentra la pregunta vieja. La llama `seedIfEmpty` en su propio `try/catch`.
+ * Devuelve cuántas filas cambió.
+ */
+export function aclararPreguntaDeRed(db: DB): number {
+  const r = db
+    .prepare(`UPDATE academia_quiz SET question = ? WHERE question = ?`)
+    .run(PREGUNTA_RED_S5.ahora, PREGUNTA_RED_S5.antes);
+  const n = Number(r.changes);
+  if (n > 0) console.info(`[seed] Academia: ${n} pregunta(s) sobre la red, acotadas a la plataforma de la comunidad.`);
   return n;
 }

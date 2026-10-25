@@ -10,7 +10,13 @@ import { FOUNDER_WALLET, BOOTSTRAP_CODE_MAX, BOOTSTRAP_CODE_MIN, DEMO_INVITE_COD
 import { GENOME_V1, seedGenomeV1, seedGenomeV2 } from "./genome";
 import { seedTeam } from "./team";
 import { createCohortInvite } from "./invites";
-import { ACADEMIA_S1, aplicarContenidoPublico, reordenarOpcionesAcademia } from "./contenido-publico";
+import {
+  ACADEMIA_S1,
+  PREGUNTA_RED_S5,
+  aclararPreguntaDeRed,
+  aplicarContenidoPublico,
+  reordenarOpcionesAcademia,
+} from "./contenido-publico";
 import { ORIGEN_SEMBRADO, marcarSembradosComoBorrador } from "./agora-borradores";
 import { vincularReemplazosConocidos } from "./decisiones";
 import { marcarCuentasDeNavegadorComoReales } from "./cuentas-reales";
@@ -107,6 +113,11 @@ export function seedIfEmpty(db: DB, env: NodeJS.ProcessEnv = process.env): void 
   // exacta (después de S1, que ya escribe el orden nuevo). Idempotente; si falla, el
   // arranque sigue y se reintenta.
   try { reordenarOpcionesAcademia(db); } catch (e) { console.error("[seed] orden de opciones de la Academia", e); }
+
+  // Academia (WP33): la pregunta "¿Dónde corre todo hoy?" se acota a la plataforma de la
+  // comunidad (los bonos de Harmony ya se pagan en la red principal). Solo el texto, en su
+  // sitio. Idempotente; si falla, el arranque sigue y se reintenta.
+  try { aclararPreguntaDeRed(db); } catch (e) { console.error("[seed] pregunta de la red en la Academia", e); }
 
   // Decisiones (decisión del founder, 2026-10-21): registra que la decisión histórica de
   // las etiquetas viejas la reemplaza la de S2. Solo inserta en decision_replacements; el
@@ -618,7 +629,7 @@ Cada proyecto alimenta el perfil append-only del contribuidor. Más historial ha
       ["La tesis central de Zelena es...", ["La antigüedad manda", "Las horas registradas", "El título importa más", "El valor que entregas determina lo que recibes"], 3],
       ["Zelena se construye sobre...", ["Bitcoin", "Ethereum L2", "Stellar / Soroban", "Una base de datos central"], 2],
       ["El onboarding es...", ["Por invitación con CLA", "Abierto a todos", "Solo por pago", "Automático"], 0],
-      ["¿Dónde corre todo hoy?", ["Mainnet", "Testnet", "Un servidor privado", "En papel"], 1],
+      [PREGUNTA_RED_S5.ahora, ["Mainnet", "Testnet", "Un servidor privado", "En papel"], 1],
       ["El tagline de Zelena es...", ["Move fast", "To the moon", "Code is law", "Real work, Real rewards"], 3],
     ]
   );

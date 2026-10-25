@@ -663,6 +663,24 @@ describe("D6 · lecturas públicas sin wallets ni nombres; el enlace solo con se
     expect(detalleRito(db, id, true, a1.wallet)?.join_url).toBe("https://meet.example.org/demo");
   });
 
+  // WP33: /comunidad pasó a ser la landing en inglés; la página de ritos (asistencia,
+  // próximos, pasados) vive en /comunidad/ritos, en español y con el cromo del sitio.
+  it("la página de ritos vive en /comunidad/ritos y lo que la enlazaba la sigue", () => {
+    const ritos = leer("app/comunidad/ritos/page.tsx");
+    expect(ritos).toContain("ruta: RUTA_RITOS,");
+    expect(ritos).toContain('idioma: "es",');
+    expect(ritos).toContain('titulo: "Ritos · Zelena",');
+    expect(ritos).toContain('<section id="proximos"');
+    const ficha = leer("app/comunidad/ritos/[id]/page.tsx");
+    expect(ficha).toContain("<Link href={RUTA_RITOS}");
+    expect(ficha).not.toMatch(/href="\/comunidad"/);
+    // La landing no lleva el flujo de asistencia: solo enlaza a los ritos.
+    const landing = leer("app/comunidad/page.tsx");
+    expect(landing).not.toMatch(/actorDeRitos|asistenciaPropia|detalleRito|getSession/);
+    expect(leer("app/_landing/copy-comun.ts")).toContain("ritos: RUTA_RITOS,");
+    expect(leer("app/_landing/copy-comunidad.ts")).toContain("href: ENLACES.ritos");
+  });
+
   it("las páginas deciden el enlace por la fila activa y la wallet, no solo por la cookie", () => {
     for (const r of ["app/comunidad/ritos/[id]/page.tsx", "app/comunidad/ritos/page.tsx"]) {
       const src = leer(r);
@@ -975,12 +993,13 @@ describe("D8 (corte 2) · /admin, la ruta de épocas y la landing · estáticos"
     }
   });
 
-  it("ProximoEncuentro anuncia solo ritos de comunidad, sin personas ni enlace de conexión", () => {
-    const src = leer("src/components/ProximoEncuentro.tsx");
-    expect(src).not.toMatch(/^"use client"/);
-    expect(src).toContain("proximoRitoDeComunidad(");
-    expect(src).toContain("elegirProximo(");
-    expect(src).toContain("Las próximas fechas se publican en");
+  // WP33: el anuncio de la landing anterior (ProximoEncuentro) salió con ella. Las fechas
+  // públicas las arma ahora lib/landing-datos.ts para /comunidad, con la misma regla.
+  it("las fechas públicas de /comunidad: solo ritos de comunidad preparados, sin personas ni enlace de conexión", () => {
+    const src = leer("src/lib/landing-datos.ts");
+    expect(src).toContain("ritosPublicos(db, ahora, 6)");
+    expect(src).toContain(".proximos.filter((r) => r.sessionId !== null)");
     expect(src).not.toMatch(/join_url|detalleRito|sesionesGestionables|host_wallet|recorder_wallet/);
+    expect(fs.existsSync(path.join(process.cwd(), "src", "components", "ProximoEncuentro.tsx"))).toBe(false);
   });
 });

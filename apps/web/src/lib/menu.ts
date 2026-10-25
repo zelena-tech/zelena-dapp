@@ -164,9 +164,13 @@ export const FOOTER_GRUPOS: ReadonlyArray<{ titulo: string; enlaces: readonly En
   },
 ];
 
-/** Aviso del pie: lo que es de prueba se dice en todas las páginas. */
+/**
+ * Aviso del pie, en todas las páginas: qué es real y qué es de prueba. Los bonos de
+ * Harmony se pagan en la red principal de Stellar (desde septiembre de 2026); la
+ * plataforma de la comunidad y el contrato que automatiza el reparto, en la de pruebas.
+ */
 export const AVISO_LEGAL =
-  "Las funciones de pago de la plataforma corren en la red de pruebas de Stellar. Nada aquí es oferta de valores ni asesoría.";
+  "Harmony paga bonos reales en USDC en la red principal de Stellar; la plataforma de la comunidad, con sus pagos, y el contrato que automatiza el reparto corren en la red de pruebas de Stellar. Nada aquí es oferta de valores ni asesoría.";
 
 /** ¿El enlace sale del sitio? (se abre en otra pestaña). */
 export function esEnlaceExterno(href: string): boolean {

@@ -13,7 +13,7 @@ export const metadata = metadatos({
 // de idiomas solo tenga que añadir el lado en inglés sin tocar la maqueta.
 const ESTADO = [
   { etiqueta: "Fase 1", valor: "En producción", vivo: true },
-  { etiqueta: "Fase 2", valor: "Piloto en testnet", tenue: true },
+  { etiqueta: "Fase 2", valor: "Pagos reales en USDC · Stellar", vivo: true },
   { etiqueta: "Infraestructura", valor: "Stellar · Soroban" },
   { etiqueta: "Cobertura", valor: "Colombia → México → Argentina" },
 ];
@@ -24,14 +24,14 @@ const FASES = [
     estado: "En producción",
     acento: true,
     titulo: "Columna vertebral de operaciones",
-    desc: "El sistema de fulfillment que opera el almacén. Cada pedido, cada operador, cada tarea — rastreados en tiempo real. Construido durante dos años junto a operadores logísticos reales en Latinoamérica.",
+    desc: "El WMS que opera el almacén. Cada pedido, cada operador, cada tarea — rastreados en tiempo real. Construido durante dos años junto a operadores logísticos reales en Latinoamérica.",
   },
   {
     num: "02",
-    estado: "Piloto en testnet",
-    acento: false,
+    estado: "Pagos en producción",
+    acento: true,
     titulo: "Incentivos por desempeño",
-    desc: "Distribución automática de incentivos basada en el desempeño medido. Recompensas financiadas en USDC y pensadas para llegar a la cuenta bancaria de cada trabajador en moneda local — COP, MXN, ARS — sin fricción cripto. Hoy corre como piloto en testnet.",
+    desc: "Bonos calculados a partir del desempeño medido. Harmony ya paga bonos reales en USDC, en la red principal de Stellar, a la billetera de cada operador, y cada pago se puede verificar en la red. El contrato que automatiza el reparto todavía se prueba en la red de pruebas. La meta es entregar el bono en moneda local (COP, MXN, ARS) directo a la cuenta bancaria.",
   },
 ];
 
@@ -40,13 +40,13 @@ const PASOS = [
   { n: "02", t: "Financiar el fondo", d: "El fondo de recompensas se deposita antes de que empiece el periodo. Así nadie trabaja por una promesa." },
   { n: "03", t: "Ejecutar tareas", d: "Los trabajadores completan las operaciones. Cada acción se registra en vivo desde el piso." },
   { n: "04", t: "Puntuar y cerrar", d: "El supervisor revisa y aplica el multiplicador de calidad. El cierre del periodo queda registrado y se puede verificar." },
-  { n: "05", t: "Verificar y pagar", d: "Stellar ancla los puntajes y las recompensas se reparten. El pago a la cuenta bancaria de cada trabajador es hoy un piloto en testnet." },
+  { n: "05", t: "Verificar y pagar", d: "El bono se paga en USDC a la billetera Stellar de cada operador y queda verificable en la red. El reparto automático por contrato se prueba hoy en la red de pruebas." },
 ];
 
 const STELLAR = [
-  { t: "Moneda local, última milla", d: "Los anchors de Stellar convierten USDC a COP, MXN y ARS y lo entregan como transferencias bancarias estándar, sin necesidad de conocimientos de cripto. En Zelena, piloto en testnet." },
+  { t: "Moneda local, última milla", d: "Los anchors de Stellar pueden convertir USDC a COP, MXN y ARS y entregarlo como transferencia bancaria, sin conocimientos de cripto. Ahí queremos llegar; hoy los bonos llegan en USDC a la billetera." },
   { t: "Comisiones de centavos", d: "Pagar a docenas de trabajadores por periodo se vuelve económicamente viable. A escala PyME, esta es la diferencia entre lo posible y lo imposible." },
-  { t: "Una cuenta propia", d: "Cada persona entra con su wallet de Stellar: Freighter, o una que se crea en el navegador sin instalar nada. Hoy todo corre en la red de pruebas, sin dinero real." },
+  { t: "Una cuenta propia", d: "Cada persona entra con su wallet de Stellar: Freighter, o una que se crea en el navegador sin instalar nada. La plataforma de la comunidad (entrada, proyectos, Ágora, puntos) corre en la red de pruebas de Stellar." },
 ];
 
 export default function Empresas() {
@@ -92,7 +92,7 @@ export default function Empresas() {
               <span className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-muted">
                 <span
                   className={`h-1.5 w-1.5 rounded-full ${
-                    e.vivo ? "animate-pulseline bg-primary" : e.tenue ? "bg-primary/60" : "bg-faint"
+                    e.vivo ? "animate-pulseline bg-primary" : "bg-faint"
                   }`}
                 />
                 {e.etiqueta}
@@ -144,8 +144,8 @@ export default function Empresas() {
             </p>
             <p className="text-base leading-7 text-muted">
               Gamificación y bonos por desempeño integrados para motivar a tu personal de almacén.
-              Recompensas calculadas a partir del trabajo real, entregadas en moneda local, con
-              total transparencia tanto para dueños como para operadores.
+              Recompensas calculadas a partir del trabajo real, pagadas en USDC a la billetera de
+              cada operador, con total transparencia tanto para dueños como para operadores.
             </p>
             <p className="text-xs uppercase tracking-[0.18em] text-primary">
               Trabajo real · Recompensas reales

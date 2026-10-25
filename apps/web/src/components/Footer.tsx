@@ -3,7 +3,7 @@ import { AVISO_LEGAL, FOOTER_GRUPOS, esEnlaceExterno } from "@/lib/menu";
 import { Logo } from "./ui";
 
 // Pie de todas las páginas: lo que no cabe en el menú, lo legal (acuerdo,
-// privacidad y licencia) y el aviso de la red de pruebas. Los enlaces viven en
+// privacidad y licencia) y el aviso de qué es real y qué es de prueba. Los enlaces viven en
 // lib/menu.ts para que un test pueda comprobarlos sin pintar nada.
 export default function Footer() {
   return (

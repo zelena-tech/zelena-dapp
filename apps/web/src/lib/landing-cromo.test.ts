@@ -14,11 +14,14 @@ import { AVISOS_LEGALES, CABECERA, ENLACES, PIE, PIE_LEGAL } from "../../app/_la
 const WEB = process.cwd(); // apps/web
 const leer = (r: string) => fs.readFileSync(path.join(WEB, r), "utf8");
 const LANDING = path.join(WEB, "app", "_landing");
-const archivosLanding = () =>
-  fs
-    .readdirSync(LANDING)
-    .filter((n) => /\.(ts|tsx|css)$/.test(n))
-    .map((n) => `app/_landing/${n}`);
+/** Todo app/_landing, a cualquier profundidad (las secciones viven en home/ y comunidad/). */
+function archivosLanding(dir = LANDING): string[] {
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+    const p = path.join(dir, e.name);
+    if (e.isDirectory()) return archivosLanding(p);
+    return /\.(ts|tsx|css)$/.test(e.name) ? [path.relative(WEB, p).split(path.sep).join("/")] : [];
+  });
+}
 
 describe("cromo por ruta (un solo layout raíz)", () => {
   it("el layout pasa menú, aviso y pie a MarcoSitio, que los quita en la landing", () => {
@@ -60,6 +63,13 @@ describe("fuentes e imágenes de la landing", () => {
     expect(shell).toContain('import "@fontsource/caveat/600.css";');
     expect(shell).not.toMatch(/@fontsource-variable\/archivo(\/index\.css)?["']/);
     expect(leer("app/layout.tsx")).not.toMatch(/archivo|jetbrains|caveat/i);
+  });
+
+  it("los guardas de abajo ven las secciones de las dos páginas, no solo los archivos compartidos", () => {
+    const todos = archivosLanding();
+    for (const r of ["app/_landing/home/HeroBento.tsx", "app/_landing/comunidad/Hero.tsx", "app/_landing/comunidad/comunidad.module.css"]) {
+      expect(todos).toContain(r);
+    }
   });
 
   it("sin Google Fonts ni recursos externos (CSP: font-src y style-src 'self')", () => {

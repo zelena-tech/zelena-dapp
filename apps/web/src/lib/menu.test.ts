@@ -24,6 +24,7 @@ import {
   menuPara,
   rutaPublicar,
 } from "./menu";
+import { PIE, PIE_LEGAL } from "../../app/_landing/copy-comun";
 
 const SIN_SESION = { conSesion: false, accesoEquipo: false, esInterno: false, puedeVerTodo: false };
 const INTERNO_PRIVADO = /^\/(equipo|clientes|admin)(\/|$)/;
@@ -270,11 +271,15 @@ describe("pie y aviso legal (E1-6)", () => {
     expect(etiquetas.filter((l) => /whitepaper/i.test(l))).toEqual([]);
   });
 
-  it("AVISO_LEGAL es el texto nuevo y no dice 'sin dinero real'", () => {
+  // WP33: los bonos de Harmony se pagan de verdad en la red principal de Stellar (desde
+  // septiembre de 2026); lo que sigue en la red de pruebas es la plataforma de la comunidad
+  // y el contrato que automatiza el reparto. El aviso anterior decía que todo pago era de prueba.
+  it("AVISO_LEGAL dice qué es real y qué es de prueba, y no dice 'sin dinero real'", () => {
     expect(AVISO_LEGAL).toBe(
-      "Las funciones de pago de la plataforma corren en la red de pruebas de Stellar. Nada aquí es oferta de valores ni asesoría."
+      "Harmony paga bonos reales en USDC en la red principal de Stellar; la plataforma de la comunidad, con sus pagos, y el contrato que automatiza el reparto corren en la red de pruebas de Stellar. Nada aquí es oferta de valores ni asesoría."
     );
     expect(AVISO_LEGAL.toLowerCase()).not.toContain("sin dinero real");
+    expect(AVISO_LEGAL).not.toMatch(/mainnet|n[oó]mina|cuenta bancaria|moneda local/i);
   });
 
   it("solo la licencia sale del sitio", () => {
@@ -285,6 +290,27 @@ describe("pie y aviso legal (E1-6)", () => {
     const src = fs.readFileSync(path.join(process.cwd(), "src", "components", "Footer.tsx"), "utf8");
     expect(src).toContain("FOOTER_GRUPOS.map");
     expect(src).toContain("{AVISO_LEGAL}");
+  });
+
+  // WP33: / y /comunidad no pintan el pie en español (MarcoSitio lo quita) sino el suyo, en
+  // inglés. El grupo Legal es obligatorio en todas las páginas: el pie de la landing lo saca
+  // de FOOTER_GRUPOS (mismos destinos y mismo orden), y lo pinta con el aviso de cada página.
+  it("el pie de la landing en inglés lleva el grupo Legal: acuerdo, privacidad y licencia", () => {
+    const legal = FOOTER_GRUPOS.find((g) => g.titulo === "Legal");
+    expect(PIE_LEGAL.map((e) => e.href)).toEqual(["/acuerdo", "/privacidad", URL_LICENCIA]);
+    expect(PIE_LEGAL.map((e) => e.href)).toEqual(legal?.enlaces.map((e) => e.href));
+    expect(PIE_LEGAL.map((e) => e.label)).toEqual(["Contribution agreement", "Privacy", "License"]);
+    expect(PIE_LEGAL.find((e) => e.href === URL_LICENCIA)?.externo).toBe(true);
+    const pie = fs.readFileSync(path.join(process.cwd(), "app", "_landing", "Footer.tsx"), "utf8");
+    expect(pie).toContain("PIE.legal.map");
+    expect(pie).toContain("{aviso}");
+    const shell = fs.readFileSync(path.join(process.cwd(), "app", "_landing", "LandingShell.tsx"), "utf8");
+    expect(shell).toContain("<Footer aviso={AVISOS_LEGALES[pagina]} />");
+    // Y el resto del pie: el manifiesto, el método y las decisiones, cada uno a una página que existe.
+    const enlaces = PIE.enlaces.map((e) => e.href);
+    for (const h of ["/manifiesto", "/metodo", "/gobernanza"]) expect(enlaces).toContain(h);
+    const sinPagina = enlaces.filter((h) => !fs.existsSync(path.join(process.cwd(), "app", ...h.split("/").filter(Boolean), "page.tsx")));
+    expect(sinPagina).toEqual([]);
   });
 });
 

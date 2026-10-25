@@ -222,9 +222,11 @@
 /* Pie                                                                 */
 /* ------------------------------------------------------------------ */
 
+/* Las dos páginas terminan en el bloque lima de cierre: el pie va pegado a él, con el
+   mismo aire del diseño (clamp 20–32px), no con el espacio de una sección. */
 .pie {
   max-width: var(--ancho-contenido);
-  margin: var(--espacio-seccion) auto 0;
+  margin: clamp(20px, 3vw, 32px) auto 0;
   padding: 28px 0 40px;
   border-top: 1px solid var(--borde);
   font-size: 14px;

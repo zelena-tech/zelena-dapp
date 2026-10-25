@@ -37,7 +37,8 @@ RUTAS_200="/ /metodo /comunidad /manifiesto /encuentros /empresas /privacidad /a
 RUTAS_SIN_ESTRUCTURA="/ /metodo /comunidad /agora /academia /academia/construir-sin-riesgo /empresas /encuentros"
 PATRON_ESTRUCTURA='\bSAS\b|S\.A\.S|societari|sociedad'
 
-# Prueba en vivo de la landing: un enlace a una transacción verificable de testnet.
+# Prueba verificable: un enlace a una transacción de testnet. Desde WP33 vive en
+# /metodo#compruebalo; la landing en inglés ("/") enlaza ahí y ya no la pinta.
 PATRON_TX='stellar\.expert/explorer/testnet/tx/[0-9a-f]{64}'
 
 # Con SIN_COMUNIDAD=1, un enlace a /comunidad (o a /comunidad/..., ?..., #...) es un 404.
@@ -130,12 +131,12 @@ else
   falla "/api/cla respondió $codigo sin el hash ${HASH_CLA:0:8}…"
 fi
 
-echo "6. La landing enlaza una transacción verificable de testnet"
-landing="$(archivo_de "/")"
-if [ -s "$landing" ] && grep -Eq "$PATRON_TX" "$landing"; then
-  ok "/ enlaza stellar.expert/explorer/testnet/tx/<64 hex>"
+echo "6. /metodo enlaza una transacción verificable de testnet"
+pruebas="$(archivo_de "/metodo")"
+if [ -s "$pruebas" ] && grep -Eq "$PATRON_TX" "$pruebas"; then
+  ok "/metodo enlaza stellar.expert/explorer/testnet/tx/<64 hex>"
 else
-  falla "/ no enlaza ninguna transacción de stellar.expert/explorer/testnet/tx/<64 hex>"
+  falla "/metodo no enlaza ninguna transacción de stellar.expert/explorer/testnet/tx/<64 hex>"
 fi
 
 echo "7. Sin estructura societaria en las páginas públicas"

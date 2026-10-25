@@ -3,16 +3,22 @@
  *
  * Criterios: E1-1 (sin la estructura societaria), E1-2b (Admin y perfil por rol),
  * E1-3 (redirecciones 308), E1-5 (/empresas), E1-8 (/metodo), E1-9 (privacidad y
- * casilla), E1-10 (landing), E1-11 (jerga) y E1-13 (literales del tipo de proyecto).
+ * casilla), E1-10 (landing; desde WP33, la landing en inglés de / y /comunidad), E1-11
+ * (jerga) y E1-13 (literales del tipo de proyecto).
  *
  * La lista de archivos públicos se GENERA recorriendo `app/`: una página nueva
- * entra sola, sin que nadie tenga que acordarse de añadirla aquí.
+ * entra sola, sin que nadie tenga que acordarse de añadirla aquí. Incluye todo
+ * app/_landing/** (componentes, copy y hojas de estilo de la landing en inglés).
  */
 import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import { PASOS_METODO } from "./metodo";
+import { RUTA_VOTAR } from "./landing-datos";
+import { CABECERA, ENLACES } from "../../app/_landing/copy-comun";
+import { BENTO, HARMONY, HERO as HERO_INICIO } from "../../app/_landing/copy-home";
+import { CIFRAS, HERO as HERO_COMUNIDAD } from "../../app/_landing/copy-comunidad";
 
 const WEB = process.cwd(); // apps/web
 const rel = (p: string) => path.relative(WEB, p).split(path.sep).join("/");
@@ -31,30 +37,30 @@ function recorrer(dir: string, filtro: RegExp): string[] {
 
 /** Zonas de `app/` que no son sitio público (tienen su propia puerta). */
 const PRIVADAS = /^app\/(api|equipo|admin|clientes|perfil)\//;
-const COMPONENTES_PUBLICOS = [
-  "Nav",
-  "NavContextual",
-  "Footer",
-  "IntroEcosistema",
-  "PruebaEnVivo",
-  "PruebaTestnet",
-  "PruebasTestnetLista",
-  "ProximoEncuentro",
-  "ui",
-];
+// WP33: PruebaEnVivo, PruebaTestnet y ProximoEncuentro salieron con la landing anterior
+// (sus cifras y fechas las pinta ahora /comunidad, desde lib/landing-datos.ts).
+const COMPONENTES_PUBLICOS = ["Nav", "NavContextual", "Footer", "IntroEcosistema", "PruebasTestnetLista", "ui"];
 const LIBS_PUBLICAS = ["menu", "metodo", "servicios", "encuentros", "aviso-privacidad", "seo", "landing-datos"];
+
+/** Todo lo de la landing en inglés: componentes, copy y hojas de estilo, a cualquier profundidad. */
+const archivosLanding = (): string[] =>
+  recorrer(path.join(WEB, "app", "_landing"), /\.(tsx?|css)$/)
+    .map(rel)
+    .sort();
 
 /**
  * Lista generada de archivos públicos (E1-1). Incluye los `.ts` de `app/`: el copy de la
  * landing en inglés vive en app/_landing/copy-*.ts, y robots y sitemap también son públicos.
+ * De la landing entran también sus hojas de estilo (un comentario también se publica).
  */
 function archivosPublicos(): string[] {
   const paginas = recorrer(path.join(WEB, "app"), /\.tsx?$/)
     .map(rel)
     .filter((r) => !PRIVADAS.test(r));
+  const estilosLanding = archivosLanding().filter((r) => r.endsWith(".css"));
   const componentes = COMPONENTES_PUBLICOS.map((c) => `src/components/${c}.tsx`);
   const libs = LIBS_PUBLICAS.map((l) => `src/lib/${l}.ts`);
-  return [...paginas, ...componentes, ...libs].sort();
+  return [...paginas, ...estilosLanding, ...componentes, ...libs].sort();
 }
 
 /** Líneas que casan con un patrón, como `archivo:línea: texto`. */
@@ -89,13 +95,26 @@ describe("la lista generada de archivos públicos", () => {
       "app/empresas/page.tsx",
       "app/manifiesto/page.tsx",
       "app/comunidad/ritos/page.tsx",
+      "app/comunidad/page.tsx",
       "app/_landing/copy-comun.ts",
+      "app/_landing/copy-home.ts",
+      "app/_landing/copy-comunidad.ts",
       "app/_landing/LandingShell.tsx",
+      "app/_landing/landing.module.css",
+      "app/_landing/home/HeroBento.tsx",
+      "app/_landing/home/FlujoPagos.tsx",
+      "app/_landing/home/pagos.module.css",
+      "app/_landing/comunidad/Hero.tsx",
+      "app/_landing/comunidad/VentanaCodigo.tsx",
+      "app/_landing/comunidad/comunidad.module.css",
       "app/robots.ts",
       "app/sitemap.ts",
     ]) {
       expect(PUBLICOS).toContain(r);
     }
+    // Todo app/_landing/** entra en la lista: los guardas de abajo la cubren entera.
+    expect(archivosLanding().length).toBeGreaterThan(40);
+    expect(archivosLanding().filter((r) => !PUBLICOS.includes(r))).toEqual([]);
     expect(PUBLICOS.some((r) => r.startsWith("app/equipo/") || r.startsWith("app/admin/"))).toBe(false);
   });
 
@@ -142,6 +161,17 @@ describe("E1-11 · sin jerga en lo público", () => {
 
   it("'hash' solo en /entrar (detalle técnico de la firma); en lo demás es 'huella'", () => {
     expect(coincidencias(PUBLICOS, /\bhash\b/i, (r) => r.startsWith("app/entrar/"))).toEqual([]);
+  });
+
+  // Decisión del founder (2026-10-25): "payroll" se queda en la landing en inglés, y solo en
+  // sus módulos de copy. En español sigue sin decirse "nómina" (WP31, E1-5).
+  it("'payroll' solo en los módulos de copy de la landing en inglés; 'nómina' en ninguna parte", () => {
+    expect(coincidencias(PUBLICOS, /payroll/i, (r) => /^app\/_landing\/copy-[a-z]+\.ts$/.test(r))).toEqual([]);
+    expect(coincidencias(PUBLICOS, /\bn[oó]minas?\b/i)).toEqual([]);
+  });
+
+  it("el producto logístico es el WMS: nunca FMS ni 'fulfillment management'", () => {
+    expect(coincidencias(PUBLICOS, /\bFMS\b|fulfillment management/i)).toEqual([]);
   });
 });
 
@@ -227,15 +257,32 @@ describe("E1-3 · redirecciones permanentes (308)", () => {
 
 describe("E1-5 · /empresas sin promesas que no podemos sostener", () => {
   const src = leer("app/empresas/page.tsx");
-  it("sin 'Nómina', 'Blend', 'rendimiento' ni 'mainnet'", () => {
+  it("sin 'Nómina', 'Blend', 'rendimiento', 'mainnet' (en español: 'red principal') ni 'fulfillment'", () => {
     expect(src).not.toMatch(/n[oó]mina/i);
     expect(src).not.toMatch(/blend/i);
     expect(src).not.toMatch(/rendimiento/i);
     expect(src).not.toMatch(/mainnet/i);
+    expect(src).not.toMatch(/fulfillment/i);
   });
-  it("los pagos a cuentas bancarias se marcan como piloto en testnet", () => {
-    expect(src).toContain("piloto en testnet");
+
+  // WP33 (hallazgo H10 de la revisión de la landing): desde septiembre de 2026 Harmony paga
+  // bonos reales en USDC en la red principal de Stellar, a la billetera de cada operador. El
+  // contrato que automatiza el reparto y la plataforma de la comunidad siguen en la red de
+  // pruebas, y el pago a cuenta bancaria en moneda local es la meta, no lo que ya funciona.
+  // Antes esta prueba exigía "piloto en testnet": decía menos de lo que ya es real.
+  it("dice qué es real y qué es de prueba: bonos en USDC en la red principal; reparto y comunidad en la de pruebas", () => {
     expect(src).toContain("Incentivos por desempeño");
+    expect(src).toContain("El WMS que opera el almacén.");
+    expect(src).toContain(
+      "Harmony ya paga bonos reales en USDC, en la red principal de Stellar, a la billetera de cada operador"
+    );
+    expect(src).toContain("El contrato que automatiza el reparto todavía se prueba en la red de pruebas.");
+    expect(src).toContain(
+      "La plataforma de la comunidad (entrada, proyectos, Ágora, puntos) corre en la red de pruebas de Stellar."
+    );
+    expect(src).toContain("La meta es entregar el bono en moneda local");
+    expect(src).not.toMatch(/sin dinero real|piloto en testnet|todo corre en la red de pruebas/i);
+    expect(src).not.toMatch(/entregadas? en moneda local/i);
   });
 });
 
@@ -299,64 +346,158 @@ describe("E1-9 · aviso de privacidad y casilla de autorización", () => {
   });
 });
 
-describe("E1-10 · la landing", () => {
-  const src = leer("app/page.tsx");
-
-  it("tiene el H1 exacto", () => {
-    expect(src).toMatch(/<h1[^>]*>\s*Lo que entregas decide lo que recibes\.\s*<\/h1>/);
-    expect(src).toContain("No el cargo. No la antigüedad. No las horas.");
-  });
-
-  it("las 4 puertas, en orden: manifiesto, método, comunidad y empresas", () => {
-    const bloque = src.slice(src.indexOf("const PUERTAS"), src.indexOf("];", src.indexOf("const PUERTAS")));
-    const pos = ['href: "/manifiesto"', 'href: "/metodo"', "href: RUTA_COMUNIDAD", 'href: "/empresas"'].map((h) =>
-      bloque.indexOf(h)
+/**
+ * E1-10 · la landing. Desde WP33 es la landing en inglés del diseño "Zelena Stellar Web":
+ * "/" para empresas (medir el trabajo y pagar el bono) y "/comunidad" para quien contribuye
+ * (cifras reales, proyectos, decisiones y encuentros). El contrato anterior (H1 en español,
+ * las 4 puertas, "¿Construimos?" y una sola tarjeta de pruebas) era de la landing que esta
+ * reemplaza: sus enlaces viven ahora en el pie y la cabecera, sus cifras en /comunidad y la
+ * prueba verificable en /metodo#compruebalo.
+ */
+describe("E1-10 · la landing en inglés (/ y /comunidad)", () => {
+  const inicio = leer("app/page.tsx");
+  const comunidad = leer("app/comunidad/page.tsx");
+  const shell = leer("app/_landing/LandingShell.tsx");
+  const heroInicio = leer("app/_landing/home/HeroBento.tsx");
+  const heroComunidad = leer("app/_landing/comunidad/Hero.tsx");
+  const LANDING = archivosLanding();
+  /** Los .tsx que pinta una página: los de su carpeta y los compartidos (cabecera, pie, shell). */
+  const deLaPagina = (carpeta: "home" | "comunidad") =>
+    LANDING.filter(
+      (r) => r.endsWith(".tsx") && (r.startsWith(`app/_landing/${carpeta}/`) || !/\/(home|comunidad)\//.test(r))
     );
-    expect(pos.every((p) => p >= 0)).toBe(true);
-    expect([...pos].sort((a, b) => a - b)).toEqual(pos);
+
+  it("las dos páginas van dentro del cromo de la landing: raíz data-landing en inglés, clara y dinámica", () => {
+    expect(inicio).toContain('<LandingShell pagina="home">');
+    expect(comunidad).toContain('<LandingShell pagina="comunidad">');
+    expect(shell).toContain('<div data-landing="" lang="en"');
+    for (const src of [inicio, comunidad]) {
+      expect(src).toContain('export const viewport: Viewport = { themeColor: "#FFFFFF", colorScheme: "light" };');
+      expect(src).toContain('export const dynamic = "force-dynamic";');
+      expect(src).toContain('idioma: "en",');
+    }
+    expect(inicio).toContain('ruta: "/",');
+    expect(comunidad).toContain('ruta: "/comunidad",');
   });
 
-  it("los 2 CTA del cierre: Entrar y la llamada a un encuentro, a un rito preparado o al aviso", () => {
-    expect(src).toContain("¿Construimos?");
-    expect(src).toMatch(/href="\/entrar"[^>]*>\s*Entrar\s*</);
-    // Hallazgo de la verificación final: "Ven a la próxima demo" llevaba a fechas de la
-    // cadencia sin lugar ni enlace. Ahora la decide llamadaParticipar (ritos-labels.ts).
-    expect(src).toMatch(/href=\{llamada\.href\}[^>]*>\s*\{llamada\.texto\}\s*</);
-    expect(src).toContain("llamadaParticipar(");
-    expect(src).toContain("proximoRitoPreparado(db)");
-    expect(src).not.toContain("#proximos`");
+  it("/ tiene el H1 en inglés del copy (dos líneas, LATAM resaltado) y es el único h1 de la página", () => {
+    expect(HERO_INICIO.h1.linea1).toBe("Performance-based payroll");
+    expect(`${HERO_INICIO.h1.antes}${HERO_INICIO.h1.resaltado}${HERO_INICIO.h1.despues}`).toBe("for LATAM logistics.");
+    expect(heroInicio).toMatch(/<h1 id="inicio-titulo"[^>]*>\s*\{HERO\.h1\.linea1\}\{" "\}\s*<br \/>/);
+    expect(heroInicio).toContain("<span className={s.resaltado}>{HERO.h1.resaltado}</span>");
+    const h1 = [inicio, ...deLaPagina("home").map(leer)].join("\n").match(/<h1\b/g) ?? [];
+    expect(h1).toHaveLength(1);
   });
 
-  it("/comunidad: 'Cómo participar' lleva a la misma llamada, y /encuentros tiene el ancla del aviso", () => {
-    // WP33: la página de ritos que antes era /comunidad vive en /comunidad/ritos.
-    const comunidad = leer("app/comunidad/ritos/page.tsx");
-    expect(comunidad).toContain("llamadaParticipar(encuentros[0] ?? null, proximoRitoPreparado(db), tz)");
-    expect(comunidad).toMatch(/href=\{llamada\.href\}[^>]*>\s*\{llamada\.texto\}\s*</);
+  it("/comunidad tiene su H1 en inglés, de texto real en el HTML del servidor, y es el único h1", () => {
+    expect([...HERO_COMUNIDAD.titulo]).toEqual(["The value you deliver", "decides what you get."]);
+    expect(heroComunidad).toMatch(/<h1 id="comunidad-titulo"[^>]*>\s*\{linea1\} <br \/>\s*\{linea2\}\s*<\/h1>/);
+    // El efecto de consola es una capa aparte, oculta al lector de pantalla, que se monta al hidratar.
+    const decodificar = leer("app/_landing/comunidad/DecodificarTitulo.tsx");
+    expect(decodificar.startsWith('"use client";')).toBe(true);
+    expect(decodificar).toContain('aria-hidden="true"');
+    const h1 = [comunidad, ...deLaPagina("comunidad").map(leer)].join("\n").match(/<h1\b/g) ?? [];
+    expect(h1).toHaveLength(1);
+  });
+
+  it("Book a demo lleva al formulario con Harmony elegido (en el hero y en el cierre); Log in, a /entrar", () => {
+    expect(ENLACES.reservarDemo).toBe("/empresas/contacto?interes=harmony");
+    expect(heroInicio).toContain("<PrimaryCta href={ENLACES.reservarDemo}");
+    expect(leer("app/_landing/home/CierreHome.tsx")).toContain("href={ENLACES.reservarDemo}");
+    expect(ENLACES.entrar).toBe("/entrar");
+    expect(CABECERA.entrar).toBe("Log in");
+    expect(shell).toContain("if (!session) return { href: ENLACES.entrar, etiqueta: CABECERA.entrar };");
+    expect(leer("app/_landing/Header.tsx")).toContain("<Link href={cuenta.href}");
+  });
+
+  it("/comunidad cuenta solo lo real (cifrasEnVivo y puntosRepartidos) y, si la base falla, sale con sus ceros", () => {
+    expect(comunidad).toContain("datosComunidad(getDb(), new Date())");
+    expect(comunidad).toMatch(/catch \(e\) \{[\s\S]*?cifras: CIFRAS_EN_CERO/);
+    const datos = leer("src/lib/landing-datos.ts");
+    expect(datos).toContain("const c = cifrasEnVivo(db);");
+    expect(datos).toContain("puntosRepartidos(db)");
+    // cohortStats cuenta también las filas sembradas de demostración.
+    expect(datos).not.toContain("cohortStats");
+    // Con todo en cero se muestra el cero, con su llamada a la acción.
+    expect(CIFRAS.nota).toBe("We only count what\u2019s real: no test accounts.");
+    for (const c of [CIFRAS.firmas, CIFRAS.proyectos, CIFRAS.puntos]) expect(c.cero.texto.length).toBeGreaterThan(0);
+    expect(leer("app/_landing/comunidad/Cifras.tsx")).toContain("{d.valor === 0 ? <LineaDelCero cero={d.cero} /> : null}");
+  });
+
+  it("/ no lee la base: sus cifras son ejemplos rotulados; los proyectos de /comunidad salen sin campaña ni valor interno", () => {
+    for (const src of [inicio, ...LANDING.filter((r) => r.startsWith("app/_landing/home/")).map(leer)]) {
+      expect(src).not.toMatch(/@\/lib\/db|getDb|listProjects|datosComunidad/);
+    }
+    expect(BENTO.b.muestra).toBe("Sample");
+    expect(BENTO.b.filas.map((f) => f.nombre)).toEqual(["Operator 01", "Operator 02", "Operator 03"]);
+    expect(HARMONY.pieTelefono).toMatch(/^Sample screen/);
+    const datos = leer("src/lib/landing-datos.ts");
+    expect(datos).toContain(
+      "SELECT id, title, type, budget_usd, weeks FROM projects WHERE state = 'Open' AND draft = 0"
+    );
+    expect(datos).toContain("etiquetaTipo: etiquetaTipoEn(String(p.type)),");
+    expect(coincidencias(LANDING, /\bcampaign\b/)).toEqual([]);
+  });
+
+  it("sin votos de mentira: ninguna isla de cliente vota; el botón de votar es un enlace a /gobernanza", () => {
+    const islas = LANDING.filter((r) => /\.tsx?$/.test(r) && leer(r).startsWith('"use client";'));
+    expect(islas.length).toBeGreaterThan(4);
+    for (const r of islas) expect(leer(r), r).not.toMatch(/vot[eo]|vota|governance|fetch\(|\/api\//i);
+    expect(RUTA_VOTAR).toBe("/gobernanza");
+    const decisiones = leer("app/_landing/comunidad/Decisiones.tsx");
+    expect(decisiones.startsWith('"use client";')).toBe(false);
+    expect(decisiones).toContain("<Link href={v.href}");
+    expect(decisiones).not.toMatch(/onClick|<button/);
+  });
+
+  it("/comunidad/ritos (la página de ritos que antes era /comunidad): 'Cómo participar' lleva a la misma llamada, y /encuentros tiene el ancla del aviso", () => {
+    const ritos = leer("app/comunidad/ritos/page.tsx");
+    expect(ritos).toContain("llamadaParticipar(encuentros[0] ?? null, proximoRitoPreparado(db), tz)");
+    expect(ritos).toMatch(/href=\{llamada\.href\}[^>]*>\s*\{llamada\.texto\}\s*</);
     expect(leer("app/encuentros/page.tsx")).toMatch(/<div id="aviso" [^>]*>[\s\S]*<AvisoEncuentrosForm \/>/);
   });
 
-  it("no importa Type ni lista proyectos", () => {
-    expect(src).not.toMatch(/components\/Type/);
-    expect(src).not.toContain("listProjects");
-  });
-
-  it("una sola tarjeta de pruebas: PruebaEnVivo es solo cifras", () => {
-    expect(src.match(/<PruebaTestnet\b/g) ?? []).toHaveLength(1);
-    const enVivo = leer("src/components/PruebaEnVivo.tsx");
-    expect(enVivo).not.toMatch(/stellar\.expert|EXPLORADOR/);
-    expect(enVivo).toContain("Esto no es");
-    expect(enVivo).toContain("Contamos solo lo real: sin cuentas de prueba.");
-    expect(enVivo).toContain("Las primeras entregas se registran aquí, a la vista de todos.");
+  it("no importa Type ni next/image, ni carga fuentes de fuera", () => {
+    for (const r of [...LANDING, "app/page.tsx", "app/comunidad/page.tsx"]) {
+      const src = leer(r);
+      expect(src, r).not.toMatch(/components\/Type|<Type\b/);
+      expect(src, r).not.toMatch(/from\s+["']next\/image["']/);
+      expect(src, r).not.toMatch(/fonts\.(googleapis|gstatic)\.com/);
+    }
   });
 });
 
 describe("lenguaje editorial en lo público", () => {
-  it("las páginas nuevas o reescritas usan serif y no el componente Type", () => {
-    for (const r of ["app/page.tsx", "app/metodo/page.tsx", "app/privacidad/page.tsx", "app/acuerdo/page.tsx", "app/gobernanza/page.tsx", "app/academia/page.tsx"]) {
+  // WP31: las páginas en español usan la serif editorial y no el componente Type. La landing
+  // en inglés de WP33 (/ y /comunidad) tiene otra voz, la del diseño que encargó el founder:
+  // mono, botones "[[ book_a_demo ]]" e indicaciones "$ zelena …". Esa voz vive solo en
+  // app/_landing; las páginas en español no la toman.
+  it("las páginas en español nuevas o reescritas usan serif y no el componente Type", () => {
+    for (const r of [
+      "app/metodo/page.tsx",
+      "app/privacidad/page.tsx",
+      "app/acuerdo/page.tsx",
+      "app/gobernanza/page.tsx",
+      "app/academia/page.tsx",
+      "app/empresas/page.tsx",
+      "app/manifiesto/page.tsx",
+      "app/comunidad/ritos/page.tsx",
+    ]) {
       const src = leer(r);
       expect(src, r).toContain("font-serif");
       expect(src, r).not.toMatch(/components\/Type|<Type\b/);
     }
+  });
+
+  it("la voz de comandos de la landing ([[ … ]] y $ zelena …) solo en app/_landing; la landing no usa la serif", () => {
+    const VOZ_COMANDO = /\[\[ \{?[a-z_]+\}? \]\]|\$ zelena\b|\$ (cat|ls) /;
+    const fuera = PUBLICOS.filter((r) => !r.startsWith("app/_landing/"));
+    expect(coincidencias(fuera, VOZ_COMANDO)).toEqual([]);
+    // La landing sí la usa (si este guarda deja de ver la voz, deja de proteger nada).
+    expect(leer("app/_landing/Ctas.tsx")).toContain("[[ {comando} ]]");
+    expect(leer("app/_landing/copy-home.ts")).toMatch(/eyebrow: "\$ zelena /);
+    const landing = [...archivosLanding(), "app/page.tsx", "app/comunidad/page.tsx"];
+    expect(coincidencias(landing, /font-serif|Playfair/)).toEqual([]);
   });
 
   it("los titulares de /gobernanza y /academia en lenguaje llano", () => {
@@ -500,6 +641,7 @@ function huellasEn(texto: string, huellas: ReadonlySet<string>): string[] {
 /** Archivos de este paquete que podrían mostrar o filtrar un nombre: lo público, los datos y sus módulos. */
 const REVISAR_NOMBRES = [
   ...PUBLICOS,
+  ...archivosLanding(),
   "src/data/pruebas-testnet.json",
   "next.config.mjs",
   ...["ContactoForm", "AvisoEncuentrosForm", "MutationBanner"].map((c) => `src/components/${c}.tsx`),
@@ -518,6 +660,10 @@ describe("sin nombres privados en lo público", () => {
 
   it("ninguna huella de la lista aparece en los archivos públicos ni en los datos públicos", () => {
     expect(HUELLAS_NOMBRES_PRIVADOS.size).toBe(11);
+    // La landing en inglés entra entera (componentes, copy y estilos), y los datos que pinta.
+    for (const r of [...archivosLanding(), "src/lib/landing-datos.ts", "src/lib/seo.ts"]) {
+      expect(REVISAR_NOMBRES).toContain(r);
+    }
     const hallados = REVISAR_NOMBRES.flatMap((r) =>
       huellasEn(leer(r), HUELLAS_NOMBRES_PRIVADOS).map((h) => `${r}: ${h.slice(0, 12)}…`)
     );
