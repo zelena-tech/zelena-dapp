@@ -1,5 +1,5 @@
 "use client";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { esRutaLanding } from "@/lib/menu";
 
@@ -24,7 +24,13 @@ export default function MarcoSitio({
   children: ReactNode;
 }) {
   const ruta = usePathname();
-  if (esRutaLanding(ruta)) return <>{children}</>;
+  const landing = esRutaLanding(ruta);
+  // El HTML del servidor ya trae el `<html lang>` de la ruta (middleware + layout raíz).
+  // Al navegar dentro del sitio el layout raíz no se vuelve a pintar: aquí se corrige.
+  useEffect(() => {
+    document.documentElement.lang = landing ? "en" : "es";
+  }, [landing]);
+  if (landing) return <>{children}</>;
   return (
     <>
       {/* Glow de fondo, sutil, marca Zelena */}

@@ -2,6 +2,7 @@
 import { getDb, type DB } from "./db";
 import { REPUTATION_AXES, type Axis } from "./config";
 import { getActiveGenome } from "./genome";
+import { recuentoVotos } from "./votos";
 
 export interface UserRow {
   wallet: string;
@@ -186,13 +187,9 @@ export function getOpenProposal() {
     | undefined;
 }
 
+/** Recuento de una votación, sin los votos de cuentas de demostración (lib/votos.ts). */
 export function voteTally(proposalId: number) {
-  const rows = getDb()
-    .prepare(`SELECT choice, COUNT(*) AS n FROM votes WHERE proposal_id = ? GROUP BY choice`)
-    .all(proposalId) as Array<{ choice: string; n: number }>;
-  const out = { favor: 0, contra: 0, abstencion: 0 };
-  for (const r of rows) (out as Record<string, number>)[r.choice] = r.n;
-  return out;
+  return recuentoVotos(getDb(), proposalId);
 }
 
 export function userVote(proposalId: number, wallet: string) {

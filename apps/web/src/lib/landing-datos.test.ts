@@ -27,6 +27,8 @@ import {
   proyectosAbiertos,
   votacionesAbiertas,
 } from "./landing-datos";
+import { voteTally } from "./repo";
+import { anclaPropuesta, propuestasAbiertas, recuentoVotos } from "./votos";
 
 const SCHEMA = fs.readFileSync(path.join(process.cwd(), "src", "lib", "schema.sql"), "utf8");
 const PREP = new Date("2026-10-01T12:00:00.000Z");
@@ -74,7 +76,9 @@ describe("votacionesAbiertas", () => {
   it("la votación sembrada sale con 0 votos: los suyos son de cuentas de prueba", () => {
     const v = votacionesAbiertas(db);
     expect(v).toHaveLength(1);
-    expect(v[0]).toMatchObject({ favor: 0, contra: 0, abstencion: 0, total: 0, pctFavor: 0, umbral: 66, href: RUTA_VOTAR });
+    expect(v[0]).toMatchObject({ favor: 0, contra: 0, abstencion: 0, total: 0, pctFavor: 0, umbral: 66 });
+    // Enlaza a SU votación en /gobernanza, que las muestra todas con su ancla.
+    expect(v[0].href).toBe(`${RUTA_VOTAR}#propuesta-${v[0].id}`);
     const sembrados = (db.prepare(`SELECT COUNT(*) AS n FROM votes`).get() as { n: number }).n;
     expect(sembrados).toBeGreaterThan(0);
     expect(cuantasVotacionesAbiertas(db)).toBe(1);
@@ -98,6 +102,26 @@ describe("votacionesAbiertas", () => {
     expect(v).toMatchObject({ id, favor: 2, contra: 1, abstencion: 0, total: 3, pctFavor: 67 });
   });
 
+  // Hallazgo de la revisión (WP33): /comunidad decía "sin votos" y /gobernanza, para la misma
+  // propuesta, 3 votos y 67 %: eran dos recuentos. Ahora los dos salen de lib/votos.ts.
+  it("da el MISMO recuento que /gobernanza (repo.voteTally) para la misma propuesta", () => {
+    const id = (db.prepare(`SELECT id FROM proposals WHERE status = 'open' ORDER BY id LIMIT 1`).get() as { id: number }).id;
+    usuario(db, "GR1", 0);
+    db.prepare(`INSERT INTO votes (proposal_id, wallet, choice) VALUES (?, ?, ?)`).run(id, "GR1", "contra");
+    const g = globalThis as unknown as { __zelenaDb?: DB };
+    const antes = g.__zelenaDb;
+    g.__zelenaDb = db;
+    try {
+      const [v] = votacionesAbiertas(db);
+      expect(voteTally(id)).toEqual({ favor: v.favor, contra: v.contra, abstencion: v.abstencion });
+      // Los votos sembrados son de cuentas de prueba: no cuentan en ninguna de las dos.
+      expect(voteTally(id)).toEqual({ favor: 0, contra: 1, abstencion: 0 });
+      expect(recuentoVotos(db, id)).toEqual(voteTally(id));
+    } finally {
+      g.__zelenaDb = antes;
+    }
+  });
+
   it("solo las abiertas, la más antigua primero (la misma que /gobernanza), con límite", () => {
     const nueva = db.prepare(`INSERT INTO proposals (title, description, status, threshold) VALUES (?, 'd', ?, 50)`);
     nueva.run("Abierta 2", "open");
@@ -106,6 +130,9 @@ describe("votacionesAbiertas", () => {
     const v = votacionesAbiertas(db);
     expect(v.map((x) => x.titulo).slice(1)).toEqual(["Abierta 2", "Abierta 3"]);
     expect(v[0].id).toBeLessThan(v[1].id);
+    // Cada una a su ancla en /gobernanza: allí se vota cualquiera de las abiertas.
+    expect(v.map((x) => x.href)).toEqual(v.map((x) => `/gobernanza#${anclaPropuesta(x.id)}`));
+    expect(propuestasAbiertas(db).map((p) => p.id)).toEqual(v.map((x) => x.id));
     expect(votacionesAbiertas(db, 1)).toHaveLength(1);
     expect(votacionesAbiertas(db, 0)).toEqual([]);
     expect(cuantasVotacionesAbiertas(db)).toBe(3);

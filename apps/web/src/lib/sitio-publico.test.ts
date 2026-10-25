@@ -40,7 +40,7 @@ const PRIVADAS = /^app\/(api|equipo|admin|clientes|perfil)\//;
 // WP33: PruebaEnVivo, PruebaTestnet y ProximoEncuentro salieron con la landing anterior
 // (sus cifras y fechas las pinta ahora /comunidad, desde lib/landing-datos.ts).
 const COMPONENTES_PUBLICOS = ["Nav", "NavContextual", "Footer", "IntroEcosistema", "PruebasTestnetLista", "ui"];
-const LIBS_PUBLICAS = ["menu", "metodo", "servicios", "encuentros", "aviso-privacidad", "seo", "landing-datos"];
+const LIBS_PUBLICAS = ["menu", "metodo", "servicios", "encuentros", "aviso-privacidad", "seo", "landing-datos", "votos"];
 
 /** Todo lo de la landing en inglés: componentes, copy y hojas de estilo, a cualquier profundidad. */
 const archivosLanding = (): string[] =>
@@ -284,6 +284,16 @@ describe("E1-5 · /empresas sin promesas que no podemos sostener", () => {
     expect(src).not.toMatch(/sin dinero real|piloto en testnet|todo corre en la red de pruebas/i);
     expect(src).not.toMatch(/entregadas? en moneda local/i);
   });
+
+  // Revisión de la landing (F5, F6): la cobertura de hoy es Colombia (decisión del founder,
+  // 2026-10-25), y el fondeo previo del periodo es lo que hace el contrato de la red de
+  // pruebas: el paso 02 dice "compromete", como el de la home en inglés.
+  it("cobertura: Colombia; el paso 02 compromete el bono, no dice que se deposita", () => {
+    expect(src).toContain('{ etiqueta: "Cobertura", valor: "Colombia" }');
+    expect(src).not.toMatch(/M[eé]xico\s*→|→\s*Argentina/);
+    expect(src).toContain("La empresa compromete el bono del periodo por adelantado.");
+    expect(src).not.toMatch(/se deposita antes/i);
+  });
 });
 
 describe("E1-8 · /metodo en lenguaje llano", () => {
@@ -391,6 +401,8 @@ describe("E1-10 · la landing en inglés (/ y /comunidad)", () => {
 
   it("/comunidad tiene su H1 en inglés, de texto real en el HTML del servidor, y es el único h1", () => {
     expect([...HERO_COMUNIDAD.titulo]).toEqual(["The value you deliver", "decides what you get."]);
+    // Revisión (F4): en la red de pruebas solo se anclan firmas, totales de puntos y ritos.
+    expect(HERO_COMUNIDAD.lead).not.toMatch(/writes it all|records (it all|everything)/i);
     expect(heroComunidad).toMatch(/<h1 id="comunidad-titulo"[^>]*>\s*\{linea1\} <br \/>\s*\{linea2\}\s*<\/h1>/);
     // El efecto de consola es una capa aparte, oculta al lector de pantalla, que se monta al hidratar.
     const decodificar = leer("app/_landing/comunidad/DecodificarTitulo.tsx");
@@ -421,6 +433,8 @@ describe("E1-10 · la landing en inglés (/ y /comunidad)", () => {
     // Con todo en cero se muestra el cero, con su llamada a la acción.
     expect(CIFRAS.nota).toBe("We only count what\u2019s real: no test accounts.");
     for (const c of [CIFRAS.firmas, CIFRAS.proyectos, CIFRAS.puntos]) expect(c.cero.texto.length).toBeGreaterThan(0);
+    // Los primeros puntos también los da la Academia, no solo una entrega aprobada (F7).
+    expect(CIFRAS.puntos.cero).toEqual({ texto: expect.stringMatching(/Academy/), href: ENLACES.academia });
     expect(leer("app/_landing/comunidad/Cifras.tsx")).toContain("{d.valor === 0 ? <LineaDelCero cero={d.cero} /> : null}");
   });
 
@@ -444,6 +458,14 @@ describe("E1-10 · la landing en inglés (/ y /comunidad)", () => {
     expect(islas.length).toBeGreaterThan(4);
     for (const r of islas) expect(leer(r), r).not.toMatch(/vot[eo]|vota|governance|fetch\(|\/api\//i);
     expect(RUTA_VOTAR).toBe("/gobernanza");
+    // Cada "Vote on proposal #N" lleva a SU votación: /gobernanza muestra todas las
+    // abiertas, cada una con su ancla y su formulario (antes, solo la más antigua).
+    const gob = leer("app/gobernanza/page.tsx");
+    expect(gob).toContain("propuestasAbiertas(db)");
+    expect(gob).toContain("id={anclaPropuesta(proposal.id)}");
+    expect(gob).toContain("<VoteForm proposalId={proposal.id}");
+    expect(gob).not.toContain("getOpenProposal");
+    expect(leer("src/lib/landing-datos.ts")).toContain("href: `${RUTA_VOTAR}#${anclaPropuesta(p.id)}`,");
     const decisiones = leer("app/_landing/comunidad/Decisiones.tsx");
     expect(decisiones.startsWith('"use client";')).toBe(false);
     expect(decisiones).toContain("<Link href={v.href}");

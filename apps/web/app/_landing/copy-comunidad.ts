@@ -6,9 +6,9 @@
  * de llamada a la acción que acompañan a un cero ("con todo en cero se muestra el cero").
  * "Proyectos abiertos", nunca la palabra en inglés de recompensa por tarea. La gobernanza
  * es pública y cualquiera la puede leer; no se dice que un contrato ejecuta lo votado. El
- * pago de quien contribuye sigue lo que dice /metodo (por hito aprobado, 20/70/10). Las
- * firmas, las entregas y los puntos se anclan en la red de pruebas de Stellar: nunca se
- * presentan como red principal. Lo que es maqueta lleva su rótulo de ejemplo ("Sample").
+ * pago de quien contribuye sigue lo que dice /metodo (por hito aprobado, 20/70/10). En la
+ * red de pruebas de Stellar se anclan las firmas del acuerdo, los totales de puntos de cada
+ * época y los ritos (nada más): nunca se presentan como red principal. Lo que es maqueta lleva su rótulo de ejemplo ("Sample").
  *
  * Los textos van en minúscula de frase: las mayúsculas del diseño las pone el CSS.
  * Importa con rutas relativas (no "@/") para que los tests de vitest puedan leerlo.
@@ -35,7 +35,9 @@ export const HERO = {
   chip: "Real work, real rewards",
   /** El H1 en dos líneas forzadas. */
   titulo: ["The value you deliver", "decides what you get."],
-  lead: "A community of contributors with public rules, milestone-based pay and a reputation that belongs to you. Stellar writes it all down; you just deliver.",
+  // No "Stellar lo registra todo": en la red de pruebas solo se anclan las firmas del
+  // acuerdo, los totales de puntos de cada época y los ritos; el resto vive en la base.
+  lead: "A community of contributors with public rules, milestone-based pay and a reputation that belongs to you. The record stays open; you just deliver.",
   ctaPrincipal: { comando: "explore_projects", nombre: "Explore open projects" },
   /** Lleva a la llamada a participar (encuentro, rito preparado o aviso por correo). */
   ctaSecundario: { comando: "join_the_community", nombre: "Join the community" },
@@ -89,7 +91,8 @@ export const CIFRAS = {
   puntos: {
     comando: "points_awarded",
     nombre: "points awarded",
-    cero: { texto: "The first ones land with the first approved delivery", href: null } as LineaCero,
+    // También los da la Academia (bucket 'academia' en points_ledger), no solo una entrega.
+    cero: { texto: "Earn the first ones in the Academy or with an approved delivery", href: ENLACES.academia } as LineaCero,
   },
   nota: "We only count what’s real: no test accounts.",
 } as const;

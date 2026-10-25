@@ -1,4 +1,4 @@
-import { getOpenProposal, voteTally, userVote } from "@/lib/repo";
+import { voteTally, userVote } from "@/lib/repo";
 import { getSession } from "@/lib/session";
 import { getDb } from "@/lib/db";
 import { listLatentAudits } from "@/lib/audits";
@@ -7,6 +7,7 @@ import { decisionesVigentes, vigenteDe } from "@/lib/decisiones";
 import { EmptyState } from "@/components/ui";
 import VoteForm from "@/components/VoteForm";
 import { metadatos } from "@/lib/seo";
+import { anclaPropuesta, propuestasAbiertas } from "@/lib/votos";
 
 export const dynamic = "force-dynamic";
 
@@ -30,16 +31,25 @@ export default async function GobernanzaPage() {
   const decisions = decisionesVigentes(db)
     .filter((d) => !esActaDeRito(d.title))
     .reverse();
-  const proposal = getOpenProposal();
+  // Todas las votaciones abiertas, la más antigua primero, cada una con su ancla
+  // (#propuesta-N): la landing (/comunidad) enlaza a la suya.
+  const proposals = propuestasAbiertas(db);
   // Una revisión enlazada a una decisión reemplazada lleva a la vigente (y su título).
   const audits = listLatentAudits(db).map((a) => {
     const vigente = a.decisionLogId ? vigenteDe(db, a.decisionLogId) : null;
     return { ...a, decisionLogId: vigente?.id ?? null, decisionTitle: vigente?.title ?? null };
   });
   const session = await getSession();
-  const tally = proposal ? voteTally(proposal.id) : null;
-  const myVote = proposal && session ? userVote(proposal.id, session.wallet)?.choice ?? null : null;
-  const total = tally ? tally.favor + tally.contra + tally.abstencion : 0;
+  // El recuento es el mismo que muestra la landing: sin los votos de cuentas de prueba.
+  const votaciones = proposals.map((proposal) => {
+    const tally = voteTally(proposal.id);
+    return {
+      proposal,
+      tally,
+      total: tally.favor + tally.contra + tally.abstencion,
+      myVote: session ? userVote(proposal.id, session.wallet)?.choice ?? null : null,
+    };
+  });
 
   return (
     <div className="space-y-20 md:space-y-24">
@@ -53,47 +63,54 @@ export default async function GobernanzaPage() {
         </p>
       </header>
 
-      {/* Votación abierta */}
+      {/* Votaciones abiertas */}
       <section className="space-y-6">
-        <h2 className={TITULAR_H2}>Votación abierta</h2>
-        {proposal ? (
-          <div className="card p-6 md:p-8">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="font-head text-xl font-bold text-white">{proposal.title}</h3>
-              <span className="tag tag-sas">se aprueba con {proposal.threshold} %</span>
-            </div>
-            <p className="mt-3 max-w-3xl text-sm text-muted">{proposal.description}</p>
+        <h2 className={TITULAR_H2}>{votaciones.length > 1 ? "Votaciones abiertas" : "Votación abierta"}</h2>
+        {votaciones.length > 0 ? (
+          votaciones.map(({ proposal, tally, total, myVote }) => (
+            <div key={proposal.id} id={anclaPropuesta(proposal.id)} className="card scroll-mt-24 p-6 md:p-8">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="font-head text-xl font-bold text-white">
+                  <span className="text-faint">#{proposal.id}</span> {proposal.title}
+                </h3>
+                <span className="tag tag-sas">se aprueba con {proposal.threshold} %</span>
+              </div>
+              <p className="mt-3 max-w-3xl text-sm text-muted">{proposal.description}</p>
 
-            {/* Resultados en vivo */}
-            <div className="mt-6 space-y-3">
-              {(["favor", "contra", "abstencion"] as const).map((k) => {
-                const n = tally ? tally[k] : 0;
-                const pct = total > 0 ? Math.round((n / total) * 100) : 0;
-                const label = k === "favor" ? "A favor" : k === "contra" ? "En contra" : "Abstención";
-                const color = k === "favor" ? "bg-primary" : k === "contra" ? "bg-red-500" : "bg-faint";
-                return (
-                  <div key={k}>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-white">{label}</span>
-                      <span className="text-muted">{n} · {pct}%</span>
+              {/* Resultados en vivo */}
+              <div className="mt-6 space-y-3">
+                {(["favor", "contra", "abstencion"] as const).map((k) => {
+                  const n = tally[k];
+                  const pct = total > 0 ? Math.round((n / total) * 100) : 0;
+                  const label = k === "favor" ? "A favor" : k === "contra" ? "En contra" : "Abstención";
+                  const color = k === "favor" ? "bg-primary" : k === "contra" ? "bg-red-500" : "bg-faint";
+                  return (
+                    <div key={k}>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-white">{label}</span>
+                        <span className="text-muted">{n} · {pct}%</span>
+                      </div>
+                      <div className="bar-track mt-1 h-2 w-full overflow-hidden rounded-full">
+                        <div className={`h-full rounded-full ${color} transition-all duration-500`} style={{ width: `${pct}%` }} />
+                      </div>
                     </div>
-                    <div className="bar-track mt-1 h-2 w-full overflow-hidden rounded-full">
-                      <div className={`h-full rounded-full ${color} transition-all duration-500`} style={{ width: `${pct}%` }} />
-                    </div>
-                  </div>
-                );
-              })}
-              <p className="pt-1 text-xs text-faint">{total} votos emitidos · un voto por persona</p>
-            </div>
+                  );
+                })}
+                <p className="pt-1 text-xs text-faint">
+                  {total} {total === 1 ? "voto emitido" : "votos emitidos"} · un voto por persona · sin contar las
+                  cuentas de demostración
+                </p>
+              </div>
 
-            <div className="mt-6">
-              {session ? (
-                <VoteForm proposalId={proposal.id} current={myVote} />
-              ) : (
-                <p className="text-sm text-faint">Para votar, entra y firma el acuerdo de contribución.</p>
-              )}
+              <div className="mt-6">
+                {session ? (
+                  <VoteForm proposalId={proposal.id} current={myVote} />
+                ) : (
+                  <p className="text-sm text-faint">Para votar, entra y firma el acuerdo de contribución.</p>
+                )}
+              </div>
             </div>
-          </div>
+          ))
         ) : (
           <EmptyState title="Sin votaciones abiertas" message="No hay propuestas en votación por ahora." />
         )}

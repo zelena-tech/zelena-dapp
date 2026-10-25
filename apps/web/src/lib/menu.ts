@@ -36,6 +36,13 @@ export function esRutaLanding(ruta: string | null | undefined): boolean {
   return !!ruta && RUTAS_LANDING.includes(ruta);
 }
 
+/**
+ * Cabecera con la que el middleware le dice al layout raíz el idioma de la página ("en"
+ * en la landing), para el `<html lang>`. Si alguien la manda a mano en otra ruta, solo
+ * cambia el atributo de su propia respuesta.
+ */
+export const CABECERA_IDIOMA = "x-zelena-idioma";
+
 /** Menú público (sin sesión): cuatro puertas, en este orden. */
 export const MENU_PUBLICO: readonly EnlaceMenu[] = [
   { href: "/manifiesto", label: "Manifiesto" },

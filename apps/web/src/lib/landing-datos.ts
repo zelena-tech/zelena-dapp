@@ -20,6 +20,7 @@ import { EXPLORADOR_TX } from "./pruebas-testnet";
 import { proximoRitoPreparado, ritosPublicos, zonaRitos, type RitoProximo } from "./ritos";
 import { RUTA_AVISO_ENCUENTROS, llamadaParticipar } from "./ritos-labels";
 import { RUTA_RITOS } from "./menu";
+import { anclaPropuesta, propuestasAbiertas, recuentoVotos } from "./votos";
 
 // ---------------------------------------------------------------------------
 // Votaciones abiertas
@@ -40,6 +41,7 @@ export interface VotacionAbierta {
   total: number;
   /** round(favor / total × 100); 0 sin votos. La misma fórmula que /gobernanza. */
   pctFavor: number;
+  /** Su votación en /gobernanza (`/gobernanza#propuesta-N`), que las muestra todas. */
   href: string;
 }
 
@@ -49,37 +51,23 @@ function entero(v: unknown): number {
 }
 
 /**
- * Las votaciones abiertas, la más antigua primero (la primera es la misma que muestra
- * /gobernanza, que toma `ORDER BY id LIMIT 1`). Los votos de cuentas de prueba no
- * cuentan, igual que en el resto de cifras de la landing.
+ * Las votaciones abiertas, la más antigua primero, con el MISMO recuento que /gobernanza
+ * (lib/votos.ts: sin los votos de cuentas de prueba). Cada una enlaza a su ancla allí.
  */
 export function votacionesAbiertas(db: DB, limite = 3): VotacionAbierta[] {
   const cuantas = Math.min(Math.max(0, Math.floor(limite) || 0), 20);
   if (cuantas === 0) return [];
-  const propuestas = db
-    .prepare(`SELECT id, title, threshold FROM proposals WHERE status = 'open' ORDER BY id LIMIT ${cuantas}`)
-    .all() as Array<{ id: number; title: string; threshold: number }>;
-  const votos = db.prepare(
-    `SELECT v.choice AS choice, COUNT(*) AS n
-       FROM votes v
-       JOIN users u ON u.wallet = v.wallet
-      WHERE v.proposal_id = ? AND u.is_demo = 0
-      GROUP BY v.choice`
-  );
-  return propuestas.map((p) => {
-    const t = { favor: 0, contra: 0, abstencion: 0 };
-    for (const r of votos.all(p.id) as Array<{ choice: string; n: number }>) {
-      if (r.choice === "favor" || r.choice === "contra" || r.choice === "abstencion") t[r.choice] = entero(r.n);
-    }
+  return propuestasAbiertas(db, cuantas).map((p) => {
+    const t = recuentoVotos(db, p.id);
     const total = t.favor + t.contra + t.abstencion;
     return {
-      id: entero(p.id),
-      titulo: String(p.title),
-      umbral: entero(p.threshold),
+      id: p.id,
+      titulo: p.title,
+      umbral: p.threshold,
       ...t,
       total,
       pctFavor: total > 0 ? Math.round((t.favor / total) * 100) : 0,
-      href: RUTA_VOTAR,
+      href: `${RUTA_VOTAR}#${anclaPropuesta(p.id)}`,
     };
   });
 }

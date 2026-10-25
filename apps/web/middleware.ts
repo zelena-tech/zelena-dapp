@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SESSION_COOKIE, verifySession } from "@/lib/jwt";
+// Ruta relativa (no "@/"): vitest importa este archivo y no resuelve los alias.
+import { CABECERA_IDIOMA, esRutaLanding } from "./src/lib/menu";
 
 /**
  * Gate de acceso. Las páginas de lectura (/, /manifiesto, /metodo, /agora,
@@ -32,6 +34,13 @@ function matches(path: string, prefixes: string[]): boolean {
 
 export async function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
+  // La landing en inglés: el layout raíz pone `<html lang="en">` con esta cabecera.
+  // No mira sesión: estas rutas son públicas.
+  if (esRutaLanding(path)) {
+    const cabeceras = new Headers(req.headers);
+    cabeceras.set(CABECERA_IDIOMA, "en");
+    return NextResponse.next({ request: { headers: cabeceras } });
+  }
   const needsCla = matches(path, PROTECTED_CLA);
   const needsSession = needsCla || matches(path, PROTECTED_SESSION);
   if (!needsSession) return NextResponse.next();
@@ -47,6 +56,8 @@ export async function middleware(req: NextRequest) {
   return NextResponse.next();
 }
 
+// "/" y "/comunidad" (RUTAS_LANDING) entran solo para el idioma del documento; la ruta
+// exacta, sin lo que cuelga de ellas.
 export const config = {
-  matcher: ["/perfil/:path*", "/admin/:path*", "/equipo/:path*", "/clientes/:path*"],
+  matcher: ["/perfil/:path*", "/admin/:path*", "/equipo/:path*", "/clientes/:path*", "/", "/comunidad"],
 };

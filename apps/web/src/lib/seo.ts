@@ -25,12 +25,19 @@ export interface ImagenOg {
 }
 
 /**
- * La imagen de Open Graph que ya tenía el sitio (`app/opengraph-image.png`, 1200×630).
- * Es oscura y en español: sirve para las páginas en español. Las páginas en inglés no la
- * usan por defecto (dice "red de pruebas" y la home habla de pagos en la red principal);
- * hasta que haya imágenes propias, ellas no llevan imagen salvo que se pase una.
+ * La imagen de Open Graph de las páginas de la comunidad en español (1200×630, oscura).
+ * Vive en `public/og/` y va por configuración, nunca como `opengraph-image.*` o
+ * `twitter-image.*` dentro de `app/`: esos archivos le ganan a lo que diga cada página, y
+ * así la home en inglés salía con la tarjeta vieja en español (la de la red de pruebas y
+ * sin dinero real). Esta no nombra la red: va en páginas que hablan de las dos. Las páginas en
+ * inglés y las de empresas (`imagen: null`) no llevan imagen hasta que tengan una propia.
  */
-export const IMAGEN_OG_ES: ImagenOg = { url: "/opengraph-image.png", alt: "Zelena", width: 1200, height: 630 };
+export const IMAGEN_OG_ES: ImagenOg = {
+  url: "/og/sitio-es.png",
+  alt: "Zelena: el valor que entregas decide lo que recibes",
+  width: 1200,
+  height: 630,
+};
 
 export interface OpcionesMetadatos {
   /** Ruta propia, empezando por "/" (sin dominio): canónica y `og:url`. */
@@ -39,7 +46,7 @@ export interface OpcionesMetadatos {
   titulo: string;
   descripcion: string;
   idioma: Idioma;
-  /** Imagen de Open Graph. Si falta: la del sitio en español; en inglés, ninguna. */
+  /** Imagen de Open Graph. Si falta: la del sitio en español; en inglés, ninguna. `null`: ninguna. */
   imagen?: ImagenOg | null;
   /** `false` → `noindex, follow` (p. ej. /entrar). Por defecto se indexa. */
   indexar?: boolean;

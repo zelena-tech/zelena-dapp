@@ -5,6 +5,9 @@ import { metadatos } from "@/lib/seo";
 export const metadata = metadatos({
   ruta: "/empresas/contacto",
   idioma: "es",
+  // Sin imagen: la de public/og/ es de la comunidad (contribuidores, entrada por
+  // invitación) y no habla a una empresa. Hasta que haya una propia, ninguna.
+  imagen: null,
   titulo: "Agenda una demostración · Zelena",
   descripcion:
     "Cuéntanos cómo opera tu bodega y coordinamos una demostración de ZELENA: operaciones, incentivos por desempeño y servicios de tecnología.",

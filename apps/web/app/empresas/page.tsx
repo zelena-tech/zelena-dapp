@@ -4,6 +4,9 @@ import { metadatos } from "@/lib/seo";
 export const metadata = metadatos({
   ruta: "/empresas",
   idioma: "es",
+  // Sin imagen: la de public/og/ es de la comunidad (contribuidores, entrada por
+  // invitación) y no habla a una empresa. Hasta que haya una propia, ninguna.
+  imagen: null,
   titulo: "Zelena · Software e incentivos para la logística de LATAM",
   descripcion:
     "Software e incentivos que hacen la logística de LATAM más rápida, inteligente y rentable. ZELENA ayuda a los operadores de almacenes a modernizar sus operaciones y recompensar el desempeño real.",
@@ -15,7 +18,9 @@ const ESTADO = [
   { etiqueta: "Fase 1", valor: "En producción", vivo: true },
   { etiqueta: "Fase 2", valor: "Pagos reales en USDC · Stellar", vivo: true },
   { etiqueta: "Infraestructura", valor: "Stellar · Soroban" },
-  { etiqueta: "Cobertura", valor: "Colombia → México → Argentina" },
+  // Hoy se opera en Colombia (decisión del founder, 2026-10-25); México y Argentina son
+  // expansión, no cobertura.
+  { etiqueta: "Cobertura", valor: "Colombia" },
 ];
 
 const FASES = [
@@ -37,7 +42,9 @@ const FASES = [
 
 const PASOS = [
   { n: "01", t: "Crear campaña", d: "El dueño define las reglas de recompensa, el periodo y los parámetros de puntuación." },
-  { n: "02", t: "Financiar el fondo", d: "El fondo de recompensas se deposita antes de que empiece el periodo. Así nadie trabaja por una promesa." },
+  // Comprometer, no "depositar": el fondeo previo del periodo lo hace el contrato, y ese
+  // contrato sigue en la red de pruebas. Igual que el paso 02 de la home en inglés.
+  { n: "02", t: "Financiar el fondo", d: "La empresa compromete el bono del periodo por adelantado. Así nadie trabaja por una promesa." },
   { n: "03", t: "Ejecutar tareas", d: "Los trabajadores completan las operaciones. Cada acción se registra en vivo desde el piso." },
   { n: "04", t: "Puntuar y cerrar", d: "El supervisor revisa y aplica el multiplicador de calidad. El cierre del periodo queda registrado y se puede verificar." },
   { n: "05", t: "Verificar y pagar", d: "El bono se paga en USDC a la billetera Stellar de cada operador y queda verificable en la red. El reparto automático por contrato se prueba hoy en la red de pruebas." },

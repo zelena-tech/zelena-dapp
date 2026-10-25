@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import "@fontsource/space-mono/400.css";
 import "@fontsource/space-mono/700.css";
 import "@fontsource/space-mono/400-italic.css";
@@ -14,7 +15,8 @@ import Footer from "@/components/Footer";
 import MutationBanner from "@/components/MutationBanner";
 import MarcoSitio from "@/components/MarcoSitio";
 import { getSession } from "@/lib/session";
-import { SITIO } from "@/lib/seo";
+import { IMAGEN_OG_ES, SITIO } from "@/lib/seo";
+import { CABECERA_IDIOMA } from "@/lib/menu";
 
 const TITULO = "Zelena — Lo que entregas decide lo que recibes";
 const DESCRIPCION =
@@ -34,12 +36,16 @@ export const metadata: Metadata = {
   },
   description: DESCRIPCION,
   applicationName: "Zelena",
+  // La imagen va por configuración (public/og/): un opengraph-image.* en app/ le ganaría
+  // a la página "/", que en inglés no lleva imagen. Las páginas con `metadatos()` traen
+  // su propio openGraph y esto no les llega; solo cubre las internas que no lo traen.
   openGraph: {
     type: "website",
     locale: "es_CO",
     siteName: "Zelena",
+    images: [IMAGEN_OG_ES],
   },
-  twitter: { card: "summary_large_image" },
+  twitter: { card: "summary_large_image", images: [IMAGEN_OG_ES.url] },
 };
 
 export const viewport: Viewport = {
@@ -51,8 +57,12 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
+  // El idioma del documento sigue al de la página (WCAG 3.1.1): la landing ("/" y
+  // "/comunidad") está en inglés y el resto en español. La ruta solo la sabe el
+  // middleware, que marca la petición con esta cabecera.
+  const idioma = headers().get(CABECERA_IDIOMA) === "en" ? "en" : "es";
   return (
-    <html lang="es">
+    <html lang={idioma}>
       <body>
         {/* El cromo depende de la ruta: la landing en inglés trae el suyo (MarcoSitio). */}
         <MarcoSitio nav={<Nav session={session} />} banner={<MutationBanner />} footer={<Footer />}>

@@ -5,6 +5,9 @@ import { metadatos } from "@/lib/seo";
 export const metadata = metadatos({
   ruta: "/empresas/servicios",
   idioma: "es",
+  // Sin imagen: la de public/og/ es de la comunidad (contribuidores, entrada por
+  // invitación) y no habla a una empresa. Hasta que haya una propia, ninguna.
+  imagen: null,
   titulo: "Servicios · Zelena",
   descripcion:
     "Seis líneas de servicio con entregas reales detrás: Gestión de Área TI, Odoo/ERP, WMS, Transformación Digital, Datos y Analítica, Cloud e Infraestructura.",

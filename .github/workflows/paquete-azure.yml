@@ -87,12 +87,12 @@ jobs:
           sh "$E/app/start.sh" > "$E/server.log" 2>&1 &
           for i in $(seq 1 40); do curl -sf -o /dev/null http://127.0.0.1:8080/api/cla && break; sleep 1; done
           falla() { echo "FALLA: $1"; tail -80 "$E/server.log"; exit 1; }
-          for p in / /manifiesto /metodo /comunidad /comunidad/ritos /encuentros /empresas /empresas/servicios /empresas/contacto /agora /academia /gobernanza /entrar /privacidad /acuerdo /robots.txt /sitemap.xml /landing/avatar-beanie-cut.png /landing/zelena-wordmark.svg; do
+          for p in / /manifiesto /metodo /comunidad /comunidad/ritos /encuentros /empresas /empresas/servicios /empresas/contacto /agora /academia /gobernanza /entrar /privacidad /acuerdo /robots.txt /sitemap.xml /landing/avatar-beanie-cut.png /landing/zelena-wordmark.svg /og/sitio-es.png; do
             c=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:8080$p"); echo "$p $c"; [ "$c" = 200 ] || falla "$p respondió $c"
           done
           # La landing en inglés (WP33): public/ viajó en el paquete (imagen y wordmark con su
           # tipo) y el titular sale en el HTML del servidor, no solo después de hidratar.
-          for par in "/landing/avatar-beanie-cut.png image/png" "/landing/zelena-wordmark.svg image/svg+xml"; do
+          for par in "/landing/avatar-beanie-cut.png image/png" "/landing/zelena-wordmark.svg image/svg+xml" "/og/sitio-es.png image/png"; do
             p="${par%% *}"; tipo="${par##* }"
             t=$(curl -s -o /dev/null -w "%{content_type}" "http://127.0.0.1:8080$p"); echo "$p $t"
             case "$t" in "$tipo"*) ;; *) falla "$p con tipo '$t' (se esperaba $tipo)" ;; esac
@@ -102,6 +102,15 @@ jobs:
           grep -q 'data-landing="" lang="en"' "$E/inicio.html" || falla "/ sin la raíz data-landing en inglés"
           curl -s http://127.0.0.1:8080/comunidad > "$E/comunidad.html"
           grep -Eq '<h1 [^>]*>The value you deliver' "$E/comunidad.html" || falla "/comunidad sin el H1 en inglés en el HTML del servidor"
+          # El idioma del documento sigue a la página (WCAG 3.1.1): inglés en la landing, español en el resto.
+          curl -s http://127.0.0.1:8080/manifiesto > "$E/manifiesto.html"
+          grep -q '<html lang="en"' "$E/inicio.html" || falla "/ sin <html lang=\"en\">"
+          grep -q '<html lang="en"' "$E/comunidad.html" || falla "/comunidad sin <html lang=\"en\">"
+          grep -q '<html lang="es"' "$E/manifiesto.html" || falla "/manifiesto sin <html lang=\"es\">"
+          # Imágenes para compartir: "/" sin ninguna (un opengraph-image en app/ le ganaría a la
+          # página), y las páginas de la comunidad en español con la de public/og/.
+          if grep -Eq 'og:image|twitter:image' "$E/inicio.html"; then falla "/ lleva una imagen para compartir"; fi
+          grep -q 'property="og:image" content="[^"]*/og/sitio-es\.png"' "$E/manifiesto.html" || falla "/manifiesto sin la imagen de public/og/"
           # A archivo y después grep: con pipefail, un grep -q que corta antes puede tumbar al curl.
           curl -s http://127.0.0.1:8080/robots.txt > "$E/robots.txt"
           grep -q '^Sitemap: ' "$E/robots.txt" || falla "/robots.txt sin la línea Sitemap"

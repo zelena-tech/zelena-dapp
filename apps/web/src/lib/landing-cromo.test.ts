@@ -4,12 +4,18 @@
  * las fuentes solo en la landing y ninguna imagen por el optimizador de Next.
  * Tests estáticos sobre el código y sobre el copy común (app/_landing/copy-comun.ts).
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
-import { FOOTER_GRUPOS, URL_LICENCIA } from "./menu";
+import { NextRequest } from "next/server";
+import { CABECERA_IDIOMA, FOOTER_GRUPOS, RUTAS_LANDING, URL_LICENCIA } from "./menu";
+import { IMAGEN_OG_ES, metadatos } from "./seo";
 import { SLUGS_INTERES } from "./servicios";
 import { AVISOS_LEGALES, CABECERA, ENLACES, PIE, PIE_LEGAL } from "../../app/_landing/copy-comun";
+
+// El middleware importa la sesión con el alias "@/" (vitest no lo resuelve).
+vi.mock("@/lib/jwt", async () => await import("./jwt"));
+import { middleware, config as configMiddleware } from "../../middleware";
 
 const WEB = process.cwd(); // apps/web
 const leer = (r: string) => fs.readFileSync(path.join(WEB, r), "utf8");
@@ -27,7 +33,8 @@ describe("cromo por ruta (un solo layout raíz)", () => {
   it("el layout pasa menú, aviso y pie a MarcoSitio, que los quita en la landing", () => {
     const layout = leer("app/layout.tsx");
     expect(layout).toMatch(/<MarcoSitio nav=\{<Nav session=\{session\} \/>\} banner=\{<MutationBanner \/>\} footer=\{<Footer \/>\}>/);
-    expect(layout).toContain('<html lang="es">');
+    // El idioma del documento sigue a la página (AP-14, WCAG 3.1.1): ver "idioma del documento".
+    expect(layout).toContain("<html lang={idioma}>");
     const marco = leer("src/components/MarcoSitio.tsx");
     expect(marco).toMatch(/^"use client";/);
     expect(marco).toContain("esRutaLanding(ruta)");
@@ -53,6 +60,81 @@ describe("cromo por ruta (un solo layout raíz)", () => {
     expect(shell).toContain('<main id="main"');
     expect(shell).toContain('href="#main"');
     expect(shell.match(/<main id="main"/g) ?? []).toHaveLength(1);
+  });
+});
+
+/**
+ * Hallazgo AP-14 de la revisión (WCAG 3.1.1): "/" y "/comunidad" están en inglés y el
+ * documento decía `<html lang="es">`, también para el <title> y la descripción. El
+ * middleware marca la petición de la landing y el layout raíz pone el lang con eso.
+ */
+describe("idioma del documento", () => {
+  const idiomaDe = async (ruta: string) =>
+    (await middleware(new NextRequest(`http://localhost${ruta}`))).headers.get(
+      `x-middleware-request-${CABECERA_IDIOMA}`
+    );
+
+  it("el middleware marca en inglés solo las rutas exactas de la landing", async () => {
+    for (const r of RUTAS_LANDING) {
+      expect(configMiddleware.matcher, r).toContain(r);
+      expect(await idiomaDe(r), r).toBe("en");
+    }
+    for (const r of ["/comunidad/ritos", "/manifiesto", "/empresas"]) expect(await idiomaDe(r), r).toBeNull();
+  });
+
+  it("el layout raíz lee esa cabecera y, sin ella, el documento es español", () => {
+    const layout = leer("app/layout.tsx");
+    expect(layout).toContain('const idioma = headers().get(CABECERA_IDIOMA) === "en" ? "en" : "es";');
+    expect(layout).not.toContain('<html lang="es">');
+  });
+
+  it("al navegar dentro del sitio, MarcoSitio corrige el lang (el layout raíz no se vuelve a pintar)", () => {
+    expect(leer("src/components/MarcoSitio.tsx")).toContain('document.documentElement.lang = landing ? "en" : "es";');
+  });
+});
+
+/**
+ * Hallazgo F1 / SEO-1 / CC-1 de la revisión: `app/opengraph-image.png` y
+ * `app/twitter-image.png` le ganaban a los metadatos de "/" (mismo segmento), y la home
+ * en inglés se compartía con la tarjeta vieja en español ("red de pruebas", "sin dinero
+ * real"). La imagen va ahora por configuración, desde public/og/.
+ */
+describe("imágenes para compartir", () => {
+  function archivosApp(dir = path.join(WEB, "app")): string[] {
+    return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+      const p = path.join(dir, e.name);
+      return e.isDirectory() ? archivosApp(p) : [path.relative(WEB, p).split(path.sep).join("/")];
+    });
+  }
+
+  it("ningún opengraph-image.* ni twitter-image.* dentro de app/ (le ganarían a la página)", () => {
+    expect(archivosApp().filter((r) => /\/(opengraph|twitter)-image\.[a-z]+$/.test(r))).toEqual([]);
+  });
+
+  it("la imagen en español existe en public/ con las medidas declaradas y no es la de app/", () => {
+    expect(IMAGEN_OG_ES.url).toBe("/og/sitio-es.png");
+    const b = fs.readFileSync(path.join(WEB, "public", IMAGEN_OG_ES.url));
+    expect([b.readUInt32BE(16), b.readUInt32BE(20)]).toEqual([IMAGEN_OG_ES.width, IMAGEN_OG_ES.height]);
+  });
+
+  it('"/" y "/comunidad" no llevan imagen; la tarjeta de Twitter es "summary" y concuerda', () => {
+    for (const r of ["app/page.tsx", "app/comunidad/page.tsx"]) {
+      const src = leer(r);
+      expect(src, r).toContain('idioma: "en",');
+      expect(src, r).not.toMatch(/imagen:/);
+    }
+    const m = metadatos({ ruta: "/", idioma: "en", titulo: "t", descripcion: "d" });
+    expect(m.openGraph).not.toHaveProperty("images");
+    expect(m.twitter).toMatchObject({ card: "summary" });
+    expect(m.twitter).not.toHaveProperty("images");
+    const es = metadatos({ ruta: "/manifiesto", idioma: "es", titulo: "t", descripcion: "d" });
+    expect(es.twitter).toMatchObject({ card: "summary_large_image", images: [IMAGEN_OG_ES.url] });
+  });
+
+  it("las páginas de empresas no llevan la tarjeta de la comunidad", () => {
+    for (const r of ["app/empresas/page.tsx", "app/empresas/servicios/page.tsx", "app/empresas/contacto/page.tsx"]) {
+      expect(leer(r), r).toMatch(/idioma: "es",\n[\s\S]*?imagen: null,/);
+    }
   });
 });
 
