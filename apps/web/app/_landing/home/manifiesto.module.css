@@ -1,0 +1,77 @@
+/* Manifiesto: bloque gris con los tres pilares en tarjetas blancas. */
+
+.bloque {
+  margin-top: 12px;
+  background: var(--panel);
+  border-radius: clamp(22px, 3vw, 32px);
+  padding: clamp(28px, 5vw, 64px);
+}
+
+.bloque .titulo {
+  margin-top: 14px;
+}
+/* Verde de texto (no el verde de rellenos): sobre el panel, el otro no da contraste. */
+.verde {
+  color: var(--verde-texto);
+}
+
+.pilares {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 10px;
+  margin: 32px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.pilar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 22px;
+  border-radius: 20px;
+  background: var(--blanco);
+}
+.pilarNumero {
+  margin: 0;
+  font-family: var(--fuente-mono);
+  font-size: 12px;
+  line-height: 1.4;
+  text-transform: uppercase;
+  color: var(--verde-texto);
+}
+.pilarTitulo {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.pilarTexto {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--gris-suave);
+  text-wrap: pretty;
+}
+
+.enlaces {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 24px;
+  margin-top: 28px;
+}
+.enlaceComunidad {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--tinta);
+  transition: color 0.2s ease;
+}
+.enlaceComunidad:hover {
+  color: var(--verde-texto);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

@@ -1,0 +1,498 @@
+/*
+ * Hero de la home ("Bento"). Los tokens (--tinta, --lima…) los pone la raíz de la landing.
+ * Las reglas que ajustan una clase compartida (titulo1, display, eyebrow) van con dos
+ * clases para ganarle siempre, sin depender del orden de las hojas.
+ */
+
+.hero {
+  max-width: var(--ancho-hero);
+  margin: 8px auto 0;
+  padding-top: clamp(28px, 4vw, 56px);
+}
+
+.mayus {
+  text-transform: uppercase;
+}
+
+/* ------------------------------------------------------------------ */
+/* Encabezado: chip, H1, párrafo, CTA y prueba                         */
+/* ------------------------------------------------------------------ */
+
+.encabezado {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.encabezado .h1 {
+  margin-top: 20px;
+}
+.encabezado .parrafo {
+  margin-top: 18px;
+  max-width: 460px;
+}
+
+.fila {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px 20px;
+  flex-wrap: wrap;
+  margin-top: 24px;
+}
+
+.prueba {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--gris-suave);
+  text-align: left;
+}
+.pruebaIconos {
+  display: flex;
+  flex: none;
+}
+.pruebaIcono {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 0 0 3px var(--blanco);
+}
+.pruebaIcono + .pruebaIcono {
+  margin-left: -8px;
+}
+.pruebaLima {
+  background: var(--lima);
+  color: var(--tinta);
+}
+.pruebaTinta {
+  background: var(--tinta);
+  color: var(--lima);
+}
+.pruebaVerde {
+  background: var(--verde);
+  color: var(--tinta);
+}
+
+/* ------------------------------------------------------------------ */
+/* Rejilla: 1 columna, 2 desde 640px (A y D a lo ancho), 3 desde 980px  */
+/* ------------------------------------------------------------------ */
+
+.bento {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  margin-top: clamp(32px, 4vw, 52px);
+}
+
+@media (min-width: 640px) {
+  .bento {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .celdaA,
+  .celdaD {
+    grid-column: span 2;
+  }
+}
+
+@media (min-width: 980px) {
+  .bento {
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr);
+    grid-auto-rows: minmax(200px, auto);
+  }
+  .celdaA {
+    grid-column: 1;
+    grid-row: 1 / 3;
+  }
+  .celdaB {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .celdaC {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .celdaD {
+    grid-column: 3;
+    grid-row: 1 / 3;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* A · avatar en el piso                                               */
+/* ------------------------------------------------------------------ */
+
+.celdaA {
+  position: relative;
+  overflow: hidden;
+  min-height: 360px;
+  border-radius: var(--radio-lg);
+  background-color: var(--panel);
+  background-image: linear-gradient(rgba(12, 15, 10, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(12, 15, 10, 0.045) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* Brillo lima: el degradado ya es suave, sin filter: blur (coste de pintado sin efecto). */
+.brillo {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  width: 70%;
+  height: 60%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(157, 255, 79, 0.5), rgba(157, 255, 79, 0));
+}
+
+/* Sombra en el piso, también como degradado. */
+.sombraSuelo {
+  position: absolute;
+  left: 50%;
+  bottom: 22%;
+  width: 110px;
+  height: 12px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(12, 15, 10, 0.24), rgba(12, 15, 10, 0));
+}
+
+.avatarCaja {
+  position: absolute;
+  left: 50%;
+  bottom: 23%;
+  width: min(26%, 120px);
+  transform: translateX(-50%);
+  z-index: 2;
+}
+.avatarVaiven {
+  transform-origin: 50% 70%;
+}
+.avatar {
+  width: 100%;
+  height: auto;
+  transform-origin: 50% 70%;
+  filter: drop-shadow(0 18px 14px rgba(30, 60, 80, 0.18));
+}
+
+/* El avatar se mece (8 s) y flota 26px girando un poco (6 s), como en el diseño. Con
+   "menos movimiento", quieto. */
+@media (prefers-reduced-motion: no-preference) {
+  .avatarVaiven {
+    animation: mecerse 8s ease-in-out infinite;
+  }
+  .avatar {
+    animation: flotarAvatar 6s ease-in-out 0.6s infinite;
+  }
+}
+@keyframes mecerse {
+  0%,
+  100% {
+    rotate: -2.2deg;
+  }
+  50% {
+    rotate: 2.2deg;
+  }
+}
+@keyframes flotarAvatar {
+  0%,
+  100% {
+    translate: 0 0;
+    rotate: -1.6deg;
+  }
+  50% {
+    translate: 0 -26px;
+    rotate: 1.6deg;
+  }
+}
+
+/* Ficha del puntaje: flota (clase compartida) y va girada. Sin desenfoque de fondo, porque
+   se mueve: blanco casi opaco con la sombra del vidrio. */
+.chipPuntaje {
+  position: absolute;
+  left: 5%;
+  top: 8%;
+  z-index: 3;
+  transform: rotate(-3deg);
+  --flota-amp: 10px;
+  --flota-dur: 5.2s;
+  --flota-retraso: 0.4s;
+}
+.chipPuntajeCaja {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radio-sm);
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: var(--sombra-vidrio);
+  text-align: left;
+}
+.puntajeCifra {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--tinta);
+  color: var(--lima);
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 800;
+}
+.puntajeTextos {
+  display: flex;
+  flex-direction: column;
+}
+.puntajeTitulo {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.puntajeDetalle {
+  font-family: var(--fuente-mono);
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--gris-suave);
+}
+
+.muestraA {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 3;
+}
+
+.barraPago {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  text-align: left;
+}
+.check {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--lima);
+  color: var(--tinta);
+  display: grid;
+  place-items: center;
+}
+.pagoTextos {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.pagoTitulo {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.pagoDetalle {
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--gris-suave);
+}
+
+/* ------------------------------------------------------------------ */
+/* B · tabla semanal de ejemplo                                        */
+/* ------------------------------------------------------------------ */
+
+.celdaB {
+  background: var(--panel-2);
+  border-radius: var(--radio-lg);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+}
+.tablaCabeza {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.tablaTitulo {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.filaTabla {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 7px 9px;
+  border-radius: 11px;
+  background: var(--blanco);
+}
+.filaPrimera {
+  background: var(--lima-tinte);
+}
+.ficha {
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: var(--sobre-lima);
+}
+.fichaLima {
+  background: var(--lima);
+}
+.fichaLimaClaro {
+  background: var(--lima-claro);
+}
+.fichaTinte {
+  background: var(--lima-tinte);
+}
+.filaNombre {
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.filaPuntaje {
+  font-family: var(--fuente-mono);
+  font-size: 11px;
+}
+.filaBono {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--verde-profundo);
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------ */
+/* C · el lema sobre lima                                              */
+/* ------------------------------------------------------------------ */
+
+.celdaC {
+  background: var(--lima);
+  border-radius: var(--radio-lg);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 12px;
+  transition: transform 0.3s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .celdaC:hover {
+    transform: translateY(-4px);
+  }
+}
+.sticker {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  transform: rotate(-8deg);
+  filter: drop-shadow(0 8px 12px rgba(12, 15, 10, 0.25));
+}
+.lema {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+/* ------------------------------------------------------------------ */
+/* D · años y píldoras, sobre tinta                                    */
+/* ------------------------------------------------------------------ */
+
+.celdaD {
+  position: relative;
+  overflow: hidden;
+  min-height: 240px;
+  background: var(--tinta);
+  color: var(--blanco);
+  border-radius: var(--radio-lg);
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 14px;
+}
+.ondas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: rgba(157, 255, 79, 0.2);
+  stroke-width: 1;
+}
+.flechaArriba {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--lima);
+  color: var(--tinta);
+  display: grid;
+  place-items: center;
+}
+.celdaD .anos {
+  position: relative;
+  margin: 0;
+  font-size: clamp(56px, 6vw, 84px);
+  line-height: 0.85;
+  color: var(--lima);
+}
+.anosTexto {
+  position: relative;
+  max-width: 220px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--claro-sobre-tinta-2);
+}
+.pastillas {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 4px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.pastilla {
+  display: inline-block;
+  background: var(--blanco);
+  color: var(--tinta);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
+  padding: 6px 11px;
+  border-radius: var(--radio-pill);
+  box-shadow: inset 0 0 0 1.5px var(--tinta), 0 5px 12px rgba(0, 0, 0, 0.25);
+  rotate: var(--giro, 0deg);
+  transition: rotate 0.25s ease, scale 0.25s ease;
+}
+/* Al pasar el ratón, la píldora se endereza y crece un poco. */
+@media (hover: hover) and (pointer: fine) {
+  .pastilla:hover {
+    rotate: 0deg;
+    scale: 1.06;
+  }
+}

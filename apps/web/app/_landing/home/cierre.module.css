@@ -1,0 +1,37 @@
+/* Cierre: bloque lima centrado con la demo. */
+
+.bloque {
+  margin-top: var(--espacio-seccion);
+  background: var(--lima);
+  color: var(--tinta);
+  border-radius: clamp(22px, 3vw, 32px);
+  padding: clamp(48px, 7vw, 96px) clamp(20px, 4vw, 56px);
+  text-align: center;
+}
+
+/* Sobre lima, el verde de texto no da contraste: verde profundo (5,97:1). */
+.bloque .eyebrow {
+  color: var(--verde-profundo);
+  font-weight: 600;
+}
+
+.bloque .titulo {
+  margin: 16px auto 0;
+  max-width: 860px;
+  font-size: clamp(48px, 7.4vw, 108px);
+  line-height: 0.88;
+  text-wrap: balance;
+}
+
+.texto {
+  margin: 18px auto 0;
+  max-width: 440px;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--sobre-lima);
+  text-wrap: pretty;
+}
+
+.bloque .accion {
+  margin-top: 28px;
+}

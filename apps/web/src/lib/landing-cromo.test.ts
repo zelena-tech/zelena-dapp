@@ -105,7 +105,7 @@ describe("cabecera, enlaces y pie (en inglés, a rutas reales)", () => {
   it("el pie enlaza el manifiesto, el método y las decisiones, con la línea de marca", () => {
     const hrefs = PIE.enlaces.map((e) => e.href);
     for (const h of ["/manifiesto", "/metodo", "/gobernanza"]) expect(hrefs).toContain(h);
-    expect(PIE.linea).toBe("© 2026 Zelena · Performance-based bonuses for LATAM logistics, built on Stellar");
+    expect(PIE.linea).toBe("© 2026 Zelena · Performance-based payroll for LATAM logistics, built on Stellar");
   });
 
   it("los avisos legales: pagos de bonos en la red principal, el reparto y la comunidad en la de pruebas", () => {
@@ -119,7 +119,11 @@ describe("cabecera, enlaces y pie (en inglés, a rutas reales)", () => {
     }
   });
 
-  it("nada de la landing usa la palabra de nómina en inglés", () => {
-    for (const r of archivosLanding()) expect(leer(r), r).not.toMatch(/payroll/i);
+  // El founder eligió "payroll" para la landing en inglés (2026-10-25); en las páginas en
+  // español sigue sin decirse "nómina" (E1-5).
+  it("la palabra de nómina en inglés solo vive en los módulos de copy", () => {
+    for (const r of archivosLanding().filter((r) => !/copy-[a-z]+\.ts$/.test(r))) {
+      expect(leer(r), r).not.toMatch(/payroll/i);
+    }
   });
 });

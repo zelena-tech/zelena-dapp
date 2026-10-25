@@ -1,0 +1,98 @@
+/* Productos: "Measure the work. Pay the bonus." y las dos tarjetas (gris y lima). */
+
+.seccion .titulo {
+  margin-top: 14px;
+}
+.seccion .intro {
+  margin-top: 16px;
+  max-width: 460px;
+}
+
+.mayus {
+  text-transform: uppercase;
+}
+
+.tarjetas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 12px;
+  margin: 36px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tarjeta {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  border-radius: 24px;
+  padding: clamp(24px, 3vw, 32px);
+}
+.tarjetaPanel {
+  background: var(--panel);
+}
+.tarjetaLima {
+  background: var(--lima);
+}
+
+.tarjetaCabeza {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.tarjeta .numero {
+  font-size: 56px;
+  line-height: 0.8;
+}
+
+.tarjetaTitulo {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.puntos {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: #2e3531;
+}
+.tarjetaLima .puntos {
+  color: var(--sobre-lima);
+}
+.punto {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.vinieta {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--tinta);
+  color: var(--lima);
+}
+.tarjetaLima .vinieta {
+  background: var(--blanco);
+  color: var(--verde-profundo);
+}
+/* Lo que viene: círculo sin relleno y discontinuo. */
+.tarjeta .vinietaSiguiente {
+  background: transparent;
+  color: var(--verde-profundo);
+  border: 1.5px dashed var(--verde-profundo);
+}

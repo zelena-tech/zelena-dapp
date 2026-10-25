@@ -1,0 +1,190 @@
+/*
+ * Cómo funciona: tablero cuadriculado con cuatro tarjetas clavadas. Zig-zag desde 640px;
+ * por debajo, una columna con giros suaves y sin solape (nada desborda a 360px).
+ */
+
+.etiqueta {
+  display: inline-block;
+  margin: 0;
+  font-family: var(--fuente-mono);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.25;
+  padding: 6px 12px;
+  border-radius: var(--radio-pill);
+  box-shadow: inset 0 0 0 1.5px var(--tinta);
+}
+
+.cabeza {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+.intro {
+  margin: 0;
+  max-width: 320px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--gris-cuerpo);
+  text-wrap: pretty;
+}
+
+.tablero {
+  position: relative;
+  margin-top: 44px;
+  padding: 28px clamp(8px, 2vw, 24px) 80px;
+  border-radius: 32px;
+  background-color: var(--panel-2);
+  background-image: linear-gradient(#e6eae3 1px, transparent 1px), linear-gradient(90deg, #e6eae3 1px, transparent 1px);
+  background-size: 56px 56px;
+}
+
+/* Camino discontinuo entre las tarjetas: solo en el zig-zag. */
+.ruta {
+  display: none;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: var(--tinta);
+  stroke-width: 1.5;
+  stroke-dasharray: 6 7;
+  opacity: 0.45;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.pasos {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
+  margin: 0;
+  padding: 8px 6px 0;
+  list-style: none;
+}
+.paso {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+}
+
+.tarjeta {
+  position: relative;
+  background: var(--blanco);
+  border-radius: var(--radio-md);
+  padding: 34px 24px 26px;
+  box-shadow: 0 1px 0 var(--borde), 0 24px 50px rgba(12, 15, 10, 0.14);
+  transform: rotate(var(--giro-movil, 0deg));
+  transition: transform 0.3s ease;
+}
+.tarjetaLima {
+  background: var(--lima);
+}
+
+/* Al pasar el ratón la tarjeta se endereza y sube. */
+@media (hover: hover) and (pointer: fine) {
+  .tarjeta:hover {
+    transform: rotate(0deg) translateY(-4px);
+  }
+}
+
+.clavo {
+  position: absolute;
+  left: 50%;
+  top: 12px;
+  transform: translateX(-50%);
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--tinta);
+  box-shadow: 0 0 0 4px var(--borde);
+}
+
+.numero {
+  margin: 0;
+  font-family: var(--fuente-mono);
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--verde-texto);
+}
+.tarjetaLima .numero {
+  color: var(--verde-profundo);
+}
+
+.tarjeta .tarjetaTitulo {
+  margin: 6px 0 0;
+  font-size: 34px;
+  line-height: 0.92;
+}
+
+.tarjetaTexto {
+  margin: 10px 0 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--gris-suave);
+  text-wrap: pretty;
+}
+.tarjetaLima .tarjetaTexto {
+  color: var(--sobre-lima);
+}
+
+.nota {
+  position: absolute;
+  right: clamp(16px, 6vw, 80px);
+  bottom: 24px;
+  z-index: 2;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: clamp(26px, 3vw, 34px);
+  line-height: 1;
+  color: var(--verde-profundo);
+  transform: rotate(-4deg);
+}
+
+/* Zig-zag desde 640px: dos columnas, solape de 70px y el camino discontinuo. */
+@media (min-width: 640px) {
+  .ruta {
+    display: block;
+  }
+  .pasos {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: clamp(12px, 4vw, 56px);
+    row-gap: 0;
+    padding: 0;
+  }
+  .paso {
+    width: min(100%, 320px);
+  }
+  .paso:nth-child(1) {
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: end;
+  }
+  .paso:nth-child(2) {
+    grid-column: 2;
+    grid-row: 2;
+    justify-self: start;
+    margin-top: -70px;
+  }
+  .paso:nth-child(3) {
+    grid-column: 1;
+    grid-row: 3;
+    justify-self: end;
+    margin-top: -70px;
+  }
+  .paso:nth-child(4) {
+    grid-column: 2;
+    grid-row: 4;
+    justify-self: start;
+    margin-top: -70px;
+  }
+  .tarjeta {
+    transform: rotate(var(--giro, 0deg));
+  }
+}

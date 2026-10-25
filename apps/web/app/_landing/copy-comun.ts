@@ -88,7 +88,7 @@ export const PIE_LEGAL: readonly EnlacePie[] = (FOOTER_GRUPOS.find((g) => g.titu
 );
 
 export const PIE = {
-  linea: "© 2026 Zelena · Performance-based bonuses for LATAM logistics, built on Stellar",
+  linea: "© 2026 Zelena · Performance-based payroll for LATAM logistics, built on Stellar",
   navAria: "Footer",
   legalAria: "Legal",
   /** Las páginas enlazadas están en español: se marca con hrefLang en cada enlace. */
