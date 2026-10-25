@@ -55,13 +55,11 @@ export default function Hero({
       <div className={c.heroBotones}>
         <PrimaryCta
           href={ENLACES.proyectosAbiertos}
-          comando={HERO.ctaPrincipal.comando}
           nombre={HERO.ctaPrincipal.nombre}
         />
         <SecondaryCta
           href={llamada.href}
           hrefLang="es"
-          comando={HERO.ctaSecundario.comando}
           nombre={HERO.ctaSecundario.nombre}
         />
       </div>

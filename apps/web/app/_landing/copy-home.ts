@@ -27,11 +27,11 @@ export const PAISES = "Colombia";
 export const META_HOME = {
   titulo: "Zelena — Performance-based payroll for LATAM logistics",
   descripcion:
-    "Zelena measures warehouse operators’ work and pays the bonus they earn in USDC on Stellar: a WMS and Harmony incentives for LATAM logistics SMEs.",
+    "Performance-based payroll and incentives for LATAM logistics: Zelena measures your warehouse operators’ work and pays the bonus they earn in USDC, on Stellar.",
 } as const;
 
 /** Llamada principal (hero y cierre): el formulario de demo, con Harmony elegido. */
-export const CTA_DEMO = { comando: "book_a_demo", nombre: "Book a demo" } as const;
+export const CTA_DEMO = { nombre: "Book a demo" } as const;
 
 export const HERO = {
   chip: "Real work, real rewards",
@@ -50,7 +50,8 @@ export const HERO = {
 /**
  * Clientes que salen con logo en la home, con su Instagram. Autorizados por el founder el
  * 2026-10-25: por eso sus nombres ya no están en la lista de nombres privados del repo.
- * Los logos son monocromos (assets.ts): en una franja de clientes se leen más sobrios.
+ * Salen como fotos de perfil (círculos a color, sin rótulos): el clic abre su Instagram en
+ * otra pestaña.
  */
 export const CLIENTES = [
   { nombre: "Bloomshell", instagram: "bloomshell_cosmetics", logo: "clienteBloomshell" },
@@ -58,37 +59,14 @@ export const CLIENTES = [
   { nombre: "Burbay", instagram: "burbaybeauty", logo: "clienteBurbay" },
 ] as const;
 
-export const BENTO = {
-  /** A: los años con empresas y los logos de los clientes, cada uno a su Instagram. */
-  a: {
-    etiqueta: "Our clients",
-    cifra: ANOS_CON_OPERADORES,
-    texto: `impacting companies in ${PAISES}.`,
-    logosAria: "Companies we work with",
-    /** Rótulo visible bajo cada logo (el usuario no cabe en la ficha) y nombre accesible del enlace. */
-    rotuloEnlace: "Instagram",
-    enInstagram: "on Instagram",
-  },
-  /** B: tabla semanal de ejemplo (sin nombres de personas). */
-  b: {
-    aria: "Sample weekly leaderboard: three operators scored 96, 91 and 88 and earned bonuses of 20, 18 and 17 USDC.",
-    titulo: "This week · Sample warehouse",
-    muestra: "Sample",
-    filas: [
-      { nombre: "Operator 01", puntaje: "96", bono: "+20 USDC" },
-      { nombre: "Operator 02", puntaje: "91", bono: "+18 USDC" },
-      { nombre: "Operator 03", puntaje: "88", bono: "+17 USDC" },
-    ],
-  },
-  /** C: el lema sobre lima, en dos líneas. */
-  c: { linea1: "Fair, fast", linea2: "and verifiable." },
-  /** D: lo que tarda el bono en llegar y las seis píldoras inclinadas. */
-  d: {
-    cifra: "~5 sec",
-    texto: "from an approved score to the operator’s Stellar wallet, in USDC.",
-    pastillasAria: "What Zelena is",
-    pastillas: ["Logistics SMEs", "Payroll", "USDC payouts", "On Stellar mainnet", "WMS", PAISES],
-  },
+/** El bloque de clientes del hero: los años con empresas y un círculo por cliente. */
+export const BLOQUE_CLIENTES = {
+  etiqueta: "Our clients",
+  cifra: ANOS_CON_OPERADORES,
+  texto: `impacting companies in ${PAISES}.`,
+  logosAria: "Companies we work with",
+  /** Nombre accesible (y title) de cada enlace: "{nombre} on Instagram". */
+  enInstagram: "on Instagram",
 } as const;
 
 export interface PuntoProducto {
@@ -247,7 +225,7 @@ export const MANIFIESTO = {
       texto: "Technology you don’t notice. Trust is earned step by step.",
     },
   ],
-  cta: { comando: "read_the_manifesto", nombre: "Read the manifesto" },
+  cta: { nombre: "Read the manifesto" },
   comunidad: "Meet the community",
 } as const;
 

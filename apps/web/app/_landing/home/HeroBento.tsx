@@ -1,4 +1,3 @@
-import type { CSSProperties } from "react";
 import s from "../landing.module.css";
 import h from "./heroBento.module.css";
 import Chip from "../Chip";
@@ -6,37 +5,18 @@ import Imagen from "../Imagen";
 import { IMG } from "../assets";
 import { PrimaryCta } from "../Ctas";
 import { ENLACES } from "../copy-comun";
-import { BENTO, CLIENTES, CTA_DEMO, HERO } from "../copy-home";
+import { BLOQUE_CLIENTES, CLIENTES, CTA_DEMO, HERO } from "../copy-home";
 import { IconoCheck, IconoFlechaArriba, IconoFlechaDiagonal } from "../Iconos";
-import { ONDAS } from "./ondas";
-
-// Inclinación de cada píldora de la tarjeta D, en el orden del copy (como en el diseño).
-const GIROS_PASTILLAS = ["-8deg", "6deg", "-4deg", "9deg", "-5deg", "5deg"];
-
-// Fondo de la ficha de cada fila de la tabla de ejemplo: lima, lima claro, tinte.
-const FICHAS = [h.fichaLima, h.fichaLimaClaro, h.fichaTinte];
-
-/** Silueta neutra de operador (en lugar de iniciales: la tabla es un ejemplo). */
-function Operador() {
-  return (
-    <svg aria-hidden="true" focusable="false" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-      <circle cx="12" cy="8" r="4.5" />
-      <path d="M3.5 21c0-4.4 3.8-7.5 8.5-7.5s8.5 3.1 8.5 7.5z" />
-    </svg>
-  );
-}
 
 /**
- * Hero de la home (diseño "Bento"): chip, H1 en dos líneas, párrafo, CTA con una prueba
- * verificable y la rejilla A/B/C/D: A los clientes, B la tabla de ejemplo, C el lema y D lo
- * que tarda el bono en llegar. Todo en el servidor; el movimiento es CSS (flotar y
- * mecerse, solo sin "menos movimiento"). Sin aparición al hacer scroll: es el hero.
- *
- * La rejilla cambia con CSS, nunca con JS: una columna en el teléfono, dos en tableta (A y
- * D a lo ancho) y la de tres columnas desde 980px.
+ * Hero de la home: chip, H1 en dos líneas, párrafo, CTA con una prueba verificable y, debajo,
+ * el bloque de clientes: "2 years impacting companies" y un círculo por cliente, como foto de
+ * perfil, sin rótulos. Al pasar el ratón el círculo sube un poco; el clic abre su Instagram
+ * en otra pestaña (el nombre lo dicen el aria-label y el title). Todo en el servidor; sin
+ * aparición al hacer scroll: es el hero.
  */
 export default function HeroBento() {
-  const { a, b, c, d } = BENTO;
+  const a = BLOQUE_CLIENTES;
   return (
     <section className={h.hero} aria-labelledby="inicio-titulo">
       <div className={h.encabezado}>
@@ -52,7 +32,7 @@ export default function HeroBento() {
         </h1>
         <p className={`${s.lead} ${h.parrafo}`}>{HERO.parrafo}</p>
         <div className={h.fila}>
-          <PrimaryCta href={ENLACES.reservarDemo} hrefLang="es" comando={CTA_DEMO.comando} nombre={CTA_DEMO.nombre} />
+          <PrimaryCta href={ENLACES.reservarDemo} hrefLang="es" nombre={CTA_DEMO.nombre} />
           <p className={h.prueba}>
             <span className={h.pruebaIconos} aria-hidden="true">
               <span className={`${h.pruebaIcono} ${h.pruebaLima}`}>
@@ -70,93 +50,30 @@ export default function HeroBento() {
         </div>
       </div>
 
-      <div className={h.bento}>
-        {/* A · los años con empresas y los clientes, cada logo a su Instagram. */}
-        <div className={h.celdaA}>
-          <Chip tono="blanco" tamano="sm" punto className={`${h.mayus} ${h.etiquetaA}`}>
+      <div className={h.clientes}>
+        <div className={h.clientesTexto}>
+          <Chip tono="blanco" tamano="sm" punto className={h.mayus}>
             {a.etiqueta}
           </Chip>
-          <div className={h.anosA}>
-            <p className={`${s.display} ${h.anosACifra}`}>{a.cifra}</p>
-            <p className={h.anosATexto}>{a.texto}</p>
-          </div>
-          <ul className={h.logos} aria-label={a.logosAria}>
-            {CLIENTES.map((cl) => (
-              <li key={cl.nombre} className={h.logoCelda}>
-                <a
-                  href={`https://www.instagram.com/${cl.instagram}/`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={h.logo}
-                  aria-label={`${cl.nombre} ${a.enInstagram}`}
-                >
-                  <span className={h.logoMarco}>
-                    <Imagen img={IMG[cl.logo]} perezosa={false} className={h.logoImg} />
-                  </span>
-                  <span className={h.logoUsuario} aria-hidden="true">
-                    {a.rotuloEnlace}
-                    <IconoFlechaDiagonal tamano={11} trazo={2.5} />
-                  </span>
-                </a>
-              </li>
-            ))}
-          </ul>
+          <p className={`${s.display} ${h.anosCifra}`}>{a.cifra}</p>
+          <p className={h.anosTexto}>{a.texto}</p>
         </div>
-
-        {/* B · tabla semanal de ejemplo. */}
-        <div className={h.celdaB} role="img" aria-label={b.aria}>
-          <div className={h.tablaCabeza}>
-            <span className={h.tablaTitulo}>{b.titulo}</span>
-            <Chip tono="tinta" tamano="sm" className={h.mayus}>
-              {b.muestra}
-            </Chip>
-          </div>
-          {b.filas.map((f, i) => (
-            <div key={f.nombre} className={i === 0 ? `${h.filaTabla} ${h.filaPrimera}` : h.filaTabla}>
-              <span className={`${h.ficha} ${FICHAS[i % FICHAS.length]}`}>
-                <Operador />
-              </span>
-              <span className={h.filaNombre}>{f.nombre}</span>
-              <span className={h.filaPuntaje}>{f.puntaje}</span>
-              <span className={h.filaBono}>{f.bono}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* C · el lema, sobre lima. */}
-        <div className={h.celdaC}>
-          <Imagen img={IMG.stickerTeclaZ} perezosa={false} className={h.sticker} />
-          <p className={h.lema}>
-            {c.linea1}{" "}
-            <br />
-            {c.linea2}
-          </p>
-        </div>
-
-        {/* D · lo que tarda el bono en llegar y las píldoras inclinadas, sobre tinta. */}
-        <div className={`${h.celdaD} ${s.superficieOscura}`}>
-          <svg className={h.ondas} viewBox="0 0 600 300" preserveAspectRatio="none" aria-hidden="true" focusable="false">
-            {ONDAS.map((dd, i) => (
-              <path key={i} d={dd} />
-            ))}
-          </svg>
-          <span className={h.circuloLima} aria-hidden="true">
-            <IconoCheck tamano={20} trazo={3} />
-          </span>
-          <p className={`${s.display} ${h.anos}`}>{d.cifra}</p>
-          <p className={h.anosTexto}>{d.texto}</p>
-          <ul className={h.pastillas} aria-label={d.pastillasAria}>
-            {d.pastillas.map((p, i) => (
-              <li
-                key={p}
-                className={h.pastilla}
-                style={{ "--giro": GIROS_PASTILLAS[i % GIROS_PASTILLAS.length] } as CSSProperties}
+        <ul className={h.circulos} aria-label={a.logosAria}>
+          {CLIENTES.map((cl) => (
+            <li key={cl.nombre} className={h.circuloCelda}>
+              <a
+                href={`https://www.instagram.com/${cl.instagram}/`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={h.cliente}
+                aria-label={`${cl.nombre} ${a.enInstagram}`}
+                title={`${cl.nombre} ${a.enInstagram}`}
               >
-                {p}
-              </li>
-            ))}
-          </ul>
-        </div>
+                <Imagen img={IMG[cl.logo]} perezosa={false} className={h.circulo} />
+              </a>
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   );

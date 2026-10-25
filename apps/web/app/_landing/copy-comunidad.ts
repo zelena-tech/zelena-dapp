@@ -38,9 +38,9 @@ export const HERO = {
   // No "Stellar lo registra todo": en la red de pruebas solo se anclan las firmas del
   // acuerdo, los totales de puntos de cada época y los ritos; el resto vive en la base.
   lead: "A community of contributors with public rules, milestone-based pay and a reputation that belongs to you. The record stays open; you just deliver.",
-  ctaPrincipal: { comando: "explore_projects", nombre: "Explore open projects" },
+  ctaPrincipal: { nombre: "Explore open projects" },
   /** Lleva a la llamada a participar (encuentro, rito preparado o aviso por correo). */
-  ctaSecundario: { comando: "join_the_community", nombre: "Join the community" },
+  ctaSecundario: { nombre: "Join the community" },
   /** Tarjetas de vidrio sobre la nube (ilustración; las cifras reales están en la tira). */
   tarjetas: {
     prueba: {
@@ -199,7 +199,7 @@ export const MANIFIESTO = {
       d: "Technology you don’t notice. Trust is earned step by step.",
     },
   ],
-  cta: { comando: "read_the_manifesto", nombre: "Read the manifesto" },
+  cta: { nombre: "Read the manifesto" },
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -216,10 +216,9 @@ export const PROYECTOS = {
   monto: (n: number) => `USD ${numero(n)}`,
   /** Junto a cada monto: es la red de pruebas (WP31, regla 7). */
   red: "Testnet",
-  verTodos: { comando: "see_all_in_the_agora", nombre: "See all projects in the Agora" },
+  verTodos: { nombre: "See all projects in the Agora" },
   vacio: {
     texto: "No open projects right now. New ones are published in the Agora.",
-    comando: "open_the_agora",
     nombre: "Open the Agora",
   },
 } as const;
@@ -274,7 +273,7 @@ export const CIERRE = {
   eyebrow: "$ zelena join",
   titulo: ["Real work.", "Real rewards."],
   texto: "Deliver the milestone. Once it’s approved, it gets paid and stays on your record.",
-  cta: { comando: "explore_projects", nombre: "Explore open projects" },
+  cta: { nombre: "Explore open projects" },
   /** Ventana de código (decorativa): aprobar, registrar y pagar contra la aprobación. */
   archivo: "milestone_02.rs",
   codigo: [

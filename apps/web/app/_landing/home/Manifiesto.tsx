@@ -35,7 +35,6 @@ export default function Manifiesto() {
         <SecondaryCta
           href={ENLACES.manifiesto}
           hrefLang="es"
-          comando={MANIFIESTO.cta.comando}
           nombre={MANIFIESTO.cta.nombre}
         />
         <Link href={ENLACES.comunidad} className={m.enlaceComunidad}>

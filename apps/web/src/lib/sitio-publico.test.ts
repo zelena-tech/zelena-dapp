@@ -17,7 +17,7 @@ import { createHash } from "node:crypto";
 import { PASOS_METODO } from "./metodo";
 import { RUTA_VOTAR } from "./landing-datos";
 import { CABECERA, ENLACES } from "../../app/_landing/copy-comun";
-import { BENTO, CLIENTES, HARMONY, HERO as HERO_INICIO } from "../../app/_landing/copy-home";
+import { BLOQUE_CLIENTES, CLIENTES, CTA_DEMO, HARMONY, HERO as HERO_INICIO } from "../../app/_landing/copy-home";
 import { CIFRAS, HERO as HERO_COMUNIDAD } from "../../app/_landing/copy-comunidad";
 
 const WEB = process.cwd(); // apps/web
@@ -165,8 +165,11 @@ describe("E1-11 · sin jerga en lo público", () => {
 
   // Decisión del founder (2026-10-25): "payroll" se queda en la landing en inglés, y solo en
   // sus módulos de copy. En español sigue sin decirse "nómina" (WP31, E1-5).
-  it("'payroll' solo en los módulos de copy de la landing en inglés; 'nómina' en ninguna parte", () => {
-    expect(coincidencias(PUBLICOS, /payroll/i, (r) => /^app\/_landing\/copy-[a-z]+\.ts$/.test(r))).toEqual([]);
+  // El discurso de la home y de los buscadores es "performance-based payroll" (founder,
+  // 2026-10-25): vale en la copy en inglés y en los datos estructurados de seo.ts.
+  it("'payroll' solo en la copy de la landing en inglés y en seo.ts; 'nómina' en ninguna parte", () => {
+    const permitido = (r: string) => /^app\/_landing\/copy-[a-z]+\.ts$/.test(r) || r === "src/lib/seo.ts";
+    expect(coincidencias(PUBLICOS, /payroll/i, permitido)).toEqual([]);
     expect(coincidencias(PUBLICOS, /\bn[oó]minas?\b/i)).toEqual([]);
   });
 
@@ -438,23 +441,21 @@ describe("E1-10 · la landing en inglés (/ y /comunidad)", () => {
     expect(leer("app/_landing/comunidad/Cifras.tsx")).toContain("{d.valor === 0 ? <LineaDelCero cero={d.cero} /> : null}");
   });
 
-  it("los clientes de la home son los autorizados, cada logo enlaza a su Instagram y abre aparte", () => {
+  it("los clientes de la home son los autorizados, cada círculo enlaza a su Instagram y abre aparte", () => {
     expect(CLIENTES.map((c) => c.nombre)).toEqual(["Bloomshell", "Montoc", "Burbay"]);
     for (const c of CLIENTES) expect(c.instagram).toMatch(/^[a-z0-9_.]+$/);
     const bento = leer("app/_landing/home/HeroBento.tsx");
     expect(bento).toContain("href={`https://www.instagram.com/${cl.instagram}/`}");
     expect(bento).toContain('rel="noopener noreferrer"');
-    // El avatar salió del hero de la home: ahora es la franja de clientes (sigue en /comunidad).
-    expect(bento).not.toContain("avatarDePie");
-    expect(BENTO.a.texto).toBe("impacting companies in Colombia.");
+    // El hero de la home es solo de clientes: sin avatar ni maquetas (el avatar sigue en /comunidad).
+    expect(bento).not.toMatch(/avatarDePie|Operator 0|Sample/);
+    expect(BLOQUE_CLIENTES.texto).toBe("impacting companies in Colombia.");
   });
 
   it("/ no lee la base: sus cifras son ejemplos rotulados; los proyectos de /comunidad salen sin campaña ni valor interno", () => {
     for (const src of [inicio, ...LANDING.filter((r) => r.startsWith("app/_landing/home/")).map(leer)]) {
       expect(src).not.toMatch(/@\/lib\/db|getDb|listProjects|datosComunidad/);
     }
-    expect(BENTO.b.muestra).toBe("Sample");
-    expect(BENTO.b.filas.map((f) => f.nombre)).toEqual(["Operator 01", "Operator 02", "Operator 03"]);
     expect(HARMONY.pieTelefono).toMatch(/^Sample screen/);
     const datos = leer("src/lib/landing-datos.ts");
     expect(datos).toContain(
@@ -503,8 +504,9 @@ describe("E1-10 · la landing en inglés (/ y /comunidad)", () => {
 describe("lenguaje editorial en lo público", () => {
   // WP31: las páginas en español usan la serif editorial y no el componente Type. La landing
   // en inglés de WP33 (/ y /comunidad) tiene otra voz, la del diseño que encargó el founder:
-  // mono, botones "[[ book_a_demo ]]" e indicaciones "$ zelena …". Esa voz vive solo en
-  // app/_landing; las páginas en español no la toman.
+  // mono e indicaciones "$ zelena …". Esa voz vive solo en app/_landing; las páginas en
+  // español no la toman. Los botones dicen su nombre llano ("Book a demo"): los corchetes
+  // "[[ … ]]" del diseño se quitaron a pedido del founder (2026-10-25).
   it("las páginas en español nuevas o reescritas usan serif y no el componente Type", () => {
     for (const r of [
       "app/metodo/page.tsx",
@@ -522,12 +524,13 @@ describe("lenguaje editorial en lo público", () => {
     }
   });
 
-  it("la voz de comandos de la landing ([[ … ]] y $ zelena …) solo en app/_landing; la landing no usa la serif", () => {
+  it("la voz de comandos de la landing ($ zelena …) solo en app/_landing; sin corchetes en los botones; la landing no usa la serif", () => {
     const VOZ_COMANDO = /\[\[ \{?[a-z_]+\}? \]\]|\$ zelena\b|\$ (cat|ls) /;
     const fuera = PUBLICOS.filter((r) => !r.startsWith("app/_landing/"));
     expect(coincidencias(fuera, VOZ_COMANDO)).toEqual([]);
     // La landing sí la usa (si este guarda deja de ver la voz, deja de proteger nada).
-    expect(leer("app/_landing/Ctas.tsx")).toContain("[[ {comando} ]]");
+    expect(coincidencias([...archivosLanding()], /\[\[ \{?[a-z_]+\}? \]\]/)).toEqual([]);
+    expect(CTA_DEMO.nombre).toBe("Book a demo");
     expect(leer("app/_landing/copy-home.ts")).toMatch(/eyebrow: "\$ zelena /);
     const landing = [...archivosLanding(), "app/page.tsx", "app/comunidad/page.tsx"];
     expect(coincidencias(landing, /font-serif|Playfair/)).toEqual([]);

@@ -44,7 +44,6 @@ export default function Proyectos({ proyectos }: { proyectos: ProyectoAbierto[] 
             <SecondaryCta
               href={ENLACES.agora}
               hrefLang="es"
-              comando={PROYECTOS.verTodos.comando}
               nombre={PROYECTOS.verTodos.nombre}
             />
           </div>
@@ -64,7 +63,6 @@ export default function Proyectos({ proyectos }: { proyectos: ProyectoAbierto[] 
             <SecondaryCta
               href={ENLACES.agora}
               hrefLang="es"
-              comando={PROYECTOS.vacio.comando}
               nombre={PROYECTOS.vacio.nombre}
             />
           </div>

@@ -121,7 +121,7 @@ export const JSON_LD_INICIO = {
       url: `${SITIO}/`,
       logo: { "@type": "ImageObject", url: `${SITIO}/icon.png`, width: 512, height: 512 },
       description:
-        "Zelena builds a WMS for logistics SMEs in Latin America and Harmony, an incentive layer that pays warehouse operators performance bonuses in USDC on the Stellar network.",
+        "Zelena brings performance-based payroll and incentives to logistics SMEs in Latin America: a WMS that measures warehouse work and Harmony, which pays operators their performance bonus in USDC on the Stellar network.",
       sameAs: ["https://github.com/zelena-tech"],
       contactPoint: {
         "@type": "ContactPoint",

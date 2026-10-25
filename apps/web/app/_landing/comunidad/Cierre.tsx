@@ -24,8 +24,8 @@ export default function Cierre({ llamada }: { llamada: LlamadaLanding }) {
         </h2>
         <p className={c.cierreParrafo}>{CIERRE.texto}</p>
         <div className={c.cierreBotones}>
-          <PrimaryCta href={ENLACES.proyectosAbiertos} comando={CIERRE.cta.comando} nombre={CIERRE.cta.nombre} />
-          <SecondaryCta href={llamada.href} hrefLang="es" comando={llamada.comando} nombre={llamada.texto} />
+          <PrimaryCta href={ENLACES.proyectosAbiertos} nombre={CIERRE.cta.nombre} />
+          <SecondaryCta href={llamada.href} hrefLang="es" nombre={llamada.texto} />
         </div>
       </div>
       <VentanaCodigo

@@ -255,10 +255,8 @@ export interface LlamadaLanding {
   href: string;
   /** A dónde lleva: un encuentro, un rito ya preparado o el aviso de encuentros. */
   destino: "encuentro" | "rito" | "aviso";
-  /** Texto llano en inglés (nombre accesible del botón). */
+  /** Texto llano en inglés: lo que dice el botón. */
   texto: string;
-  /** Etiqueta con la voz de comando del diseño (snake_case). */
-  comando: string;
 }
 
 /** Sin calendario (o si la base falla): al formulario para dejar el correo. */
@@ -266,7 +264,6 @@ export const LLAMADA_AVISO: LlamadaLanding = {
   href: RUTA_AVISO_ENCUENTROS,
   destino: "aviso",
   texto: "Get notified of the next date",
-  comando: "get_notified",
 };
 
 /**
@@ -283,7 +280,7 @@ export function llamadaParticiparEn(
   const rito = proximoRitoPreparado(db, ahora);
   const base = llamadaParticipar(encuentros[0] ?? null, rito, tz);
   if (base.href === "/encuentros#proximos") {
-    return { href: base.href, destino: "encuentro", texto: "Come to a meetup", comando: "join_a_meetup" };
+    return { href: base.href, destino: "encuentro", texto: "Come to a meetup" };
   }
   if (rito && rito.sessionId && base.href === `${RUTA_RITOS}/${rito.sessionId}`) {
     const nombre = rito.kind === "retro" ? "retro" : "demo";
@@ -292,7 +289,6 @@ export function llamadaParticiparEn(
       href: base.href,
       destino: "rito",
       texto: `Come to the ${nombre} on ${dia.charAt(0)}${dia.slice(1).toLowerCase()}`,
-      comando: `join_the_next_${nombre}`,
     };
   }
   return { ...LLAMADA_AVISO, href: base.href };

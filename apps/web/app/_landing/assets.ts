@@ -30,8 +30,8 @@ export const IMG = {
   stickerCorazon: { src: "/landing/st-heart-trim.png", width: 156, height: 144, pixel: true },
   /** Sticker flecha (tira de cifras, rotado 14°). 187×202. */
   stickerFlecha: { src: "/landing/st-arrow-ref.png", width: 187, height: 202, pixel: true },
-  /** Logos de clientes (bento A de la home): monocromos en tinta, fondo transparente. */
-  clienteBloomshell: { src: "/landing/clientes/bloomshell.png", width: 167, height: 160, pixel: false },
-  clienteMontoc: { src: "/landing/clientes/montoc.png", width: 378, height: 82, pixel: false },
-  clienteBurbay: { src: "/landing/clientes/burbay.png", width: 374, height: 116, pixel: false },
+  /** Logos de clientes como foto de perfil (hero de la home): 320×320, a color; el CSS los recorta en círculo. */
+  clienteBloomshell: { src: "/landing/clientes/bloomshell.png", width: 320, height: 320, pixel: false },
+  clienteMontoc: { src: "/landing/clientes/montoc.png", width: 320, height: 320, pixel: false },
+  clienteBurbay: { src: "/landing/clientes/burbay.png", width: 320, height: 320, pixel: false },
 } as const satisfies Record<string, ImagenLanding>;

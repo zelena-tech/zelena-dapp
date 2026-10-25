@@ -214,7 +214,6 @@ describe("proximasCitas y la llamada a participar", () => {
       href: `/comunidad/ritos/${r.id}`,
       destino: "rito",
       texto: "Come to the demo on Oct 9",
-      comando: "join_the_next_demo",
     });
   });
 

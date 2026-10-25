@@ -21,7 +21,6 @@ export default function CierreHome() {
       <PrimaryCta
         href={ENLACES.reservarDemo}
         hrefLang="es"
-        comando={CTA_DEMO.comando}
         nombre={CTA_DEMO.nombre}
         className={c.accion}
       />

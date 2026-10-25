@@ -36,7 +36,6 @@ export default function Manifiesto() {
         <SecondaryCta
           href={ENLACES.manifiesto}
           hrefLang="es"
-          comando={M.cta.comando}
           nombre={M.cta.nombre}
           sobreOscuro
         />

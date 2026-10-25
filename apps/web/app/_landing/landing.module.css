@@ -277,7 +277,7 @@
 /* Botones                                                             */
 /* ------------------------------------------------------------------ */
 
-/* Primario: píldora de tinta con "[[ comando ]]" y el círculo lima con la flecha. */
+/* Primario: píldora de tinta con el nombre y el círculo lima con la flecha. */
 .ctaPrimario {
   display: inline-flex;
   align-items: center;
