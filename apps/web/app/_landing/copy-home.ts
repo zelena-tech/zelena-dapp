@@ -232,7 +232,7 @@ export const MANIFIESTO = {
     {
       n: "III · How we build",
       titulo: "Real comes first.",
-      texto: "Technology you don’t notice. Trust is earned in stages.",
+      texto: "Technology you don’t notice. Trust is earned step by step.",
     },
   ],
   cta: { comando: "read_the_manifesto", nombre: "Read the manifesto" },
