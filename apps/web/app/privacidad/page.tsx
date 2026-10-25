@@ -1,8 +1,8 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { responsableTratamiento } from "@/lib/legal";
 import { AVISO_PRIVACIDAD, AVISO_PRIVACIDAD_VERSION } from "@/lib/aviso-privacidad";
 import { avisoVigente } from "@/lib/consentimiento";
+import { metadatos } from "@/lib/seo";
 
 // El responsable y su contacto salen de la configuración del despliegue: se leen
 // en cada visita para no congelar en la build un valor que todavía no existe.
@@ -12,11 +12,13 @@ import { avisoVigente } from "@/lib/consentimiento";
 // así que esta página pinta exactamente lo que se resume en la huella.
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Privacidad", // el layout le añade "· Zelena"
-  description:
+export const metadata = metadatos({
+  ruta: "/privacidad",
+  idioma: "es",
+  titulo: "Privacidad · Zelena",
+  descripcion:
     "Aviso de tratamiento de datos de Zelena: qué datos guardamos, para qué, qué no hacemos y cómo ejerces tus derechos.",
-};
+});
 
 const ENLACE = "text-primary underline decoration-primary/40 underline-offset-4 hover:decoration-primary";
 

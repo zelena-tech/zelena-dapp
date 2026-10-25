@@ -664,7 +664,7 @@ describe("D6 · lecturas públicas sin wallets ni nombres; el enlace solo con se
   });
 
   it("las páginas deciden el enlace por la fila activa y la wallet, no solo por la cookie", () => {
-    for (const r of ["app/comunidad/ritos/[id]/page.tsx", "app/comunidad/page.tsx"]) {
+    for (const r of ["app/comunidad/ritos/[id]/page.tsx", "app/comunidad/ritos/page.tsx"]) {
       const src = leer(r);
       expect(src).toMatch(/actorDeRitos\(db, session\.wallet\)/);
       expect(src).not.toMatch(/detalleRito\(db, [^)]*!!session\)/);

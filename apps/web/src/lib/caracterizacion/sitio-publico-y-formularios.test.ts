@@ -336,9 +336,10 @@ describe("menú, pie y redirecciones", () => {
     }
   });
 
-  it("con sesión de comunidad (sin acceso al trabajo): Ágora, Academia y Comunidad", () => {
+  it("con sesión de comunidad (sin acceso al trabajo): Ágora, Academia y Comunidad (los ritos)", () => {
     const m = menuPara({ ruta: "/", conSesion: true, accesoEquipo: false, esInterno: false, puedeVerTodo: false });
-    expect(m.map((e) => e.href)).toEqual(["/agora", "/academia", "/comunidad"]);
+    // WP33: con sesión, "Comunidad" lleva a los ritos; /comunidad es la landing en inglés.
+    expect(m.map((e) => e.href)).toEqual(["/agora", "/academia", "/comunidad/ritos"]);
   });
 
   it("el pie trae el grupo Legal (acuerdo, privacidad, licencia) y el de Empresas; el aviso de red de pruebas", () => {

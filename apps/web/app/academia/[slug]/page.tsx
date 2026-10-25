@@ -1,11 +1,26 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAcademiaBySlug, academiaAlreadyAwarded } from "@/lib/repo";
 import { getSession } from "@/lib/session";
 import { Markdown } from "@/components/Markdown";
 import Reader from "@/components/Reader";
+import { metadatos } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
+
+// Un contenido apagado sigue abriendo por su enlace, pero no se indexa (ni va al sitemap).
+export function generateMetadata({ params }: { params: { slug: string } }): Metadata {
+  const c = getAcademiaBySlug(params.slug);
+  if (!c) return { title: { absolute: "Contenido no encontrado · Zelena" } };
+  return metadatos({
+    ruta: `/academia/${encodeURIComponent(c.slug)}`,
+    idioma: "es",
+    titulo: `${c.title} · Academia Zelena`,
+    descripcion: c.summary,
+    indexar: Number(c.enabled) === 1,
+  });
+}
 
 export default async function AcademiaDetail({ params }: { params: { slug: string } }) {
   const content = getAcademiaBySlug(params.slug);

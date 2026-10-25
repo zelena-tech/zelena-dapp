@@ -7,7 +7,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { openDb, type DB } from "./db";
 import { seedIfEmpty } from "./seed";
-import { cifrasEnVivo } from "./prueba-en-vivo";
+import { cifrasEnVivo, puntosRepartidos } from "./prueba-en-vivo";
 
 const TX_1 = "1".repeat(64);
 const TX_2 = "ab".repeat(32);
@@ -118,5 +118,39 @@ describe("cifrasEnVivo", () => {
     db.prepare(`UPDATE projects SET assignee_wallet = ?, state = 'Assigned' WHERE id = ?`).run(demo, sembrado.id);
     db.prepare(`UPDATE milestones SET approved = 1 WHERE project_id = ?`).run(sembrado.id);
     expect(cifrasEnVivo(db).entregasAprobadas).toBe(0);
+  });
+});
+
+/** Un movimiento de puntos (append-only) para una wallet. */
+function puntos(db: DB, wallet: string, n: number): void {
+  db.prepare(`INSERT INTO points_ledger (wallet, points, period_id, bucket, ref) VALUES (?, ?, 1, 'ejecucion', 'prueba')`).run(
+    wallet,
+    n
+  );
+}
+
+describe("puntosRepartidos (landing en inglés, WP33)", () => {
+  it("la base sembrada da 0: los puntos de la demo son de cuentas de prueba", () => {
+    const sembrados = (db.prepare(`SELECT COALESCE(SUM(points), 0) AS n FROM points_ledger`).get() as { n: number }).n;
+    expect(sembrados).toBeGreaterThan(0);
+    expect(puntosRepartidos(db)).toBe(0);
+  });
+
+  it("una base vacía da 0", () => {
+    const vacia = openDb(":memory:");
+    vacia.exec(fs.readFileSync(path.join(process.cwd(), "src", "lib", "schema.sql"), "utf8"));
+    expect(puntosRepartidos(vacia)).toBe(0);
+  });
+
+  it("suma solo los de cuentas reales; ni demo ni wallets sin cuenta", () => {
+    usuario(db, "GREAL1", 0);
+    usuario(db, "GREAL2", 0);
+    usuario(db, "GDEMO1", 1);
+    puntos(db, "GREAL1", 120);
+    puntos(db, "GREAL2", 30);
+    puntos(db, "GREAL1", 5);
+    puntos(db, "GDEMO1", 900); // cuenta de prueba: no cuenta
+    puntos(db, "GSIN_CUENTA", 40); // wallet sin fila en users: no cuenta
+    expect(puntosRepartidos(db)).toBe(155);
   });
 });

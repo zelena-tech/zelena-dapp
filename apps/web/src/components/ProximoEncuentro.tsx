@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getDb } from "@/lib/db";
 import { fechaLarga, proximosEncuentros } from "@/lib/encuentros";
-import { RUTA_COMUNIDAD } from "@/lib/menu";
+import { RUTA_RITOS } from "@/lib/menu";
 import { proximoRitoDeComunidad, zonaRitos, type RitoProximo } from "@/lib/ritos";
 import { elegirProximo, proximoRitoTexto, zonaTexto } from "@/lib/ritos-labels";
 
@@ -45,7 +45,7 @@ export default function ProximoEncuentro() {
         </Link>
       ) : textoRito && rito ? (
         <Link
-          href={rito.sessionId ? `/comunidad/ritos/${rito.sessionId}` : `${RUTA_COMUNIDAD}#proximos`}
+          href={rito.sessionId ? `/comunidad/ritos/${rito.sessionId}` : `${RUTA_RITOS}#proximos`}
           className="group flex flex-col gap-2"
         >
           <span className="font-serif text-2xl font-normal normal-case leading-snug text-paper sm:text-3xl">
@@ -62,7 +62,7 @@ export default function ProximoEncuentro() {
       ) : (
         <p className="text-base leading-7 text-muted">
           Las próximas fechas se publican en{" "}
-          <Link href={RUTA_COMUNIDAD} className="text-primary underline decoration-primary/40 underline-offset-4 hover:decoration-primary">
+          <Link href={RUTA_RITOS} className="text-primary underline decoration-primary/40 underline-offset-4 hover:decoration-primary">
             Comunidad
           </Link>
           .

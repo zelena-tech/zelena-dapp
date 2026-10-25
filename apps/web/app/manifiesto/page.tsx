@@ -1,10 +1,13 @@
 import Link from "next/link";
+import { metadatos } from "@/lib/seo";
 
-export const metadata = {
-  title: { absolute: "Manifiesto · ZELENA" },
-  description:
+export const metadata = metadatos({
+  ruta: "/manifiesto",
+  idioma: "es",
+  titulo: "Manifiesto · Zelena",
+  descripcion:
     "Lo que creemos: lo que entregas debería determinar lo que recibes. Los principios que guían a ZELENA en el trabajo, en la comunidad y en la forma en que construimos.",
-};
+});
 
 // Valores y filosofía, no estructura: aquí no se explica la forma legal ni la
 // mecánica de la comunidad (eso vive en /metodo y /comunidad). Es el documento de fondo

@@ -42,11 +42,14 @@ const COMPONENTES_PUBLICOS = [
   "ProximoEncuentro",
   "ui",
 ];
-const LIBS_PUBLICAS = ["menu", "metodo", "servicios", "encuentros", "aviso-privacidad"];
+const LIBS_PUBLICAS = ["menu", "metodo", "servicios", "encuentros", "aviso-privacidad", "seo", "landing-datos"];
 
-/** Lista generada de archivos públicos (E1-1). */
+/**
+ * Lista generada de archivos públicos (E1-1). Incluye los `.ts` de `app/`: el copy de la
+ * landing en inglés vive en app/_landing/copy-*.ts, y robots y sitemap también son públicos.
+ */
 function archivosPublicos(): string[] {
-  const paginas = recorrer(path.join(WEB, "app"), /\.tsx$/)
+  const paginas = recorrer(path.join(WEB, "app"), /\.tsx?$/)
     .map(rel)
     .filter((r) => !PRIVADAS.test(r));
   const componentes = COMPONENTES_PUBLICOS.map((c) => `src/components/${c}.tsx`);
@@ -85,6 +88,11 @@ describe("la lista generada de archivos públicos", () => {
       "app/entrar/page.tsx",
       "app/empresas/page.tsx",
       "app/manifiesto/page.tsx",
+      "app/comunidad/ritos/page.tsx",
+      "app/_landing/copy-comun.ts",
+      "app/_landing/LandingShell.tsx",
+      "app/robots.ts",
+      "app/sitemap.ts",
     ]) {
       expect(PUBLICOS).toContain(r);
     }
@@ -200,6 +208,21 @@ describe("E1-3 · redirecciones permanentes (308)", () => {
       permanent: true,
     });
   });
+
+  // WP33: el dominio sin www y las visitas directas al host de azurewebsites van a www. Lo
+  // que llega por Front Door (siempre con x-azure-fdid) no se toca; /.well-known/, /api/ y
+  // el calentamiento del App Service quedan fuera.
+  it("redirige el dominio sin www y el host de origen a https://www.zelena.tech, conservando la ruta", async () => {
+    const mod = (await import("../../next.config.mjs")) as { default: { redirects: () => Promise<unknown[]> } };
+    const r = await mod.default.redirects();
+    expect(r).toContainEqual({
+      source: "/:path((?!\\.well-known/|api/|robots933456\\.txt).*)",
+      has: [{ type: "host", value: "(?:zelena\\.tech|zelena-dao\\.azurewebsites\\.net)" }],
+      missing: [{ type: "header", key: "x-azure-fdid" }],
+      destination: "https://www.zelena.tech/:path",
+      permanent: true,
+    });
+  });
 });
 
 describe("E1-5 · /empresas sin promesas que no podemos sostener", () => {
@@ -305,7 +328,8 @@ describe("E1-10 · la landing", () => {
   });
 
   it("/comunidad: 'Cómo participar' lleva a la misma llamada, y /encuentros tiene el ancla del aviso", () => {
-    const comunidad = leer("app/comunidad/page.tsx");
+    // WP33: la página de ritos que antes era /comunidad vive en /comunidad/ritos.
+    const comunidad = leer("app/comunidad/ritos/page.tsx");
     expect(comunidad).toContain("llamadaParticipar(encuentros[0] ?? null, proximoRitoPreparado(db), tz)");
     expect(comunidad).toMatch(/href=\{llamada\.href\}[^>]*>\s*\{llamada\.texto\}\s*</);
     expect(leer("app/encuentros/page.tsx")).toMatch(/<div id="aviso" [^>]*>[\s\S]*<AvisoEncuentrosForm \/>/);

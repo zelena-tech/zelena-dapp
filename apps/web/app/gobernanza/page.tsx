@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { getOpenProposal, voteTally, userVote } from "@/lib/repo";
 import { getSession } from "@/lib/session";
 import { getDb } from "@/lib/db";
@@ -7,13 +6,17 @@ import { esActaDeRito, huellaCorta } from "@/lib/agora-labels";
 import { decisionesVigentes, vigenteDe } from "@/lib/decisiones";
 import { EmptyState } from "@/components/ui";
 import VoteForm from "@/components/VoteForm";
+import { metadatos } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Decisiones", // el layout le añade "· Zelena"
-  description: "Cada decisión de Zelena, con su razón y su huella, para que cualquiera pueda revisarla.",
-};
+export const metadata = metadatos({
+  ruta: "/gobernanza",
+  idioma: "es",
+  titulo: "Decisiones · Zelena",
+  descripcion:
+    "Cada decisión de Zelena, con su razón y su huella, para que cualquiera pueda revisarla.",
+});
 
 const TITULAR_H2 =
   "font-serif text-3xl font-normal normal-case leading-[1.15] tracking-normal text-paper sm:text-4xl";

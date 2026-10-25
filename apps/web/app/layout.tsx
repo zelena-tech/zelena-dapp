@@ -12,15 +12,21 @@ import "./globals.css";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import MutationBanner from "@/components/MutationBanner";
+import MarcoSitio from "@/components/MarcoSitio";
 import { getSession } from "@/lib/session";
+import { SITIO } from "@/lib/seo";
 
-const SITIO = process.env.SITE_URL ?? "https://www.zelena.tech";
 const TITULO = "Zelena — Lo que entregas decide lo que recibes";
 const DESCRIPCION =
   "Una comunidad donde lo que entregas decide lo que recibes: reglas públicas, pago por hitos y un historial que es tuyo. En la red de pruebas de Stellar.";
 
+// Valores por defecto para las páginas en español que no traen los suyos. A propósito
+// NO van aquí ni la canónica, ni `og:url`, ni `og:title`/`og:description`, ni `robots`:
+// lo que pone un layout lo heredan todas sus páginas, y así todo el sitio decía ser la
+// home. Cada página arma los suyos con `metadatos()` (lib/seo.ts); sin ellos, Next toma
+// el título y la descripción de la propia página para Open Graph.
 export const metadata: Metadata = {
-  // Necesaria para que las imágenes de Open Graph se sirvan con URL absoluta.
+  // Necesaria para que las imágenes de Open Graph y las canónicas salgan con URL absoluta.
   metadataBase: new URL(SITIO),
   title: {
     default: TITULO,
@@ -32,12 +38,8 @@ export const metadata: Metadata = {
     type: "website",
     locale: "es_CO",
     siteName: "Zelena",
-    title: TITULO,
-    description: DESCRIPCION,
-    url: SITIO,
   },
   twitter: { card: "summary_large_image" },
-  robots: { index: true, follow: true },
 };
 
 export const viewport: Viewport = {
@@ -52,17 +54,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="es">
       <body>
-        {/* Glow de fondo, sutil, marca Zelena */}
-        <div
-          aria-hidden
-          className="pointer-events-none fixed inset-x-0 top-0 z-0 h-[420px] bg-[radial-gradient(60%_60%_at_50%_0%,rgba(60,225,9,0.08),transparent_70%)]"
-        />
-        <div className="relative z-10 flex min-h-screen flex-col">
-          <Nav session={session} />
-          <MutationBanner />
-          <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-16 pt-8">{children}</main>
-          <Footer />
-        </div>
+        {/* El cromo depende de la ruta: la landing en inglés trae el suyo (MarcoSitio). */}
+        <MarcoSitio nav={<Nav session={session} />} banner={<MutationBanner />} footer={<Footer />}>
+          {children}
+        </MarcoSitio>
       </body>
     </html>
   );

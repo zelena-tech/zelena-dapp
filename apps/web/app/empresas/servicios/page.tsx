@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { SERVICIOS } from "@/lib/servicios";
+import { metadatos } from "@/lib/seo";
 
-export const metadata = {
-  title: { absolute: "Servicios · ZELENA" },
-  description:
+export const metadata = metadatos({
+  ruta: "/empresas/servicios",
+  idioma: "es",
+  titulo: "Servicios · Zelena",
+  descripcion:
     "Seis líneas de servicio con entregas reales detrás: Gestión de Área TI, Odoo/ERP, WMS, Transformación Digital, Datos y Analítica, Cloud e Infraestructura.",
-};
+});
 
 export default function Servicios() {
   return (

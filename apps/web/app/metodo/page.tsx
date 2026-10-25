@@ -1,13 +1,15 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { PASOS_METODO } from "@/lib/metodo";
 import PruebasTestnetLista from "@/components/PruebasTestnetLista";
+import { metadatos } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Método", // el layout le añade "· Zelena"
-  description:
+export const metadata = metadatos({
+  ruta: "/metodo",
+  idioma: "es",
+  titulo: "Método · Zelena",
+  descripcion:
     "Cómo una necesidad se convierte en una entrega que se paga: ocho pasos, las mismas reglas para todos y un historial que queda a tu nombre.",
-};
+});
 
 const TITULAR_H2 =
   "font-serif text-3xl font-normal normal-case leading-[1.15] tracking-normal text-paper sm:text-4xl sm:leading-[1.15] lg:text-[52px]";

@@ -14,6 +14,7 @@ import {
   esTipoCliente,
   etiquetaEstado,
   etiquetaTipo,
+  etiquetaTipoEn,
   huellaCorta,
   queryDesdeTipo,
   tipoDesdeEtiqueta,
@@ -33,6 +34,15 @@ describe("etiquetas de tipo y estado", () => {
     expect(etiquetaTipo("otra-cosa")).toBe("otra-cosa");
     expect(esTipoCliente(CLIENTE)).toBe(true);
     expect(esTipoCliente(COMUNIDAD)).toBe(false);
+  });
+
+  it("en inglés (landing): Client o Community, y nunca el valor interno", () => {
+    expect(etiquetaTipoEn(CLIENTE)).toBe("Client");
+    expect(etiquetaTipoEn(COMUNIDAD)).toBe("Community");
+    expect(etiquetaTipoEn("otra-cosa")).toBe("Project");
+    expect(etiquetaTipoEn("")).toBe("Project");
+    // etiquetaTipo (español) no cambia: /agora y sus tests la siguen usando.
+    expect(etiquetaTipo(COMUNIDAD)).toBe("Comunidad");
   });
 
   it("los cinco estados del proyecto tienen nombre en español", () => {

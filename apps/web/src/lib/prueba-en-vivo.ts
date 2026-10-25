@@ -66,3 +66,20 @@ export function cifrasEnVivo(db: DB): CifrasEnVivo {
     ultimaFirmaAnclada: ultima ? { tx: ultima.tx, fecha: String(ultima.fecha).slice(0, 10) } : null,
   };
 }
+
+/**
+ * Puntos repartidos a cuentas reales (landing en inglés, WP33). Mismo criterio que
+ * `cifrasEnVivo`: las cuentas de prueba (`is_demo = 1`) no cuentan, y un movimiento cuya
+ * wallet no es de nadie tampoco (el JOIN lo deja fuera). Los puntos sembrados de la demo
+ * son justo los de esas cuentas, así que con la base recién sembrada da 0.
+ * Va aparte de `cifrasEnVivo` para no cambiar la forma que ya leen la landing y sus tests.
+ */
+export function puntosRepartidos(db: DB): number {
+  return contar(
+    db,
+    `SELECT COALESCE(SUM(pl.points), 0) AS n
+       FROM points_ledger pl
+       JOIN users u ON u.wallet = pl.wallet
+      WHERE u.is_demo = 0`
+  );
+}

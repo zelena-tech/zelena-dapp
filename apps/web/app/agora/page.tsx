@@ -3,8 +3,17 @@ import { listProjects, getMilestones } from "@/lib/repo";
 import { Tag, StateBadge, EmptyState } from "@/components/ui";
 import { PROJECT_STATES } from "@/lib/state-machine";
 import { etiquetaEstado, queryDesdeTipo, tipoDesdeQuery, type TipoProyecto } from "@/lib/agora-labels";
+import { metadatos } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
+
+// La canónica es /agora también para las variantes con ?tipo= y ?state=.
+export const metadata = metadatos({
+  ruta: "/agora",
+  idioma: "es",
+  titulo: "Ágora: proyectos abiertos · Zelena",
+  descripcion: "Proyectos abiertos de Zelena: alcance, hitos y presupuesto a la vista. Aplica con tu enfoque.",
+});
 
 // Filtro "Para quién". El valor interno vive en lib/agora-labels.ts; en la URL va
 // `?tipo=cliente|comunidad` (se sigue aceptando el `?type=` de los enlaces viejos).

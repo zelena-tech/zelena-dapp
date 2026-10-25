@@ -85,6 +85,19 @@ const nextConfig = {
       { source: "/whitepaper", destination: "/manifiesto", permanent: true },
       // La pantalla de seguimiento de la línea anterior (a6194b9) la reemplaza el tablero de Seguimiento.
       { source: "/equipo/seguimiento", destination: "/equipo/dashboard", permanent: true },
+      // Host canónico: www. El dominio sin www llega directo al App Service (registro A en
+      // Hostinger), y las visitas directas al host de azurewebsites.net son un duplicado del
+      // sitio: las dos se mandan a www, con su ruta y su consulta. Front Door siempre envía
+      // x-azure-fdid, así que lo que entra por www no se toca (tampoco hace bucle aunque Front
+      // Door reenvíe el host de azurewebsites). Quedan fuera /.well-known/ (ahí se valida el
+      // certificado), /api/ y robots933456.txt (el calentamiento del App Service).
+      {
+        source: "/:path((?!\\.well-known/|api/|robots933456\\.txt).*)",
+        has: [{ type: "host", value: "(?:zelena\\.tech|zelena-dao\\.azurewebsites\\.net)" }],
+        missing: [{ type: "header", key: "x-azure-fdid" }],
+        destination: "https://www.zelena.tech/:path",
+        permanent: true,
+      },
     ];
   },
 };

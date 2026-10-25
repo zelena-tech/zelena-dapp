@@ -4,8 +4,16 @@ import { getSession } from "@/lib/session";
 import { getDb } from "@/lib/db";
 import { getActiveGenome } from "@/lib/genome";
 import { EmptyState } from "@/components/ui";
+import { metadatos } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
+
+export const metadata = metadatos({
+  ruta: "/academia",
+  idioma: "es",
+  titulo: "Academia · Zelena",
+  descripcion: "Aprende haciendo: artículos y videos cortos sobre cómo se mide el valor y cómo se trabaja en Zelena.",
+});
 
 export default async function AcademiaPage() {
   const content = listAcademia();

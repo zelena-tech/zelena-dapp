@@ -1,11 +1,14 @@
 import Link from "next/link";
 import ContactoForm from "@/components/ContactoForm";
+import { metadatos } from "@/lib/seo";
 
-export const metadata = {
-  title: { absolute: "Agenda una demostración · ZELENA" },
-  description:
+export const metadata = metadatos({
+  ruta: "/empresas/contacto",
+  idioma: "es",
+  titulo: "Agenda una demostración · Zelena",
+  descripcion:
     "Cuéntanos cómo opera tu bodega y coordinamos una demostración de ZELENA: operaciones, incentivos por desempeño y servicios de tecnología.",
-};
+});
 
 // Qué pasa después de enviar. Sin plazos inventados: prometer "respuesta en
 // 24 h" es un SLA público que el equipo tendría que sostener.

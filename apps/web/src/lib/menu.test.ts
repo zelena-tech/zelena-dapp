@@ -12,12 +12,15 @@ import {
   MENU_PUBLICO,
   PUBLICAR_DISPONIBLE,
   RUTA_AVISOS,
+  RUTAS_LANDING,
   RUTA_COMUNIDAD,
   RUTA_PUBLICAR,
+  RUTA_RITOS,
   RUTA_SEGUIMIENTO,
   URL_LICENCIA,
   esEnlaceExterno,
   esRutaEmpresas,
+  esRutaLanding,
   menuPara,
   rutaPublicar,
 } from "./menu";
@@ -107,9 +110,9 @@ describe("menuPara (E1-2)", () => {
     expect(ctx).toContain("menuPara({ ruta, conSesion, accesoEquipo, esInterno, puedeVerTodo, conClientes })");
   });
 
-  it("con sesión de comunidad (sin acceso al trabajo): solo Ágora, Academia y Comunidad", () => {
+  it("con sesión de comunidad (sin acceso al trabajo): solo Ágora, Academia y Comunidad (los ritos)", () => {
     const m = menuPara({ ruta: "/perfil", conSesion: true, accesoEquipo: false, esInterno: false, puedeVerTodo: false });
-    expect(m.map((e) => e.href)).toEqual(["/agora", "/academia", RUTA_COMUNIDAD]);
+    expect(m.map((e) => e.href)).toEqual(["/agora", "/academia", RUTA_RITOS]);
     expect(m.filter((e) => INTERNO_PRIVADO.test(e.href))).toEqual([]);
   });
 
@@ -132,6 +135,29 @@ describe("menuPara (E1-2)", () => {
 
   it("RUTA_COMUNIDAD apunta a /comunidad", () => {
     expect(RUTA_COMUNIDAD).toBe("/comunidad");
+  });
+
+  // WP33: la página de ritos (la que antes era /comunidad) vive en /comunidad/ritos.
+  it("RUTA_RITOS apunta a /comunidad/ritos y su página existe", () => {
+    expect(RUTA_RITOS).toBe("/comunidad/ritos");
+    expect(fs.existsSync(path.join(process.cwd(), "app", "comunidad", "ritos", "page.tsx"))).toBe(true);
+  });
+});
+
+describe("rutas de la landing (WP33)", () => {
+  it("solo / y /comunidad, exactas", () => {
+    expect([...RUTAS_LANDING]).toEqual(["/", "/comunidad"]);
+    for (const r of RUTAS_LANDING) expect(esRutaLanding(r)).toBe(true);
+    for (const r of ["/comunidad/ritos", "/comunidad/ritos/3", "/comunidad/", "/manifiesto", "/empresas", "", "/?x=1"]) {
+      expect(esRutaLanding(r), r).toBe(false);
+    }
+    expect(esRutaLanding(null)).toBe(false);
+    expect(esRutaLanding(undefined)).toBe(false);
+  });
+
+  it("cada ruta de la landing tiene su página", () => {
+    expect(fs.existsSync(path.join(process.cwd(), "app", "page.tsx"))).toBe(true);
+    expect(fs.existsSync(path.join(process.cwd(), "app", "comunidad", "page.tsx"))).toBe(true);
   });
 });
 

@@ -1,17 +1,19 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { claCanonicalHash, readClaText } from "@/lib/cla";
 import { Markdown } from "@/components/Markdown";
+import { metadatos } from "@/lib/seo";
 
 // El texto se lee en cada visita, igual que lo sirve /api/cla al firmar: lo que
 // lees aquí es exactamente lo que firma cada persona.
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Acuerdo de contribución", // el layout le añade "· Zelena"
-  description:
+export const metadata = metadatos({
+  ruta: "/acuerdo",
+  idioma: "es",
+  titulo: "Acuerdo de contribución · Zelena",
+  descripcion:
     "El texto completo del acuerdo que firma cada persona al entrar a Zelena, con su huella verificable.",
-};
+});
 
 const EN_POCAS_PALABRAS = [
   { t: "Tu autoría es tuya.", d: "Siempre se reconoce quién hizo qué. Ese derecho no se cede." },

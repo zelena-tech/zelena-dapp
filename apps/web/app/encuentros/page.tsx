@@ -1,12 +1,15 @@
 import Link from "next/link";
 import AvisoEncuentrosForm from "@/components/AvisoEncuentrosForm";
 import { FORMATOS, diasPara, fechaLarga, proximosEncuentros } from "@/lib/encuentros";
+import { metadatos } from "@/lib/seo";
 
-export const metadata = {
-  title: { absolute: "Encuentros · ZELENA" },
-  description:
+export const metadata = metadatos({
+  ruta: "/encuentros",
+  idioma: "es",
+  titulo: "Encuentros · Zelena",
+  descripcion:
     "Jornadas abiertas para construir, mostrar lo que hiciste y conocer a la comunidad de ZELENA. Deja tu correo y te avisamos de la próxima fecha.",
-};
+});
 
 // Los días que faltan cambian solos: se recalcula cada hora.
 export const revalidate = 3600;

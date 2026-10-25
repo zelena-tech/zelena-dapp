@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getProject, getMilestones } from "@/lib/repo";
@@ -6,8 +7,31 @@ import { Tag, StateBadge, shortWallet } from "@/components/ui";
 import ApplyForm from "@/components/ApplyForm";
 import { PROJECT_STATES, recibeAplicaciones, type ProjectState } from "@/lib/state-machine";
 import { etiquetaEstado } from "@/lib/agora-labels";
+import { metadatos } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
+
+/** Recorta un texto para la descripción (unos 160 caracteres, sin partir palabras). */
+function resumen(texto: string, max = 160): string {
+  const limpio = texto.replace(/\s+/g, " ").trim();
+  if (limpio.length <= max) return limpio;
+  const corte = limpio.slice(0, max - 1);
+  return `${corte.slice(0, Math.max(corte.lastIndexOf(" "), 40))}…`;
+}
+
+// Título y descripción públicos del proyecto (nunca la campaña). Un borrador no existe:
+// getProject no lo devuelve y la página responde 404.
+export function generateMetadata({ params }: { params: { id: string } }): Metadata {
+  const id = Number(params.id);
+  const project = Number.isInteger(id) ? getProject(id) : undefined;
+  if (!project) return { title: { absolute: "Proyecto no encontrado · Zelena" } };
+  return metadatos({
+    ruta: `/agora/${project.id}`,
+    idioma: "es",
+    titulo: `${project.title} · Ágora Zelena`,
+    descripcion: resumen(project.summary || project.description),
+  });
+}
 
 export default async function ProjectDetail({ params }: { params: { id: string } }) {
   const id = Number(params.id);

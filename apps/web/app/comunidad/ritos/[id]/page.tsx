@@ -29,14 +29,21 @@ import {
 import RitoCodigo from "@/components/RitoCodigo";
 import RitoAsistenciaForm from "@/components/RitoAsistenciaForm";
 import RitoAnfitrionAcciones from "@/components/RitoAnfitrionAcciones";
+import { RUTA_RITOS } from "@/lib/menu";
+import { metadatos } from "@/lib/seo";
 
 // El estado del rito (y el código) cambia minuto a minuto.
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Rito", // el layout le añade "· Zelena"
-  description: "Un rito de la comunidad: cuándo es, dónde y cómo registrar tu asistencia.",
-};
+// Canónica propia por rito; sin leer la base: el título genérico basta (no van al sitemap).
+export function generateMetadata({ params }: { params: { id: string } }): Metadata {
+  return metadatos({
+    ruta: `${RUTA_RITOS}/${encodeURIComponent(params.id)}`,
+    idioma: "es",
+    titulo: "Rito · Zelena",
+    descripcion: "Un rito de la comunidad: cuándo es, dónde y cómo registrar tu asistencia.",
+  });
+}
 
 const ENLACE = "text-primary underline decoration-primary/40 underline-offset-4 hover:decoration-primary";
 
@@ -71,7 +78,7 @@ export default async function RitoPage({ params }: { params: { id: string } }) {
     <div className="space-y-14 md:space-y-20">
       <header className="flex flex-col gap-6 pt-6 md:pt-14">
         <p className="label">
-          <Link href="/comunidad" className="hover:text-primary">
+          <Link href={RUTA_RITOS} className="hover:text-primary">
             Comunidad
           </Link>{" "}
           · Rito

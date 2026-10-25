@@ -18,6 +18,24 @@ export interface EnlaceMenu {
  */
 export const RUTA_COMUNIDAD: string = "/comunidad";
 
+/**
+ * Ritos de la comunidad: calendario, asistencia propia, pasados con su acta, encuentros,
+ * Academia y decisiones. Es la página en español que antes vivía en /comunidad.
+ */
+export const RUTA_RITOS = "/comunidad/ritos";
+
+/**
+ * Rutas de la landing en inglés (WP33): llevan su propio cromo claro (cabecera y pie)
+ * y no el del sitio en español. Solo la ruta exacta: /comunidad/ritos y lo que cuelga
+ * de /comunidad siguen con el cromo de siempre.
+ */
+export const RUTAS_LANDING: readonly string[] = ["/", RUTA_COMUNIDAD];
+
+/** ¿La ruta es de la landing? (decide el cromo en MarcoSitio). */
+export function esRutaLanding(ruta: string | null | undefined): boolean {
+  return !!ruta && RUTAS_LANDING.includes(ruta);
+}
+
 /** Menú público (sin sesión): cuatro puertas, en este orden. */
 export const MENU_PUBLICO: readonly EnlaceMenu[] = [
   { href: "/manifiesto", label: "Manifiesto" },
@@ -61,10 +79,12 @@ export const RUTA_SEGUIMIENTO = "/equipo/dashboard";
 const ENLACE_SEGUIMIENTO: EnlaceMenu = { href: RUTA_SEGUIMIENTO, label: "Seguimiento" };
 const ENLACE_TALENTO: EnlaceMenu = { href: "/equipo/talento", label: "Talento" };
 const ENLACE_CLIENTES: EnlaceMenu = { href: "/clientes", label: "Clientes" };
+// Con sesión, "Comunidad" lleva a los ritos (asistencia y calendario): es lo que usa
+// quien ya es parte. La landing en inglés (/comunidad) sigue en el menú público.
 const MENU_COMUNIDAD: readonly EnlaceMenu[] = [
   { href: "/agora", label: "Ágora" },
   { href: "/academia", label: "Academia" },
-  { href: RUTA_COMUNIDAD, label: "Comunidad" },
+  { href: RUTA_RITOS, label: "Comunidad" },
 ];
 
 /** ¿La ruta es del sitio para empresas? */

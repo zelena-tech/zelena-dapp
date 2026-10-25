@@ -1,10 +1,13 @@
 import Link from "next/link";
+import { metadatos } from "@/lib/seo";
 
-export const metadata = {
-  title: { absolute: "ZELENA · Software e incentivos para la logística de LATAM" },
-  description:
+export const metadata = metadatos({
+  ruta: "/empresas",
+  idioma: "es",
+  titulo: "Zelena · Software e incentivos para la logística de LATAM",
+  descripcion:
     "Software e incentivos que hacen la logística de LATAM más rápida, inteligente y rentable. ZELENA ayuda a los operadores de almacenes a modernizar sus operaciones y recompensar el desempeño real.",
-};
+});
 
 // El contenido vive en constantes, no incrustado en el JSX, para que la capa
 // de idiomas solo tenga que añadir el lado en inglés sin tocar la maqueta.

@@ -33,6 +33,20 @@ export function etiquetaTipo(tipo: string): string {
   return (TIPO_PROYECTO_LABEL as Record<string, string>)[tipo] ?? tipo;
 }
 
+/** Lo mismo en inglés, para la landing (WP33). */
+export const TIPO_PROYECTO_LABEL_EN: Record<TipoProyecto, string> = {
+  SAS: "Client",
+  DAO: "Community",
+};
+
+/**
+ * Etiqueta del tipo en inglés. A diferencia de `etiquetaTipo`, un valor desconocido NO se
+ * muestra crudo (la landing no pinta valores internos): queda "Project".
+ */
+export function etiquetaTipoEn(tipo: string): string {
+  return (TIPO_PROYECTO_LABEL_EN as Record<string, string>)[tipo] ?? "Project";
+}
+
 /** Etiqueta visible del estado; un valor desconocido se muestra tal cual. */
 export function etiquetaEstado(estado: string): string {
   return ESTADO_PROYECTO_LABEL[estado] ?? estado;
