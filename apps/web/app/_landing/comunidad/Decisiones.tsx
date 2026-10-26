@@ -22,9 +22,6 @@ export default function Decisiones({ votaciones, decisiones }: { votaciones: Vot
     >
       <div className={c.cabecera}>
         <div>
-          <p className={s.eyebrow} aria-hidden="true">
-            {DECISIONES.eyebrow}
-          </p>
           <h2 id="decisiones-titulo" className={`${s.titulo2} ${c.tituloCompacto}`}>
             {DECISIONES.titulo}
           </h2>

@@ -15,7 +15,7 @@ import s from "./landing.module.css";
 import Header, { type EnlaceCuenta } from "./Header";
 import Footer from "./Footer";
 import Reveal from "./Reveal";
-import { AVISOS_LEGALES, CABECERA, ENLACES, type PaginaLanding } from "./copy-comun";
+import { CABECERA, ENLACES, type PaginaLanding } from "./copy-comun";
 
 /**
  * A dónde lleva la píldora de cuenta: sin sesión, a /entrar; con sesión, a su trabajo
@@ -51,7 +51,7 @@ export default async function LandingShell({ pagina, children }: { pagina: Pagin
         <main id="main" tabIndex={-1} className={s.principal}>
           {children}
         </main>
-        <Footer aviso={AVISOS_LEGALES[pagina]} />
+        <Footer />
       </div>
       <Reveal />
     </div>

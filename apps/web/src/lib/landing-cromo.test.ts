@@ -8,10 +8,10 @@ import { describe, it, expect, vi } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import { NextRequest } from "next/server";
-import { CABECERA_IDIOMA, FOOTER_GRUPOS, RUTAS_LANDING, URL_LICENCIA } from "./menu";
+import { CABECERA_IDIOMA, RUTAS_LANDING } from "./menu";
 import { IMAGEN_OG_ES, metadatos } from "./seo";
 import { SLUGS_INTERES } from "./servicios";
-import { AVISOS_LEGALES, CABECERA, ENLACES, PIE, PIE_LEGAL } from "../../app/_landing/copy-comun";
+import { CABECERA, ENLACES, PIE } from "../../app/_landing/copy-comun";
 import { FORMULARIO_DEMO } from "../../app/_landing/copy-demo";
 
 // El middleware importa la sesión con el alias "@/" (vitest no lo resuelve).
@@ -193,13 +193,6 @@ describe("cabecera, enlaces y pie (en inglés, a rutas reales)", () => {
     expect(ENLACES.proyectosAbiertos).toBe("/comunidad#open-projects");
   });
 
-  it("el grupo Legal del pie es el de FOOTER_GRUPOS (mismos destinos y orden), en inglés", () => {
-    const legal = FOOTER_GRUPOS.find((g) => g.titulo === "Legal");
-    expect(PIE_LEGAL.map((e) => e.href)).toEqual(legal?.enlaces.map((e) => e.href));
-    expect(PIE_LEGAL.map((e) => e.label)).toEqual(["Contribution agreement", "Privacy", "License"]);
-    expect(PIE_LEGAL.filter((e) => e.externo).map((e) => e.href)).toEqual([URL_LICENCIA]);
-  });
-
   it("el pie enlaza el manifiesto, el método y las decisiones, con la línea de marca", () => {
     const hrefs = PIE.enlaces.map((e) => e.href);
     for (const h of ["/manifiesto", "/metodo", "/gobernanza"]) expect(hrefs).toContain(h);
@@ -208,18 +201,15 @@ describe("cabecera, enlaces y pie (en inglés, a rutas reales)", () => {
     expect(PIE.linea).toBe("© 2026 Zelena · Performance-based payroll for LATAM logistics, built on Stellar");
   });
 
-  it("los avisos legales: pagos de bonos en la red principal, el reparto y la comunidad en la de pruebas", () => {
-    expect(AVISOS_LEGALES.home).toMatch(/USDC on Stellar mainnet/);
-    expect(AVISOS_LEGALES.home).toMatch(/split contract runs on the Stellar testnet/);
-    expect(AVISOS_LEGALES.comunidad).toMatch(/Stellar testnet/);
-    expect(AVISOS_LEGALES.comunidad).toMatch(/no monetary value/);
-    // La demo habla a empresas, como la home; el manifiesto, a la comunidad.
-    expect(AVISOS_LEGALES.demo).toBe(AVISOS_LEGALES.home);
-    expect(AVISOS_LEGALES.manifiesto).toBe(AVISOS_LEGALES.comunidad);
-    for (const a of Object.values(AVISOS_LEGALES)) {
-      expect(a).toContain("Nothing here is a securities offering or investment advice.");
-      expect(a).not.toMatch(/payroll|bank|bounty|on-chain/i);
-    }
+  // Pedido del founder (2026-10-26): el pie queda en una sola fila, la línea de marca y los
+  // enlaces del sitio, sin la fila del aviso legal ni el grupo Legal.
+  it("el pie de la landing es una sola fila: sin aviso legal ni grupo Legal", () => {
+    const pie = leer("app/_landing/Footer.tsx");
+    expect(pie.match(/className=\{s\.pieFila\}/g) ?? []).toHaveLength(1);
+    expect(pie).not.toMatch(/\{aviso\}|PIE\.legal/);
+    expect(pie).toContain("export default function Footer() {");
+    expect(leer("app/_landing/LandingShell.tsx")).toContain("<Footer />");
+    expect(Object.keys(PIE)).not.toContain("legal");
   });
 
   // El founder eligió "payroll" para la landing en inglés (2026-10-25); en las páginas en

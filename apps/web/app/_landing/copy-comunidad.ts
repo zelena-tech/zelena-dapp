@@ -10,6 +10,9 @@
  * red de pruebas de Stellar se anclan las firmas del acuerdo, los totales de puntos de cada
  * época y los ritos (nada más): nunca se presentan como red principal. Lo que es maqueta lleva su rótulo de ejemplo ("Sample").
  *
+ * Sin la voz de terminal (las indicaciones de consola sobre los titulares y en los carteles
+ * de encuentros): el founder la quitó el 2026-10-26, como antes en la home.
+ *
  * Los textos van en minúscula de frase: las mayúsculas del diseño las pone el CSS.
  * Importa con rutas relativas (no "@/") para que los tests de vitest puedan leerlo.
  */
@@ -102,7 +105,6 @@ export const CIFRAS = {
 // ---------------------------------------------------------------------------
 
 export const TECNOLOGIA = {
-  eyebrow: "$ principle --08",
   titulo: ["Technology", "you don’t notice."],
   intro:
     "No crypto jargon. You deliver; the record stays open, and signed agreements and point totals get a fingerprint on Stellar (testnet for now).",
@@ -179,7 +181,6 @@ export const ORBITA = {
 // ---------------------------------------------------------------------------
 
 export const MANIFIESTO = {
-  eyebrow: "$ cat manifesto.md",
   /** Dos líneas; la última palabra va resaltada. */
   titulo: { linea1: "We’re redesigning", linea2: "how we", resaltado: "collaborate." },
   pilares: [
@@ -207,7 +208,6 @@ export const MANIFIESTO = {
 // ---------------------------------------------------------------------------
 
 export const PROYECTOS = {
-  eyebrow: "$ zelena projects --open",
   titulo: "Open projects.",
   filtrosAria: "Filter projects",
   todos: "All",
@@ -228,7 +228,6 @@ export const PROYECTOS = {
 // ---------------------------------------------------------------------------
 
 export const DECISIONES = {
-  eyebrow: "$ ls decisions --open",
   titulo: "Decisions",
   intro: "Votes and decisions are public: anyone can read them, with their reasons.",
   meta: (id: number) => `#${id} · open vote`,
@@ -248,15 +247,12 @@ export const DECISIONES = {
 // ---------------------------------------------------------------------------
 
 export const ENCUENTROS = {
-  eyebrow: "$ cal meetups",
   titulo: "Meetups",
   tipo: { encuentro: "Meetup", rito: "Ritual" },
-  comando: { encuentro: "$ meetup --join", rito: "$ ritual --join" },
   /** Palabra grande del cartel cuando no hay lugar publicado. */
   sinLugar: { encuentro: "Soon", rito: "Community" },
   sinDetalles: "Details on the page",
   vacio: {
-    comando: "$ notify --me",
     lugar: "Soon",
     tipo: "Meetups",
     titulo: "No dates yet.",
@@ -270,7 +266,6 @@ export const ENCUENTROS = {
 // ---------------------------------------------------------------------------
 
 export const CIERRE = {
-  eyebrow: "$ zelena join",
   titulo: ["Real work.", "Real rewards."],
   texto: "Deliver the milestone. Once it’s approved, it gets paid and stays on your record.",
   cta: { nombre: "Explore open projects" },

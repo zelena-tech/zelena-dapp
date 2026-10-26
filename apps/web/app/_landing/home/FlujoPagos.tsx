@@ -93,7 +93,6 @@ export default function FlujoPagos({ textos }: { textos: TextosFlujoPagos }) {
               </div>
               <p className={f.nodoTitulo}>
                 {n.titulo}
-                {n.enPruebas ? <span className={f.etiquetaPruebas}>{textos.etiquetaPruebas}</span> : null}
               </p>
               <p className={`${s.display} ${f.nodoValor}`}>{n.valor}</p>
               {i === total - 1 ? (

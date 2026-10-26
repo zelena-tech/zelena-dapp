@@ -24,7 +24,7 @@ import {
   menuPara,
   rutaPublicar,
 } from "./menu";
-import { PIE, PIE_LEGAL } from "../../app/_landing/copy-comun";
+import { PIE } from "../../app/_landing/copy-comun";
 
 const SIN_SESION = { conSesion: false, accesoEquipo: false, esInterno: false, puedeVerTodo: false };
 const INTERNO_PRIVADO = /^\/(equipo|clientes|admin)(\/|$)/;
@@ -305,21 +305,18 @@ describe("pie y aviso legal (E1-6)", () => {
     expect(src).toContain("{AVISO_LEGAL}");
   });
 
-  // WP33: / y /comunidad no pintan el pie en español (MarcoSitio lo quita) sino el suyo, en
-  // inglés. El grupo Legal es obligatorio en todas las páginas: el pie de la landing lo saca
-  // de FOOTER_GRUPOS (mismos destinos y mismo orden), y lo pinta con el aviso de cada página.
-  it("el pie de la landing en inglés lleva el grupo Legal: acuerdo, privacidad y licencia", () => {
-    const legal = FOOTER_GRUPOS.find((g) => g.titulo === "Legal");
-    expect(PIE_LEGAL.map((e) => e.href)).toEqual(["/acuerdo", "/privacidad", URL_LICENCIA]);
-    expect(PIE_LEGAL.map((e) => e.href)).toEqual(legal?.enlaces.map((e) => e.href));
-    expect(PIE_LEGAL.map((e) => e.label)).toEqual(["Contribution agreement", "Privacy", "License"]);
-    expect(PIE_LEGAL.find((e) => e.href === URL_LICENCIA)?.externo).toBe(true);
+  // WP33: las páginas de la landing no pintan el pie en español (MarcoSitio lo quita) sino el
+  // suyo, en inglés. Desde 2026-10-26 (pedido del founder) ese pie es una sola fila, sin aviso
+  // legal ni grupo Legal; el aviso de privacidad sigue en la casilla del formulario de la demo.
+  it("el pie de la landing en inglés enlaza páginas que existen y ya no lleva el grupo Legal", () => {
     const pie = fs.readFileSync(path.join(process.cwd(), "app", "_landing", "Footer.tsx"), "utf8");
-    expect(pie).toContain("PIE.legal.map");
-    expect(pie).toContain("{aviso}");
+    expect(pie).not.toContain("PIE.legal");
+    expect(pie).not.toContain("{aviso}");
     const shell = fs.readFileSync(path.join(process.cwd(), "app", "_landing", "LandingShell.tsx"), "utf8");
-    expect(shell).toContain("<Footer aviso={AVISOS_LEGALES[pagina]} />");
-    // Y el resto del pie: el manifiesto, el método y las decisiones, cada uno a una página que existe.
+    expect(shell).toContain("<Footer />");
+    const demo = fs.readFileSync(path.join(process.cwd(), "app", "_landing", "demo", "FormularioDemo.tsx"), "utf8");
+    expect(demo).toContain('<Link href="/privacidad"');
+    // El manifiesto, el método y las decisiones, cada uno a una página que existe.
     const enlaces = PIE.enlaces.map((e) => e.href);
     for (const h of ["/manifiesto", "/metodo", "/gobernanza"]) expect(enlaces).toContain(h);
     const sinPagina = enlaces.filter((h) => !fs.existsSync(path.join(process.cwd(), "app", ...h.split("/").filter(Boolean), "page.tsx")));

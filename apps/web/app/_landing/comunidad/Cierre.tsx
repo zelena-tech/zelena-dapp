@@ -9,15 +9,12 @@ import VentanaCodigo from "./VentanaCodigo";
 /**
  * Cierre en lima: "Real work. Real rewards.", los proyectos abiertos y la llamada a
  * participar (el encuentro publicado, el próximo rito preparado o el aviso por correo),
- * y la ventana de código que se teclea sola. El aviso legal de la página lo pinta el pie.
+ * y la ventana de código que se teclea sola.
  */
 export default function Cierre({ llamada }: { llamada: LlamadaLanding }) {
   return (
     <section className={c.cierre} aria-labelledby="cierre-titulo" data-reveal="seccion">
       <div className={c.cierreTexto}>
-        <p className={c.cierreEyebrow} aria-hidden="true">
-          {CIERRE.eyebrow}
-        </p>
         <h2 id="cierre-titulo" className={`${s.display} ${c.cierreTitulo}`}>
           {CIERRE.titulo[0]} <br />
           {CIERRE.titulo[1]}

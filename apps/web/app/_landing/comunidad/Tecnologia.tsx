@@ -103,9 +103,6 @@ export default function Tecnologia({
     <section className={s.seccion} aria-labelledby="tecnologia-titulo">
       <div className={c.cabecera} data-reveal="titulo">
         <div>
-          <p className={s.eyebrow} aria-hidden="true">
-            {T.eyebrow}
-          </p>
           <h2 id="tecnologia-titulo" className={`${s.titulo2} ${c.tituloSeccion}`}>
             {T.titulo[0]} <br />
             {T.titulo[1]}

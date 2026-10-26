@@ -179,14 +179,16 @@ describe("/metodo · Compruébalo tú mismo con todas las pruebas", () => {
   });
 
   // WP33: la tarjeta "Compruébalo tú mismo" de la landing anterior salió con ella; la
-  // landing en inglés (pagos en "/" y tecnología en /comunidad) enlaza a la lista.
+  // landing en inglés enlaza a la lista desde la tecnología de /comunidad. Los pagos de "/"
+  // ya no la enlazan (2026-10-26): los bonos se pagan en la red principal y el flujo de
+  // la home no muestra nada de la red de pruebas.
   it("/metodo la incluye y la landing en inglés enlaza a ella", () => {
     const leer = (...p: string[]) => fs.readFileSync(path.join(process.cwd(), ...p), "utf8");
     const metodo = leer("app", "metodo", "page.tsx");
     expect(metodo).toContain('import PruebasTestnetLista from "@/components/PruebasTestnetLista"');
     expect(metodo).toContain("<PruebasTestnetLista />");
     expect(leer("app", "_landing", "copy-comun.ts")).toContain('metodoPruebas: "/metodo#compruebalo"');
-    expect(leer("app", "_landing", "home", "Pagos.tsx")).toContain("href={ENLACES.metodoPruebas}");
+    expect(leer("app", "_landing", "home", "Pagos.tsx")).not.toContain("metodoPruebas");
     expect(leer("app", "_landing", "copy-comunidad.ts")).toContain("href: ENLACES.metodoPruebas");
   });
 });

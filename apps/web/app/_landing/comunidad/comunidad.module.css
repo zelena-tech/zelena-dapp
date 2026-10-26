@@ -21,7 +21,7 @@
   flex-wrap: wrap;
 }
 .tituloSeccion {
-  margin-top: 14px;
+  margin-top: 0;
 }
 .introSeccion {
   max-width: 340px;
@@ -1156,7 +1156,7 @@
 }
 /* H2 un poco más bajo (Decisions, Meetups), como en el diseño. */
 .tituloCompacto {
-  margin-top: 14px;
+  margin-top: 0;
   font-size: clamp(44px, 6vw, 80px);
 }
 .decLista {
@@ -1318,7 +1318,7 @@
 }
 .cartelArriba {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   gap: 8px;
   font-family: var(--fuente-mono);
@@ -1405,13 +1405,6 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 20px;
-}
-.cierreEyebrow {
-  margin: 0;
-  font-family: var(--fuente-mono);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--verde-profundo);
 }
 .cierreTitulo {
   margin: 0;

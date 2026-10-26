@@ -583,19 +583,15 @@ describe("lenguaje editorial en lo público", () => {
     }
   });
 
-  it("la voz de comandos de la landing ($ zelena …) solo en app/_landing; sin corchetes en los botones; la landing no usa la serif", () => {
+  // Pedido del founder (2026-10-26): la voz de terminal ("$ zelena products", "$ cat
+  // manifesto.md", "$ meetup --join"…) salió de toda la landing porque metía ruido.
+  it("sin la voz de comandos ($ zelena …) en ninguna página pública; sin corchetes en los botones; la landing no usa la serif", () => {
     const VOZ_COMANDO = /\[\[ \{?[a-z_]+\}? \]\]|\$ zelena\b|\$ (cat|ls) /;
-    const fuera = PUBLICOS.filter((r) => !r.startsWith("app/_landing/"));
-    expect(coincidencias(fuera, VOZ_COMANDO)).toEqual([]);
-    // La landing sí la usa (si este guarda deja de ver la voz, deja de proteger nada).
-    expect(coincidencias([...archivosLanding()], /\[\[ \{?[a-z_]+\}? \]\]/)).toEqual([]);
+    expect(coincidencias([...PUBLICOS, ...archivosLanding()], VOZ_COMANDO)).toEqual([]);
     expect(CTA_DEMO.nombre).toBe("Book a demo");
-    expect(leer("app/_landing/copy-comunidad.ts")).toMatch(/eyebrow: "\$ zelena /);
-    // Pedido del founder (2026-10-26): la home ya no lleva la voz de terminal sobre sus
-    // titulares ("$ zelena products", "$ zelena pay --network stellar"…), ni la demo ni el manifiesto.
-    for (const r of ["app/_landing/copy-home.ts", "app/_landing/copy-demo.ts", "app/_landing/copy-manifiesto.ts"]) {
-      expect(leer(r), r).not.toMatch(/"\$ /);
-    }
+    const copys = archivosLanding().filter((r) => /copy-[a-z]+\.ts$/.test(r));
+    expect(copys.length).toBeGreaterThanOrEqual(5);
+    for (const r of copys) expect(leer(r), r).not.toMatch(/"\$ /);
     const landing = [
       ...archivosLanding(),
       "app/page.tsx",

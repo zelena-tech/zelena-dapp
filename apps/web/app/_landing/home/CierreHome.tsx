@@ -6,7 +6,7 @@ import { CIERRE, CTA_DEMO } from "../copy-home";
 
 /**
  * Cierre de la home, sobre lima: la invitación a la página de la demo. El aviso legal de la página no
- * se repite aquí: lo pinta el pie (AVISOS_LEGALES.home).
+ * se repite aquí.
  */
 export default function CierreHome() {
   return (

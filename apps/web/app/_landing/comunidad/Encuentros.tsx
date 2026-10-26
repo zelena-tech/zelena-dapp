@@ -16,12 +16,11 @@ const ICONOS = [
   <IconoCheck key="check" tamano={14} trazo={2.75} />,
 ];
 
-function Cartel({ i, comando, lugar, children }: { i: number; comando: string; lugar: string; children: ReactNode }) {
+function Cartel({ i, lugar, children }: { i: number; lugar: string; children: ReactNode }) {
   return (
     <>
       <span className={`${c.cartel} ${CARTELES[i % CARTELES.length]}`} aria-hidden="true">
         <span className={c.cartelArriba}>
-          <span>{comando}</span>
           <span className={c.cartelIcono}>{ICONOS[i % ICONOS.length]}</span>
         </span>
         <span className={`${s.display} ${c.cartelLugar}`}>{lugar}</span>
@@ -43,9 +42,6 @@ export default function Encuentros({ citas }: { citas: CitaComunidad[] }) {
   return (
     <section className={c.seccionEncuentros} aria-labelledby="encuentros-titulo">
       <div data-reveal="titulo">
-        <p className={s.eyebrow} aria-hidden="true">
-          {E.eyebrow}
-        </p>
         <h2 id="encuentros-titulo" className={`${s.titulo2} ${c.tituloCompacto}`}>
           {E.titulo}
         </h2>
@@ -57,7 +53,7 @@ export default function Encuentros({ citas }: { citas: CitaComunidad[] }) {
             return (
               <li key={cita.clave}>
                 <Link href={cita.href} hrefLang="es" className={`${c.cita} ${s.elevable}`}>
-                  <Cartel i={i} comando={E.comando[cita.tipo]} lugar={cita.lugar ?? E.sinLugar[cita.tipo]}>
+                  <Cartel i={i} lugar={cita.lugar ?? E.sinLugar[cita.tipo]}>
                     <span className={c.citaFila}>
                       <span className={`${s.display} ${c.citaDia}`}>
                         <time dateTime={cita.fecha}>{cita.diaCorto}</time>
@@ -78,7 +74,7 @@ export default function Encuentros({ citas }: { citas: CitaComunidad[] }) {
         ) : (
           <li>
             <Link href={ENLACES.avisoEncuentros} hrefLang="es" className={`${c.cita} ${s.elevable}`}>
-              <Cartel i={0} comando={E.vacio.comando} lugar={E.vacio.lugar}>
+              <Cartel i={0} lugar={E.vacio.lugar}>
                 <span className={c.citaFila}>
                   <span className={`${s.display} ${c.citaDia}`}>0</span>
                   <Chip tono="blanco" tamano="sm" className={c.mayusculas}>

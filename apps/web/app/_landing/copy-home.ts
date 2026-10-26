@@ -8,11 +8,14 @@
  * sueltas de este módulo; no se publica la cifra pagada, solo desde cuándo se paga; los
  * importes de ejemplo se rotulan como ejemplo; el pago a cuenta bancaria en moneda local es
  * lo que viene, no lo que ya funciona; los clientes que salen con logo son los que el founder
- * autorizó (CLIENTES). El aviso legal de la página lo pinta el pie (copy-comun.ts).
+ * autorizó (CLIENTES), rotulados como "algunos" de nuestros clientes y no como la lista entera.
  *
- * Hechos que sostienen el copy: Harmony paga bonos reales en USDC en la red principal de
- * Stellar desde septiembre de 2026, a la billetera de cada operador; el contrato de Soroban
- * que automatiza el reparto corre en la red de pruebas. Las maquetas (tabla semanal,
+ * Hechos que sostienen el copy: Harmony calcula el reparto del bono y lo paga en USDC en la
+ * red principal de Stellar desde septiembre de 2026, con pagos directos a la billetera de
+ * cada operador. El contrato de Soroban del reparto (Organization/Factory) sigue en la red de
+ * pruebas: verificado el 2026-10-26, la cuenta pagadora en la red principal no invoca
+ * contratos y el README de Harmony dice "Not deployed on mainnet". Por eso el flujo de pagos
+ * nombra a Harmony y no a Soroban, y nada de la home se rotula "Testnet". Las maquetas (tabla semanal,
  * teléfono, importes) son ejemplos y lo dicen: ni nombres de personas ni "LIVE" sobre datos
  * inventados. Los textos van en minúscula normal; las mayúsculas las pone el CSS.
  *
@@ -66,7 +69,7 @@ export const CLIENTES = [
 
 /** El bloque de clientes del hero: los años con empresas y un círculo por cliente. */
 export const BLOQUE_CLIENTES = {
-  etiqueta: "Our clients",
+  etiqueta: "Some of our clients",
   cifra: ANOS_CON_OPERADORES,
   texto: `impacting companies in ${PAISES}.`,
   logosAria: "Companies we work with",
@@ -152,8 +155,7 @@ export interface TextosFlujoPagos {
   /** Valor aproximado en moneda local del último nodo (solo COP: la cobertura es Colombia). */
   equivalente: string;
   aproximado: string;
-  etiquetaPruebas: string;
-  nodos: ReadonlyArray<{ n: string; titulo: string; valor: string; tiempo: string; enPruebas?: boolean }>;
+  nodos: ReadonlyArray<{ n: string; titulo: string; valor: string; tiempo: string }>;
   controles: { pausar: string; seguir: string; repetir: string };
 }
 
@@ -165,10 +167,9 @@ export const PAGOS = {
     // Tasa de ejemplo (unos 4.100 COP por dólar): se rotula como aproximada.
     equivalente: "≈ COP 82,000",
     aproximado: "approx.",
-    etiquetaPruebas: "Testnet",
     nodos: [
       { n: "01", titulo: "Company pool", valor: "US$ 800", tiempo: "0 s" },
-      { n: "02", titulo: "Soroban splits", valor: "40 people", tiempo: "+1 s", enPruebas: true },
+      { n: "02", titulo: "Harmony splits", valor: "40 people", tiempo: "+1 s" },
       { n: "03", titulo: "Stellar settles", valor: "USDC", tiempo: "+3 s" },
       { n: "04", titulo: "Worker’s wallet", valor: "20 USDC", tiempo: "+5 s" },
     ],
@@ -194,8 +195,7 @@ export const PAGOS = {
       ],
     },
   },
-  nota: "Sample amounts and approximate exchange rates. Bonus payouts run in USDC on Stellar mainnet since September 2026; the automatic split contract runs on the Stellar testnet.",
-  notaEnlace: "See our testnet contracts and transactions",
+  nota: "Sample amounts and approximate exchange rates. Bonus payouts run in USDC on Stellar mainnet since September 2026.",
 } as const;
 
 export const MANIFIESTO = {

@@ -1,15 +1,13 @@
-import Link from "next/link";
 import s from "../landing.module.css";
 import p from "./pagos.module.css";
 import FlujoPagos from "./FlujoPagos";
-import { ENLACES } from "../copy-comun";
 import { PAGOS } from "../copy-home";
 
 /**
  * Pagos, sobre tinta: del puntaje a la billetera en segundos. El flujo (isla de cliente)
- * muestra importes de ejemplo; el paso del reparto automático va rotulado como red de
- * pruebas, y el cobro en el banco en moneda local, como lo que viene. La nota final dice
- * qué es real hoy y enlaza las pruebas públicas en la red de pruebas.
+ * muestra importes de ejemplo y el reparto que hace Harmony (los pagos van por la red
+ * principal), y el cobro en el banco en moneda local, como lo que viene. La nota final dice
+ * qué es ejemplo y desde cuándo se paga de verdad.
  */
 export default function Pagos() {
   const { antes, despues } = PAGOS.comparacion;
@@ -58,12 +56,7 @@ export default function Pagos() {
         </div>
       </div>
 
-      <p className={p.nota}>
-        {PAGOS.nota}{" "}
-        <Link href={ENLACES.metodoPruebas} hrefLang="es" className={p.notaEnlace}>
-          {PAGOS.notaEnlace}
-        </Link>
-      </p>
+      <p className={p.nota}>{PAGOS.nota}</p>
     </section>
   );
 }

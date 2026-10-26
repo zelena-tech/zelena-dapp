@@ -27,9 +27,6 @@ export default function Proyectos({ proyectos }: { proyectos: ProyectoAbierto[] 
   const filtros = filtrosDe(proyectos);
   const cabecera = (
     <div>
-      <p className={s.eyebrow} aria-hidden="true">
-        {PROYECTOS.eyebrow}
-      </p>
       <h2 id={idTitulo} className={`${s.titulo2} ${c.tituloSeccion}`}>
         {PROYECTOS.titulo}
       </h2>

@@ -267,14 +267,6 @@
   color: var(--tinta);
 }
 
-.pieAviso {
-  max-width: 640px;
-  margin: 0;
-  font-family: var(--fuente-mono);
-  font-size: 12px;
-  line-height: 1.55;
-  color: var(--gris-suave);
-}
 
 /* ------------------------------------------------------------------ */
 /* Botones                                                             */
@@ -441,7 +433,7 @@
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
 }
-/* Eyebrow con voz de terminal ("$ zelena products"): mono 12px en verde de texto. */
+/* Eyebrow: mono 12px en verde de texto (sin indicaciones de terminal desde 2026-10-26). */
 .eyebrow {
   font-family: var(--fuente-mono);
   font-size: 12px;

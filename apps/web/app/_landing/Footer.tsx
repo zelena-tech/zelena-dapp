@@ -21,11 +21,11 @@ function Enlace({ e }: { e: EnlacePie }) {
 }
 
 /**
- * Pie de la landing: la línea de marca y los enlaces del sitio; debajo, el aviso legal de
- * la página y el grupo Legal (acuerdo, privacidad y licencia), obligatorio en todas las
- * páginas. Ni la entidad legal ni el documento retirado.
+ * Pie de la landing: la línea de marca y los enlaces del sitio, en una sola fila. La fila
+ * del aviso legal y del grupo Legal salió por pedido del founder (2026-10-26); el aviso de
+ * privacidad sigue enlazado donde se piden datos (la casilla del formulario de la demo).
  */
-export default function Footer({ aviso }: { aviso: string }) {
+export default function Footer() {
   return (
     <footer className={s.pie}>
       <div className={s.pieFila}>
@@ -33,18 +33,6 @@ export default function Footer({ aviso }: { aviso: string }) {
         <nav aria-label={PIE.navAria}>
           <ul className={s.pieEnlaces}>
             {PIE.enlaces.map((e) => (
-              <li key={e.href}>
-                <Enlace e={e} />
-              </li>
-            ))}
-          </ul>
-        </nav>
-      </div>
-      <div className={s.pieFila}>
-        <p className={s.pieAviso}>{aviso}</p>
-        <nav aria-label={PIE.legalAria}>
-          <ul className={s.pieEnlaces}>
-            {PIE.legal.map((e) => (
               <li key={e.href}>
                 <Enlace e={e} />
               </li>

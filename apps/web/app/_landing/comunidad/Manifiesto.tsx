@@ -16,9 +16,6 @@ export default function Manifiesto() {
       aria-labelledby="manifiesto-titulo"
       data-reveal="seccion"
     >
-      <p className={s.eyebrow} aria-hidden="true">
-        {M.eyebrow}
-      </p>
       <h2 id="manifiesto-titulo" className={`${s.titulo2} ${c.tituloSeccion}`}>
         {M.titulo.linea1} <br />
         {M.titulo.linea2} <span className={c.resaltadoLima}>{M.titulo.resaltado}</span>
