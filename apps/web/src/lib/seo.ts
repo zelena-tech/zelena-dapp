@@ -88,6 +88,7 @@ export function metadatos(o: OpcionesMetadatos): Metadata {
 export const RUTAS_SITEMAP: readonly string[] = [
   "/",
   "/comunidad",
+  "/book-a-demo",
   "/manifiesto",
   "/metodo",
   "/empresas",

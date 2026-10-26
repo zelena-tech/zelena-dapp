@@ -146,10 +146,21 @@ describe("menuPara (E1-2)", () => {
 });
 
 describe("rutas de la landing (WP33)", () => {
-  it("solo / y /comunidad, exactas", () => {
-    expect([...RUTAS_LANDING]).toEqual(["/", "/comunidad"]);
+  // La demo y el manifiesto entraron el 2026-10-26 (pedido del founder): mismo cromo y en inglés.
+  it("/, /comunidad, la demo y el manifiesto, exactas", () => {
+    expect([...RUTAS_LANDING]).toEqual(["/", "/comunidad", "/book-a-demo", "/manifiesto"]);
     for (const r of RUTAS_LANDING) expect(esRutaLanding(r)).toBe(true);
-    for (const r of ["/comunidad/ritos", "/comunidad/ritos/3", "/comunidad/", "/manifiesto", "/empresas", "", "/?x=1"]) {
+    for (const r of [
+      "/comunidad/ritos",
+      "/comunidad/ritos/3",
+      "/comunidad/",
+      "/manifiesto/",
+      "/book-a-demo/x",
+      "/empresas",
+      "/empresas/contacto",
+      "",
+      "/?x=1",
+    ]) {
       expect(esRutaLanding(r), r).toBe(false);
     }
     expect(esRutaLanding(null)).toBe(false);
@@ -159,6 +170,8 @@ describe("rutas de la landing (WP33)", () => {
   it("cada ruta de la landing tiene su página", () => {
     expect(fs.existsSync(path.join(process.cwd(), "app", "page.tsx"))).toBe(true);
     expect(fs.existsSync(path.join(process.cwd(), "app", "comunidad", "page.tsx"))).toBe(true);
+    expect(fs.existsSync(path.join(process.cwd(), "app", "book-a-demo", "page.tsx"))).toBe(true);
+    expect(fs.existsSync(path.join(process.cwd(), "app", "manifiesto", "page.tsx"))).toBe(true);
   });
 });
 

@@ -9,14 +9,8 @@
   text-align: center;
 }
 
-/* Sobre lima, el verde de texto no da contraste: verde profundo (5,97:1). */
-.bloque .eyebrow {
-  color: var(--verde-profundo);
-  font-weight: 600;
-}
-
 .bloque .titulo {
-  margin: 16px auto 0;
+  margin: 0 auto;
   max-width: 860px;
   font-size: clamp(48px, 7.4vw, 108px);
   line-height: 0.88;

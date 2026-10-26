@@ -56,8 +56,17 @@ export async function middleware(req: NextRequest) {
   return NextResponse.next();
 }
 
-// "/" y "/comunidad" (RUTAS_LANDING) entran solo para el idioma del documento; la ruta
-// exacta, sin lo que cuelga de ellas.
+// Las rutas de la landing (RUTAS_LANDING) entran solo para el idioma del documento; la
+// ruta exacta, sin lo que cuelga de ellas.
 export const config = {
-  matcher: ["/perfil/:path*", "/admin/:path*", "/equipo/:path*", "/clientes/:path*", "/", "/comunidad"],
+  matcher: [
+    "/perfil/:path*",
+    "/admin/:path*",
+    "/equipo/:path*",
+    "/clientes/:path*",
+    "/",
+    "/comunidad",
+    "/book-a-demo",
+    "/manifiesto",
+  ],
 };

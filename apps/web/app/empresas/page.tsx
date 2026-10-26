@@ -36,7 +36,7 @@ const FASES = [
     estado: "Pagos en producción",
     acento: true,
     titulo: "Incentivos por desempeño",
-    desc: "Bonos calculados a partir del desempeño medido. Harmony ya paga bonos reales en USDC, en la red principal de Stellar, a la billetera de cada operador, y cada pago se puede verificar en la red. El contrato que automatiza el reparto todavía se prueba en la red de pruebas. La meta es entregar el bono en moneda local (COP, MXN, ARS) directo a la cuenta bancaria.",
+    desc: "Bonos calculados a partir del desempeño medido. Harmony ya paga bonos reales en USDC, en la red principal de Stellar, a la billetera de cada operador, y cada pago se puede verificar en la red. El contrato que automatiza el reparto todavía se prueba en la red de pruebas. La meta es entregar el bono en moneda local (pesos colombianos) directo a la cuenta bancaria.",
   },
 ];
 
@@ -51,7 +51,7 @@ const PASOS = [
 ];
 
 const STELLAR = [
-  { t: "Moneda local, última milla", d: "Los anchors de Stellar pueden convertir USDC a COP, MXN y ARS y entregarlo como transferencia bancaria, sin conocimientos de cripto. Ahí queremos llegar; hoy los bonos llegan en USDC a la billetera." },
+  { t: "Moneda local, última milla", d: "Los anchors de Stellar pueden convertir USDC a pesos colombianos y entregarlo como transferencia bancaria, sin conocimientos de cripto. Ahí queremos llegar; hoy los bonos llegan en USDC a la billetera." },
   { t: "Comisiones de centavos", d: "Pagar a docenas de trabajadores por periodo se vuelve económicamente viable. A escala PyME, esta es la diferencia entre lo posible y lo imposible." },
   { t: "Una cuenta propia", d: "Cada persona entra con su wallet de Stellar: Freighter, o una que se crea en el navegador sin instalar nada. La plataforma de la comunidad (entrada, proyectos, Ágora, puntos) corre en la red de pruebas de Stellar." },
 ];

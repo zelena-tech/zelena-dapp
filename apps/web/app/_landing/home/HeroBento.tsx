@@ -32,7 +32,7 @@ export default function HeroBento() {
         </h1>
         <p className={`${s.lead} ${h.parrafo}`}>{HERO.parrafo}</p>
         <div className={h.fila}>
-          <PrimaryCta href={ENLACES.reservarDemo} hrefLang="es" nombre={CTA_DEMO.nombre} />
+          <PrimaryCta href={ENLACES.reservarDemo} nombre={CTA_DEMO.nombre} />
           <p className={h.prueba}>
             <span className={h.pruebaIconos} aria-hidden="true">
               <span className={`${h.pruebaIcono} ${h.pruebaLima}`}>

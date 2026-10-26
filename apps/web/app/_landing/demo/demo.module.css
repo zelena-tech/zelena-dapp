@@ -1,0 +1,390 @@
+/*
+ * Página de la demo (/book-a-demo): hero con el formulario y los pasos. Los tokens
+ * (--tinta, --lima…) los pone la raíz de la landing. Las reglas que ajustan una clase
+ * compartida (titulo1, titulo2, display, ctaPrimario) van con dos clases para ganarle
+ * siempre, sin depender del orden de las hojas.
+ */
+
+.mayus {
+  text-transform: uppercase;
+}
+
+/* ------------------------------------------------------------------ */
+/* Hero: texto a la izquierda, formulario a la derecha                 */
+/* ------------------------------------------------------------------ */
+
+.hero {
+  max-width: var(--ancho-hero);
+  margin: 8px auto 0;
+  padding-top: clamp(28px, 4vw, 56px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(32px, 4vw, 56px);
+  align-items: start;
+}
+@media (min-width: 980px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 540px);
+  }
+}
+
+.texto {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+@media (min-width: 980px) {
+  .texto {
+    position: sticky;
+    top: calc(var(--alto-cabecera) + 24px);
+  }
+}
+.texto .h1 {
+  margin-top: 20px;
+}
+.texto .parrafo {
+  margin-top: 18px;
+  max-width: 480px;
+}
+
+.agenda {
+  margin-top: 32px;
+  width: 100%;
+  max-width: 480px;
+  border-top: 1px solid var(--borde);
+  padding-top: 22px;
+}
+.agendaTitulo {
+  margin: 0;
+  font-family: var(--fuente-mono);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-transform: uppercase;
+  color: var(--verde-texto);
+}
+.agendaLista {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.agendaPunto {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--gris-cuerpo);
+}
+.vinieta {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+  border-radius: 50%;
+  background: var(--lima);
+  color: var(--tinta);
+  display: grid;
+  place-items: center;
+}
+
+.prueba {
+  margin-top: 28px;
+  white-space: normal;
+}
+
+/* El formulario vive sobre panel gris, con la cuadrícula del bloque de clientes de la home. */
+.tarjeta {
+  border-radius: var(--radio-xl);
+  background-color: var(--panel);
+  background-image: linear-gradient(rgba(12, 15, 10, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(12, 15, 10, 0.045) 1px, transparent 1px);
+  background-size: 32px 32px;
+  padding: clamp(22px, 3.6vw, 44px);
+}
+
+/* ------------------------------------------------------------------ */
+/* Formulario (FormularioDemo)                                         */
+/* ------------------------------------------------------------------ */
+
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.formulario .formularioTitulo {
+  margin: 0 0 4px;
+  font-size: clamp(34px, 3.6vw, 48px);
+}
+
+.dosColumnas {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+}
+@media (min-width: 560px) {
+  .dosColumnas {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.etiqueta {
+  padding: 0;
+  font-family: var(--fuente-mono);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-transform: uppercase;
+  color: var(--tinta);
+}
+.opcional {
+  font-weight: 400;
+  text-transform: none;
+  color: var(--gris-suave);
+}
+
+.entrada {
+  width: 100%;
+  min-height: 50px;
+  padding: 12px 16px;
+  border: 1px solid var(--borde-2);
+  border-radius: var(--radio-sm);
+  background: var(--blanco);
+  color: var(--tinta);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.4;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.entrada::placeholder {
+  color: var(--gris-suave);
+}
+.entrada:hover {
+  border-color: var(--gris-suave);
+}
+.entrada:focus {
+  border-color: var(--tinta);
+  box-shadow: 0 0 0 3px var(--lima-claro);
+}
+.area {
+  min-height: 128px;
+  resize: vertical;
+}
+
+/* Qué quiere ver: radios nativos; se ve la píldora, el radio queda accesible pero invisible. */
+.intereses {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.opciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.opcion {
+  position: relative;
+  display: inline-flex;
+  cursor: pointer;
+}
+.opcionInput {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.opcionPildora {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: var(--radio-pill);
+  background: var(--blanco);
+  box-shadow: inset 0 0 0 1px var(--borde-2);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--tinta);
+  transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+.opcion:hover .opcionPildora {
+  box-shadow: inset 0 0 0 1px var(--tinta);
+}
+.opcionInput:checked + .opcionPildora {
+  background: var(--tinta);
+  color: var(--lima);
+  box-shadow: none;
+}
+.opcionInput:focus-visible + .opcionPildora {
+  outline: 2px solid var(--foco);
+  outline-offset: 3px;
+}
+
+/* Campo trampa: fuera de la pantalla, no `display: none` (algunos bots lo saltan). */
+.trampa {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.casilla {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--gris-cuerpo);
+  cursor: pointer;
+}
+.casillaInput {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 1px 0 0;
+  accent-color: var(--tinta);
+  cursor: pointer;
+}
+.enlace {
+  color: var(--tinta);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: var(--verde);
+  text-underline-offset: 3px;
+}
+.enlace:hover {
+  color: var(--verde-texto);
+}
+
+/* Rojo de error sobre blanco (6,6:1): el aviso va en su propia caja, no sobre el panel. */
+.error {
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: var(--radio-sm);
+  background: var(--blanco);
+  box-shadow: inset 0 0 0 1px #f1c4bf;
+  font-size: 14px;
+  line-height: 1.45;
+  color: #b42318;
+}
+
+.formulario .enviar {
+  align-self: flex-start;
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
+}
+.formulario .enviar:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+/* Éxito: reemplaza al formulario. */
+.exito {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  min-height: 360px;
+  justify-content: center;
+}
+.exitoIcono {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--lima);
+  color: var(--tinta);
+  display: grid;
+  place-items: center;
+}
+.exitoEtiqueta {
+  margin: 0;
+  font-family: var(--fuente-mono);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--verde-texto);
+}
+.exito .exitoTitulo {
+  margin: 0;
+  font-size: clamp(40px, 4.4vw, 60px);
+  overflow-wrap: anywhere;
+}
+.exitoTexto {
+  margin: 0;
+  max-width: 400px;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--gris-cuerpo);
+  overflow-wrap: anywhere;
+}
+
+/* ------------------------------------------------------------------ */
+/* Qué pasa después: bloque de tinta con tres pasos                    */
+/* ------------------------------------------------------------------ */
+
+.pasosBloque {
+  margin-top: var(--espacio-seccion);
+  background: var(--tinta);
+  color: var(--blanco);
+  border-radius: clamp(22px, 3vw, 32px);
+  padding: clamp(28px, 5vw, 64px);
+}
+.pasosBloque .pasosTitulo {
+  font-size: clamp(44px, 6vw, 84px);
+}
+
+.pasos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 10px;
+  margin: 32px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.paso {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+.paso .pasoNumero {
+  font-size: 44px;
+  color: var(--lima);
+}
+.pasoTitulo {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.pasoTexto {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--claro-sobre-tinta);
+  text-wrap: pretty;
+}
+
+.pasosPie {
+  margin-top: 28px;
+}

@@ -13,7 +13,7 @@
 /* Tope de 104px (el diseño llega a 120): "wallet" es más largo que la palabra del diseño
    y así la primera línea sigue cabiendo entera en escritorio. */
 .bloque .titulo {
-  margin: 14px 0 0;
+  margin: 0;
   font-size: clamp(52px, 8vw, 104px);
   line-height: 0.86;
   text-wrap: balance;
@@ -39,63 +39,12 @@
   margin-top: 28px;
 }
 
-/* Monedas: radios nativos; se ve la píldora, el radio queda accesible pero invisible. */
-.monedas {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  min-width: 0;
-}
-.moneda {
-  position: relative;
-  display: inline-flex;
-  cursor: pointer;
-}
-.monedaInput {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  opacity: 0;
-  cursor: pointer;
-}
-.monedaPildora {
-  display: inline-flex;
-  align-items: center;
-  min-height: 34px;
-  padding: 0 16px;
-  border-radius: var(--radio-pill);
-  font-family: var(--fuente-mono);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--blanco);
-  background: rgba(255, 255, 255, 0.08);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
-  transition: background-color 0.2s ease, color 0.2s ease;
-}
-.moneda:hover .monedaPildora {
-  background: rgba(255, 255, 255, 0.16);
-}
-.monedaInput:checked + .monedaPildora {
-  background: var(--lima);
-  color: var(--tinta);
-  box-shadow: none;
-}
-.monedaInput:focus-visible + .monedaPildora {
-  outline: 2px solid var(--foco);
-  outline-offset: 3px;
-}
-
 /* Nodos: fila compacta en el teléfono, 2 columnas desde 480px y 4 desde 1024px. */
 .nodos {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 10px;
-  margin: 16px 0 0;
+  margin: 0;
   padding: 0;
   list-style: none;
 }

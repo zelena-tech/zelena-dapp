@@ -29,9 +29,6 @@ export default function Productos() {
   const { medir, pagar } = PRODUCTOS;
   return (
     <section className={`${s.seccion} ${p.seccion}`} aria-labelledby="productos-titulo">
-      <p className={s.eyebrow} aria-hidden="true" data-reveal="">
-        {PRODUCTOS.eyebrow}
-      </p>
       <h2 id="productos-titulo" className={`${s.titulo2} ${p.titulo}`} data-reveal="titulo">
         {PRODUCTOS.h2.linea1}{" "}
         <br />

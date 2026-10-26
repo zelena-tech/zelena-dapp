@@ -13,9 +13,6 @@ import { MANIFIESTO } from "../copy-home";
 export default function Manifiesto() {
   return (
     <section className={m.bloque} aria-labelledby="manifiesto-titulo" data-reveal="seccion">
-      <p className={s.eyebrow} aria-hidden="true">
-        {MANIFIESTO.eyebrow}
-      </p>
       <h2 id="manifiesto-titulo" className={`${s.titulo2} ${m.titulo}`}>
         {MANIFIESTO.h2.linea1}{" "}
         <br />
@@ -32,11 +29,7 @@ export default function Manifiesto() {
         ))}
       </ol>
       <div className={m.enlaces}>
-        <SecondaryCta
-          href={ENLACES.manifiesto}
-          hrefLang="es"
-          nombre={MANIFIESTO.cta.nombre}
-        />
+        <SecondaryCta href={ENLACES.manifiesto} nombre={MANIFIESTO.cta.nombre} />
         <Link href={ENLACES.comunidad} className={m.enlaceComunidad}>
           {MANIFIESTO.comunidad}
           <IconoFlechaDerecha tamano={16} />

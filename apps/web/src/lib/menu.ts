@@ -24,12 +24,18 @@ export const RUTA_COMUNIDAD: string = "/comunidad";
  */
 export const RUTA_RITOS = "/comunidad/ritos";
 
+/** "Book a demo": la página de la demo, en inglés y con el cromo de la landing. */
+export const RUTA_DEMO = "/book-a-demo";
+
+/** El manifiesto: desde 2026-10-26 en inglés y con el cromo de la landing (pedido del founder). */
+export const RUTA_MANIFIESTO = "/manifiesto";
+
 /**
  * Rutas de la landing en inglés (WP33): llevan su propio cromo claro (cabecera y pie)
  * y no el del sitio en español. Solo la ruta exacta: /comunidad/ritos y lo que cuelga
  * de /comunidad siguen con el cromo de siempre.
  */
-export const RUTAS_LANDING: readonly string[] = ["/", RUTA_COMUNIDAD];
+export const RUTAS_LANDING: readonly string[] = ["/", RUTA_COMUNIDAD, RUTA_DEMO, RUTA_MANIFIESTO];
 
 /** ¿La ruta es de la landing? (decide el cromo en MarcoSitio). */
 export function esRutaLanding(ruta: string | null | undefined): boolean {

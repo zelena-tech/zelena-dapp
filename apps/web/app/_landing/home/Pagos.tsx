@@ -19,9 +19,6 @@ export default function Pagos() {
       aria-labelledby="pagos-titulo"
       data-reveal="seccion"
     >
-      <p className={s.eyebrow} aria-hidden="true">
-        {PAGOS.eyebrow}
-      </p>
       <h2 id="pagos-titulo" className={`${s.display} ${p.titulo}`}>
         {PAGOS.h2.linea1}{" "}
         <br />

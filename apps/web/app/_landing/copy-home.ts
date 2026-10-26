@@ -15,6 +15,11 @@
  * que automatiza el reparto corre en la red de pruebas. Las maquetas (tabla semanal,
  * teléfono, importes) son ejemplos y lo dicen: ni nombres de personas ni "LIVE" sobre datos
  * inventados. Los textos van en minúscula normal; las mayúsculas las pone el CSS.
+ *
+ * Sin la voz de terminal (las indicaciones de consola de "zelena products" o "zelena pay")
+ * sobre los titulares de la home: el founder la quitó el 2026-10-26 porque metía ruido. Ese
+ * mismo día salieron MXN y ARS: el valor local de ejemplo del flujo de pagos va solo en pesos
+ * colombianos (la cobertura de hoy es Colombia), sin selector de moneda.
  */
 
 /** Años construyendo con operadores logísticos. */
@@ -30,7 +35,7 @@ export const META_HOME = {
     "Performance-based payroll and incentives for LATAM logistics: Zelena measures your warehouse operators’ work and pays the bonus they earn in USDC, on Stellar.",
 } as const;
 
-/** Llamada principal (hero y cierre): el formulario de demo, con Harmony elegido. */
+/** Llamada principal (hero y cierre): la página de la demo (/book-a-demo, copy-demo.ts). */
 export const CTA_DEMO = { nombre: "Book a demo" } as const;
 
 export const HERO = {
@@ -76,7 +81,6 @@ export interface PuntoProducto {
 }
 
 export const PRODUCTOS = {
-  eyebrow: "$ zelena products",
   h2: { linea1: "Measure the work.", linea2: "Pay the bonus." },
   intro: "One clear loop: what your operators do gets measured, and what gets measured gets paid.",
   medir: {
@@ -143,33 +147,23 @@ export const COMO_FUNCIONA = {
   nota: "ready to get paid!",
 } as const;
 
-export type ClaveMoneda = "COP" | "MXN" | "ARS";
-
 /** Textos del flujo de pagos (isla de cliente): solo cadenas, se pasan como props. */
 export interface TextosFlujoPagos {
-  leyendaMoneda: string;
-  monedas: ReadonlyArray<{ clave: ClaveMoneda; equivalente: string }>;
+  /** Valor aproximado en moneda local del último nodo (solo COP: la cobertura es Colombia). */
+  equivalente: string;
   aproximado: string;
   etiquetaPruebas: string;
   nodos: ReadonlyArray<{ n: string; titulo: string; valor: string; tiempo: string; enPruebas?: boolean }>;
-  /** Anuncio para lectores de pantalla al cambiar de moneda: "{anuncio} {equivalente}." */
-  anuncio: string;
   controles: { pausar: string; seguir: string; repetir: string };
 }
 
 export const PAGOS = {
-  eyebrow: "$ zelena pay --network stellar",
   h2: { linea1: "From score to wallet", linea2: "in seconds." },
   intro:
     "The bonus leaves in digital dollars (USDC) and settles in the worker’s Stellar wallet in seconds, with network fees under a cent.",
   flujo: {
-    leyendaMoneda: "Approximate local value",
-    // Tasas de ejemplo (unos 4.100 COP, 18,5 MXN y 1.450 ARS por dólar): se rotulan como aproximadas.
-    monedas: [
-      { clave: "COP", equivalente: "≈ COP 82,000" },
-      { clave: "MXN", equivalente: "≈ MXN 370" },
-      { clave: "ARS", equivalente: "≈ ARS 29,000" },
-    ],
+    // Tasa de ejemplo (unos 4.100 COP por dólar): se rotula como aproximada.
+    equivalente: "≈ COP 82,000",
     aproximado: "approx.",
     etiquetaPruebas: "Testnet",
     nodos: [
@@ -178,7 +172,6 @@ export const PAGOS = {
       { n: "03", titulo: "Stellar settles", valor: "USDC", tiempo: "+3 s" },
       { n: "04", titulo: "Worker’s wallet", valor: "20 USDC", tiempo: "+5 s" },
     ],
-    anuncio: "Each worker receives 20 USDC, worth about",
     controles: { pausar: "pause", seguir: "play", repetir: "replay" },
   } satisfies TextosFlujoPagos,
   siguiente: {
@@ -206,7 +199,6 @@ export const PAGOS = {
 } as const;
 
 export const MANIFIESTO = {
-  eyebrow: "$ cat manifesto.md",
   h2: { linea1: "We’re redesigning", antes: "how we ", resaltado: "collaborate." },
   pilares: [
     {
@@ -230,7 +222,6 @@ export const MANIFIESTO = {
 } as const;
 
 export const CIERRE = {
-  eyebrow: "$ zelena demo --book",
   h2: "Bring performance-based payroll to your warehouse.",
   texto: "Book a demo and see how Zelena measures the work and pays the bonus in USDC on Stellar.",
 } as const;

@@ -652,7 +652,8 @@ describe("login-y-sesion · puerta corporativa (Entra) detrás del flag", () => 
     expect(db.prepare(`SELECT role, entra_oid FROM users WHERE wallet = 'pending:founder'`).get()).toEqual(filaFounder);
   });
 
-  // WP33: "/" y "/comunidad" entran solo para marcar el idioma del documento (sin sesión).
+  // WP33: las rutas de la landing ("/", "/comunidad" y, desde 2026-10-26, la demo y el
+  // manifiesto) entran solo para marcar el idioma del documento (sin sesión).
   it("el middleware solo cubre páginas: ninguna ruta /api pasa por él", () => {
     expect(configMiddleware.matcher).toEqual([
       "/perfil/:path*",
@@ -661,6 +662,8 @@ describe("login-y-sesion · puerta corporativa (Entra) detrás del flag", () => 
       "/clientes/:path*",
       "/",
       "/comunidad",
+      "/book-a-demo",
+      "/manifiesto",
     ]);
   });
 });

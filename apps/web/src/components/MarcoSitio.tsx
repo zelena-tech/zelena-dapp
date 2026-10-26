@@ -5,7 +5,7 @@ import { esRutaLanding } from "@/lib/menu";
 
 /**
  * El cromo del sitio según la ruta (WP33). Un solo layout raíz: en las rutas de la
- * landing en inglés (`RUTAS_LANDING`: "/" y "/comunidad") la página trae su propio
+ * landing en inglés (`RUTAS_LANDING`: "/", "/comunidad", la demo y el manifiesto) la página trae su propio
  * cromo claro (cabecera, `<main>` y pie) y aquí no se pinta nada alrededor; en el resto,
  * el de siempre: glow, menú, aviso de mutación, `<main>` y pie.
  *

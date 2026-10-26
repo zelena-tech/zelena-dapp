@@ -19,6 +19,7 @@ import { RUTA_VOTAR } from "./landing-datos";
 import { CABECERA, ENLACES } from "../../app/_landing/copy-comun";
 import { BLOQUE_CLIENTES, CLIENTES, CTA_DEMO, HARMONY, HERO as HERO_INICIO } from "../../app/_landing/copy-home";
 import { CIFRAS, HERO as HERO_COMUNIDAD } from "../../app/_landing/copy-comunidad";
+import { FORMULARIO_DEMO } from "../../app/_landing/copy-demo";
 
 const WEB = process.cwd(); // apps/web
 const rel = (p: string) => path.relative(WEB, p).split(path.sep).join("/");
@@ -99,6 +100,10 @@ describe("la lista generada de archivos públicos", () => {
       "app/_landing/copy-comun.ts",
       "app/_landing/copy-home.ts",
       "app/_landing/copy-comunidad.ts",
+      "app/_landing/copy-demo.ts",
+      "app/_landing/copy-manifiesto.ts",
+      "app/_landing/demo/FormularioDemo.tsx",
+      "app/book-a-demo/page.tsx",
       "app/_landing/LandingShell.tsx",
       "app/_landing/landing.module.css",
       "app/_landing/home/HeroBento.tsx",
@@ -353,6 +358,21 @@ describe("E1-9 · aviso de privacidad y casilla de autorización", () => {
     });
   }
 
+  it("app/_landing/demo/FormularioDemo.tsx (en inglés): enlaza /privacidad y tiene una casilla obligatoria NO premarcada", () => {
+    const src = leer("app/_landing/demo/FormularioDemo.tsx");
+    expect(src).toContain('<Link href="/privacidad" hrefLang="es"');
+    expect(src).toContain("{textos.consentimiento.antes}");
+    expect(FORMULARIO_DEMO.consentimiento.antes).toBe("I agree to the processing of my personal data under the ");
+    expect(FORMULARIO_DEMO.consentimiento.enlace).toBe("privacy notice");
+    const casillas = src.match(/<input[^>]*type="checkbox"[^>]*\/>/g) ?? [];
+    expect(casillas).toHaveLength(1);
+    expect(casillas[0]).toMatch(/\brequired\b/);
+    expect(casillas[0]).not.toMatch(/defaultChecked|\bchecked\b/);
+    expect(src).not.toContain("defaultChecked");
+    expect(casillas[0]).toContain('name="acepto"');
+    expect(src).toMatch(/\bacepto, aviso: AVISO_PRIVACIDAD_VERSION\b/);
+  });
+
   it("/entrar y /acuerdo enlazan el aviso", () => {
     expect(leer("app/entrar/page.tsx")).toContain('href="/privacidad"');
     expect(leer("app/acuerdo/page.tsx")).toContain('href="/privacidad"');
@@ -367,30 +387,50 @@ describe("E1-9 · aviso de privacidad y casilla de autorización", () => {
  * reemplaza: sus enlaces viven ahora en el pie y la cabecera, sus cifras en /comunidad y la
  * prueba verificable en /metodo#compruebalo.
  */
-describe("E1-10 · la landing en inglés (/ y /comunidad)", () => {
+describe("E1-10 · la landing en inglés (/, /comunidad, la demo y el manifiesto)", () => {
   const inicio = leer("app/page.tsx");
   const comunidad = leer("app/comunidad/page.tsx");
+  const demo = leer("app/book-a-demo/page.tsx");
+  const manifiesto = leer("app/manifiesto/page.tsx");
   const shell = leer("app/_landing/LandingShell.tsx");
   const heroInicio = leer("app/_landing/home/HeroBento.tsx");
   const heroComunidad = leer("app/_landing/comunidad/Hero.tsx");
   const LANDING = archivosLanding();
   /** Los .tsx que pinta una página: los de su carpeta y los compartidos (cabecera, pie, shell). */
-  const deLaPagina = (carpeta: "home" | "comunidad") =>
+  const deLaPagina = (carpeta: "home" | "comunidad" | "demo" | "manifiesto") =>
     LANDING.filter(
-      (r) => r.endsWith(".tsx") && (r.startsWith(`app/_landing/${carpeta}/`) || !/\/(home|comunidad)\//.test(r))
+      (r) =>
+        r.endsWith(".tsx") &&
+        (r.startsWith(`app/_landing/${carpeta}/`) || !/\/(home|comunidad|demo|manifiesto)\//.test(r))
     );
 
-  it("las dos páginas van dentro del cromo de la landing: raíz data-landing en inglés, clara y dinámica", () => {
+  it("las cuatro páginas van dentro del cromo de la landing: raíz data-landing en inglés, clara y dinámica", () => {
     expect(inicio).toContain('<LandingShell pagina="home">');
     expect(comunidad).toContain('<LandingShell pagina="comunidad">');
+    expect(demo).toContain('<LandingShell pagina="demo">');
+    expect(manifiesto).toContain('<LandingShell pagina="manifiesto">');
     expect(shell).toContain('<div data-landing="" lang="en"');
-    for (const src of [inicio, comunidad]) {
+    for (const src of [inicio, comunidad, demo, manifiesto]) {
       expect(src).toContain('export const viewport: Viewport = { themeColor: "#FFFFFF", colorScheme: "light" };');
       expect(src).toContain('export const dynamic = "force-dynamic";');
       expect(src).toContain('idioma: "en",');
     }
     expect(inicio).toContain('ruta: "/",');
     expect(comunidad).toContain('ruta: "/comunidad",');
+    expect(demo).toContain("ruta: RUTA_DEMO,");
+    expect(manifiesto).toContain("ruta: RUTA_MANIFIESTO,");
+  });
+
+  it("la demo y el manifiesto tienen su H1 en inglés del copy, y es el único h1 de cada página", () => {
+    for (const [pagina, src] of [
+      ["demo", demo],
+      ["manifiesto", manifiesto],
+    ] as const) {
+      const h1 = [src, ...deLaPagina(pagina).map(leer)].join("\n").match(/<h1\b/g) ?? [];
+      expect(h1, pagina).toHaveLength(1);
+    }
+    expect(leer("app/_landing/demo/HeroDemo.tsx")).toContain('<h1 id="demo-titulo"');
+    expect(leer("app/_landing/manifiesto/HeroManifiesto.tsx")).toContain('<h1 id="manifiesto-titulo"');
   });
 
   it("/ tiene el H1 en inglés del copy (dos líneas, LATAM resaltado) y es el único h1 de la página", () => {
@@ -415,10 +455,17 @@ describe("E1-10 · la landing en inglés (/ y /comunidad)", () => {
     expect(h1).toHaveLength(1);
   });
 
-  it("Book a demo lleva al formulario con Harmony elegido (en el hero y en el cierre); Log in, a /entrar", () => {
-    expect(ENLACES.reservarDemo).toBe("/empresas/contacto?interes=harmony");
-    expect(heroInicio).toContain("<PrimaryCta href={ENLACES.reservarDemo}");
+  // Pedido del founder (2026-10-26): Book a demo lleva a una página con el diseño de la
+  // landing, ya no al formulario en español. La solicitud entra por la misma API.
+  it("Book a demo lleva a la página de la demo (en el hero y en el cierre), en inglés; Log in, a /entrar", () => {
+    expect(ENLACES.reservarDemo).toBe("/book-a-demo");
+    expect(heroInicio).toContain("<PrimaryCta href={ENLACES.reservarDemo} nombre={CTA_DEMO.nombre} />");
     expect(leer("app/_landing/home/CierreHome.tsx")).toContain("href={ENLACES.reservarDemo}");
+    expect(coincidencias(LANDING, /reservarDemo[^\n]*hrefLang/)).toEqual([]);
+    expect(demo).toContain("<HeroDemo interesInicial={interesDe(searchParams.interes)} />");
+    expect(leer("app/_landing/demo/HeroDemo.tsx")).toContain(
+      "<FormularioDemo textos={FORMULARIO_DEMO} interesInicial={interesInicial} />"
+    );
     expect(ENLACES.entrar).toBe("/entrar");
     expect(CABECERA.entrar).toBe("Log in");
     expect(shell).toContain("if (!session) return { href: ENLACES.entrar, etiqueta: CABECERA.entrar };");
@@ -468,7 +515,19 @@ describe("E1-10 · la landing en inglés (/ y /comunidad)", () => {
   it("sin votos de mentira: ninguna isla de cliente vota; el botón de votar es un enlace a /gobernanza", () => {
     const islas = LANDING.filter((r) => /\.tsx?$/.test(r) && leer(r).startsWith('"use client";'));
     expect(islas.length).toBeGreaterThan(4);
-    for (const r of islas) expect(leer(r), r).not.toMatch(/vot[eo]|vota|governance|fetch\(|\/api\//i);
+    // La única isla que escribe es el formulario de la demo: una sola llamada, a la API de
+    // solicitudes comerciales (la misma de /empresas/contacto), y nada de votos.
+    const FORMULARIO = "app/_landing/demo/FormularioDemo.tsx";
+    expect(islas).toContain(FORMULARIO);
+    for (const r of islas.filter((r) => r !== FORMULARIO)) {
+      expect(leer(r), r).not.toMatch(/vot[eo]|vota|governance|fetch\(|\/api\//i);
+    }
+    const formulario = leer(FORMULARIO);
+    expect(formulario).not.toMatch(/vot[eo]|vota|governance/i);
+    expect(formulario).toContain('const API_SOLICITUD = "/api/empresas/contacto";');
+    expect(formulario.match(/fetch\(/g) ?? []).toEqual(["fetch("]);
+    expect(formulario).toContain("await fetch(API_SOLICITUD, {");
+    expect(formulario.match(/\/api\//g) ?? []).toHaveLength(1);
     expect(RUTA_VOTAR).toBe("/gobernanza");
     // Cada "Vote on proposal #N" lleva a SU votación: /gobernanza muestra todas las
     // abiertas, cada una con su ancla y su formulario (antes, solo la más antigua).
@@ -492,7 +551,7 @@ describe("E1-10 · la landing en inglés (/ y /comunidad)", () => {
   });
 
   it("no importa Type ni next/image, ni carga fuentes de fuera", () => {
-    for (const r of [...LANDING, "app/page.tsx", "app/comunidad/page.tsx"]) {
+    for (const r of [...LANDING, "app/page.tsx", "app/comunidad/page.tsx", "app/book-a-demo/page.tsx", "app/manifiesto/page.tsx"]) {
       const src = leer(r);
       expect(src, r).not.toMatch(/components\/Type|<Type\b/);
       expect(src, r).not.toMatch(/from\s+["']next\/image["']/);
@@ -503,8 +562,9 @@ describe("E1-10 · la landing en inglés (/ y /comunidad)", () => {
 
 describe("lenguaje editorial en lo público", () => {
   // WP31: las páginas en español usan la serif editorial y no el componente Type. La landing
-  // en inglés de WP33 (/ y /comunidad) tiene otra voz, la del diseño que encargó el founder:
-  // mono e indicaciones "$ zelena …". Esa voz vive solo en app/_landing; las páginas en
+  // en inglés de WP33 (/, /comunidad, la demo y el manifiesto) tiene otra voz, la del diseño
+  // que encargó el founder: mono e indicaciones "$ zelena …" (desde 2026-10-26, solo en
+  // /comunidad: en la home metían ruido). Esa voz vive solo en app/_landing; las páginas en
   // español no la toman. Los botones dicen su nombre llano ("Book a demo"): los corchetes
   // "[[ … ]]" del diseño se quitaron a pedido del founder (2026-10-25).
   it("las páginas en español nuevas o reescritas usan serif y no el componente Type", () => {
@@ -515,7 +575,6 @@ describe("lenguaje editorial en lo público", () => {
       "app/gobernanza/page.tsx",
       "app/academia/page.tsx",
       "app/empresas/page.tsx",
-      "app/manifiesto/page.tsx",
       "app/comunidad/ritos/page.tsx",
     ]) {
       const src = leer(r);
@@ -531,8 +590,19 @@ describe("lenguaje editorial en lo público", () => {
     // La landing sí la usa (si este guarda deja de ver la voz, deja de proteger nada).
     expect(coincidencias([...archivosLanding()], /\[\[ \{?[a-z_]+\}? \]\]/)).toEqual([]);
     expect(CTA_DEMO.nombre).toBe("Book a demo");
-    expect(leer("app/_landing/copy-home.ts")).toMatch(/eyebrow: "\$ zelena /);
-    const landing = [...archivosLanding(), "app/page.tsx", "app/comunidad/page.tsx"];
+    expect(leer("app/_landing/copy-comunidad.ts")).toMatch(/eyebrow: "\$ zelena /);
+    // Pedido del founder (2026-10-26): la home ya no lleva la voz de terminal sobre sus
+    // titulares ("$ zelena products", "$ zelena pay --network stellar"…), ni la demo ni el manifiesto.
+    for (const r of ["app/_landing/copy-home.ts", "app/_landing/copy-demo.ts", "app/_landing/copy-manifiesto.ts"]) {
+      expect(leer(r), r).not.toMatch(/"\$ /);
+    }
+    const landing = [
+      ...archivosLanding(),
+      "app/page.tsx",
+      "app/comunidad/page.tsx",
+      "app/book-a-demo/page.tsx",
+      "app/manifiesto/page.tsx",
+    ];
     expect(coincidencias(landing, /font-serif|Playfair/)).toEqual([]);
   });
 

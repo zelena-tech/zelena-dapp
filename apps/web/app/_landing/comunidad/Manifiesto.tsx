@@ -33,12 +33,7 @@ export default function Manifiesto() {
         ))}
       </ul>
       <div className={c.manifiestoPie}>
-        <SecondaryCta
-          href={ENLACES.manifiesto}
-          hrefLang="es"
-          nombre={M.cta.nombre}
-          sobreOscuro
-        />
+        <SecondaryCta href={ENLACES.manifiesto} nombre={M.cta.nombre} sobreOscuro />
       </div>
     </section>
   );

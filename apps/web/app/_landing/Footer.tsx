@@ -1,6 +1,7 @@
 import Link from "next/link";
 import s from "./landing.module.css";
 import { PIE, type EnlacePie } from "./copy-comun";
+import { esRutaLanding } from "@/lib/menu";
 
 function Enlace({ e }: { e: EnlacePie }) {
   if (e.externo) {
@@ -11,9 +12,9 @@ function Enlace({ e }: { e: EnlacePie }) {
       </a>
     );
   }
-  // Las páginas del sitio enlazadas desde aquí están en español.
+  // Las páginas del sitio enlazadas desde aquí están en español, salvo las de la landing.
   return (
-    <Link href={e.href} hrefLang={PIE.idiomaDestino} className={s.pieEnlace}>
+    <Link href={e.href} hrefLang={esRutaLanding(e.href) ? undefined : PIE.idiomaDestino} className={s.pieEnlace}>
       {e.label}
     </Link>
   );

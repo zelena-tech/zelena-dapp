@@ -8,7 +8,7 @@
 }
 
 .bloque .titulo {
-  margin-top: 14px;
+  margin-top: 0;
 }
 /* Verde de texto (no el verde de rellenos): sobre el panel, el otro no da contraste. */
 .verde {

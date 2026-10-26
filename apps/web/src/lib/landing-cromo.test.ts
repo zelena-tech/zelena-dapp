@@ -12,6 +12,7 @@ import { CABECERA_IDIOMA, FOOTER_GRUPOS, RUTAS_LANDING, URL_LICENCIA } from "./m
 import { IMAGEN_OG_ES, metadatos } from "./seo";
 import { SLUGS_INTERES } from "./servicios";
 import { AVISOS_LEGALES, CABECERA, ENLACES, PIE, PIE_LEGAL } from "../../app/_landing/copy-comun";
+import { FORMULARIO_DEMO } from "../../app/_landing/copy-demo";
 
 // El middleware importa la sesión con el alias "@/" (vitest no lo resuelve).
 vi.mock("@/lib/jwt", async () => await import("./jwt"));
@@ -79,7 +80,7 @@ describe("idioma del documento", () => {
       expect(configMiddleware.matcher, r).toContain(r);
       expect(await idiomaDe(r), r).toBe("en");
     }
-    for (const r of ["/comunidad/ritos", "/manifiesto", "/empresas"]) expect(await idiomaDe(r), r).toBeNull();
+    for (const r of ["/comunidad/ritos", "/empresas", "/empresas/contacto"]) expect(await idiomaDe(r), r).toBeNull();
   });
 
   it("el layout raíz lee esa cabecera y, sin ella, el documento es español", () => {
@@ -117,8 +118,8 @@ describe("imágenes para compartir", () => {
     expect([b.readUInt32BE(16), b.readUInt32BE(20)]).toEqual([IMAGEN_OG_ES.width, IMAGEN_OG_ES.height]);
   });
 
-  it('"/" y "/comunidad" no llevan imagen; la tarjeta de Twitter es "summary" y concuerda', () => {
-    for (const r of ["app/page.tsx", "app/comunidad/page.tsx"]) {
+  it('las páginas de la landing no llevan imagen; la tarjeta de Twitter es "summary" y concuerda', () => {
+    for (const r of ["app/page.tsx", "app/comunidad/page.tsx", "app/book-a-demo/page.tsx", "app/manifiesto/page.tsx"]) {
       const src = leer(r);
       expect(src, r).toContain('idioma: "en",');
       expect(src, r).not.toMatch(/imagen:/);
@@ -127,7 +128,7 @@ describe("imágenes para compartir", () => {
     expect(m.openGraph).not.toHaveProperty("images");
     expect(m.twitter).toMatchObject({ card: "summary" });
     expect(m.twitter).not.toHaveProperty("images");
-    const es = metadatos({ ruta: "/manifiesto", idioma: "es", titulo: "t", descripcion: "d" });
+    const es = metadatos({ ruta: "/metodo", idioma: "es", titulo: "t", descripcion: "d" });
     expect(es.twitter).toMatchObject({ card: "summary_large_image", images: [IMAGEN_OG_ES.url] });
   });
 
@@ -180,9 +181,14 @@ describe("cabecera, enlaces y pie (en inglés, a rutas reales)", () => {
     expect(leer("app/_landing/Header.tsx")).toContain('aria-current={t.pagina === activa ? "page" : undefined}');
   });
 
-  it("Book a demo lleva al formulario con Harmony elegido (el slug existe)", () => {
-    expect(ENLACES.reservarDemo).toBe("/empresas/contacto?interes=harmony");
+  // Pedido del founder (2026-10-26): antes llevaba al formulario en español, con el diseño viejo.
+  it("Book a demo lleva a la página de la demo, en la landing; su formulario usa intereses que existen", () => {
+    expect(ENLACES.reservarDemo).toBe("/book-a-demo");
+    expect(RUTAS_LANDING).toContain(ENLACES.reservarDemo);
     expect(SLUGS_INTERES).toContain("harmony");
+    for (const i of FORMULARIO_DEMO.intereses) expect(SLUGS_INTERES, i.slug).toContain(i.slug);
+    // Sin ?interes= (o con uno que el formulario no ofrece), Harmony.
+    expect(leer("app/book-a-demo/page.tsx")).toContain('? (pedido as string) : "harmony";');
     expect(ENLACES.entrar).toBe("/entrar");
     expect(ENLACES.proyectosAbiertos).toBe("/comunidad#open-projects");
   });
@@ -197,6 +203,8 @@ describe("cabecera, enlaces y pie (en inglés, a rutas reales)", () => {
   it("el pie enlaza el manifiesto, el método y las decisiones, con la línea de marca", () => {
     const hrefs = PIE.enlaces.map((e) => e.href);
     for (const h of ["/manifiesto", "/metodo", "/gobernanza"]) expect(hrefs).toContain(h);
+    // El manifiesto ya es de la landing (en inglés): el pie solo marca en español lo demás.
+    expect(leer("app/_landing/Footer.tsx")).toContain("hrefLang={esRutaLanding(e.href) ? undefined : PIE.idiomaDestino}");
     expect(PIE.linea).toBe("© 2026 Zelena · Performance-based payroll for LATAM logistics, built on Stellar");
   });
 
@@ -205,6 +213,9 @@ describe("cabecera, enlaces y pie (en inglés, a rutas reales)", () => {
     expect(AVISOS_LEGALES.home).toMatch(/split contract runs on the Stellar testnet/);
     expect(AVISOS_LEGALES.comunidad).toMatch(/Stellar testnet/);
     expect(AVISOS_LEGALES.comunidad).toMatch(/no monetary value/);
+    // La demo habla a empresas, como la home; el manifiesto, a la comunidad.
+    expect(AVISOS_LEGALES.demo).toBe(AVISOS_LEGALES.home);
+    expect(AVISOS_LEGALES.manifiesto).toBe(AVISOS_LEGALES.comunidad);
     for (const a of Object.values(AVISOS_LEGALES)) {
       expect(a).toContain("Nothing here is a securities offering or investment advice.");
       expect(a).not.toMatch(/payroll|bank|bounty|on-chain/i);

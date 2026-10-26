@@ -1,10 +1,10 @@
 "use client";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import s from "../landing.module.css";
 import f from "./pagos.module.css";
 import { useEnVista } from "../useEnVista";
 import { useReducedMotion } from "../useReducedMotion";
-import type { ClaveMoneda, TextosFlujoPagos } from "../copy-home";
+import type { TextosFlujoPagos } from "../copy-home";
 
 /** Cada cuánto se enciende el siguiente nodo, como en el diseño. */
 const PASO_MS = 1300;
@@ -12,8 +12,8 @@ const PASO_MS = 1300;
 type Estado = "espera" | "corriendo" | "pausado" | "terminado";
 
 /**
- * El flujo de pagos (isla de cliente): las monedas como grupo de radios nativo, los cuatro
- * nodos que se encienden uno tras otro y la barra de avance.
+ * El flujo de pagos (isla de cliente): los cuatro nodos que se encienden uno tras otro y la
+ * barra de avance.
  *
  * El servidor pinta el estado FINAL (los cuatro nodos encendidos y la barra llena): es lo
  * que ve quien no tiene JS o pidió menos movimiento. Si el movimiento está permitido, la
@@ -21,17 +21,15 @@ type Estado = "espera" | "corriendo" | "pausado" | "terminado";
  * 1,3 s, una sola vez; luego queda quieto con "replay". Fuera de pantalla o con la pestaña
  * oculta se detiene, y el botón permite pausarlo (dura algo más de 5 s).
  *
- * La moneda solo cambia el valor aproximado en moneda local del último nodo; el anuncio
- * para lectores de pantalla depende solo de la moneda, no del avance.
+ * El último nodo lleva el valor aproximado en pesos colombianos (sin selector de moneda
+ * desde 2026-10-26: la cobertura de hoy es Colombia).
  */
 export default function FlujoPagos({ textos }: { textos: TextosFlujoPagos }) {
   const raiz = useRef<HTMLDivElement>(null);
   const reducir = useReducedMotion();
   const enVista = useEnVista(raiz);
-  const nombreGrupo = useId();
   const total = textos.nodos.length;
 
-  const [moneda, setMoneda] = useState<ClaveMoneda>(textos.monedas[0]?.clave ?? "COP");
   const [paso, setPaso] = useState(total);
   const [estado, setEstado] = useState<Estado>("espera");
 
@@ -74,31 +72,10 @@ export default function FlujoPagos({ textos }: { textos: TextosFlujoPagos }) {
         ? textos.controles.seguir
         : textos.controles.repetir;
 
-  const equivalente = textos.monedas.find((m) => m.clave === moneda)?.equivalente ?? "";
   const avance = total > 0 ? Math.round((Math.min(paso, total) / total) * 100) : 100;
 
   return (
     <div ref={raiz} className={f.flujo}>
-      <fieldset className={f.monedas}>
-        <legend className={s.srOnly}>{textos.leyendaMoneda}</legend>
-        {textos.monedas.map((m) => (
-          <label key={m.clave} className={f.moneda}>
-            <input
-              type="radio"
-              name={nombreGrupo}
-              value={m.clave}
-              checked={moneda === m.clave}
-              onChange={() => setMoneda(m.clave)}
-              className={f.monedaInput}
-            />
-            <span className={f.monedaPildora}>{m.clave}</span>
-          </label>
-        ))}
-      </fieldset>
-      <p className={s.srOnly} aria-live="polite">
-        {`${textos.anuncio} ${equivalente.replace(/^≈\s*/, "")}.`}
-      </p>
-
       <ol className={f.nodos}>
         {textos.nodos.map((n, i) => {
           const encendido = i < paso;
@@ -121,7 +98,7 @@ export default function FlujoPagos({ textos }: { textos: TextosFlujoPagos }) {
               <p className={`${s.display} ${f.nodoValor}`}>{n.valor}</p>
               {i === total - 1 ? (
                 <p className={f.nodoEquivalente}>
-                  {equivalente} <span className={f.aproximado}>({textos.aproximado})</span>
+                  {textos.equivalente} <span className={f.aproximado}>({textos.aproximado})</span>
                 </p>
               ) : null}
             </li>
