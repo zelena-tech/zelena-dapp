@@ -33,6 +33,8 @@
   --gris-sobre-tinta-2: #7a837d;
   --claro-sobre-tinta: #b4bdb7;
   --claro-sobre-tinta-2: #c9cfcb;
+  /* El verde del logo oficial (Diseño Marca/LogoZelena.png): solo para el wordmark, no para texto. */
+  --marca: #3de10a;
   /* Anillo de foco: tinta sobre claro y lima; en bloques oscuros, .superficieOscura lo pasa a lima. */
   --foco: var(--tinta);
 
@@ -139,10 +141,11 @@
   -webkit-backdrop-filter: blur(14px);
 }
 
+/* El wordmark va en el verde de la marca (pedido del founder, 2026-10-26; antes, en tinta). */
 .logo {
   display: block;
   line-height: 0;
-  color: var(--tinta);
+  color: var(--marca);
   padding: 4px 0;
 }
 .logo svg {
