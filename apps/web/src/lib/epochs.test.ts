@@ -5,6 +5,9 @@ import { openDb, type DB } from "./db";
 import { seedIfEmpty } from "./seed";
 import { computeAndStoreEpochFitness, signEpochDecision } from "./epochs";
 import { recordNoMutation } from "./mutation";
+import { abrirRito, cerrarRito, prepararRito, registrarAsistencia } from "./ritos";
+import { bucketDe, codigoRito, ritesSecret } from "./ritos-codigo";
+import { GENOME_DEFAULTS } from "./genome";
 
 function seededDb(): DB {
   const db = openDb(":memory:");
@@ -88,5 +91,41 @@ describe("motor de épocas — persistencia y firma (WP07)", () => {
     expect(report.prevScore).toBe(1.0);
     expect(report.score).toBeLessThan(1.0); // retención < 1 por la wallet inactiva
     expect(report.recommendation).toBe("revert");
+  });
+});
+
+describe("D7 · la participación sale de la asistencia a ritos (WP31-D)", () => {
+  function persona(db: DB, wallet: string, role = "contributor"): void {
+    db.prepare(
+      `INSERT INTO users (wallet, display_name, tier, status, is_demo, is_founder, cla_signed, role, is_supervisor)
+       VALUES (?, ?, 'Bronze', 'active', 0, ?, 1, ?, ?)`
+    ).run(wallet, wallet, role === "founder" ? 1 : 0, role, role === "founder" ? 1 : 0);
+  }
+
+  it("sin ritos cerrados en la época se sigue degradando", () => {
+    const db = seededDb();
+    const report = computeAndStoreEpochFitness(db, 1);
+    expect(report.components.find((c) => c.key === "participation")?.value).toBeNull();
+  });
+
+  it("con ≥ 1 rito cerrado en la época, participation.value no es null y es ≤ 1", () => {
+    const db = seededDb();
+    db.prepare(`UPDATE periods SET created_at = '2026-09-01 00:00:00' WHERE id = 1`).run();
+    persona(db, "G_FUNDADORA_D7", "founder");
+    persona(db, "G_ASISTE_D7");
+    const fundadora = { wallet: "G_FUNDADORA_D7", name: "F", role: "founder" as const, isSupervisor: true };
+    const id = prepararRito(db, fundadora, { kind: "demo", scheduledFor: "2026-10-09T21:00:00.000Z" }, new Date("2026-10-01T12:00:00Z")).id;
+    abrirRito(db, fundadora, id, new Date("2026-10-09T20:45:00Z"));
+    const t = new Date("2026-10-09T21:05:00Z");
+    const codigo = codigoRito(ritesSecret(), id, bucketDe(t.getTime(), GENOME_DEFAULTS.RITE_CODE_ROTATION_S));
+    registrarAsistencia(db, "G_ASISTE_D7", { sessionId: id, codigo }, t);
+    registrarAsistencia(db, "G_FUNDADORA_D7", { sessionId: id, codigo }, t);
+    cerrarRito(db, fundadora, { sessionId: id }, new Date("2026-10-09T22:05:00Z"));
+
+    const report = computeAndStoreEpochFitness(db, 1);
+    const part = report.components.find((c) => c.key === "participation");
+    expect(part?.value).not.toBeNull();
+    expect(part?.value as number).toBeGreaterThan(0);
+    expect(part?.value as number).toBeLessThanOrEqual(1);
   });
 });

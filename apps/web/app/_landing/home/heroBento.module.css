@@ -1,0 +1,180 @@
+/*
+ * Hero de la home: encabezado y bloque de clientes. Los tokens (--tinta, --lima…) los pone la raíz de la landing.
+ * Las reglas que ajustan una clase compartida (titulo1, display, eyebrow) van con dos
+ * clases para ganarle siempre, sin depender del orden de las hojas.
+ */
+
+.hero {
+  max-width: var(--ancho-hero);
+  margin: 8px auto 0;
+  padding-top: clamp(28px, 4vw, 56px);
+}
+
+.mayus {
+  text-transform: uppercase;
+}
+
+/* ------------------------------------------------------------------ */
+/* Encabezado: chip, H1, párrafo, CTA y prueba                         */
+/* ------------------------------------------------------------------ */
+
+.encabezado {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.encabezado .h1 {
+  margin-top: 20px;
+}
+.encabezado .parrafo {
+  margin-top: 18px;
+  max-width: 460px;
+}
+
+.fila {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px 20px;
+  flex-wrap: wrap;
+  margin-top: 24px;
+}
+
+.prueba {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--gris-suave);
+  text-align: left;
+}
+.pruebaIconos {
+  display: flex;
+  flex: none;
+}
+.pruebaIcono {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 0 0 3px var(--blanco);
+}
+.pruebaIcono + .pruebaIcono {
+  margin-left: -8px;
+}
+.pruebaLima {
+  background: var(--lima);
+  color: var(--tinta);
+}
+.pruebaTinta {
+  background: var(--tinta);
+  color: var(--lima);
+}
+.pruebaVerde {
+  background: var(--verde);
+  color: var(--tinta);
+}
+
+/* ------------------------------------------------------------------ */
+/* Clientes: los años con empresas y un círculo por cliente            */
+/* ------------------------------------------------------------------ */
+
+.clientes {
+  position: relative;
+  overflow: hidden;
+  margin-top: clamp(32px, 4vw, 52px);
+  border-radius: var(--radio-xl);
+  background-color: var(--panel);
+  background-image: linear-gradient(rgba(12, 15, 10, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(12, 15, 10, 0.045) 1px, transparent 1px);
+  background-size: 32px 32px;
+  padding: clamp(24px, 4.4vw, 60px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(28px, 4vw, 48px);
+  align-items: center;
+}
+@media (min-width: 980px) {
+  .clientes {
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.4fr);
+    min-height: 420px;
+  }
+}
+
+.clientesTexto {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+}
+.clientes .anosCifra {
+  margin: 18px 0 0;
+  font-size: clamp(72px, 7.4vw, 116px);
+  line-height: 0.85;
+  white-space: nowrap;
+  color: var(--tinta);
+}
+.anosTexto {
+  margin: 14px 0 0;
+  max-width: 24ch;
+  font-size: clamp(17px, 1.6vw, 21px);
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--gris-cuerpo);
+}
+
+.circulos {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(12px, 2.6vw, 36px);
+}
+.circuloCelda {
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+}
+.cliente {
+  display: block;
+  width: 100%;
+  max-width: 200px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--borde-2), 0 16px 36px rgba(12, 15, 10, 0.1);
+  transition: transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1), box-shadow 0.35s ease;
+}
+.circulo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* Al pasar el ratón (o con el foco del teclado) el círculo sube y su sombra crece: invita
+   al clic. Sin anillos de color ni rótulos. */
+.cliente:focus-visible {
+  transform: translateY(-6px) scale(1.04);
+  box-shadow: 0 0 0 1px var(--borde-2), 0 26px 50px rgba(12, 15, 10, 0.2);
+}
+@media (hover: hover) and (pointer: fine) {
+  .cliente:hover {
+    transform: translateY(-6px) scale(1.04);
+    box-shadow: 0 0 0 1px var(--borde-2), 0 26px 50px rgba(12, 15, 10, 0.2);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cliente {
+    transition: none;
+  }
+  .cliente:hover,
+  .cliente:focus-visible {
+    transform: none;
+  }
+}

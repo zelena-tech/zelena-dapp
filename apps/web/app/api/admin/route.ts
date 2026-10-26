@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
-import { FOUNDER_WALLET } from "@/lib/config";
+import { adminActor } from "@/lib/authz";
 import { adminActionSchema } from "@/lib/validation";
 import {
   approveApplication,
@@ -13,12 +13,14 @@ import { getDb } from "@/lib/db";
 import { computeAndStoreEpochFitness, signEpochDecision } from "@/lib/epochs";
 import { proposeMutation, revertToVersion, recordNoMutation, type GeneChange } from "@/lib/mutation";
 import { createLatentAudit } from "@/lib/audits";
+import { publicarProyecto } from "@/lib/agora-borradores";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   const session = await getSession();
-  if (!session || session.wallet !== FOUNDER_WALLET) {
+  // Gate por ROL resuelto contra la base, no por la wallet de una persona.
+  if (!adminActor(session)) {
     return NextResponse.json({ error: "Solo el founder puede administrar." }, { status: 403 });
   }
   const body = await req.json().catch(() => null);
@@ -66,6 +68,11 @@ export async function POST(req: NextRequest) {
         const r = approveMilestone(milestoneId);
         return NextResponse.json({ ok: true, ...r });
       }
+      case "publishProject":
+        // Borrador del Ágora → publicado (solo founder: adminActor arriba).
+        if (!projectId) throw new Error("Falta projectId.");
+        publicarProyecto(getDb(), projectId);
+        break;
       case "toggleContent":
         if (!contentId) throw new Error("Falta contentId.");
         toggleContent(contentId);

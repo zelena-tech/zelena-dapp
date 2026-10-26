@@ -25,9 +25,9 @@ Correcciones de registro que estos specs asumen: `assignments.published_as_proje
 
 | WP | Owner humano | Apoyo |
 |---|---|---|
-| WP25 Ciclo completo | Fausto | David (UI), Vale (tests) |
-| WP26 Ritos | Fausto | David (UI), Vale (define ritos), John (RITES_SECRET) |
-| WP27 Misiones | Fausto | David (UI), Vale (curadora) |
-| WP28 Onboarding + perfil | David | Fausto (regla pura), Vale (copys) |
-| WP29 Disputas | Fausto | Vale (guardiana seed), John (guardianes), Juan (pagos parciales) |
-| WP30 Integridad del anclaje | Fausto | John (multisig), Vale (lectora externa de la spec) |
+| WP25 Ciclo completo | Plataforma | Producto (UI), Operaciones (tests) |
+| WP26 Ritos | Plataforma | Producto (UI), Operaciones (define ritos), John (RITES_SECRET) |
+| WP27 Misiones | Plataforma | Producto (UI), Operaciones (curadora) |
+| WP28 Onboarding + perfil | Producto | Plataforma (regla pura), Operaciones (copys) |
+| WP29 Disputas | Plataforma | Operaciones (guardiana seed), John (guardianes), Finanzas (pagos parciales) |
+| WP30 Integridad del anclaje | Plataforma | John (multisig), Operaciones (lectora externa de la spec) |

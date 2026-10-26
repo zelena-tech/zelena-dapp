@@ -28,7 +28,7 @@ Regla de diseño: sin invitación no hay login; sin CLA no hay primer bounty; si
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Open: publicado con etiqueta SAS/DAO + rúbrica + tabla de pagos
+    [*] --> Open: publicado con etiqueta Cliente/Comunidad + rúbrica + tabla de pagos
     Open --> Assigned: supervisor asigna (B8 aplica)
     Assigned --> Delivered: contribuidor entrega
     Delivered --> Scored: score + revisión cruzada (10%)
@@ -74,4 +74,4 @@ sequenceDiagram
 
 ## 5. Nómina del core (Modo A+, tras gate legal)
 
-Contrato PDF firmado → hash anclado en mainnet → pago USDC desde multisig SAS (fuera de la app) → admin registra tx en `/nomina` → la app verifica contra Horizon → el pagado ve contrato→hash→tx enlazados. Nadie más ve montos.
+Contrato PDF firmado → hash anclado en mainnet → pago USDC desde el multisig de Zelena (fuera de la app) → admin registra tx en `/nomina` → la app verifica contra Horizon → el pagado ve contrato→hash→tx enlazados. Nadie más ve montos.

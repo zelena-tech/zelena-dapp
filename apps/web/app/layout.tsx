@@ -1,36 +1,51 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import "@fontsource/space-mono/400.css";
 import "@fontsource/space-mono/700.css";
 import "@fontsource/space-mono/400-italic.css";
+// Serif editorial para los titulares comerciales. Auto-hospedada: la CSP
+// de esta app es font-src 'self' data:, que bloquea Google Fonts.
+import "@fontsource/playfair-display/400.css";
+import "@fontsource/playfair-display/700.css";
+import "@fontsource/playfair-display/400-italic.css";
+import "@fontsource/playfair-display/700-italic.css";
 import "./globals.css";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import MutationBanner from "@/components/MutationBanner";
+import MarcoSitio from "@/components/MarcoSitio";
 import { getSession } from "@/lib/session";
+import { IMAGEN_OG_ES, SITIO } from "@/lib/seo";
+import { CABECERA_IDIOMA } from "@/lib/menu";
 
-const SITIO = process.env.SITE_URL ?? "https://zelena-dao.azurewebsites.net";
+const TITULO = "Zelena — Lo que entregas decide lo que recibes";
 const DESCRIPCION =
-  "Comunidad de contribuidores donde el valor que entregas determina lo que recibes: reglas públicas, pago por hitos y una reputación que te pertenece. Sobre Stellar, en testnet.";
+  "Una comunidad donde lo que entregas decide lo que recibes: reglas públicas, pago por hitos y un historial que es tuyo. En la red de pruebas de Stellar.";
 
+// Valores por defecto para las páginas en español que no traen los suyos. A propósito
+// NO van aquí ni la canónica, ni `og:url`, ni `og:title`/`og:description`, ni `robots`:
+// lo que pone un layout lo heredan todas sus páginas, y así todo el sitio decía ser la
+// home. Cada página arma los suyos con `metadatos()` (lib/seo.ts); sin ellos, Next toma
+// el título y la descripción de la propia página para Open Graph.
 export const metadata: Metadata = {
-  // Necesaria para que las imágenes de Open Graph se sirvan con URL absoluta.
+  // Necesaria para que las imágenes de Open Graph y las canónicas salgan con URL absoluta.
   metadataBase: new URL(SITIO),
   title: {
-    default: "Zelena DAO — El valor que entregas decide lo que recibes",
-    template: "%s · Zelena DAO",
+    default: TITULO,
+    template: "%s · Zelena",
   },
   description: DESCRIPCION,
-  applicationName: "Zelena DAO",
+  applicationName: "Zelena",
+  // La imagen va por configuración (public/og/): un opengraph-image.* en app/ le ganaría
+  // a la página "/", que en inglés no lleva imagen. Las páginas con `metadatos()` traen
+  // su propio openGraph y esto no les llega; solo cubre las internas que no lo traen.
   openGraph: {
     type: "website",
     locale: "es_CO",
-    siteName: "Zelena DAO",
-    title: "Zelena DAO — El valor que entregas decide lo que recibes",
-    description: DESCRIPCION,
-    url: SITIO,
+    siteName: "Zelena",
+    images: [IMAGEN_OG_ES],
   },
-  twitter: { card: "summary_large_image" },
-  robots: { index: true, follow: true },
+  twitter: { card: "summary_large_image", images: [IMAGEN_OG_ES.url] },
 };
 
 export const viewport: Viewport = {
@@ -42,20 +57,17 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
+  // El idioma del documento sigue al de la página (WCAG 3.1.1): la landing ("/" y
+  // "/comunidad") está en inglés y el resto en español. La ruta solo la sabe el
+  // middleware, que marca la petición con esta cabecera.
+  const idioma = headers().get(CABECERA_IDIOMA) === "en" ? "en" : "es";
   return (
-    <html lang="es">
+    <html lang={idioma}>
       <body>
-        {/* Glow de fondo, sutil, marca Zelena */}
-        <div
-          aria-hidden
-          className="pointer-events-none fixed inset-x-0 top-0 z-0 h-[420px] bg-[radial-gradient(60%_60%_at_50%_0%,rgba(60,225,9,0.08),transparent_70%)]"
-        />
-        <div className="relative z-10 flex min-h-screen flex-col">
-          <Nav session={session} />
-          <MutationBanner />
-          <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-16 pt-8">{children}</main>
-          <Footer />
-        </div>
+        {/* El cromo depende de la ruta: la landing en inglés trae el suyo (MarcoSitio). */}
+        <MarcoSitio nav={<Nav session={session} />} banner={<MutationBanner />} footer={<Footer />}>
+          {children}
+        </MarcoSitio>
       </body>
     </html>
   );

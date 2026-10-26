@@ -1,11 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Markdown } from "@/components/Markdown";
 import { shortWallet } from "@/components/ui";
 import { claSigningPayload } from "@/lib/cla-signing";
+import { SITIO_RE, loginSigningPayload } from "@/lib/login-signing";
+import { EntraSignInButton, EntraSignInError } from "@/components/EntraSignInButton";
+import { EntraSecondEmailBanner } from "@/components/EntraSecondEmailBanner";
 import IntroEcosistema from "@/components/IntroEcosistema";
+import AvisoLlaveNavegador, { CLAVE_WALLET_NAVEGADOR } from "@/components/AvisoLlaveNavegador";
 
 async function sha256Hex(str: string): Promise<string> {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
@@ -18,14 +21,46 @@ function bytesToBase64(bytes: Uint8Array): string {
   return btoa(bin);
 }
 
-const STEPS = ["Ecosistema", "Invitación", "Wallet", "Firma del CLA"];
+const STEPS = ["Bienvenida", "Invitación", "Tu cuenta", "Tu firma"];
+
+/**
+ * A dónde ir al entrar: la ruta de `?next=` (la pone el middleware al pedir sesión) si,
+ * una vez resuelta por el navegador, sigue siendo del propio sitio; si no, /perfil. Se
+ * compara el origen YA resuelto (`new URL`), así "//otro-sitio", "/\otro" o un tabulador
+ * escondido no sacan a nadie del sitio.
+ */
+function destinoTrasEntrar(): string {
+  try {
+    const next = new URLSearchParams(window.location.search).get("next");
+    if (next && next.startsWith("/")) {
+      const url = new URL(next, window.location.origin);
+      if (url.origin === window.location.origin) return url.pathname + url.search + url.hash;
+    }
+  } catch {
+    /* sin URL legible: al perfil */
+  }
+  return "/perfil";
+}
+
+/**
+ * Navegación COMPLETA tras entrar (no `router.push`): el router del cliente guardaba la
+ * redirección a /entrar que vio antes de tener sesión (el prefetch de "Ir a mi perfil") y
+ * dejaba a la persona, ya con sesión, otra vez en /entrar?next=/perfil.
+ */
+function irTrasEntrar(): void {
+  window.location.assign(destinoTrasEntrar());
+}
 
 export default function Entrar() {
-  const router = useRouter();
   // Arranca en 0: nadie conecta una wallet sin saber primero a qué entra.
   const [step, setStep] = useState(0);
   // Reingreso: la wallet ya está registrada, se entra firmando el CLA (sin invitación).
   const [returning, setReturning] = useState(false);
+  // Rechazo de la puerta corporativa (WP13): llega como ?error=<motivo>. No afecta
+  // en nada al flujo de invitación. Se lee de window.location.search (igual que
+  // ?code=) para no forzar el bailout a CSR de toda la página en `next build`.
+  const [entraError, setEntraError] = useState<string | null>(null);
+  const [entraMotivo, setEntraMotivo] = useState<string | undefined>(undefined);
 
   // Paso 1
   const [code, setCode] = useState("");
@@ -35,13 +70,15 @@ export default function Entrar() {
   // Paso 2
   const [wallet, setWallet] = useState("");
   const [secret, setSecret] = useState("");
-  const [isDemo, setIsDemo] = useState(false);
+  // La wallet se creó en este navegador: firma aquí mismo, sin extensión. Es una cuenta
+  // REAL (decisión del founder, 2026-10-21); lo único distinto es dónde vive la llave.
+  const [walletLocal, setWalletLocal] = useState(false);
   const [name, setName] = useState("");
   const [walletMsg, setWalletMsg] = useState("");
   // Trabajo en curso: sin esto se puede pulsar "crear wallet" cinco veces mientras
   // se descarga el SDK (casi 900 KB) y no pasa nada visible.
   const [ocupado, setOcupado] = useState<"" | "demo" | "freighter">("");
-  // Wallet de prueba ya guardada en este navegador, pendiente de que la persona
+  // Wallet ya guardada en este navegador, pendiente de que la persona
   // confirme que es suya (en un teléfono prestado o un PC compartido, no lo es).
   const [walletGuardada, setWalletGuardada] = useState<{ public: string; secret: string } | null>(null);
   // El navegador impide guardar (modo privado de iOS, almacenamiento bloqueado).
@@ -56,22 +93,29 @@ export default function Entrar() {
   const [detalle, setDetalle] = useState("");
 
   useEffect(() => {
-    if (step === 3 && !claText) {
+    // Quien ya está registrado no vuelve a firmar el acuerdo: firma un reto de entrada.
+    if (step === 3 && !returning && !claText) {
       fetch("/api/cla")
         .then((r) => r.json())
         .then(async (d) => {
           setClaText(d.text);
           setClaHash(await sha256Hex(d.text));
         })
-        .catch(() => setError("No se pudo cargar el CLA."));
+        .catch(() => setError("No se pudo cargar el acuerdo."));
     }
-  }, [step, claText]);
+  }, [step, returning, claText]);
 
   // Prellenado desde el QR proyectado: /entrar?code=ESPECIALIZACION-2026.
   // Se lee de window.location.search (no useSearchParams) para no forzar el
   // bailout a CSR de toda la página en `next build`.
   useEffect(() => {
-    const fromUrl = new URLSearchParams(window.location.search).get("code");
+    const qs = new URLSearchParams(window.location.search);
+    const errorEntra = qs.get("error");
+    if (errorEntra) {
+      setEntraError(errorEntra);
+      setEntraMotivo(qs.get("motivo") ?? undefined);
+    }
+    const fromUrl = qs.get("code");
     if (!fromUrl) return;
     const normalized = fromUrl.trim().toUpperCase();
     if (normalized.length < 3) return;
@@ -106,7 +150,7 @@ export default function Entrar() {
 
   function leerGuardada(): { public: string; secret: string } | null {
     try {
-      const raw = localStorage.getItem("zelena_demo_wallet");
+      const raw = localStorage.getItem(CLAVE_WALLET_NAVEGADOR);
       if (!raw) return null;
       const p = JSON.parse(raw);
       return typeof p?.public === "string" && typeof p?.secret === "string" ? p : null;
@@ -116,7 +160,7 @@ export default function Entrar() {
   }
 
   /** Genera un par de claves nuevo. `guardar` en false = wallet solo en memoria. */
-  async function crearWalletDemo(guardar: boolean) {
+  async function crearWalletNavegador(guardar: boolean) {
     setOcupado("demo");
     setWalletMsg("");
     try {
@@ -127,7 +171,7 @@ export default function Entrar() {
       let persistida = false;
       if (guardar) {
         try {
-          localStorage.setItem("zelena_demo_wallet", JSON.stringify({ public: pub, secret: sec }));
+          localStorage.setItem(CLAVE_WALLET_NAVEGADOR, JSON.stringify({ public: pub, secret: sec }));
           persistida = true;
         } catch {
           // Modo privado de iOS y navegadores con almacenamiento bloqueado: la
@@ -137,22 +181,22 @@ export default function Entrar() {
       }
       setWallet(pub);
       setSecret(sec);
-      setIsDemo(true);
+      setWalletLocal(true);
       setWalletGuardada(null);
       setName((n) => n.trim() || `${pub.slice(0, 4)}…${pub.slice(-4)}`);
       setWalletMsg(
         persistida
-          ? "Wallet de prueba creada y guardada en este navegador."
-          : "Wallet de prueba creada. Este navegador no permite guardarla, así que termina el registro sin cerrar la pestaña."
+          ? "Wallet creada y guardada en este navegador."
+          : "Wallet creada, pero este navegador no permite guardarla: al cerrar la pestaña perderías el acceso. Mejor usa Freighter o una ventana normal."
       );
     } catch {
-      setWalletMsg("No se pudo generar la wallet de prueba. Revisa tu conexión y reintenta.");
+      setWalletMsg("No se pudo crear la wallet. Revisa tu conexión y reintenta.");
     } finally {
       setOcupado("");
     }
   }
 
-  async function elegirWalletDemo() {
+  async function elegirWalletNavegador() {
     // Si ya hay una guardada, NO se reutiliza en silencio: en un teléfono
     // prestado o un computador compartido, esa wallet es de otra persona y
     // cargarla sin preguntar equivale a entrar con su identidad.
@@ -162,27 +206,27 @@ export default function Entrar() {
       setWalletMsg("");
       return;
     }
-    await crearWalletDemo(true);
+    await crearWalletNavegador(true);
   }
 
   function usarGuardada() {
     if (!walletGuardada) return;
     setWallet(walletGuardada.public);
     setSecret(walletGuardada.secret);
-    setIsDemo(true);
+    setWalletLocal(true);
     setName((n) => n.trim() || `${walletGuardada.public.slice(0, 4)}…${walletGuardada.public.slice(-4)}`);
-    setWalletMsg("Usando la wallet de prueba guardada en este navegador.");
+    setWalletMsg("Usando la wallet guardada en este navegador.");
     setWalletGuardada(null);
   }
 
   async function descartarGuardada() {
     try {
-      localStorage.removeItem("zelena_demo_wallet");
+      localStorage.removeItem(CLAVE_WALLET_NAVEGADOR);
     } catch {
       /* nada que borrar */
     }
     setWalletGuardada(null);
-    await crearWalletDemo(true);
+    await crearWalletNavegador(true);
   }
 
   async function connectFreighter() {
@@ -193,7 +237,7 @@ export default function Entrar() {
       const conn = await freighter.isConnected?.();
       const instalada = typeof conn === "object" ? conn.isConnected : conn;
       if (!instalada) {
-        setWalletMsg("No se detecta Freighter en este navegador. Instálalo desde freighter.app o usa la wallet de prueba.");
+        setWalletMsg("No se detecta Freighter en este navegador. Instálalo desde freighter.app o crea una wallet en este navegador.");
         return;
       }
       // PERMISO EXPLÍCITO: sin requestAccess, getAddress devuelve vacío en una
@@ -227,13 +271,13 @@ export default function Entrar() {
       const nombreRed = typeof red === "object" ? red?.network : red;
       setWallet(addr);
       setSecret("");
-      setIsDemo(false);
+      setWalletLocal(false);
       setName((n) => n.trim() || `${addr.slice(0, 4)}…${addr.slice(-4)}`);
       setWalletMsg(
         "Freighter conectado" + (nombreRed ? ` (red ${String(nombreRed).toLowerCase()})` : "") + "."
       );
     } catch {
-      setWalletMsg("Freighter no disponible en este navegador. Usa la wallet de prueba.");
+      setWalletMsg("Freighter no disponible en este navegador. Puedes crear una wallet aquí mismo.");
     } finally {
       setOcupado("");
     }
@@ -268,76 +312,117 @@ export default function Entrar() {
     return "";
   }
 
+  /**
+   * Firma `mensaje` con la wallet elegida: la del navegador firma aquí mismo; Freighter con
+   * `signMessage` (SEP-53). Devuelve la firma en base64, o null tras dejar el error a la vista.
+   */
+  async function firmarMensaje(mensaje: string): Promise<string | null> {
+    if (walletLocal) {
+      const { Keypair } = await import("@stellar/stellar-sdk");
+      const kp = Keypair.fromSecret(secret);
+      const sig = kp.sign(new TextEncoder().encode(mensaje) as unknown as Buffer);
+      return bytesToBase64(new Uint8Array(sig));
+    }
+    const freighter: any = await import("@stellar/freighter-api");
+    if (!freighter.signMessage) {
+      // Sin signMessage no hay firma real; NO enviar un placeholder (se anclaría
+      // en la red sin valor probatorio — hallazgo H3). Bloquear el registro.
+      setError(
+        "Esta versión de Freighter no permite firmar mensajes. Actualízala o crea una wallet en este navegador."
+      );
+      return null;
+    }
+    const r = await freighter.signMessage(mensaje, { address: wallet });
+    setDetalle("Freighter devolvió: " + describir(r));
+    if (r?.error) {
+      setError("Freighter no firmó: " + describir(r.error));
+      return null;
+    }
+    const firma = normalizarFirma(r?.signedMessage ?? r);
+    if (!firma) {
+      setError("No se pudo leer la firma devuelta por Freighter. Reintenta o crea una wallet en este navegador.");
+      return null;
+    }
+    setDetalle(`Firma recibida (${firma.length} caracteres base64) · wallet ${wallet.slice(0, 6)}…`);
+    return firma;
+  }
+
+  /**
+   * Reingreso por reto: el servidor emite un reto de un solo uso y el sitio, la wallet
+   * firma `zelena-login-testnet-v1:<sitio>:<reto>` (así se ve en Freighter dónde se entra)
+   * y /api/login lo verifica y lo gasta. El mensaje se arma AQUÍ (no se firma un texto
+   * libre del servidor): la wallet solo firma mensajes de entrada de Zelena, con un sitio
+   * que es un host válido. La firma del acuerdo ya no sirve para entrar.
+   */
+  async function entrarConReto(): Promise<boolean> {
+    const resReto = await fetch("/api/login/reto", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ wallet }),
+    });
+    const dataReto = await resReto.json().catch(() => ({}));
+    if (!resReto.ok || typeof dataReto.nonce !== "string") {
+      setError(dataReto.error ?? "No se pudo preparar la entrada. Intenta de nuevo.");
+      return false;
+    }
+    const nonce: string = dataReto.nonce;
+    const sitio = typeof dataReto.sitio === "string" ? dataReto.sitio : "";
+    if (!SITIO_RE.test(sitio)) {
+      setError("No se pudo preparar la entrada. Intenta de nuevo.");
+      return false;
+    }
+    const signature = await firmarMensaje(loginSigningPayload(sitio, nonce));
+    if (!signature) return false;
+    const resLogin = await fetch("/api/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ wallet, nonce, signature }),
+    });
+    const dataLogin = await resLogin.json().catch(() => ({}));
+    if (!resLogin.ok) {
+      setError(dataLogin.error ?? "No se pudo iniciar sesión con esta wallet.");
+      return false;
+    }
+    return true;
+  }
+
   async function signAndFinish() {
     setSigning(true);
     setError("");
     setDetalle("");
     try {
-      // El servidor verifica ed25519 sobre ESTE mismo payload (hash + domain separator).
-      const payload = claSigningPayload(claHash);
-      let signature = "";
-      if (isDemo) {
-        const { Keypair } = await import("@stellar/stellar-sdk");
-        const kp = Keypair.fromSecret(secret);
-        const sig = kp.sign(new TextEncoder().encode(payload) as unknown as Buffer);
-        signature = bytesToBase64(new Uint8Array(sig));
-      } else {
-        const freighter: any = await import("@stellar/freighter-api");
-        if (!freighter.signMessage) {
-          // Sin signMessage no hay firma real; NO enviar un placeholder (se anclaría
-          // on-chain sin valor probatorio — hallazgo H3). Bloquear el registro.
-          setError(
-            "Esta versión de Freighter no permite firmar mensajes. Usa la wallet de prueba para completar el registro."
-          );
-          return;
+      // Reingreso: no se vuelve a firmar el acuerdo, se firma un reto de entrada.
+      if (returning || !code.trim()) {
+        if (await entrarConReto()) {
+          irTrasEntrar();
         }
-        const r = await freighter.signMessage(payload, { address: wallet });
-        setDetalle("Freighter devolvió: " + describir(r));
-        if (r?.error) {
-          setError("Freighter no firmó: " + describir(r.error));
-          return;
-        }
-        signature = normalizarFirma(r?.signedMessage ?? r);
-        if (!signature) {
-          setError("No se pudo leer la firma devuelta por Freighter. Reintenta o usa la wallet de prueba.");
-          return;
-        }
-        setDetalle(`Firma recibida (${signature.length} caracteres base64) · wallet ${wallet.slice(0, 6)}…`);
-      }
-
-      // Wallet ya registrada (o reingreso explícito): sesión por firma, sin gastar invitación.
-      const soloEntrar = returning || !code.trim();
-      if (!soloEntrar) {
-        const res = await fetch("/api/onboard", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ code: code.trim(), wallet, name: name.trim(), isDemo, claHash, signature }),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (res.ok) {
-          router.push("/perfil");
-          router.refresh();
-          return;
-        }
-        // Un 409 puede ser "wallet ya registrada" (entonces sí toca reingresar)
-        // o "cupos agotados" / "código expirado" (entonces NO: hay que decirlo).
-        if (res.status !== 409 || data.reason !== "wallet_registrada") {
-          setError(data.error ?? "No se pudo completar el registro.");
-          return;
-        }
-      }
-      const resLogin = await fetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ wallet, claHash, signature }),
-      });
-      const dataLogin = await resLogin.json().catch(() => ({}));
-      if (!resLogin.ok) {
-        setError(dataLogin.error ?? "No se pudo iniciar sesión con esta wallet.");
         return;
       }
-      router.push("/perfil");
-      router.refresh();
+
+      // Alta: el servidor verifica ed25519 sobre ESTE mismo payload (hash + domain separator).
+      const signature = await firmarMensaje(claSigningPayload(claHash));
+      if (!signature) return;
+      const res = await fetch("/api/onboard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // Si la cuenta es de demostración lo decide el servidor por el código, no el navegador.
+        body: JSON.stringify({ code: code.trim(), wallet, name: name.trim(), claHash, signature }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        irTrasEntrar();
+        return;
+      }
+      // Un 409 puede ser "wallet ya registrada" (entonces sí toca reingresar)
+      // o "cupos agotados" / "código expirado" (entonces NO: hay que decirlo).
+      if (res.status !== 409 || data.reason !== "wallet_registrada") {
+        setError(data.error ?? "No se pudo completar el registro.");
+        return;
+      }
+      // Ya estaba registrada: se entra con un reto (una firma más; la invitación no se gasta).
+      if (await entrarConReto()) {
+        irTrasEntrar();
+      }
     } catch {
       setError("Error al firmar o registrar.");
     } finally {
@@ -349,9 +434,21 @@ export default function Entrar() {
     <div className={`mx-auto space-y-8 ${step === 0 ? "max-w-4xl" : "max-w-2xl"}`}>
       {step > 0 ? (
         <header>
-          <h1 className="font-head text-4xl font-bold text-white">Entrar</h1>
-          <p className="mt-2 text-muted">Invitación → wallet → CLA anclado. Sin CLA no hay acceso al Ágora.</p>
+          <h1 className="font-serif text-4xl font-normal normal-case tracking-normal text-paper sm:text-5xl">Entrar</h1>
+          <p className="mt-3 text-muted">Tres pasos: tu invitación, tu cuenta y tu firma.</p>
         </header>
+      ) : null}
+
+      {/* WP13 · Dos puertas, UN registro (plano 05). Estos tres bloques desaparecen
+          por completo si la puerta corporativa está apagada o no hay nada que decir:
+          con el flag apagado la página se ve exactamente igual que antes. En el
+          paso 0 van junto al CTA, debajo de la intro. */}
+      {step > 0 ? (
+        <>
+          {entraError ? <EntraSignInError reason={entraError} motivo={entraMotivo} /> : null}
+          <EntraSecondEmailBanner />
+          <EntraSignInButton />
+        </>
       ) : null}
 
       {/* Stepper */}
@@ -380,6 +477,9 @@ export default function Entrar() {
       {step === 0 && (
         <div className="space-y-8">
           <IntroEcosistema compacta />
+          {entraError ? <EntraSignInError reason={entraError} motivo={entraMotivo} /> : null}
+          <EntraSecondEmailBanner />
+          <EntraSignInButton />
           <div className="rule sticky bottom-0 -mx-4 bg-bg/95 px-4 py-4 backdrop-blur md:mx-0 md:px-0">
             <div className="flex flex-wrap items-center gap-3">
               <button
@@ -453,7 +553,7 @@ export default function Entrar() {
           <div className="border-t border-line pt-4">
             <p className="text-xs text-faint">
               ¿Tu wallet ya está registrada (por ejemplo la del fundador o la de una entrada anterior)? No necesitas
-              código: entra firmando el CLA con tu wallet.
+              código: entra firmando con tu wallet un reto de un solo uso.
             </p>
             <button
               className="btn btn-ghost mt-2"
@@ -477,43 +577,60 @@ export default function Entrar() {
             <p className="mt-1 text-sm text-muted">
               {returning
                 ? "Firma con la wallet que ya está registrada. No se consume ninguna invitación."
-                : "Tu wallet es tu identidad en la DAO. Todo ocurre en testnet: no hay dinero real."}
+                : "Tu wallet es tu cuenta en Zelena. Vive en la red de pruebas de Stellar: no mueve dinero real."}
             </p>
           </div>
 
+          {/* El camino principal es la wallet propia (Freighter). La wallet creada en el
+              navegador es una cuenta REAL (decisión del founder, 2026-10-21: is_demo solo
+              para los códigos de demostración), pero su llave vive solo en este navegador:
+              por eso va segunda y lo avisa con claridad. */}
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-md border border-line-strong bg-surface-2 p-4">
               <p className="label">Tu propia wallet</p>
               <p className="mt-1 text-xs text-muted">
-                Freighter (extensión de navegador). Es la opción para entrar como fundador o con tu wallet de siempre.
+                La que ya usas en este navegador. Tu cuenta queda ligada a ella, no a este navegador.
               </p>
               <button
                 className="btn btn-primary mt-3 w-full"
                 onClick={connectFreighter}
                 disabled={ocupado !== ""}
               >
-                {ocupado === "freighter" ? "Conectando…" : "Conectar Freighter"}
+                {ocupado === "freighter" ? "Conectando…" : "Conectar mi wallet"}
               </button>
+              <details className="mt-3 text-xs text-faint">
+                <summary className="cursor-pointer text-muted hover:text-primary">Ver detalle</summary>
+                <p className="mt-2 leading-6">
+                  Funciona con Freighter, la extensión de Stellar para el navegador (
+                  <a href="https://www.freighter.app/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                    freighter.app
+                  </a>
+                  ). Es la opción para entrar como fundador o con tu wallet de siempre.
+                </p>
+              </details>
             </div>
             <div className="rounded-md border border-line bg-surface-2 p-4">
-              <p className="label">Wallet de prueba</p>
+              <p className="label">Wallet en este navegador</p>
               <p className="mt-1 text-xs text-muted">
-                Se genera en tu navegador en un segundo. Ideal para invitados que solo quieren ver la DAO.
+                Si no tienes Freighter, creamos una aquí mismo, sin instalar nada. Es tu cuenta de verdad: con ella te
+                sumas a proyectos y registras tu asistencia.
               </p>
               <button
                 className="btn btn-ghost mt-3 w-full"
-                onClick={() => void elegirWalletDemo()}
+                onClick={() => void elegirWalletNavegador()}
                 disabled={ocupado !== ""}
               >
-                {ocupado === "demo" ? "Creando…" : "Crear wallet de prueba"}
+                {ocupado === "demo" ? "Creando…" : "Crear wallet en este navegador"}
               </button>
             </div>
           </div>
 
+          <AvisoLlaveNavegador />
+
           {walletGuardada ? (
             <div className="border border-primary/40 bg-glow p-4">
               <p className="text-sm text-paper">
-                En este navegador ya hay una wallet de prueba guardada:
+                En este navegador ya hay una wallet guardada:
               </p>
               <p className="mt-1 break-all font-mono text-sm text-primary">{walletGuardada.public}</p>
               <p className="mt-2 text-xs text-muted">
@@ -537,16 +654,18 @@ export default function Entrar() {
 
           {sinAlmacenamiento ? (
             <p className="border-l-2 border-primary-dim bg-surface-2 py-2 pl-3 text-xs leading-6 text-muted">
-              Tu navegador no permite guardar datos (suele pasar en modo privado). Tu wallet funciona igual para
-              firmar ahora, pero <span className="text-paper">no cierres esta pestaña</span> hasta terminar el
-              registro.
+              Tu navegador no permite guardar datos (suele pasar en modo privado). La wallet sirve para firmar
+              ahora, pero <span className="text-paper">al cerrar esta pestaña perderías el acceso a tu cuenta</span>.
+              Te recomendamos Freighter o abrir Zelena en una ventana normal.
             </p>
           ) : null}
 
           {walletMsg ? <p className="text-sm text-muted">{walletMsg}</p> : null}
           {wallet ? (
             <div className="rounded-md border border-primary/40 bg-glow p-3">
-              <p className="text-xs text-faint">Wallet {isDemo ? "de prueba (demo)" : "conectada (Freighter)"}</p>
+              <p className="text-xs text-faint">
+                {walletLocal ? "Tu wallet, guardada en este navegador" : "Tu wallet, conectada"}
+              </p>
               <p className="break-all font-mono text-sm text-white">{wallet}</p>
             </div>
           ) : null}
@@ -562,6 +681,13 @@ export default function Entrar() {
                 onChange={(e) => setName(e.target.value)}
                 maxLength={40}
               />
+              <p className="mt-1 text-xs text-faint">
+                Cómo tratamos tus datos:{" "}
+                <Link href="/privacidad" className="text-primary hover:underline">
+                  aviso de privacidad
+                </Link>
+                .
+              </p>
             </div>
           ) : null}
 
@@ -583,20 +709,53 @@ export default function Entrar() {
         </div>
       )}
 
-      {/* Paso 3 */}
-      {step === 3 && (
+      {/* Paso 3 · reingreso: un reto de un solo uso, sin volver a firmar el acuerdo */}
+      {step === 3 && returning && (
         <div className="card space-y-4 p-6">
-          <h2 className="font-head text-xl font-bold text-white">Firma el CLA</h2>
+          <h2 className="font-head text-xl font-bold text-white">Firma para entrar</h2>
           <p className="text-sm text-muted">
-            Al firmar cedes los derechos patrimoniales a Zelena SAS (derechos morales inalienables). No crea relación
-            laboral. Se calcula el SHA-256 del texto y se ancla en testnet.
+            Tu wallet firma un reto que vale una sola vez y caduca en minutos. Así nadie puede reutilizar una firma
+            tuya para entrar. No vuelves a firmar el acuerdo: ya lo firmaste al registrarte.
           </p>
-          <div className="max-h-72 overflow-y-auto rounded-md border border-line bg-surface-2 p-4">
-            {claText ? <Markdown source={claText} /> : <p className="text-sm text-faint">Cargando CLA…</p>}
+          <div className="text-xs text-faint">
+            Entrando con <span className="text-white">{shortWallet(wallet)}</span>
           </div>
-          {claHash ? (
-            <p className="break-all font-mono text-[11px] text-faint">SHA-256: {claHash}</p>
-          ) : null}
+          {error ? <p className="text-sm text-red-400">{error}</p> : null}
+          {detalle ? <p className="break-all font-mono text-[10px] text-faint">{detalle}</p> : null}
+          <div className="flex justify-between">
+            <button className="btn btn-ghost" onClick={() => setStep(2)}>Atrás</button>
+            <button className="btn btn-primary" onClick={() => void signAndFinish()} disabled={signing || !wallet}>
+              {signing ? "Firmando…" : "Firmar y entrar con mi wallet"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Paso 3 · alta: firma del acuerdo de contribución */}
+      {step === 3 && !returning && (
+        <div className="card space-y-4 p-6">
+          <h2 className="font-head text-xl font-bold text-white">Firma el acuerdo de contribución</h2>
+          <p className="text-sm text-muted">
+            Tu autoría es tuya para siempre. Al firmar cedes a Zelena los derechos patrimoniales de lo que aportes,
+            para que pueda llegar a clientes. Firmar no te convierte en empleado ni en socio. Guardamos la huella del
+            acuerdo en la red de pruebas de Stellar.
+          </p>
+          {/* El texto legal completo, tal cual se firma (CLA.md, servido por /api/cla). */}
+          <div className="max-h-72 overflow-y-auto rounded-md border border-line bg-surface-2 p-4">
+            {claText ? <Markdown source={claText} /> : <p className="text-sm text-faint">Cargando el acuerdo…</p>}
+          </div>
+          <details className="text-xs text-faint">
+            <summary className="cursor-pointer text-muted hover:text-primary">Ver detalle</summary>
+            <p className="mt-2 leading-6">
+              Tus derechos morales (que se reconozca que eres el autor) no se ceden nunca, y firmar no crea relación
+              laboral. Calculamos el SHA-256 del texto del acuerdo y lo anclamos en la red de pruebas de Stellar.{" "}
+              <Link href="/acuerdo" className="text-primary hover:underline">
+                Leer el acuerdo en su propia página
+              </Link>
+              .
+            </p>
+            {claHash ? <p className="mt-2 break-all font-mono text-[11px]">SHA-256: {claHash}</p> : null}
+          </details>
           <div className="text-xs text-faint">
             Firmando como <span className="text-white">{name || shortWallet(wallet)}</span> · {shortWallet(wallet)}
           </div>
@@ -607,7 +766,7 @@ export default function Entrar() {
           <div className="flex justify-between">
             <button className="btn btn-ghost" onClick={() => setStep(2)}>Atrás</button>
             <button className="btn btn-primary" onClick={() => void signAndFinish()} disabled={!claHash || signing}>
-              {signing ? "Firmando…" : returning ? "Firmar y entrar con mi wallet" : "Firmar y entrar"}
+              {signing ? "Firmando…" : "Firmar y entrar"}
             </button>
           </div>
         </div>
@@ -615,6 +774,8 @@ export default function Entrar() {
 
       <p className="text-center text-xs text-faint">
         ¿Ya tienes cuenta? <Link href="/perfil" className="text-primary hover:underline">Ir a mi perfil</Link>
+        {" · "}
+        <Link href="/privacidad" className="text-primary hover:underline">Aviso de privacidad</Link>
       </p>
     </div>
   );

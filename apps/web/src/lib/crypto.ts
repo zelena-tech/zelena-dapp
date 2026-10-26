@@ -9,8 +9,9 @@ export function sha256Hex(input: string): string {
  * Verifica criptográficamente (ed25519, vía StrKey de Stellar) que `signatureB64`
  * (base64) sobre el `payload` (UTF-8) corresponde a la clave pública `pubkey`.
  *
- * `payload` debe construirse SIEMPRE con `claSigningPayload()` (incluye el domain
- * separator anti-replay). Devuelve `false` — nunca lanza — ante cualquier entrada
+ * `payload` debe construirse SIEMPRE con `claSigningPayload()` (alta) o con
+ * `loginSigningPayload()` (reingreso por reto): los dos llevan su domain separator
+ * anti-replay, distinto entre sí. Devuelve `false` — nunca lanza — ante cualquier entrada
  * inválida: pubkey mal formada, firma no decodificable, o longitud distinta de los
  * 64 bytes de una firma ed25519 (esto último rechaza placeholders como el literal
  * "freighter-no-signMessage" del hallazgo H3, que jamás debe anclarse on-chain).
@@ -34,13 +35,27 @@ export function verifyWalletSignature(pubkey: string, payload: string, signature
   return false;
 }
 
+/**
+ * ¿Es `w` una llave pública Stellar real (StrKey `G…` con checksum)? Las wallets
+ * demo del seed (`GA7ZELENAFOUNDERDEMOWALLET…`) NO lo son: nadie puede firmar con
+ * ellas, así que una fila founder con esa wallet no le da acceso a nadie.
+ */
+export function esWalletStellar(w: string): boolean {
+  try {
+    Keypair.fromPublicKey(w);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Prefijo de SEP-53 (Stellar: "Sign and Verify Messages"), que usan las wallets reales. */
 const SEP53_PREFIX = "Stellar Signed Message:" + String.fromCharCode(10);
 
 /**
  * Preimágenes aceptadas para una misma firma del CLA, en orden de preferencia:
  *
- *   1. los bytes UTF-8 del payload — lo que firma la wallet de prueba del navegador;
+ *   1. los bytes UTF-8 del payload — lo que firma la wallet creada en el navegador;
  *   2. su SHA-256 — wallets que hashean antes de firmar;
  *   3. SEP-53: SHA-256 del payload con el prefijo "Stellar Signed Message:
 " —

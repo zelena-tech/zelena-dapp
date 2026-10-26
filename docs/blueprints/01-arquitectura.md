@@ -24,7 +24,7 @@ graph TB
 
     subgraph Stellar["Red Stellar"]
         TESTNET["Testnet: anclaje manageData<br/>(CLA hashes · merkle roots por época)"]
-        MAINNET["Mainnet: anclaje de contratos del core<br/>+ pagos USDC multisig SAS (Modo A+)"]:::nuevo
+        MAINNET["Mainnet: anclaje de contratos del core<br/>+ pagos USDC desde el multisig de Zelena (Modo A+)"]:::nuevo
         WORKER["anchor-worker.mjs<br/>cola anchor_queue"]
     end
 
@@ -50,5 +50,5 @@ graph TB
 1. **Toda la DB detrás de `lib/db.ts`** (swap de motor sin tocar lógica). Hoy: SQLite en local, **Azure SQL** en producción (driver `mssql`, autenticación por managed identity). Este principio es lo que hizo que cambiar de motor costara minutos y no un refactor.
 2. **Funciones puras para las reglas** (`state-machine`, `rules`, `fitness`, `genome`): testeables y reutilizables por el simulador.
 3. **Append-only donde importa**: reputación, puntos, genoma, decision log — los saldos se derivan, nunca se mutan.
-4. **La app no custodia fondos.** Los pagos se ejecutan fuera (multisig SAS) y la app registra + verifica contra Horizon. La custodia on-chain llega con el escrow de M2, auditado.
+4. **La app no custodia fondos.** Los pagos se ejecutan fuera (multisig de Zelena) y la app registra + verifica contra Horizon. La custodia on-chain llega con el escrow de M2, auditado.
 5. **Anclaje ≠ contrato**: en M1 la integridad se prueba con `manageData` (barato, seguro); los contratos Soroban entran en M2 (ver plano 04).

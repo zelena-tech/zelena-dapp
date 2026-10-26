@@ -24,8 +24,12 @@ wallet → CLA anclado → Ágora → reputación → puntos ZWORK → decision 
 - **F2 (sin Postgres/Docker):** SQLite para dev. En Vercel NO persiste → migrar a
   Postgres/Turso (ver `deploy.md`); toda la DB está detrás de `lib/db.ts` para swap fácil.
 - **F3 (firma de mensajes Freighter):** el onboarding intenta Freighter y, si no expone
-  firma o no está instalado, ofrece una **wallet de prueba** (keypair generado client-side,
-  `is_demo=true`) que firma el hash del CLA localmente. Nada custodial.
+  firma o no está instalado, ofrece crear una **wallet en el navegador** (keypair generado
+  client-side, guardado solo en ese navegador) que firma el hash del CLA localmente. Nada
+  custodial. Desde la decisión del founder del 2026-10-21 es una cuenta **real**: `is_demo` lo
+  decide el servidor por el código de invitación (solo los `GENESIS-0001…0006` de demostración
+  y las cuentas sembradas son de demostración), y /entrar y /perfil avisan que la llave vive solo
+  en ese navegador y recomiendan Freighter.
 
 ## Modelo de datos (append-only donde importa)
 
@@ -82,13 +86,14 @@ wallet (`reading_sessions`).
 ## Rutas
 
 Páginas: `/`, `/entrar`, `/agora`, `/agora/[id]`, `/academia`, `/academia/[slug]`,
-`/perfil`, `/gobernanza`, `/admin`, `/whitepaper`.
+`/perfil`, `/gobernanza`, `/admin`, `/manifiesto`, `/metodo` (`/whitepaper` redirige con 308 a
+`/manifiesto`: el whitepaper salió del sitio y `docs/whitepaper.md` queda como documento interno).
 API: `/api/cla`, `/api/invite/verify`, `/api/invite/generate`, `/api/onboard`, `/api/apply`,
 `/api/governance/vote`, `/api/academia/start|heartbeat|quiz`, `/api/admin`.
 
 ## Middleware
 
-Lectura pública (`/`, `/agora`, `/academia`, `/gobernanza`, `/whitepaper`). `/perfil` y
+Lectura pública (`/`, `/manifiesto`, `/metodo`, `/agora`, `/academia`, `/gobernanza`). `/perfil` y
 `/admin` exigen sesión con CLA firmado. Las mutaciones (aplicar, votar, generar invitación,
 Academia, admin) revalidan sesión y CLA en el handler (defensa en profundidad).
 

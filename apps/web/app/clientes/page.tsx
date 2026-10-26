@@ -3,9 +3,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/session";
-import { listClientsFor, type Actor } from "@/lib/clients";
+import { listClientsFor } from "@/lib/clients";
 import { coverage } from "@/lib/client-graph";
-import { FOUNDER_WALLET } from "@/lib/config";
+import { clientActor } from "@/lib/authz";
 import { EmptyState } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -20,8 +20,11 @@ export default async function ClientesPage() {
   const session = await getSession();
   if (!session) redirect("/entrar");
 
-  const actor: Actor = { wallet: session.wallet, isFounder: session.wallet === FOUNDER_WALLET };
   const db = getDb();
+  // Por ROL leído de la base (equipo interno; founder ve todo), no por la wallet de
+  // una persona. El layout ya cerró la puerta; esto es la segunda capa.
+  const actor = clientActor(session, db);
+  if (!actor) redirect("/perfil");
   const clientes = listClientsFor(db, actor);
 
   return (

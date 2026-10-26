@@ -1,0 +1,282 @@
+/* Pagos: bloque de tinta, el flujo de cuatro nodos (isla) y la comparación. */
+
+.bloque {
+  position: relative;
+  overflow: hidden;
+  margin-top: var(--espacio-seccion);
+  background: var(--tinta);
+  color: var(--blanco);
+  border-radius: clamp(22px, 3vw, 32px);
+  padding: clamp(28px, 5vw, 64px);
+}
+
+/* Tope de 104px (el diseño llega a 120): "wallet" es más largo que la palabra del diseño
+   y así la primera línea sigue cabiendo entera en escritorio. */
+.bloque .titulo {
+  margin: 0;
+  font-size: clamp(52px, 8vw, 104px);
+  line-height: 0.86;
+  text-wrap: balance;
+}
+.lima {
+  color: var(--lima);
+}
+
+.intro {
+  margin: 18px 0 0;
+  max-width: 520px;
+  font-size: 17px;
+  line-height: 1.55;
+  color: var(--claro-sobre-tinta);
+  text-wrap: pretty;
+}
+
+/* ------------------------------------------------------------------ */
+/* Flujo (FlujoPagos)                                                  */
+/* ------------------------------------------------------------------ */
+
+.flujo {
+  margin-top: 28px;
+}
+
+/* Nodos: fila compacta en el teléfono, 2 columnas desde 480px y 4 desde 1024px. */
+.nodos {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.nodo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 4px;
+  padding: 14px 16px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--blanco);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  transition: background-color 0.35s ease, color 0.35s ease;
+}
+.nodo[data-encendido] {
+  background: rgba(157, 255, 79, 0.14);
+}
+.nodo[data-final] {
+  background: var(--lima);
+  color: var(--tinta);
+}
+
+.nodoCabeza {
+  grid-column: 1;
+  display: flex;
+  gap: 10px;
+  font-family: var(--fuente-mono);
+  font-size: 11px;
+  line-height: 1.3;
+  opacity: 0.75;
+}
+.nodoTitulo {
+  grid-column: 1;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+.nodo .nodoValor {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  margin: 0;
+  font-size: 26px;
+  line-height: 0.9;
+  text-align: right;
+}
+.nodoEquivalente {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-family: var(--fuente-mono);
+  font-size: 12px;
+  line-height: 1.35;
+}
+.aproximado {
+  opacity: 0.8;
+}
+
+@media (min-width: 480px) {
+  .nodos {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .nodo {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    min-height: 150px;
+    padding: 20px;
+  }
+  .nodoCabeza {
+    justify-content: space-between;
+  }
+  .nodoTitulo {
+    font-size: 18px;
+  }
+  .nodo .nodoValor {
+    margin-top: auto;
+    font-size: clamp(26px, 3vw, 36px);
+    text-align: left;
+  }
+}
+@media (min-width: 1024px) {
+  .nodos {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.avance {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+.barra {
+  flex: 1;
+  height: 4px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+.barraRelleno {
+  height: 100%;
+  background: var(--lima);
+  transition: width 0.9s ease;
+}
+.control {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--radio-pill);
+  background: transparent;
+  color: var(--blanco);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+  font-family: var(--fuente-mono);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+.control:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Lo que viene: una fila discontinua, fuera del flujo de hoy. */
+.siguiente {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin: 12px 0 0;
+  padding: 12px 16px;
+  border: 1px dashed rgba(255, 255, 255, 0.28);
+  border-radius: var(--radio-sm);
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--claro-sobre-tinta);
+}
+.siguienteEtiqueta {
+  font-family: var(--fuente-mono);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.3;
+  text-transform: uppercase;
+  color: var(--lima);
+  padding: 3px 9px;
+  border-radius: var(--radio-pill);
+  box-shadow: inset 0 0 0 1px var(--lima);
+}
+
+/* ------------------------------------------------------------------ */
+/* Comparación                                                         */
+/* ------------------------------------------------------------------ */
+
+.comparacion {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: 12px;
+  margin-top: clamp(32px, 4vw, 48px);
+}
+.antes {
+  border-radius: var(--radio-md);
+  padding: 24px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+.despues {
+  border-radius: var(--radio-md);
+  padding: 24px;
+  background: var(--lima);
+  color: var(--tinta);
+  transition: transform 0.3s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .despues:hover {
+    transform: translateY(-4px) rotate(-0.5deg);
+  }
+}
+
+.compTitulo {
+  margin: 0;
+  font-family: var(--fuente-mono);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+  text-transform: uppercase;
+  color: var(--gris-sobre-tinta);
+}
+.despues .compTitulo {
+  color: var(--verde-profundo);
+}
+
+.datos {
+  display: flex;
+  gap: 16px 28px;
+  flex-wrap: wrap;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.datos .datoValor {
+  display: block;
+  font-size: clamp(34px, 9vw, 48px);
+  line-height: 0.85;
+}
+.antes .datoValor {
+  color: #6f7a73;
+  text-decoration: line-through;
+}
+.datoTexto {
+  display: block;
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--gris-sobre-tinta);
+}
+.despues .datoTexto {
+  color: var(--sobre-lima);
+}
+
+.nota {
+  margin: 20px 0 0;
+  max-width: 760px;
+  font-family: var(--fuente-mono);
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--gris-sobre-tinta);
+}

@@ -1,0 +1,200 @@
+/* Harmony: bloque verde oscuro con el teléfono del operador (maqueta). */
+
+.bloque {
+  margin-top: 12px;
+  background: var(--verde-profundo);
+  color: var(--blanco);
+  border-radius: clamp(22px, 3vw, 32px);
+  padding: clamp(28px, 4vw, 48px);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: clamp(24px, 4vw, 48px);
+  align-items: center;
+}
+
+.mayus {
+  text-transform: uppercase;
+}
+
+.bloque .titulo {
+  margin: 14px 0 0;
+  font-size: clamp(56px, 8vw, 112px);
+  line-height: 0.85;
+}
+
+.subtitulo {
+  margin: 16px 0 0;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.texto {
+  margin: 12px 0 0;
+  max-width: 440px;
+  font-size: 15px;
+  line-height: 1.55;
+  color: #cfe8bf;
+  text-wrap: pretty;
+}
+
+.etiquetas {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 22px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.etiqueta {
+  font-family: var(--fuente-mono);
+  font-size: 11px;
+  line-height: 1.3;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 6px 12px;
+  border-radius: var(--radio-pill);
+}
+
+/* ------------------------------------------------------------------ */
+/* Teléfono                                                            */
+/* ------------------------------------------------------------------ */
+
+.telefonoZona {
+  margin: 0;
+  padding: 8px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.telefono {
+  width: 220px;
+  max-width: 100%;
+  background: var(--tinta);
+  border-radius: 34px;
+  padding: 10px;
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+.pantalla {
+  background: var(--panel-2);
+  color: var(--tinta);
+  border-radius: 26px;
+  padding: 16px 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.muesca {
+  width: 60px;
+  height: 5px;
+  border-radius: 5px;
+  background: var(--tinta);
+  margin: 0 auto 2px;
+  opacity: 0.85;
+}
+.saludo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.saludoTexto {
+  font-size: 12px;
+  font-weight: 700;
+}
+.marca {
+  font-family: var(--fuente-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  color: var(--verde-profundo);
+}
+
+.puntaje {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--blanco);
+  border-radius: 16px;
+  padding: 12px;
+}
+.anillo {
+  flex: none;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: conic-gradient(var(--verde) 0 86%, var(--borde) 86% 100%);
+  display: grid;
+  place-items: center;
+}
+.anilloCentro {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--blanco);
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  font-weight: 800;
+}
+.puntajeTitulo {
+  font-size: 10px;
+  color: var(--gris-suave);
+}
+.puntajeDetalle {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.bono {
+  background: var(--lima);
+  border-radius: 16px;
+  padding: 12px;
+}
+.bonoTitulo {
+  font-size: 10px;
+  color: var(--verde-profundo);
+}
+.bono .bonoValor {
+  font-size: 30px;
+  line-height: 0.95;
+}
+.bonoUnidad {
+  font-size: 13px;
+}
+.bonoDestino {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  font-family: var(--fuente-mono);
+  font-size: 10px;
+  color: var(--verde-profundo);
+}
+
+.filas {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.fila {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  background: var(--blanco);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+.filaClave {
+  color: var(--gris-suave);
+}
+.filaValor {
+  font-weight: 700;
+}
+
+.pieTelefono {
+  font-family: var(--fuente-mono);
+  font-size: 11px;
+  line-height: 1.4;
+  color: #cfe8bf;
+  text-align: center;
+}

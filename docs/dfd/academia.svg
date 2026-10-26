@@ -1,0 +1,222 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1640 3430" width="1640" height="3430" font-family="Segoe UI, Arial, sans-serif" font-size="13">
+<title>Academia: contenido, lectura con tiempo mínimo, quiz y puntos de Academia</title>
+<defs><marker id="punta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker></defs>
+<rect width="1640" height="3430" fill="#ffffff"/>
+<rect x="50" y="45" width="1500" height="195" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="58" y="63" fill="#c0392b">Internet: navegadores de la persona y del founder</text>
+<rect x="380" y="315" width="180" height="195" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="388" y="333" fill="#c0392b">Tercero: YouTube</text>
+<rect x="380" y="585" width="1170" height="1715" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="388" y="603" fill="#c0392b">Servidor Next.js (Azure App Service)</text>
+<rect x="710" y="2375" width="840" height="955" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="718" y="2393" fill="#c0392b">Base SQLite (/home/data/zelena.db)</text>
+<path d="M185,150 Q253,442 425,690" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="279" y="431" text-anchor="middle" font-size="11" fill="#b03a2e">f1 Abre la Academia *</text>
+<path d="M755,2480 Q691,1577 515,690" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="663" y="1581" text-anchor="middle" font-size="11" fill="#555">f2 Contenidos habilitados</text>
+<path d="M755,2670 Q691,1674 515,690" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="663" y="1677" text-anchor="middle" font-size="11" fill="#555">f3 Progreso del día</text>
+<path d="M755,2860 Q691,1769 515,690" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="663" y="1772" text-anchor="middle" font-size="11" fill="#555">f4 Topes que se muestran</text>
+<path d="M425,690 Q357,398 185,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="331" y="409" text-anchor="middle" font-size="11" fill="#555">f5 HTML de la lista</text>
+<path d="M185,150 Q251,533 425,880" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="278" y="524" text-anchor="middle" font-size="11" fill="#b03a2e">f6 Abre un contenido *</text>
+<path d="M755,2480 Q691,1672 515,880" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="663" y="1676" text-anchor="middle" font-size="11" fill="#555">f7 Contenido por slug</text>
+<path d="M755,2670 Q691,1767 515,880" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="663" y="1771" text-anchor="middle" font-size="11" fill="#555">f8 ¿Ya premiado?</text>
+<path d="M515,880 Q689,533 755,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="662" y="524" text-anchor="middle" font-size="11" fill="#555">f9 Monta el lector</text>
+<path d="M185,150 Q263,323 425,420" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="284" y="304" text-anchor="middle" font-size="11" fill="#b03a2e">f10 Carga el video embebido *</text>
+<path d="M845,150 Q913,442 1085,690" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="939" y="431" text-anchor="middle" font-size="11" fill="#b03a2e">f11 Comenzar lectura *</text>
+<path d="M1175,690 Q1247,910 1415,1070" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1271" y="895" text-anchor="middle" font-size="11" fill="#b03a2e">f12 Cuenta el inicio *</text>
+<path d="M1130,735 Q1074,1070 1130,1405" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1102" y="1070" text-anchor="middle" font-size="11" fill="#555">f13 startReading</text>
+<path d="M845,2480 Q1019,1977 1085,1450" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="992" y="1971" text-anchor="middle" font-size="11" fill="#555">f14 ¿Existe y está habilitado?</text>
+<path d="M1175,1450 Q1241,2070 1415,2670" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1268" y="2065" text-anchor="middle" font-size="11" fill="#b03a2e">f15 Una lectura activa por wallet *</text>
+<path d="M1085,690 Q1017,398 845,150" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="991" y="409" text-anchor="middle" font-size="11" fill="#b03a2e">f16 Token de lectura *</text>
+<path d="M845,150 Q911,533 1085,880" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="524" text-anchor="middle" font-size="11" fill="#b03a2e">f17 Latido cada 15 s (pestaña visible) *</text>
+<path d="M1175,880 Q1261,1019 1415,1070" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1278" y="997" text-anchor="middle" font-size="11" fill="#b03a2e">f18 Cuenta el latido *</text>
+<path d="M1175,880 Q1329,829 1415,690" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1312" y="807" text-anchor="middle" font-size="11" fill="#555">f19 heartbeat</text>
+<path d="M1460,735 Q1404,1680 1460,2625" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1432" y="1680" text-anchor="middle" font-size="11" fill="#555">f20 Suma tiempo activo</text>
+<path d="M1085,880 Q1019,497 845,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="992" y="506" text-anchor="middle" font-size="11" fill="#555">f21 Tiempo acumulado</text>
+<path d="M845,150 Q911,624 1085,1070" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="617" text-anchor="middle" font-size="11" fill="#b03a2e">f22 Pide el quiz *</text>
+<path d="M1175,1070 Q1329,1019 1415,880" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1312" y="997" text-anchor="middle" font-size="11" fill="#555">f23 getQuiz</text>
+<path d="M1460,2625 Q1516,1775 1460,925" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1488" y="1775" text-anchor="middle" font-size="11" fill="#555">f24 Sesión de la lectura</text>
+<path d="M1460,2435 Q1516,1680 1460,925" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1488" y="1680" text-anchor="middle" font-size="11" fill="#555">f25 3 preguntas al azar (solo la primera vez)</text>
+<path d="M1085,1070 Q1019,596 845,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="992" y="603" text-anchor="middle" font-size="11" fill="#555">f26 Preguntas</text>
+<path d="M845,150 Q911,717 1085,1260" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="711" text-anchor="middle" font-size="11" fill="#b03a2e">f27 Envía respuestas *</text>
+<path d="M1175,1260 Q1329,1209 1415,1070" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1312" y="1187" text-anchor="middle" font-size="11" fill="#b03a2e">f28 Cuenta el intento *</text>
+<path d="M1130,1305 Q1074,1450 1130,1595" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1102" y="1450" text-anchor="middle" font-size="11" fill="#555">f29 gradeQuiz</text>
+<path d="M1415,2480 Q1349,2044 1175,1640" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1322" y="2052" text-anchor="middle" font-size="11" fill="#555">f30 Respuestas correctas</text>
+<path d="M1175,1640 Q1241,2167 1415,2670" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1268" y="2161" text-anchor="middle" font-size="11" fill="#555">f31 Cierra la lectura</text>
+<path d="M845,2860 Q1019,2260 1085,1640" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="992" y="2255" text-anchor="middle" font-size="11" fill="#555">f32 Reglas de la época</text>
+<path d="M1415,3240 Q1351,2432 1175,1640" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1323" y="2436" text-anchor="middle" font-size="11" fill="#555">f33 Época actual</text>
+<path d="M1085,1640 Q911,2143 845,2670" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="2149" text-anchor="middle" font-size="11" fill="#b03a2e">f34 Registra el premio *</text>
+<path d="M1175,1640 Q1241,2260 1415,2860" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1268" y="2255" text-anchor="middle" font-size="11" fill="#b03a2e">f35 Acredita puntos *</text>
+<path d="M1175,1640 Q1239,2355 1415,3050" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1267" y="2350" text-anchor="middle" font-size="11" fill="#b03a2e">f36 Suma reputación *</text>
+<path d="M1085,1260 Q1019,693 845,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="992" y="699" text-anchor="middle" font-size="11" fill="#555">f37 Resultado</text>
+<path d="M1415,150 Q1239,982 1175,1830" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1267" y="986" text-anchor="middle" font-size="11" fill="#b03a2e">f38 Habilita o deshabilita un contenido *</text>
+<path d="M1085,1830 Q913,2135 845,2480" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="939" y="2145" text-anchor="middle" font-size="11" fill="#555">f39 Cambia enabled</text>
+<path d="M1085,2020 Q915,2224 845,2480" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="940" y="2237" text-anchor="middle" font-size="11" fill="#555">f40 Siembra los 4 contenidos</text>
+<path d="M1175,2020 Q1245,2276 1415,2480" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1270" y="2263" text-anchor="middle" font-size="11" fill="#555">f41 Siembra 5 preguntas por contenido</text>
+<path d="M1085,2210 Q923,2307 845,2480" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="944" y="2326" text-anchor="middle" font-size="11" fill="#555">f42 Reescribe S1 y S3</text>
+<path d="M1175,2210 Q1253,2383 1415,2480" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1274" y="2364" text-anchor="middle" font-size="11" fill="#555">f43 Reescribe el quiz de S1</text>
+<path d="M1415,2670 Q1349,2050 1175,1450" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1322" y="2055" text-anchor="middle" font-size="11" fill="#555">f44 Fallos recientes de ese contenido</text>
+<path d="M1175,1070 Q1295,1126 1415,1070" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1295" y="1098" text-anchor="middle" font-size="11" fill="#b03a2e">f45 Cuenta el pedido del quiz *</text>
+<path d="M1460,925 Q1404,1775 1460,2625" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1432" y="1775" text-anchor="middle" font-size="11" fill="#555">f46 Guarda lo servido</text>
+<path d="M1175,2210 Q1205,2425 1415,2480" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1250" y="2385" text-anchor="middle" font-size="11" fill="#555">f47 Reparte las correctas (S4)</text>
+<rect x="90" y="100" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="140" y="122" text-anchor="middle" fill="#222">Persona con</text>
+<text x="140" y="138" text-anchor="middle" fill="#222">sesión y</text>
+<text x="140" y="154" text-anchor="middle" fill="#222">acuerdo</text>
+<text x="140" y="170" text-anchor="middle" fill="#222">firmado</text>
+<rect x="1410" y="100" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="138" text-anchor="middle" fill="#222">Founder que</text>
+<text x="1460" y="154" text-anchor="middle" fill="#222">modera desde</text>
+<text x="1460" y="170" text-anchor="middle" fill="#222">/admin</text>
+<rect x="420" y="370" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="400" text-anchor="middle" fill="#222">YouTube</text>
+<text x="470" y="416" text-anchor="middle" fill="#222">(youtube-nocookie.com,</text>
+<text x="470" y="432" text-anchor="middle" fill="#222">video</text>
+<text x="470" y="448" text-anchor="middle" fill="#222">embebido)</text>
+<circle cx="470" cy="690" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="678" text-anchor="middle" fill="#222">Página</text>
+<text x="470" y="694" text-anchor="middle" fill="#222">/academia</text>
+<text x="470" y="710" text-anchor="middle" fill="#222">(lista)</text>
+<circle cx="470" cy="880" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="868" text-anchor="middle" fill="#222">Página</text>
+<text x="470" y="884" text-anchor="middle" fill="#222">/academia/[slug]</text>
+<text x="470" y="900" text-anchor="middle" fill="#222">(contenido)</text>
+<circle cx="800" cy="150" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="146" text-anchor="middle" fill="#222">Lector y quiz</text>
+<text x="800" y="162" text-anchor="middle" fill="#222">(navegador)</text>
+<circle cx="1130" cy="690" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="686" text-anchor="middle" fill="#222">POST</text>
+<text x="1130" y="702" text-anchor="middle" fill="#222">/api/academia/start</text>
+<circle cx="1130" cy="880" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="876" text-anchor="middle" fill="#222">POST</text>
+<text x="1130" y="892" text-anchor="middle" fill="#222">/api/academia/heartbeat</text>
+<circle cx="1130" cy="1070" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="1066" text-anchor="middle" fill="#222">GET</text>
+<text x="1130" y="1082" text-anchor="middle" fill="#222">/api/academia/quiz</text>
+<circle cx="1130" cy="1260" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="1256" text-anchor="middle" fill="#222">POST</text>
+<text x="1130" y="1272" text-anchor="middle" fill="#222">/api/academia/quiz</text>
+<circle cx="1130" cy="1450" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="1414" text-anchor="middle" fill="#222">Iniciar</text>
+<text x="1130" y="1430" text-anchor="middle" fill="#222">lectura</text>
+<text x="1130" y="1446" text-anchor="middle" fill="#222">(espera tras</text>
+<text x="1130" y="1462" text-anchor="middle" fill="#222">un fallo; máx.</text>
+<circle cx="1460" cy="690" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="686" text-anchor="middle" fill="#222">Sumar tiempo</text>
+<text x="1460" y="702" text-anchor="middle" fill="#222">activo</text>
+<circle cx="1460" cy="880" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="820" text-anchor="middle" fill="#222">Servir las 3</text>
+<text x="1460" y="836" text-anchor="middle" fill="#222">preguntas de</text>
+<text x="1460" y="852" text-anchor="middle" fill="#222">la lectura</text>
+<text x="1460" y="868" text-anchor="middle" fill="#222">(valida el</text>
+<circle cx="1130" cy="1640" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="1612" text-anchor="middle" fill="#222">Calificar una</text>
+<text x="1130" y="1628" text-anchor="middle" fill="#222">vez las</text>
+<text x="1130" y="1644" text-anchor="middle" fill="#222">preguntas</text>
+<text x="1130" y="1660" text-anchor="middle" fill="#222">servidas y</text>
+<circle cx="1130" cy="1830" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="1818" text-anchor="middle" fill="#222">POST</text>
+<text x="1130" y="1834" text-anchor="middle" fill="#222">/api/admin</text>
+<text x="1130" y="1850" text-anchor="middle" fill="#222">(toggleContent)</text>
+<circle cx="1130" cy="2020" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="2008" text-anchor="middle" fill="#222">Siembra del</text>
+<text x="1130" y="2024" text-anchor="middle" fill="#222">contenido al</text>
+<text x="1130" y="2040" text-anchor="middle" fill="#222">arrancar</text>
+<circle cx="1130" cy="2210" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="2182" text-anchor="middle" fill="#222">Migración del</text>
+<text x="1130" y="2198" text-anchor="middle" fill="#222">contenido</text>
+<text x="1130" y="2214" text-anchor="middle" fill="#222">público (S1,</text>
+<text x="1130" y="2230" text-anchor="middle" fill="#222">S3) y orden de</text>
+<rect x="750" y="2450" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="750" y1="2450" x2="850" y2="2450" stroke="#222" stroke-width="1.5"/>
+<line x1="750" y1="2510" x2="850" y2="2510" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="2484" text-anchor="middle" fill="#222">academia_content</text>
+<rect x="1410" y="2450" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1410" y1="2450" x2="1510" y2="2450" stroke="#222" stroke-width="1.5"/>
+<line x1="1410" y1="2510" x2="1510" y2="2510" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="2484" text-anchor="middle" fill="#222">academia_quiz</text>
+<rect x="1410" y="2640" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1410" y1="2640" x2="1510" y2="2640" stroke="#222" stroke-width="1.5"/>
+<line x1="1410" y1="2700" x2="1510" y2="2700" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="2674" text-anchor="middle" fill="#222">reading_sessions</text>
+<rect x="750" y="2640" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="750" y1="2640" x2="850" y2="2640" stroke="#222" stroke-width="1.5"/>
+<line x1="750" y1="2700" x2="850" y2="2700" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="2674" text-anchor="middle" fill="#222">academia_awards</text>
+<rect x="1410" y="2830" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1410" y1="2830" x2="1510" y2="2830" stroke="#222" stroke-width="1.5"/>
+<line x1="1410" y1="2890" x2="1510" y2="2890" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="2848" text-anchor="middle" fill="#222">points_ledger</text>
+<text x="1460" y="2864" text-anchor="middle" fill="#222">(bucket</text>
+<text x="1460" y="2880" text-anchor="middle" fill="#222">academia)</text>
+<rect x="1410" y="3020" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1410" y1="3020" x2="1510" y2="3020" stroke="#222" stroke-width="1.5"/>
+<line x1="1410" y1="3080" x2="1510" y2="3080" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="3038" text-anchor="middle" fill="#222">reputation_events</text>
+<text x="1460" y="3054" text-anchor="middle" fill="#222">(eje</text>
+<text x="1460" y="3070" text-anchor="middle" fill="#222">investigación)</text>
+<rect x="750" y="2830" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="750" y1="2830" x2="850" y2="2830" stroke="#222" stroke-width="1.5"/>
+<line x1="750" y1="2890" x2="850" y2="2890" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="2840" text-anchor="middle" fill="#222">Genoma activo</text>
+<text x="800" y="2856" text-anchor="middle" fill="#222">(ACADEMIA_DAILY_CAP,</text>
+<text x="800" y="2872" text-anchor="middle" fill="#222">ACADEMIA_DIMINISHING,</text>
+<text x="800" y="2888" text-anchor="middle" fill="#222">ACADEMIA_BUDGET)</text>
+<rect x="1410" y="3210" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1410" y1="3210" x2="1510" y2="3210" stroke="#222" stroke-width="1.5"/>
+<line x1="1410" y1="3270" x2="1510" y2="3270" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="3236" text-anchor="middle" fill="#222">periods (época</text>
+<text x="1460" y="3252" text-anchor="middle" fill="#222">actual)</text>
+<rect x="1410" y="1040" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1410" y1="1040" x2="1510" y2="1040" stroke="#222" stroke-width="1.5"/>
+<line x1="1410" y1="1100" x2="1510" y2="1100" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="1058" text-anchor="middle" fill="#222">Contadores de</text>
+<text x="1460" y="1074" text-anchor="middle" fill="#222">límite de tasa</text>
+<text x="1460" y="1090" text-anchor="middle" fill="#222">en memoria</text>
+<text x="90" y="3410" font-size="11" fill="#777">Academia: contenido, lectura con tiempo mínimo, quiz y puntos de Academia · docs/dfd/academia.json · commit 4032c7c · * = flujo con datos sensibles</text>
+</svg>

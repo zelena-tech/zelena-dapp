@@ -1,0 +1,321 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1970 3780" width="1970" height="3780" font-family="Segoe UI, Arial, sans-serif" font-size="13">
+<title>Login y sesión: invitación + wallet + firma del CLA, reingreso por reto de un solo uso, cookie JWT, middleware, Entra tras flag, escotilla del founder y puertas por rol</title>
+<defs><marker id="punta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker></defs>
+<rect width="1970" height="3780" fill="#ffffff"/>
+<rect x="50" y="45" width="840" height="575" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="58" y="63" fill="#c0392b">Navegador de la persona (no confiable)</text>
+<rect x="710" y="695" width="180" height="195" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="718" y="713" fill="#c0392b">Extensión Freighter (custodia la llave privada)</text>
+<rect x="380" y="1235" width="1170" height="1715" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="388" y="1253" fill="#c0392b">Servidor Next.js en Azure App Service</text>
+<rect x="1370" y="3025" width="180" height="195" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="1378" y="3043" fill="#c0392b">Configuración del App Service (App Settings)</text>
+<rect x="710" y="3295" width="1170" height="385" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="718" y="3313" fill="#c0392b">Base SQLite persistente (/home/data)</text>
+<rect x="1040" y="965" width="180" height="195" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="1048" y="983" fill="#c0392b">Tenant de Microsoft Entra ID</text>
+<path d="M185,150 Q305,206 425,150" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="305" y="178" text-anchor="middle" font-size="11" fill="#b03a2e">f1 Escribe código, nombre visible y elige wallet *</text>
+<path d="M515,150 Q581,757 755,1340" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="608" y="751" text-anchor="middle" font-size="11" fill="#b03a2e">f2 Validar código *</text>
+<path d="M800,1385 Q744,2370 800,3355" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="772" y="2370" text-anchor="middle" font-size="11" fill="#b03a2e">f3 Consultar cupo y vencimiento *</text>
+<path d="M515,150 Q579,850 755,1530" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="607" y="845" text-anchor="middle" font-size="11" fill="#555">f4 Pedir el acuerdo</text>
+<path d="M845,1530 Q909,2205 1085,2860" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="937" y="2200" text-anchor="middle" font-size="11" fill="#555">f5 Leer CLA.md del paquete</text>
+<path d="M515,150 Q635,206 755,150" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="635" y="178" text-anchor="middle" font-size="11" fill="#b03a2e">f6 Crear o reutilizar la wallet del navegador *</text>
+<path d="M515,150 Q583,495 755,800" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="609" y="485" text-anchor="middle" font-size="11" fill="#b03a2e">f7 Pedir acceso y firma *</text>
+<path d="M755,800 Q687,455 515,150" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="661" y="465" text-anchor="middle" font-size="11" fill="#b03a2e">f8 Dirección y firma *</text>
+<path d="M515,150 Q579,943 755,1720" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="607" y="939" text-anchor="middle" font-size="11" fill="#b03a2e">f9 Alta *</text>
+<path d="M845,1720 Q911,2116 1085,2480" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="2108" text-anchor="middle" font-size="11" fill="#b03a2e">f10 Contar intento por IP *</text>
+<path d="M845,1720 Q1013,1560 1085,1340" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="989" y="1545" text-anchor="middle" font-size="11" fill="#b03a2e">f11 Entrada validada con zod *</text>
+<path d="M1175,1340 Q1295,1396 1415,1340" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1295" y="1368" text-anchor="middle" font-size="11" fill="#b03a2e">f12 ¿La firma es de esa wallet? *</text>
+<path d="M1130,1385 Q1074,1530 1130,1675" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1102" y="1530" text-anchor="middle" font-size="11" fill="#b03a2e">f13 Consumir cupo (después de la firma) *</text>
+<path d="M1085,1720 Q909,2552 845,3400" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="937" y="2556" text-anchor="middle" font-size="11" fill="#b03a2e">f14 UPDATE condicional (used_by o uses+1) *</text>
+<path d="M1130,1385 Q1074,2370 1130,3355" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1102" y="2370" text-anchor="middle" font-size="11" fill="#b03a2e">f15 INSERT del registro (o promoción por escotilla) *</text>
+<path d="M1175,1340 Q1239,2376 1415,3400" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1267" y="2373" text-anchor="middle" font-size="11" fill="#b03a2e">f16 Guardar la firma del CLA *</text>
+<path d="M1175,1340 Q1239,2471 1415,3590" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1267" y="2468" text-anchor="middle" font-size="11" fill="#555">f17 Encolar huella para anclar</text>
+<path d="M845,1720 Q931,1859 1085,1910" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="948" y="1837" text-anchor="middle" font-size="11" fill="#b03a2e">f18 Firmar la sesión *</text>
+<path d="M1415,3130 Q1349,2510 1175,1910" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1322" y="2515" text-anchor="middle" font-size="11" fill="#b03a2e">f19 Leer SESSION_SECRET *</text>
+<path d="M1085,1910 Q1021,1117 845,340" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="993" y="1121" text-anchor="middle" font-size="11" fill="#b03a2e">f20 Set-Cookie zelena_session *</text>
+<path d="M515,150 Q579,1038 755,1910" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="607" y="1034" text-anchor="middle" font-size="11" fill="#b03a2e">f21 Reingreso ("Ya estoy registrado" o 409 wallet_registrada) con el reto firmado *</text>
+<path d="M845,1910 Q1013,1750 1085,1530" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="989" y="1735" text-anchor="middle" font-size="11" fill="#b03a2e">f22 Entrada validada con zod *</text>
+<path d="M1175,1530 Q1329,1479 1415,1340" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1312" y="1457" text-anchor="middle" font-size="11" fill="#b03a2e">f23 ¿La firma es de esa wallet? *</text>
+<path d="M1130,1575 Q1074,2465 1130,3355" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1102" y="2465" text-anchor="middle" font-size="11" fill="#555">f24 Leer la fila (solo lectura)</text>
+<path d="M845,1910 Q965,1966 1085,1910" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="965" y="1938" text-anchor="middle" font-size="11" fill="#b03a2e">f25 Firmar la sesión *</text>
+<path d="M755,340 Q581,826 515,1340" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="608" y="833" text-anchor="middle" font-size="11" fill="#b03a2e">f26 Cookie en cada petición a /perfil, /admin, /equipo, /clientes *</text>
+<path d="M425,1340 Q359,733 185,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="332" y="739" text-anchor="middle" font-size="11" fill="#555">f27 Pasar o redirigir a /entrar?next=…</text>
+<path d="M1415,1720 Q1239,2552 1175,3400" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1267" y="2556" text-anchor="middle" font-size="11" fill="#555">f28 Resolver el rol contra la base</text>
+<path d="M185,150 Q249,850 425,1530" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="277" y="845" text-anchor="middle" font-size="11" fill="#b03a2e">f29 Generar invitación personal *</text>
+<path d="M515,1530 Q579,2473 755,3400" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="607" y="2469" text-anchor="middle" font-size="11" fill="#b03a2e">f30 INSERT de invitación con tope por tier *</text>
+<path d="M515,530 Q683,370 755,150" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="659" y="355" text-anchor="middle" font-size="11" fill="#b03a2e">f31 Borrar la llave del navegador (solo cuenta demo confirmada y misma wallet) *</text>
+<path d="M515,530 Q579,1418 755,2290" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="607" y="1414" text-anchor="middle" font-size="11" fill="#555">f32 Cerrar sesión</text>
+<path d="M800,2245 Q856,1315 800,385" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="828" y="1315" text-anchor="middle" font-size="11" fill="#b03a2e">f33 Borrar la cookie (sin revocar el JWT) y responder { ok, esDemo, wallet } *</text>
+<path d="M515,340 Q579,1416 755,2480" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="607" y="1413" text-anchor="middle" font-size="11" fill="#555">f34 ¿Dibujar el botón?</text>
+<path d="M515,340 Q579,1511 755,2670" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="607" y="1508" text-anchor="middle" font-size="11" fill="#555">f35 signIn(microsoft-entra-id)</text>
+<path d="M845,2670 Q1021,1878 1085,1070" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="993" y="1874" text-anchor="middle" font-size="11" fill="#b03a2e">f36 Autorización OIDC (openid profile email) *</text>
+<path d="M845,2670 Q1017,2407 1085,2100" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="991" y="2396" text-anchor="middle" font-size="11" fill="#b03a2e">f37 JWT efímero de NextAuth con los claims puenteados *</text>
+<path d="M1175,2100 Q1347,1837 1415,1530" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1321" y="1826" text-anchor="middle" font-size="11" fill="#b03a2e">f38 Validar y resolver identidad *</text>
+<path d="M1415,1530 Q1239,2457 1175,3400" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1267" y="2461" text-anchor="middle" font-size="11" fill="#b03a2e">f39 Vincular entra_oid (oid o correo exacto ya vinculado) o crear entra:&lt;oid&gt; core *</text>
+<path d="M1505,1530 Q1569,2473 1745,3400" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1597" y="2469" text-anchor="middle" font-size="11" fill="#b03a2e">f40 Correo corporativo como primary *</text>
+<path d="M1085,2100 Q1021,1212 845,340" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="993" y="1216" text-anchor="middle" font-size="11" fill="#b03a2e">f41 Set-Cookie zelena_session (claSigned=false) y borrar cookies de NextAuth *</text>
+<path d="M1415,3130 Q1349,2694 1175,2290" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1322" y="2702" text-anchor="middle" font-size="11" fill="#b03a2e">f42 Variables de arranque *</text>
+<path d="M1085,2290 Q911,2833 845,3400" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="2839" text-anchor="middle" font-size="11" fill="#b03a2e">f43 Sembrar escotilla/cohorte y vencer GENESIS demo *</text>
+<path d="M1130,2335 Q1074,2845 1130,3355" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1102" y="2845" text-anchor="middle" font-size="11" fill="#555">f44 Promover FOUNDER_WALLET a founder (nunca degrada)</text>
+<path d="M1175,1910 Q1329,1859 1415,1720" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1312" y="1837" text-anchor="middle" font-size="11" fill="#b03a2e">f45 Claims verificados (desde cada página y ruta protegida) *</text>
+<path d="M185,150 Q271,289 425,340" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="288" y="267" text-anchor="middle" font-size="11" fill="#555">f46 Clic en Continuar con Microsoft</text>
+<path d="M185,150 Q257,370 425,530" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="281" y="355" text-anchor="middle" font-size="11" fill="#555">f47 Clic en Salir</text>
+<path d="M515,150 Q579,1131 755,2100" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="607" y="1128" text-anchor="middle" font-size="11" fill="#b03a2e">f48 Pedir un reto de entrada *</text>
+<path d="M845,2100 Q913,2407 1085,2670" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="939" y="2396" text-anchor="middle" font-size="11" fill="#b03a2e">f49 Guardar la huella del reto con su caducidad *</text>
+<path d="M845,2100 Q917,2320 1085,2480" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="941" y="2305" text-anchor="middle" font-size="11" fill="#b03a2e">f50 Contar pedido de reto por IP *</text>
+<path d="M1130,1575 Q1074,2100 1130,2625" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1102" y="2100" text-anchor="middle" font-size="11" fill="#b03a2e">f51 Consumir el reto (un solo intento, salga bien o mal) *</text>
+<path d="M845,2290 Q911,2857 1085,3400" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="2851" text-anchor="middle" font-size="11" fill="#555">f52 ¿La cuenta que sale es demo? (solo lectura)</text>
+<path d="M845,1910 Q913,2217 1085,2480" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="939" y="2206" text-anchor="middle" font-size="11" fill="#b03a2e">f53 Contar intento de login por IP *</text>
+<rect x="90" y="100" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="140" y="146" text-anchor="middle" fill="#222">Persona</text>
+<text x="140" y="162" text-anchor="middle" fill="#222">(navegador)</text>
+<rect x="750" y="750" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="780" text-anchor="middle" fill="#222">Extensión</text>
+<text x="800" y="796" text-anchor="middle" fill="#222">Freighter</text>
+<text x="800" y="812" text-anchor="middle" fill="#222">(llave privada</text>
+<text x="800" y="828" text-anchor="middle" fill="#222">de la persona)</text>
+<rect x="1080" y="1020" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="1042" text-anchor="middle" fill="#222">Microsoft</text>
+<text x="1130" y="1058" text-anchor="middle" fill="#222">Entra ID</text>
+<text x="1130" y="1074" text-anchor="middle" fill="#222">(proveedor</text>
+<text x="1130" y="1090" text-anchor="middle" fill="#222">OIDC del</text>
+<circle cx="470" cy="150" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="98" text-anchor="middle" fill="#222">Asistente</text>
+<text x="470" y="114" text-anchor="middle" fill="#222">/entrar:</text>
+<text x="470" y="130" text-anchor="middle" fill="#222">valida código,</text>
+<text x="470" y="146" text-anchor="middle" fill="#222">crea/conecta</text>
+<circle cx="470" cy="340" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="304" text-anchor="middle" fill="#222">Botón</text>
+<text x="470" y="320" text-anchor="middle" fill="#222">"Continuar con</text>
+<text x="470" y="336" text-anchor="middle" fill="#222">Microsoft"</text>
+<text x="470" y="352" text-anchor="middle" fill="#222">(solo si la</text>
+<circle cx="470" cy="530" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="486" text-anchor="middle" fill="#222">Botón Salir</text>
+<text x="470" y="502" text-anchor="middle" fill="#222">(borra la</text>
+<text x="470" y="518" text-anchor="middle" fill="#222">llave del</text>
+<text x="470" y="534" text-anchor="middle" fill="#222">navegador solo</text>
+<circle cx="470" cy="1340" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="1312" text-anchor="middle" fill="#222">Middleware:</text>
+<text x="470" y="1328" text-anchor="middle" fill="#222">exige sesión</text>
+<text x="470" y="1344" text-anchor="middle" fill="#222">(y CLA en</text>
+<text x="470" y="1360" text-anchor="middle" fill="#222">/perfil y</text>
+<circle cx="800" cy="1340" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="1320" text-anchor="middle" fill="#222">POST</text>
+<text x="800" y="1336" text-anchor="middle" fill="#222">/api/invite/verify</text>
+<text x="800" y="1352" text-anchor="middle" fill="#222">(valida sin</text>
+<text x="800" y="1368" text-anchor="middle" fill="#222">consumir)</text>
+<circle cx="470" cy="1530" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="1502" text-anchor="middle" fill="#222">POST</text>
+<text x="470" y="1518" text-anchor="middle" fill="#222">/api/invite/generate</text>
+<text x="470" y="1534" text-anchor="middle" fill="#222">(invitación</text>
+<text x="470" y="1550" text-anchor="middle" fill="#222">personal desde</text>
+<circle cx="800" cy="1530" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="1518" text-anchor="middle" fill="#222">GET /api/cla</text>
+<text x="800" y="1534" text-anchor="middle" fill="#222">(texto y hash</text>
+<text x="800" y="1550" text-anchor="middle" fill="#222">canónicos)</text>
+<circle cx="800" cy="1720" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="1708" text-anchor="middle" fill="#222">POST</text>
+<text x="800" y="1724" text-anchor="middle" fill="#222">/api/onboard</text>
+<text x="800" y="1740" text-anchor="middle" fill="#222">(alta)</text>
+<circle cx="1130" cy="1340" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="1312" text-anchor="middle" fill="#222">performOnboard:</text>
+<text x="1130" y="1328" text-anchor="middle" fill="#222">hash, firma,</text>
+<text x="1130" y="1344" text-anchor="middle" fill="#222">cupo y alta en</text>
+<text x="1130" y="1360" text-anchor="middle" fill="#222">una</text>
+<circle cx="800" cy="1910" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="1890" text-anchor="middle" fill="#222">POST</text>
+<text x="800" y="1906" text-anchor="middle" fill="#222">/api/login</text>
+<text x="800" y="1922" text-anchor="middle" fill="#222">(reingreso por</text>
+<text x="800" y="1938" text-anchor="middle" fill="#222">reto firmado)</text>
+<circle cx="800" cy="2100" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="2064" text-anchor="middle" fill="#222">POST</text>
+<text x="800" y="2080" text-anchor="middle" fill="#222">/api/login/reto</text>
+<text x="800" y="2096" text-anchor="middle" fill="#222">(emite un reto</text>
+<text x="800" y="2112" text-anchor="middle" fill="#222">de un solo uso</text>
+<circle cx="1130" cy="1530" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="1494" text-anchor="middle" fill="#222">performLogin:</text>
+<text x="1130" y="1510" text-anchor="middle" fill="#222">consume el</text>
+<text x="1130" y="1526" text-anchor="middle" fill="#222">reto, verifica</text>
+<text x="1130" y="1542" text-anchor="middle" fill="#222">la firma y lee</text>
+<circle cx="1460" cy="1340" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="1312" text-anchor="middle" fill="#222">Verificación</text>
+<text x="1460" y="1328" text-anchor="middle" fill="#222">ed25519</text>
+<text x="1460" y="1344" text-anchor="middle" fill="#222">(plano,</text>
+<text x="1460" y="1360" text-anchor="middle" fill="#222">sha256,</text>
+<circle cx="1130" cy="1720" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="1692" text-anchor="middle" fill="#222">Invitaciones:</text>
+<text x="1130" y="1708" text-anchor="middle" fill="#222">consumo</text>
+<text x="1130" y="1724" text-anchor="middle" fill="#222">atómico,</text>
+<text x="1130" y="1740" text-anchor="middle" fill="#222">cohorte y</text>
+<circle cx="1130" cy="1910" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="1882" text-anchor="middle" fill="#222">Sesión:</text>
+<text x="1130" y="1898" text-anchor="middle" fill="#222">firma/verifica</text>
+<text x="1130" y="1914" text-anchor="middle" fill="#222">el JWT y</text>
+<text x="1130" y="1930" text-anchor="middle" fill="#222">escribe la</text>
+<circle cx="800" cy="2290" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="2262" text-anchor="middle" fill="#222">POST</text>
+<text x="800" y="2278" text-anchor="middle" fill="#222">/api/logout</text>
+<text x="800" y="2294" text-anchor="middle" fill="#222">(dice si la</text>
+<text x="800" y="2310" text-anchor="middle" fill="#222">cuenta es demo</text>
+<circle cx="800" cy="2480" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="2460" text-anchor="middle" fill="#222">GET</text>
+<text x="800" y="2476" text-anchor="middle" fill="#222">/api/auth/entra/status</text>
+<text x="800" y="2492" text-anchor="middle" fill="#222">(¿se ofrece la</text>
+<text x="800" y="2508" text-anchor="middle" fill="#222">puerta?)</text>
+<circle cx="800" cy="2670" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="2642" text-anchor="middle" fill="#222">NextAuth:</text>
+<text x="800" y="2658" text-anchor="middle" fill="#222">baile OIDC con</text>
+<text x="800" y="2674" text-anchor="middle" fill="#222">Entra (503 con</text>
+<text x="800" y="2690" text-anchor="middle" fill="#222">el flag</text>
+<circle cx="1130" cy="2100" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="2072" text-anchor="middle" fill="#222">GET</text>
+<text x="1130" y="2088" text-anchor="middle" fill="#222">/api/auth/entra/exchange:</text>
+<text x="1130" y="2104" text-anchor="middle" fill="#222">sesión de</text>
+<text x="1130" y="2120" text-anchor="middle" fill="#222">Entra → cookie</text>
+<circle cx="1460" cy="1530" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="1494" text-anchor="middle" fill="#222">entraLogin:</text>
+<text x="1460" y="1510" text-anchor="middle" fill="#222">tenant,</text>
+<text x="1460" y="1526" text-anchor="middle" fill="#222">dominio y</text>
+<text x="1460" y="1542" text-anchor="middle" fill="#222">vinculación</text>
+<circle cx="1460" cy="1720" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="1684" text-anchor="middle" fill="#222">Puertas por</text>
+<text x="1460" y="1700" text-anchor="middle" fill="#222">rol leído de</text>
+<text x="1460" y="1716" text-anchor="middle" fill="#222">la base</text>
+<text x="1460" y="1732" text-anchor="middle" fill="#222">(adminActor,</text>
+<circle cx="1130" cy="2290" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="2254" text-anchor="middle" fill="#222">Arranque:</text>
+<text x="1130" y="2270" text-anchor="middle" fill="#222">retira demos,</text>
+<text x="1130" y="2286" text-anchor="middle" fill="#222">siembra</text>
+<text x="1130" y="2302" text-anchor="middle" fill="#222">escotilla/cohorte</text>
+<rect x="750" y="120" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="750" y1="120" x2="850" y2="120" stroke="#222" stroke-width="1.5"/>
+<line x1="750" y1="180" x2="850" y2="180" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="130" text-anchor="middle" fill="#222">localStorage:</text>
+<text x="800" y="146" text-anchor="middle" fill="#222">llave secreta</text>
+<text x="800" y="162" text-anchor="middle" fill="#222">de la wallet</text>
+<text x="800" y="178" text-anchor="middle" fill="#222">del navegador</text>
+<rect x="750" y="310" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="750" y1="310" x2="850" y2="310" stroke="#222" stroke-width="1.5"/>
+<line x1="750" y1="370" x2="850" y2="370" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="320" text-anchor="middle" fill="#222">Cookie</text>
+<text x="800" y="336" text-anchor="middle" fill="#222">zelena_session</text>
+<text x="800" y="352" text-anchor="middle" fill="#222">(JWT HS256, 24</text>
+<text x="800" y="368" text-anchor="middle" fill="#222">h)</text>
+<rect x="1080" y="2450" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="2450" x2="1180" y2="2450" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="2510" x2="1180" y2="2510" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="2412" text-anchor="middle" fill="#222">Contadores de</text>
+<text x="1130" y="2428" text-anchor="middle" fill="#222">intentos en</text>
+<text x="1130" y="2444" text-anchor="middle" fill="#222">memoria del</text>
+<text x="1130" y="2460" text-anchor="middle" fill="#222">proceso (IP:</text>
+<rect x="1080" y="2640" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="2640" x2="1180" y2="2640" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="2700" x2="1180" y2="2700" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="2634" text-anchor="middle" fill="#222">Retos de</text>
+<text x="1130" y="2650" text-anchor="middle" fill="#222">entrada en</text>
+<text x="1130" y="2666" text-anchor="middle" fill="#222">memoria del</text>
+<text x="1130" y="2682" text-anchor="middle" fill="#222">proceso (solo</text>
+<rect x="1410" y="3100" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1410" y1="3100" x2="1510" y2="3100" stroke="#222" stroke-width="1.5"/>
+<line x1="1410" y1="3160" x2="1510" y2="3160" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="3086" text-anchor="middle" fill="#222">App Settings</text>
+<text x="1460" y="3102" text-anchor="middle" fill="#222">(SESSION_SECRET,</text>
+<text x="1460" y="3118" text-anchor="middle" fill="#222">FOUNDER_WALLET,</text>
+<text x="1460" y="3134" text-anchor="middle" fill="#222">FOUNDER_BOOTSTRAP_CODE,</text>
+<rect x="1080" y="2830" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="2830" x2="1180" y2="2830" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="2890" x2="1180" y2="2890" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="2848" text-anchor="middle" fill="#222">CLA.md (texto</text>
+<text x="1130" y="2864" text-anchor="middle" fill="#222">canónico del</text>
+<text x="1130" y="2880" text-anchor="middle" fill="#222">acuerdo)</text>
+<rect x="1080" y="3370" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="3370" x2="1180" y2="3370" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="3430" x2="1180" y2="3430" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="3364" text-anchor="middle" fill="#222">users (wallet,</text>
+<text x="1130" y="3380" text-anchor="middle" fill="#222">nombre, rol,</text>
+<text x="1130" y="3396" text-anchor="middle" fill="#222">supervisión,</text>
+<text x="1130" y="3412" text-anchor="middle" fill="#222">cla_signed,</text>
+<rect x="750" y="3370" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="750" y1="3370" x2="850" y2="3370" stroke="#222" stroke-width="1.5"/>
+<line x1="750" y1="3430" x2="850" y2="3430" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="3356" text-anchor="middle" fill="#222">invites</text>
+<text x="800" y="3372" text-anchor="middle" fill="#222">(código,</text>
+<text x="800" y="3388" text-anchor="middle" fill="#222">emisor,</text>
+<text x="800" y="3404" text-anchor="middle" fill="#222">used_by,</text>
+<rect x="1410" y="3370" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1410" y1="3370" x2="1510" y2="3370" stroke="#222" stroke-width="1.5"/>
+<line x1="1410" y1="3430" x2="1510" y2="3430" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="3380" text-anchor="middle" fill="#222">cla_signatures</text>
+<text x="1460" y="3396" text-anchor="middle" fill="#222">(hash, firma,</text>
+<text x="1460" y="3412" text-anchor="middle" fill="#222">estado de</text>
+<text x="1460" y="3428" text-anchor="middle" fill="#222">anclaje)</text>
+<rect x="1410" y="3560" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1410" y1="3560" x2="1510" y2="3560" stroke="#222" stroke-width="1.5"/>
+<line x1="1410" y1="3620" x2="1510" y2="3620" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="3562" text-anchor="middle" fill="#222">anchor_queue</text>
+<text x="1460" y="3578" text-anchor="middle" fill="#222">(huellas</text>
+<text x="1460" y="3594" text-anchor="middle" fill="#222">pendientes de</text>
+<text x="1460" y="3610" text-anchor="middle" fill="#222">anclar en</text>
+<rect x="1740" y="3370" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1740" y1="3370" x2="1840" y2="3370" stroke="#222" stroke-width="1.5"/>
+<line x1="1740" y1="3430" x2="1840" y2="3430" stroke="#222" stroke-width="1.5"/>
+<text x="1790" y="3372" text-anchor="middle" fill="#222">user_emails</text>
+<text x="1790" y="3388" text-anchor="middle" fill="#222">(correo</text>
+<text x="1790" y="3404" text-anchor="middle" fill="#222">corporativo y</text>
+<text x="1790" y="3420" text-anchor="middle" fill="#222">segundo</text>
+<text x="90" y="3760" font-size="11" fill="#777">Login y sesión: invitación + wallet + firma del CLA, reingreso por reto de un solo uso, cookie JWT, middleware, Entra tras flag, escotilla del founder y puertas por rol · docs/dfd/login-y-sesion.json · commit 4032c7c · * = flujo con datos sensibles</text>
+</svg>

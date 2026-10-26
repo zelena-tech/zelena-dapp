@@ -3,7 +3,7 @@
 CONTEXTO — La metodología de 8 pasos del manifiesto **ya asume un cliente que
 paga**: Intake → Publicación → Aplicación → Asignación → Ejecución → Evaluación →
 Distribución → Reputación. Y el modelo de datos ya está casi completo:
-`projects` tiene `type` (SAS|DAO, inmutable tras intake), `budget_usd`,
+`projects` tiene `type` (cliente o comunidad, inmutable tras intake), `budget_usd`,
 `acceptance` y la máquina de estados `Open → Assigned → Delivered → Scored →
 Distributed`; `milestones` tiene `pct`, `amount_usd` y `approved` — la estructura
 20/70/10 del Modo A ya es representable.
@@ -28,7 +28,7 @@ factura sale de Odoo.
 
 ## Lo que esto NO es (y por qué la distinción importa)
 
-Esto es un **contrato de prestación de servicios**: la SAS cotiza, entrega y
+Esto es un **contrato de prestación de servicios**: Zelena cotiza, entrega y
 factura; el cliente paga por lo entregado. No hay promesa de rendimiento, no hay
 intermediación de recursos ajenos, no hay producto financiero. **No requiere
 autorización financiera ni gate regulatorio.** Es, literalmente, el negocio que
@@ -38,7 +38,7 @@ La frontera que **sí** tiene gate está una capa más adelante:
 
 | Escenario | Qué es | Gate |
 |---|---|---|
-| El cliente paga contra hito aprobado, factura de la SAS | Prestación de servicios. **Modo A. Este WP.** | Ninguno nuevo |
+| El cliente paga contra hito aprobado, factura de Zelena | Prestación de servicios. **Modo A. Este WP.** | Ninguno nuevo |
 | ZELENA **retiene** el dinero del cliente hasta la entrega | Custodia de recursos de terceros | Plano 04: escrow, auditoría independiente + legal |
 | El dinero del cliente se distribuye solo, on-chain, por score | **Modo B** | Los tres gates del plano 04 + WP10 |
 | ZELENA recibe dinero del público ofreciendo un retorno | Captación (Art. 316 CP) | **No está en ningún roadmap.** No confundir con lo anterior |
@@ -48,7 +48,7 @@ factura contra hito aprobado, como cualquier consultora.
 
 **La única obligación real de Modo A** es tributaria, no regulatoria: retención en
 la fuente por servicios al pagar a contribuidores independientes, y clasificación
-correcta de la relación (servicios vs. laboral) para cada quien. Dueño: Juan
+correcta de la relación (servicios vs. laboral) para cada quien. Dueño: Finanzas
 (FinOps/contratos). No bloquea construir; bloquea el primer pago — exactamente
 igual que hoy, sin este WP.
 
@@ -145,7 +145,7 @@ correcto del arranque de dos lados.
 - [ ] Cero campos financieros sensibles en el esquema: pasa
   `auditSchemaForSecretColumns` y la revisión de frontera con Odoo.
 
-OWNER — Fausto (modelo + permisos) · David (intake y vista de cliente) ·
-Juan (retención en la fuente y clasificación de contribuidores, antes del 1er pago) ·
-Vale (valida los tests de permisos: es la superficie crítica).
+OWNER — Plataforma (modelo + permisos) · Producto (intake y vista de cliente) ·
+Finanzas (retención en la fuente y clasificación de contribuidores, antes del 1er pago) ·
+Operaciones (valida los tests de permisos: es la superficie crítica).
 TAMAÑO — M · Depende: WP17 (clients + RBAC), WP14 (asignaciones). Sin gate regulatorio.

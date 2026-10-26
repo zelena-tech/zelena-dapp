@@ -3,6 +3,7 @@ import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { applySchema } from "@/lib/validation";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
+import { esBorrador, recibeAplicaciones } from "@/lib/state-machine";
 
 export const dynamic = "force-dynamic";
 
@@ -20,12 +21,15 @@ export async function POST(req: NextRequest) {
   const { projectId, approach, timeline } = parsed.data;
 
   const db = getDb();
-  const project = db.prepare(`SELECT id, state FROM projects WHERE id = ?`).get(projectId) as
-    | { id: number; state: string }
+  const project = db.prepare(`SELECT id, state, draft FROM projects WHERE id = ?`).get(projectId) as
+    | { id: number; state: string; draft: number }
     | undefined;
-  if (!project) return NextResponse.json({ error: "Proyecto no encontrado." }, { status: 404 });
-  if (project.state !== "Open") {
-    return NextResponse.json({ error: "Este bounty ya no recibe aplicaciones." }, { status: 409 });
+  // Un borrador no existe para el público: mismo 404 que un id que no existe.
+  if (!project || esBorrador(project)) {
+    return NextResponse.json({ error: "Proyecto no encontrado." }, { status: 404 });
+  }
+  if (!recibeAplicaciones(project)) {
+    return NextResponse.json({ error: "Este proyecto ya no recibe aplicaciones." }, { status: 409 });
   }
 
   try {
@@ -33,7 +37,7 @@ export async function POST(req: NextRequest) {
       `INSERT INTO applications (project_id, wallet, approach, timeline) VALUES (?, ?, ?, ?)`
     ).run(projectId, session.wallet, approach, timeline);
   } catch {
-    return NextResponse.json({ error: "Ya aplicaste a este bounty." }, { status: 409 });
+    return NextResponse.json({ error: "Ya aplicaste a este proyecto." }, { status: 409 });
   }
   return NextResponse.json({ ok: true });
 }

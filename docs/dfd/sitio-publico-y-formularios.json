@@ -1,0 +1,721 @@
+{
+  "feature": "sitio-publico-y-formularios",
+  "titulo": "Sitio público y formularios (landing, manifiesto, método, empresas, contacto, encuentros, legales, menú y pie)",
+  "commit": "4032c7c",
+  "elementos": [
+    {
+      "id": "u",
+      "tipo": "actor",
+      "nombre": "Visitante o prospecto (navegador)",
+      "codigo": "apps/web/app/layout.tsx#RootLayout"
+    },
+    {
+      "id": "founder",
+      "tipo": "actor",
+      "nombre": "Founder en /admin (navegador)",
+      "codigo": "apps/web/app/admin/page.tsx#AdminPage"
+    },
+    {
+      "id": "explorador",
+      "tipo": "actor",
+      "nombre": "Explorador público de la red de pruebas (stellar.expert)",
+      "codigo": "apps/web/src/lib/pruebas-testnet.ts#EXPLORADOR_TX"
+    },
+    {
+      "id": "p_redir",
+      "tipo": "proceso",
+      "nombre": "Redirecciones 308",
+      "codigo": "apps/web/next.config.mjs#redirects"
+    },
+    {
+      "id": "p_layout",
+      "tipo": "proceso",
+      "nombre": "Layout raíz (sesión, Nav, banner, pie)",
+      "codigo": "apps/web/app/layout.tsx#RootLayout"
+    },
+    {
+      "id": "p_menu",
+      "tipo": "proceso",
+      "nombre": "Menú contextual (navegador)",
+      "codigo": "apps/web/src/components/NavContextual.tsx#NavContextual"
+    },
+    {
+      "id": "p_pie",
+      "tipo": "proceso",
+      "nombre": "Pie de página",
+      "codigo": "apps/web/src/components/Footer.tsx#Footer"
+    },
+    {
+      "id": "p_landing",
+      "tipo": "proceso",
+      "nombre": "Landing /",
+      "codigo": "apps/web/app/page.tsx#Landing"
+    },
+    {
+      "id": "p_manifiesto",
+      "tipo": "proceso",
+      "nombre": "Página /manifiesto",
+      "codigo": "apps/web/app/manifiesto/page.tsx#Manifiesto"
+    },
+    {
+      "id": "p_metodo",
+      "tipo": "proceso",
+      "nombre": "Página /metodo",
+      "codigo": "apps/web/app/metodo/page.tsx#Metodo"
+    },
+    {
+      "id": "p_empresas",
+      "tipo": "proceso",
+      "nombre": "Página /empresas",
+      "codigo": "apps/web/app/empresas/page.tsx#Empresas"
+    },
+    {
+      "id": "p_servicios",
+      "tipo": "proceso",
+      "nombre": "Página /empresas/servicios",
+      "codigo": "apps/web/app/empresas/servicios/page.tsx#Servicios"
+    },
+    {
+      "id": "p_contacto",
+      "tipo": "proceso",
+      "nombre": "Página /empresas/contacto",
+      "codigo": "apps/web/app/empresas/contacto/page.tsx#Contacto"
+    },
+    {
+      "id": "p_encuentros",
+      "tipo": "proceso",
+      "nombre": "Página /encuentros",
+      "codigo": "apps/web/app/encuentros/page.tsx#Encuentros"
+    },
+    {
+      "id": "p_privacidad",
+      "tipo": "proceso",
+      "nombre": "Página /privacidad",
+      "codigo": "apps/web/app/privacidad/page.tsx#Privacidad"
+    },
+    {
+      "id": "p_acuerdo",
+      "tipo": "proceso",
+      "nombre": "Página /acuerdo",
+      "codigo": "apps/web/app/acuerdo/page.tsx#Acuerdo"
+    },
+    {
+      "id": "p_form_contacto",
+      "tipo": "proceso",
+      "nombre": "Formulario de contacto (navegador)",
+      "codigo": "apps/web/src/components/ContactoForm.tsx#ContactoForm"
+    },
+    {
+      "id": "p_form_aviso",
+      "tipo": "proceso",
+      "nombre": "Formulario de aviso de encuentros (navegador)",
+      "codigo": "apps/web/src/components/AvisoEncuentrosForm.tsx#AvisoEncuentrosForm"
+    },
+    {
+      "id": "p_api_contacto",
+      "tipo": "proceso",
+      "nombre": "POST /api/empresas/contacto (exige la autorización de datos)",
+      "codigo": "apps/web/app/api/empresas/contacto/route.ts#POST"
+    },
+    {
+      "id": "p_api_aviso",
+      "tipo": "proceso",
+      "nombre": "POST /api/encuentros/aviso (exige la autorización de datos)",
+      "codigo": "apps/web/app/api/encuentros/aviso/route.ts#POST"
+    },
+    {
+      "id": "p_admin",
+      "tipo": "proceso",
+      "nombre": "Página /admin (Solicitudes de empresas y Avisos de encuentros)",
+      "codigo": "apps/web/app/admin/page.tsx#AdminPage"
+    },
+    {
+      "id": "s_leads",
+      "tipo": "almacen",
+      "nombre": "Tabla leads (SQLite)",
+      "codigo": "apps/web/src/lib/schema.sql#leads"
+    },
+    {
+      "id": "s_consents",
+      "tipo": "almacen",
+      "nombre": "Tabla lead_consents: prueba de la autorización (versión y huella del aviso, fecha UTC; solo inserción, sin IP)",
+      "codigo": "apps/web/src/lib/schema.sql#lead_consents"
+    },
+    {
+      "id": "s_db",
+      "tipo": "almacen",
+      "nombre": "Base SQLite: proyectos, entregas, firmas, usuarios, ritos y genoma (solo lectura aquí)",
+      "codigo": "apps/web/src/lib/db.ts#getDb"
+    },
+    {
+      "id": "s_rl",
+      "tipo": "almacen",
+      "nombre": "Contadores de límite de tasa en memoria",
+      "codigo": "apps/web/src/lib/rate-limit.ts#rateLimit"
+    },
+    {
+      "id": "s_catalogo",
+      "tipo": "almacen",
+      "nombre": "Catálogo de servicios e intereses (constante)",
+      "codigo": "apps/web/src/lib/servicios.ts#INTERESES"
+    },
+    {
+      "id": "s_encuentros",
+      "tipo": "almacen",
+      "nombre": "Lista de encuentros publicados (constante)",
+      "codigo": "apps/web/src/lib/encuentros.ts#ENCUENTROS"
+    },
+    {
+      "id": "s_pruebas",
+      "tipo": "almacen",
+      "nombre": "Pruebas de testnet versionadas (src/data/pruebas-testnet.json)",
+      "codigo": "apps/web/src/lib/pruebas-testnet.ts#PRUEBAS_TESTNET"
+    },
+    {
+      "id": "s_cla",
+      "tipo": "almacen",
+      "nombre": "Texto del acuerdo (CLA.md)",
+      "codigo": "apps/web/src/lib/cla.ts#readClaText"
+    },
+    {
+      "id": "s_env",
+      "tipo": "almacen",
+      "nombre": "Configuración del despliegue (ZELENA_LEGAL_NAME, ZELENA_PRIVACY_EMAIL)",
+      "codigo": "apps/web/src/lib/legal.ts#responsableTratamiento"
+    },
+    {
+      "id": "s_aviso",
+      "tipo": "almacen",
+      "nombre": "Texto y versión del aviso de privacidad (constante)",
+      "codigo": "apps/web/src/lib/aviso-privacidad.ts#AVISO_PRIVACIDAD, AVISO_PRIVACIDAD_VERSION, textoCanonicoAviso"
+    }
+  ],
+  "flujos": [
+    {
+      "id": "f1",
+      "de": "u",
+      "a": "p_redir",
+      "nombre": "Pide una ruta vieja",
+      "protocolo": "HTTPS",
+      "datos": "GET /ecosistema, /academia/por-que-sas-dao, /whitepaper o /equipo/seguimiento",
+      "sensible": false
+    },
+    {
+      "id": "f2",
+      "de": "p_redir",
+      "a": "u",
+      "nombre": "Redirección permanente",
+      "protocolo": "HTTPS",
+      "datos": "308 Location: /metodo, /academia/construir-sin-riesgo, /manifiesto o /equipo/dashboard",
+      "sensible": false
+    },
+    {
+      "id": "f3",
+      "de": "u",
+      "a": "p_layout",
+      "nombre": "Pide cualquier página pública",
+      "protocolo": "HTTPS",
+      "datos": "GET de la página + cookie zelena_session (JWT) si hay sesión",
+      "sensible": true
+    },
+    {
+      "id": "f4",
+      "de": "s_db",
+      "a": "p_layout",
+      "nombre": "Acceso al trabajo y mutación anunciada",
+      "protocolo": "SQL",
+      "datos": "users y membresías de la wallet de la sesión (accesoEquipo); genome_versions (pendingMutation)",
+      "sensible": false
+    },
+    {
+      "id": "f5",
+      "de": "p_layout",
+      "a": "p_menu",
+      "nombre": "Banderas del menú",
+      "protocolo": "HTTPS",
+      "datos": "conSesion, accesoEquipo, esInterno, puedeVerTodo, isFounder (claims) y botón de perfil con nombre visible y wallet",
+      "sensible": false
+    },
+    {
+      "id": "f6",
+      "de": "p_layout",
+      "a": "p_pie",
+      "nombre": "Pinta el pie",
+      "protocolo": "Llamada en proceso",
+      "datos": "FOOTER_GRUPOS y AVISO_LEGAL (constantes de lib/menu.ts)",
+      "sensible": false
+    },
+    {
+      "id": "f7",
+      "de": "u",
+      "a": "p_landing",
+      "nombre": "Abre la landing",
+      "protocolo": "HTTPS",
+      "datos": "GET /",
+      "sensible": false
+    },
+    {
+      "id": "f8",
+      "de": "s_db",
+      "a": "p_landing",
+      "nombre": "Cifras en vivo y próximo rito",
+      "protocolo": "SQL",
+      "datos": "COUNT de projects abiertos y publicados (draft = 0), milestones aprobados de proyectos publicados, assignment_events 'aprobar' de cuentas no demo; tx_id de cla_signatures; próximo rite_session de comunidad",
+      "sensible": false
+    },
+    {
+      "id": "f9",
+      "de": "s_pruebas",
+      "a": "p_landing",
+      "nombre": "Pruebas verificables",
+      "protocolo": "Import de módulo",
+      "datos": "hashes de transacción y ids de contrato públicos de la red de pruebas",
+      "sensible": false
+    },
+    {
+      "id": "f10",
+      "de": "s_encuentros",
+      "a": "p_landing",
+      "nombre": "Encuentros próximos",
+      "protocolo": "Import de módulo",
+      "datos": "lista ENCUENTROS (hoy vacía)",
+      "sensible": false
+    },
+    {
+      "id": "f11",
+      "de": "p_landing",
+      "a": "u",
+      "nombre": "HTML de la landing",
+      "protocolo": "HTTPS",
+      "datos": "frase, cuatro puertas, cifras, tarjeta 'Compruébalo tú mismo', lo próximo y CTA",
+      "sensible": false
+    },
+    {
+      "id": "f12",
+      "de": "u",
+      "a": "explorador",
+      "nombre": "Abre la transacción en el explorador",
+      "protocolo": "HTTPS",
+      "datos": "hash de transacción o id de contrato (públicos)",
+      "sensible": false
+    },
+    {
+      "id": "f13",
+      "de": "u",
+      "a": "p_manifiesto",
+      "nombre": "Abre el manifiesto",
+      "protocolo": "HTTPS",
+      "datos": "GET /manifiesto",
+      "sensible": false
+    },
+    {
+      "id": "f14",
+      "de": "p_manifiesto",
+      "a": "u",
+      "nombre": "HTML del manifiesto",
+      "protocolo": "HTTPS",
+      "datos": "origen y nueve principios (constantes de la página)",
+      "sensible": false
+    },
+    {
+      "id": "f15",
+      "de": "u",
+      "a": "p_metodo",
+      "nombre": "Abre el método",
+      "protocolo": "HTTPS",
+      "datos": "GET /metodo",
+      "sensible": false
+    },
+    {
+      "id": "f16",
+      "de": "p_metodo",
+      "a": "u",
+      "nombre": "HTML del método",
+      "protocolo": "HTTPS",
+      "datos": "PASOS_METODO (lib/metodo.ts), reparto 20/70/10",
+      "sensible": false
+    },
+    {
+      "id": "f17",
+      "de": "u",
+      "a": "p_empresas",
+      "nombre": "Abre /empresas",
+      "protocolo": "HTTPS",
+      "datos": "GET /empresas",
+      "sensible": false
+    },
+    {
+      "id": "f18",
+      "de": "p_empresas",
+      "a": "u",
+      "nombre": "HTML comercial",
+      "protocolo": "HTTPS",
+      "datos": "fases, pasos, Stellar, enlaces a servicios, manifiesto y contacto",
+      "sensible": false
+    },
+    {
+      "id": "f19",
+      "de": "u",
+      "a": "p_servicios",
+      "nombre": "Abre /empresas/servicios",
+      "protocolo": "HTTPS",
+      "datos": "GET /empresas/servicios",
+      "sensible": false
+    },
+    {
+      "id": "f20",
+      "de": "s_catalogo",
+      "a": "p_servicios",
+      "nombre": "Seis líneas de servicio",
+      "protocolo": "Import de módulo",
+      "datos": "SERVICIOS (slug, nombre, línea, incluye, meta)",
+      "sensible": false
+    },
+    {
+      "id": "f21",
+      "de": "p_servicios",
+      "a": "u",
+      "nombre": "HTML del catálogo",
+      "protocolo": "HTTPS",
+      "datos": "líneas y enlaces /empresas/contacto?interes=<slug>",
+      "sensible": false
+    },
+    {
+      "id": "f22",
+      "de": "u",
+      "a": "p_contacto",
+      "nombre": "Abre el contacto",
+      "protocolo": "HTTPS",
+      "datos": "GET /empresas/contacto?interes=<slug>",
+      "sensible": false
+    },
+    {
+      "id": "f23",
+      "de": "p_contacto",
+      "a": "p_form_contacto",
+      "nombre": "Monta el formulario",
+      "protocolo": "HTTPS",
+      "datos": "interesInicial (searchParams.interes)",
+      "sensible": false
+    },
+    {
+      "id": "f24",
+      "de": "s_catalogo",
+      "a": "p_form_contacto",
+      "nombre": "Opciones del selector",
+      "protocolo": "Import de módulo",
+      "datos": "INTERESES: harmony, seis líneas, otro",
+      "sensible": false
+    },
+    {
+      "id": "f25",
+      "de": "u",
+      "a": "p_form_contacto",
+      "nombre": "Llena el formulario",
+      "protocolo": "Interacción de usuario",
+      "datos": "nombre, correo, empresa, interés, mensaje y casilla de autorización (Ley 1581)",
+      "sensible": true
+    },
+    {
+      "id": "f26",
+      "de": "p_form_contacto",
+      "a": "p_api_contacto",
+      "nombre": "Envía la solicitud",
+      "protocolo": "HTTPS",
+      "datos": "POST JSON {nombre, email, empresa, interes, mensaje, sitio, acepto, aviso}: la casilla viaja (acepto) con la versión del aviso",
+      "sensible": true
+    },
+    {
+      "id": "f27",
+      "de": "p_api_contacto",
+      "a": "s_rl",
+      "nombre": "Cuenta el envío",
+      "protocolo": "Memoria del proceso",
+      "datos": "clave lead:<IP> (último valor de X-Forwarded-For, o X-Azure-ClientIP con el X-Azure-FDID de nuestro Front Door), 5 por 10 min",
+      "sensible": true
+    },
+    {
+      "id": "f28",
+      "de": "s_catalogo",
+      "a": "p_api_contacto",
+      "nombre": "Valida el interés",
+      "protocolo": "Import de módulo",
+      "datos": "SLUGS_INTERES para el enum de leadSchema",
+      "sensible": false
+    },
+    {
+      "id": "f29",
+      "de": "p_api_contacto",
+      "a": "s_leads",
+      "nombre": "Guarda la solicitud",
+      "protocolo": "SQL",
+      "datos": "INSERT nombre, email, empresa, interes, mensaje, created_at UTC (estado 'nuevo' por defecto), en la misma transacción que lead_consents",
+      "sensible": true
+    },
+    {
+      "id": "f30",
+      "de": "p_api_contacto",
+      "a": "p_form_contacto",
+      "nombre": "Respuesta",
+      "protocolo": "HTTPS",
+      "datos": "200 {ok:true} | 400 {error} (también sin la casilla) | 409 {error} (el aviso cambió) | 429 {error}",
+      "sensible": false
+    },
+    {
+      "id": "f31",
+      "de": "u",
+      "a": "p_encuentros",
+      "nombre": "Abre /encuentros",
+      "protocolo": "HTTPS",
+      "datos": "GET /encuentros",
+      "sensible": false
+    },
+    {
+      "id": "f32",
+      "de": "s_encuentros",
+      "a": "p_encuentros",
+      "nombre": "Fechas publicadas y formatos",
+      "protocolo": "Import de módulo",
+      "datos": "ENCUENTROS (vacía) y FORMATOS",
+      "sensible": false
+    },
+    {
+      "id": "f33",
+      "de": "p_encuentros",
+      "a": "p_form_aviso",
+      "nombre": "Monta el formulario de aviso",
+      "protocolo": "HTTPS",
+      "datos": "HTML con AvisoEncuentrosForm",
+      "sensible": false
+    },
+    {
+      "id": "f34",
+      "de": "u",
+      "a": "p_form_aviso",
+      "nombre": "Deja su correo",
+      "protocolo": "Interacción de usuario",
+      "datos": "nombre, correo, ciudad y casilla de autorización",
+      "sensible": true
+    },
+    {
+      "id": "f35",
+      "de": "p_form_aviso",
+      "a": "p_api_aviso",
+      "nombre": "Envía el aviso",
+      "protocolo": "HTTPS",
+      "datos": "POST JSON {nombre, email, ciudad, sitio, acepto, aviso}: la casilla viaja (acepto) con la versión del aviso",
+      "sensible": true
+    },
+    {
+      "id": "f36",
+      "de": "p_api_aviso",
+      "a": "s_rl",
+      "nombre": "Cuenta el envío",
+      "protocolo": "Memoria del proceso",
+      "datos": "clave aviso:<IP> (misma regla de IP que el contacto), 5 por 10 min",
+      "sensible": true
+    },
+    {
+      "id": "f37",
+      "de": "p_api_aviso",
+      "a": "s_leads",
+      "nombre": "Guarda el aviso",
+      "protocolo": "SQL",
+      "datos": "INSERT nombre, email, empresa NULL, interes 'encuentros', mensaje 'Ciudad: …', created_at UTC, en la misma transacción que lead_consents",
+      "sensible": true
+    },
+    {
+      "id": "f38",
+      "de": "p_api_aviso",
+      "a": "p_form_aviso",
+      "nombre": "Respuesta",
+      "protocolo": "HTTPS",
+      "datos": "200 {ok:true} | 400 {error} (también sin la casilla) | 409 {error} (el aviso cambió) | 429 {error}",
+      "sensible": false
+    },
+    {
+      "id": "f39",
+      "de": "u",
+      "a": "p_privacidad",
+      "nombre": "Abre /privacidad",
+      "protocolo": "HTTPS",
+      "datos": "GET /privacidad",
+      "sensible": false
+    },
+    {
+      "id": "f40",
+      "de": "s_env",
+      "a": "p_privacidad",
+      "nombre": "Responsable del tratamiento",
+      "protocolo": "Variables de entorno",
+      "datos": "ZELENA_LEGAL_NAME y ZELENA_PRIVACY_EMAIL (o 'Zelena' y el formulario)",
+      "sensible": false
+    },
+    {
+      "id": "f41",
+      "de": "p_privacidad",
+      "a": "u",
+      "nombre": "HTML del aviso",
+      "protocolo": "HTTPS",
+      "datos": "qué datos, para qué, qué no se hace, derechos, canal, cómo se prueba la autorización, versión y huella del aviso",
+      "sensible": false
+    },
+    {
+      "id": "f42",
+      "de": "u",
+      "a": "p_acuerdo",
+      "nombre": "Abre /acuerdo",
+      "protocolo": "HTTPS",
+      "datos": "GET /acuerdo",
+      "sensible": false
+    },
+    {
+      "id": "f43",
+      "de": "s_cla",
+      "a": "p_acuerdo",
+      "nombre": "Texto y huella del acuerdo",
+      "protocolo": "Archivo (fs)",
+      "datos": "CLA.md y su sha256 (claCanonicalHash)",
+      "sensible": false
+    },
+    {
+      "id": "f44",
+      "de": "p_acuerdo",
+      "a": "u",
+      "nombre": "HTML del acuerdo",
+      "protocolo": "HTTPS",
+      "datos": "resumen, texto completo y huella SHA-256",
+      "sensible": false
+    },
+    {
+      "id": "f45",
+      "de": "founder",
+      "a": "p_admin",
+      "nombre": "Abre /admin",
+      "protocolo": "HTTPS",
+      "datos": "GET /admin + cookie zelena_session (rol founder leído de la base)",
+      "sensible": true
+    },
+    {
+      "id": "f46",
+      "de": "s_leads",
+      "a": "p_admin",
+      "nombre": "Lee solicitudes y avisos",
+      "protocolo": "SQL",
+      "datos": "SELECT * FROM leads ORDER BY id DESC LIMIT 100",
+      "sensible": true
+    },
+    {
+      "id": "f47",
+      "de": "p_admin",
+      "a": "founder",
+      "nombre": "Listas de prospectos",
+      "protocolo": "HTTPS",
+      "datos": "nombre, correo (mailto), empresa, interés, mensaje o ciudad, fecha UTC",
+      "sensible": true
+    },
+    {
+      "id": "f48",
+      "de": "p_api_contacto",
+      "a": "s_consents",
+      "nombre": "Guarda la prueba de la autorización",
+      "protocolo": "SQL",
+      "datos": "INSERT lead_id, formulario 'empresas/contacto', aviso_version, aviso_sha256, accepted_at (UTC); sin IP ni navegador",
+      "sensible": true
+    },
+    {
+      "id": "f49",
+      "de": "p_api_aviso",
+      "a": "s_consents",
+      "nombre": "Guarda la prueba de la autorización",
+      "protocolo": "SQL",
+      "datos": "INSERT lead_id, formulario 'encuentros', aviso_version, aviso_sha256, accepted_at (UTC); sin IP ni navegador",
+      "sensible": true
+    },
+    {
+      "id": "f50",
+      "de": "s_aviso",
+      "a": "p_privacidad",
+      "nombre": "Texto del aviso",
+      "protocolo": "Import de módulo",
+      "datos": "AVISO_PRIVACIDAD (bloques) y AVISO_PRIVACIDAD_VERSION",
+      "sensible": false
+    },
+    {
+      "id": "f51",
+      "de": "s_aviso",
+      "a": "p_api_contacto",
+      "nombre": "Versión vigente y huella",
+      "protocolo": "Import de módulo",
+      "datos": "AVISO_PRIVACIDAD_VERSION; sha256 del texto canónico (con el responsable)",
+      "sensible": false
+    },
+    {
+      "id": "f52",
+      "de": "s_aviso",
+      "a": "p_api_aviso",
+      "nombre": "Versión vigente y huella",
+      "protocolo": "Import de módulo",
+      "datos": "AVISO_PRIVACIDAD_VERSION; sha256 del texto canónico (con el responsable)",
+      "sensible": false
+    }
+  ],
+  "fronteras": [
+    {
+      "nombre": "Internet: navegadores del visitante y del founder",
+      "contiene": [
+        "u",
+        "founder",
+        "p_menu",
+        "p_form_contacto",
+        "p_form_aviso"
+      ]
+    },
+    {
+      "nombre": "Servicio externo: explorador de la red de pruebas de Stellar",
+      "contiene": [
+        "explorador"
+      ]
+    },
+    {
+      "nombre": "Servidor Next.js (Azure App Service)",
+      "contiene": [
+        "p_redir",
+        "p_layout",
+        "p_pie",
+        "p_landing",
+        "p_manifiesto",
+        "p_metodo",
+        "p_empresas",
+        "p_servicios",
+        "p_contacto",
+        "p_encuentros",
+        "p_privacidad",
+        "p_acuerdo",
+        "p_api_contacto",
+        "p_api_aviso",
+        "p_admin",
+        "s_rl",
+        "s_catalogo",
+        "s_encuentros",
+        "s_pruebas",
+        "s_aviso"
+      ]
+    },
+    {
+      "nombre": "Almacenamiento persistente (SQLite y archivos del paquete)",
+      "contiene": [
+        "s_leads",
+        "s_consents",
+        "s_db",
+        "s_cla"
+      ]
+    },
+    {
+      "nombre": "Configuración del despliegue (App Settings)",
+      "contiene": [
+        "s_env"
+      ]
+    }
+  ]
+}

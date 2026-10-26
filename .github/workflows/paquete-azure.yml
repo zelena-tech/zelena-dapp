@@ -1,0 +1,147 @@
+# Paquete de despliegue para Azure App Service (Linux, NODE:22-lts).
+#
+# La build standalone se hace aquí y no en Windows: en Windows falla con
+# `EPERM symlink` y los binarios nativos (better-sqlite3) tienen que ser de
+# Linux. Este job NO despliega: deja el zip como artefacto y el despliegue se
+# hace a mano (ver docs/DESPLIEGUE-V1.md, "Paquete del despliegue").
+name: paquete-azure
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [feat/v1-unificada, develop]
+
+permissions:
+  contents: read
+
+jobs:
+  paquete:
+    # 22.04 y no latest: glibc 2.35, compatible con la imagen Node 22 de App Service.
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar (lockfile de la raíz)
+        run: npm ci
+
+      # El lockfile se genera en Windows y npm omite los binarios opcionales de
+      # otras plataformas (npm/cli#4828). Rollup y esbuild son de vitest (no van
+      # al paquete); se instalan los de Linux con la versión exacta ya resuelta.
+      - name: Binarios de Linux de las herramientas de test
+        run: |
+          RV=$(node -p "require('rollup/package.json').version")
+          EV=$(node -p "require('esbuild/package.json').version")
+          npm install --no-save --no-package-lock "@rollup/rollup-linux-x64-gnu@$RV" "@esbuild/linux-x64@$EV"
+
+      - name: Tipos y tests
+        working-directory: apps/web
+        run: |
+          npx tsc --noEmit -p .
+          npm test
+
+      - name: Build standalone
+        env:
+          NEXT_STANDALONE: "1"
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: npm --workspace apps/web run build
+
+      - name: Armar el paquete
+        run: |
+          set -euo pipefail
+          S=apps/web/.next/standalone
+          # standalone no copia ni los estáticos ni public/.
+          cp -r apps/web/.next/static "$S/apps/web/.next/static"
+          if [ -d apps/web/public ]; then cp -r apps/web/public "$S/apps/web/public"; fi
+          mkdir -p "$S/apps/web/scripts"
+          cp apps/web/scripts/verificar-paquete.mjs "$S/apps/web/scripts/"
+          cp apps/web/start-standalone.sh "$S/start.sh"
+          chmod +x "$S/start.sh"
+          # Los enlaces simbólicos (el propio workspace @zelena/web) no sobreviven
+          # al unzip de Kudu y la app no los usa: se listan y se quitan.
+          echo "Enlaces simbólicos en el bundle:"; find "$S" -type l -print
+          find "$S" -type l -delete
+          node "$S/apps/web/scripts/verificar-paquete.mjs" "$S/apps/web"
+          # El repo es público y el paquete no debe llevar entornos, bases ni llaves.
+          prohibidos=$(find "$S" \( -name '.env*' -o -name '*.db' -o -name '*.db-*' -o -name '*.secret' \) -print)
+          if [ -n "$prohibidos" ]; then echo "Archivos que no pueden ir en el paquete:"; echo "$prohibidos"; exit 1; fi
+          (cd "$S" && zip -qr "$GITHUB_WORKSPACE/paquete-azure.zip" .)
+          ls -la paquete-azure.zip
+          echo "BUILD_ID: $(cat apps/web/.next/BUILD_ID)"
+
+      # Ensayo en Linux del MISMO zip que se va a subir, sobre una base con el
+      # esquema que hoy corre en producción (fixture del 58ee2fd): arranca con
+      # start.sh, migra y responde. Si algo falla, no hay artefacto.
+      - name: Ensayo del paquete (base con el esquema desplegado)
+        run: |
+          set -euo pipefail
+          E="$RUNNER_TEMP/ensayo"; mkdir -p "$E/app" "$E/data"
+          unzip -q paquete-azure.zip -d "$E/app"
+          node -e "const {DatabaseSync}=require('node:sqlite');const fs=require('fs');new DatabaseSync(process.argv[1]).exec(fs.readFileSync(process.argv[2],'utf8'))" "$E/data/zelena.db" apps/web/src/lib/__fixtures__/schema-58ee2fd.sql
+          export DATABASE_FILE="$E/data/zelena.db" DATABASE_DRIVER=sqlite PORT=8080 NODE_ENV=production
+          export SESSION_SECRET="$(openssl rand -hex 32)" FOUNDER_WALLET=GA7ZELENAFOUNDERDEMOWALLET000000000000000000000000000AAA
+          sh "$E/app/start.sh" > "$E/server.log" 2>&1 &
+          for i in $(seq 1 40); do curl -sf -o /dev/null http://127.0.0.1:8080/api/cla && break; sleep 1; done
+          falla() { echo "FALLA: $1"; tail -80 "$E/server.log"; exit 1; }
+          for p in / /manifiesto /book-a-demo /metodo /comunidad /comunidad/ritos /encuentros /empresas /empresas/servicios /empresas/contacto /agora /academia /gobernanza /entrar /privacidad /acuerdo /robots.txt /sitemap.xml /landing/avatar-beanie-cut.png /landing/zelena-wordmark.svg /og/sitio-es.png; do
+            c=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:8080$p"); echo "$p $c"; [ "$c" = 200 ] || falla "$p respondió $c"
+          done
+          # La landing en inglés (WP33): public/ viajó en el paquete (imagen y wordmark con su
+          # tipo) y el titular sale en el HTML del servidor, no solo después de hidratar.
+          for par in "/landing/avatar-beanie-cut.png image/png" "/landing/zelena-wordmark.svg image/svg+xml" "/og/sitio-es.png image/png"; do
+            p="${par%% *}"; tipo="${par##* }"
+            t=$(curl -s -o /dev/null -w "%{content_type}" "http://127.0.0.1:8080$p"); echo "$p $t"
+            case "$t" in "$tipo"*) ;; *) falla "$p con tipo '$t' (se esperaba $tipo)" ;; esac
+          done
+          curl -s http://127.0.0.1:8080/ > "$E/inicio.html"
+          grep -Eq '<h1 [^>]*>Performance-based payroll' "$E/inicio.html" || falla "/ sin el H1 en inglés en el HTML del servidor"
+          grep -q 'data-landing="" lang="en"' "$E/inicio.html" || falla "/ sin la raíz data-landing en inglés"
+          curl -s http://127.0.0.1:8080/comunidad > "$E/comunidad.html"
+          grep -Eq '<h1 [^>]*>The value you deliver' "$E/comunidad.html" || falla "/comunidad sin el H1 en inglés en el HTML del servidor"
+          # La demo y el manifiesto también son de la landing desde 2026-10-26.
+          curl -s http://127.0.0.1:8080/book-a-demo > "$E/demo.html"
+          grep -Eq '<h1 [^>]*>See Zelena' "$E/demo.html" || falla "/book-a-demo sin el H1 en inglés en el HTML del servidor"
+          curl -s http://127.0.0.1:8080/manifiesto > "$E/manifiesto.html"
+          grep -q '<h1 id="manifiesto-titulo"' "$E/manifiesto.html" || falla "/manifiesto sin su H1 en el HTML del servidor"
+          # El idioma del documento sigue a la página (WCAG 3.1.1): inglés en la landing, español en el resto.
+          curl -s http://127.0.0.1:8080/metodo > "$E/metodo.html"
+          for par in "inicio /" "comunidad /comunidad" "demo /book-a-demo" "manifiesto /manifiesto"; do
+            grep -q '<html lang="en"' "$E/${par%% *}.html" || falla "${par##* } sin <html lang=\"en\">"
+          done
+          grep -q '<html lang="es"' "$E/metodo.html" || falla "/metodo sin <html lang=\"es\">"
+          # Imágenes para compartir: "/" sin ninguna (un opengraph-image en app/ le ganaría a la
+          # página), y las páginas de la comunidad en español con la de public/og/.
+          if grep -Eq 'og:image|twitter:image' "$E/inicio.html"; then falla "/ lleva una imagen para compartir"; fi
+          grep -q 'property="og:image" content="[^"]*/og/sitio-es\.png"' "$E/metodo.html" || falla "/metodo sin la imagen de public/og/"
+          # A archivo y después grep: con pipefail, un grep -q que corta antes puede tumbar al curl.
+          curl -s http://127.0.0.1:8080/robots.txt > "$E/robots.txt"
+          grep -q '^Sitemap: ' "$E/robots.txt" || falla "/robots.txt sin la línea Sitemap"
+          curl -s http://127.0.0.1:8080/sitemap.xml > "$E/sitemap.xml"
+          grep -q '<urlset' "$E/sitemap.xml" || falla "/sitemap.xml no es un sitemap"
+          # Host canónico: el dominio sin www va a www con su ruta y su consulta; lo que trae la
+          # cabecera de Front Door no se toca, y /.well-known/ queda fuera (certificado).
+          r=$(curl -s -o /dev/null -w "%{http_code} %{redirect_url}" -H "Host: zelena.tech" "http://127.0.0.1:8080/manifiesto?x=1"); echo "apex /manifiesto?x=1 $r"
+          [ "$r" = "308 https://www.zelena.tech/manifiesto?x=1" ] || falla "el dominio sin www respondió '$r'"
+          c=$(curl -s -o /dev/null -w "%{http_code}" -H "Host: zelena.tech" -H "x-azure-fdid: ensayo" "http://127.0.0.1:8080/manifiesto"); echo "apex con x-azure-fdid $c"
+          [ "$c" = 200 ] || falla "con x-azure-fdid respondió $c (se esperaba 200)"
+          c=$(curl -s -o /dev/null -w "%{http_code}" -H "Host: zelena.tech" "http://127.0.0.1:8080/.well-known/acme"); echo "apex /.well-known/acme $c"
+          [ "$c" != 308 ] || falla "/.well-known/ se redirigió"
+          # Rutas que cambiaron de nombre o salieron del sitio (el whitepaper): redirección permanente.
+          for p in /ecosistema /academia/por-que-sas-dao /whitepaper; do
+            c=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:8080$p"); echo "$p $c"; [ "$c" = 308 ] || falla "$p respondió $c (se esperaba 308)"
+          done
+          for p in /equipo/hoy /equipo/proyectos /equipo/talento /equipo/avisos /admin /perfil /clientes; do
+            c=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:8080$p"); echo "$p $c"; [ "$c" = 307 ] || falla "$p respondió $c sin sesión"
+          done
+          curl -s http://127.0.0.1:8080/api/cla | grep -q 03293c9378146cbd || falla "hash del CLA distinto"
+          echo "--- log del servidor"; tail -40 "$E/server.log"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: paquete-azure
+          path: paquete-azure.zip
+          retention-days: 14

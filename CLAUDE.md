@@ -10,13 +10,15 @@ npm test                                     # suite completa — SIEMPRE verde 
 node packages/scripts/anchor-worker.mjs --watch  # worker de anclaje testnet (correr aparte)
 ```
 
-Login demo: código de invitación `GENESIS-0001` + wallet demo.
+Login demo (solo en desarrollo): código de invitación `GENESIS-0001` + wallet demo. Estos códigos están publicados: en producción no se siembran y cada arranque vence los que sigan sin usar.
 
-## Fase actual: v1 "Organizar" — NÚCLEO CONGELADO (WP13, WP14, WP15, WP16, WP19)
+## Fase actual: v1 "Organizar" — NÚCLEO CONGELADO (WP13, WP14, WP15, WP16, WP19 + WP17, WP20)
 
-Orden estratégico: **organizar → automatizar → descentralizar.** v1 = login Entra (@zelena.tech) + módulo equipo + dashboard + despliegue Azure + asistente personal de Telegram para John. **WP17 y WP18 están congelados (v1.1)**: solo se descongelan cuando se cumplan los criterios de USO definidos en QUEUE.md. Los WPs de comunidad/DAO (WP04, WP06, WP10) tampoco son v1. Checklist: `docs/DESPLIEGUE-V1.md`. Identidad dual y fases: `docs/blueprints/05-identidad-y-fases.md`.
+Orden estratégico: **organizar → automatizar → descentralizar.** v1 = login Entra (@zelena.tech) + módulo equipo + dashboard + despliegue Azure + asistente personal de Telegram para John + **entornos por cliente (WP17) y grafo de operación (WP20)**. WP17 se descongeló y WP20 entró por decisión explícita de John (2026-08-16, registrada en QUEUE.md: los criterios de USO se cumplirán más tarde, consecuencia aceptada). **WP18 sigue congelado (v1.1)** hasta cumplir esos criterios de USO. Los WPs de comunidad/DAO (WP04, WP06, WP10) tampoco son v1. Checklist: `docs/DESPLIEGUE-V1.md`. Identidad dual y fases: `docs/blueprints/05-identidad-y-fases.md`.
 
-Nada de la fase "automatizar" entra en v1: sin Microsoft Graph, sin envío de correos/Teams, sin notificaciones. Lo financiero (facturación, cotizaciones, contabilidad) vive en Odoo, FUERA de esta app — nunca se replica aquí. El NO-alcance de cada spec es ley.
+Nada de la fase "automatizar" entra en v1: sin Microsoft Graph, sin envío de correos/Teams, sin WhatsApp (WP35). **Única excepción, decisión registrada de John (2026-09-30): los recordatorios de SLA por Telegram entran en alcance.** Se redactan sobre la entrega, nunca sobre la persona, sin bombardear (idempotentes y con tope), y los parámetros (SLA, horas) van en el genoma. Cualquier otro aviso saliente sigue necesitando una decisión explícita de John. Lo financiero (facturación, cotizaciones, contabilidad) vive en Odoo, FUERA de esta app — nunca se replica aquí. El NO-alcance de cada spec es ley.
+
+**Producción real hoy (fusión 2026-09-30):** SQLite en `/home/data/zelena.db` con firmas y datos reales — **en producción NUNCA se borra la base**. Toda columna nueva sobre una tabla existente se añade a `COLUMNAS_NUEVAS` en `lib/db.ts`; los cambios de forma van como migración idempotente con respaldo `VACUUM INTO` previo (ver `prepararSqlite`). La autorización es por **rol leído de la base** (`lib/authz.ts`): nunca un gate `=== FOUNDER_WALLET` en `app/` ni en `src/components/` (lo fija un test estático). `FOUNDER_WALLET` solo entra como **dato**: cada arranque promueve su fila a `founder` (nunca degrada). Antes de desplegar, comprobar que hay un founder que puede firmar (`docs/DESPLIEGUE-V1.md`, "Acceso del founder") y verificar el paquete (`apps/web/scripts/verificar-paquete.mjs`). `CLA.md` y `apps/web/CLA.md` no se tocan: su sha256 (`03293c93…`) es lo que firman las altas.
 
 ## Ejecución con subagentes
 
@@ -24,7 +26,7 @@ Dentro de una misma ola, los WPs que no comparten archivos pueden ejecutarse con
 
 ## Nota técnica del bot de Telegram (WP19)
 
-En desarrollo local el bot corre en modo **polling** (`getUpdates`) — no requiere URL pública. El webhook con secret token se activa solo al desplegar en Azure. Sin `TELEGRAM_BOT_TOKEN`/`ANTHROPIC_API_KEY` en el entorno, el scaffolding se construye y testea con mocks detrás del flag `TELEGRAM_ENABLED=false`.
+En desarrollo local el bot corre en modo **polling** (`getUpdates`) — no requiere URL pública. El webhook con secret token se activa solo al desplegar en Azure. Sin `TELEGRAM_BOT_TOKEN`/`ANTHROPIC_API_KEY` en el entorno, el scaffolding se construye y testea con mocks detrás del flag `TELEGRAM_ENABLED=false`. Ojo con los recordatorios de SLA (en alcance desde 2026-09-30): en Azure, en modo webhook, **no hay programador** (el único es el bucle de polling de `packages/scripts/telegram-bot.mjs`), así que necesitan uno propio (endpoint protegido por secret y disparado desde fuera) y un registro de envíos para no repetir.
 
 ## Documentos que gobiernan el trabajo
 
@@ -34,14 +36,40 @@ En desarrollo local el bot corre en modo **polling** (`getUpdates`) — no requi
 - `docs/blueprints/` — planos: arquitectura, interacciones, evolución, contratos.
 - `docs/architecture.md`, `docs/security-review.md`, `docs/deploy.md` — estado actual.
 
+## Metodología de desarrollo — LEE ESTO ANTES DE ORQUESTAR
+
+**`docs/METODOLOGIA.md` gobierna cómo se construye este repo:** tres capas, **harness → loop → graph** (entorno → retroalimentación → flujo). Ninguna sustituye a otra; se anidan.
+
+Reglas operativas que salen de ahí y son obligatorias:
+
+- **Diagnostica la capa antes de arreglar.** ¿Falta una capacidad, se perdió estado? → harness. ¿El resultado no es confiable, o para sin prueba? → loop. ¿Hace falta orden, paralelismo o compuertas? → graph. Elegir mal la capa es gastar esfuerzo donde no está el problema.
+- **No se hace loop sobre la confianza, se hace sobre la evidencia.** "El agente dice que terminó" no es condición de parada. La evidencia es: `npx vitest run` + `npx tsc --noEmit` + `npx next lint` (+ `next build` al integrar) **y** los criterios de aceptación del spec.
+- **Máximo 2 WPs por ola**, en worktrees aislados y con **archivos propios disjuntos**. Cuatro agentes de golpe agotaron el presupuesto de sesión el 30-jul y mataron a un verificador.
+- **El verificador adversarial no es el implementador**: contexto separado y prompt de refutación.
+- **Nunca un recorte silencioso.** Si se omite una fase por presupuesto, se reporta.
+- **Si un nodo muere, se REANUDA** (`resumeFromRunId`), no se relanza desde cero.
+
+Para correr una ola usa el grafo ejecutable, no re-derives las olas a mano:
+
+```
+Workflow({ name: "ola", args: { ola: "1", base: "<rama>", wps: [
+  { id: "WP33", rama: "wp/21-hardening", spec: "docs/specs/...", archivos: ["..."] }
+] } })
+```
+
+Sus guardas abortan solo (0 tokens) si la base está roja, si hay más de 2 WPs, o si dos WPs comparten archivos. La topología de las olas vive en `docs/workflow-v1.2.md`.
+
 ## Protocolo de loop autónomo (modo nocturno)
 
-1. Lee `docs/specs/QUEUE.md`. Toma el primer WP en estado `ready` (todas sus dependencias `done`).
-2. Márcalo `in_progress`. Crea rama `wp/XX-nombre` desde `develop` (nunca trabajes en `main`).
-3. Lee su spec completo en `docs/specs/`. Implementa EXACTAMENTE el alcance; el NO-alcance es ley.
-4. Corre `npm test`. Rojo → arregla. Si tras 2 intentos serios sigue rojo: revierte a estado limpio, marca el WP `blocked` con una nota de por qué, y pasa al siguiente `ready`.
-5. Verde → commit convencional (`feat(wp02): ...`), marca `done` en QUEUE.md con hash del commit.
-6. Repite hasta que no queden WPs `ready`. Entonces escribe `docs/specs/NIGHT-REPORT.md`: qué se hizo, qué quedó bloqueado y por qué, decisiones tomadas, qué revisar en localhost.
+El loop **L1** de `docs/METODOLOGIA.md`. Sus siete partes, explícitas:
+
+1. **Disparador:** lee `docs/specs/QUEUE.md` y toma el primer WP `ready` con todas sus dependencias `done`. (Los `FBxx` de John tienen prioridad sobre los WP.)
+2. **Estado:** márcalo `in_progress`. Rama `wp/XX-nombre` desde `develop` (nunca trabajes en `main`).
+3. **Objetivo:** lee su spec completo en `docs/specs/`. Implementa EXACTAMENTE el alcance; el NO-alcance es ley. El objetivo son sus **criterios de aceptación binarios**, no "que quede bien".
+4. **Evidencia:** `npm test` desde `apps/web` (más `tsc` y `lint`). **Feedback:** la salida del test, no una impresión.
+5. **Parada:** rojo → arregla; **tope de 2 intentos serios**; si sigue rojo, revierte a estado limpio, marca el WP `blocked` con el motivo real y pasa al siguiente `ready`. Verde **y criterios cumplidos** → commit convencional (`feat(wp02): ...`) y `done` en QUEUE.md con el hash.
+6. **Escalamiento:** lo que necesita a John es `needs_human` / `blocked_external` — no lo intentes.
+7. **Cierre:** cuando no queden WPs `ready`, escribe el reporte en `docs/specs/`: qué se hizo, qué quedó bloqueado y por qué, decisiones a ratificar, y qué revisar en localhost. **Un hueco declarado es aceptable; uno oculto no.**
 
 ## Guardrails (no negociables)
 

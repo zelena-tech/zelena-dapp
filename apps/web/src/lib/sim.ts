@@ -12,9 +12,11 @@
  */
 // Imports con extensión .ts explícita: el mismo motor se ejecuta bajo vitest, se
 // type-checkea en el build de Next, y se importa desde el CLI con `node` (que hace
-// type-stripping nativo pero exige extensión). genome.ts es type-only en runtime,
-// así que no arrastra la capa de DB. Reuso puro del genoma y las reglas.
-import { GENOME_V1, type Genome } from "./genome.ts";
+// type-stripping nativo pero exige extensión). genome.ts solo importa tipos de la
+// capa de DB (y zona-horaria.ts, puro), así que no la arrastra en runtime. Reuso puro
+// del genoma y las reglas. El simulador trabaja con las claves v1 (`GenomeV1`): un
+// `Genome` completo también sirve, porque lo extiende.
+import { GENOME_V1, type GenomeV1 } from "./genome.ts";
 import { withinEpochBudget } from "./rules.ts";
 
 export type Strategy =
@@ -58,7 +60,7 @@ export const SANE_EMISSION_CEILING = 150_000;
 const OPPORTUNIST_THRESHOLD = 5_000;
 
 export interface SimConfig {
-  genome: Genome;
+  genome: GenomeV1;
   epochs: number;
   population: number;
   mix?: Partial<Record<Strategy, number>>; // proporciones relativas; default: uniforme
@@ -221,7 +223,7 @@ export interface ABResult {
 }
 
 /** Compara dos genomas bajo la misma población/épocas (A/B in silico). */
-export function compareGenomes(a: Genome, b: Genome, base: Omit<SimConfig, "genome">): ABResult {
+export function compareGenomes(a: GenomeV1, b: GenomeV1, base: Omit<SimConfig, "genome">): ABResult {
   const ra = simulate({ ...base, genome: a });
   const rb = simulate({ ...base, genome: b });
   return {
@@ -236,7 +238,7 @@ export function compareGenomes(a: Genome, b: Genome, base: Omit<SimConfig, "geno
 }
 
 /** Presets de genoma para el CLI. v1 = genoma canónico de lib/genome.ts. */
-export function genomePreset(name: string): Genome {
+export function genomePreset(name: string): GenomeV1 {
   if (name === "v1") return GENOME_V1;
   throw new Error(`Genoma desconocido: ${name} (disponibles: v1)`);
 }

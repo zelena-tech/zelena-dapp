@@ -77,7 +77,7 @@ CRITERIOS DE ACEPTACIÓN
 - [ ] Aditivo: **cero `UPDATE` de `amount_usd`, cero `DELETE`**; tablas y columnas
   nuevas únicamente.
 
-OWNER — Fausto (máquina + `disputes.ts`) · Vale (guardiana seed: valida el flujo
-completo) · John (nombra los guardianes seed) · Juan (implicación de pagos
+OWNER — Plataforma (máquina + `disputes.ts`) · Operaciones (guardiana seed: valida el flujo
+completo) · John (nombra los guardianes seed) · Finanzas (implicación de pagos
 parciales en retención en la fuente).
 TAMAÑO — L · Estimado: 2 días. Depende: WP25, WP26.

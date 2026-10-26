@@ -1,0 +1,25 @@
+name: Recordatorios de SLA
+on:
+  schedule:
+    - cron: "*/15 12-23 * * 1-5"   # UTC = 07:00–18:59 en Bogotá, lunes a viernes
+  workflow_dispatch: {}
+permissions: {}
+concurrency:
+  group: recordatorios
+  cancel-in-progress: false
+jobs:
+  disparar:
+    if: github.repository == 'zelena-tech/zelena-dapp'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Llamar al motor
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          APP_URL: ${{ vars.ZELENA_APP_URL || 'https://www.zelena.tech' }}
+        run: |
+          test -n "$CRON_SECRET" || { echo "Falta el secret CRON_SECRET"; exit 1; }
+          code=$(curl -sS --max-time 60 -o /dev/null -w '%{http_code}' -X POST \
+            "$APP_URL/api/cron/recordatorios" -H "x-cron-secret: $CRON_SECRET")
+          echo "HTTP $code"
+          test "$code" = 200 || exit 1

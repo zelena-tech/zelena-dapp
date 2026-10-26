@@ -4,7 +4,7 @@ CONTEXTO — Decisión de John (actualizada): el equipo SÍ trabaja en el tabler
 
 PROBLEMA — John captura tareas en reuniones y se pierden; su backlog personal vive en la cabeza; priorizar requiere sentarse frente al computador.
 
-RESULTADO ESPERADO — John le habla al bot ("asigna a David: dashboard de bloqueos para el viernes", "pendiente con Hogar Center: revisar propuesta de analítica") y la asignación/pendiente existe en la dapp, clasificada por cliente o proyecto; el bot le ayuda a revisar y priorizar su día.
+RESULTADO ESPERADO — John le habla al bot ("asigna a Producto: dashboard de bloqueos para el viernes", "pendiente con Cliente Demo: revisar propuesta de analítica") y la asignación/pendiente existe en la dapp, clasificada por cliente o proyecto; el bot le ayuda a revisar y priorizar su día.
 
 ## Arquitectura
 
@@ -25,7 +25,7 @@ Telegram ──webhook──▶ /api/telegram/webhook (misma app Next.js, mismo 
 ## Alcance v1 — El agente de backlog de John (solo John)
 
 - **Captura de tareas y pendientes**: John escribe o manda audio → transcripción → Claude estructura: título, tipo (asignación para alguien / pendiente propio), responsable (roster del plano 07) o cliente/proyecto (`client_id`/`initiative_id` de WP14/WP17), prioridad, fecha → el bot responde con la pieza formateada y botones `Confirmar / Editar / Descartar`. **Nada se crea sin confirmación** (evita asignaciones fantasma desde una reunión).
-- **Gestión del backlog propio**: `/pendientes` (todo lo de John, agrupado por cliente/proyecto) · `/pendientes hogar-center` (filtrado) · "sube la prioridad de X" · "eso ya está, ciérralo" — el bot opera el backlog conversacionalmente, siempre sobre la DB de la dapp.
+- **Gestión del backlog propio**: `/pendientes` (todo lo de John, agrupado por cliente/proyecto) · `/pendientes cliente-demo` (filtrado) · "sube la prioridad de X" · "eso ya está, ciérralo" — el bot opera el backlog conversacionalmente, siempre sobre la DB de la dapp.
 - **Los 3 focos del día**: cada mañana (hora en el genoma) el bot propone a John sus 3 prioridades del día según vencimientos, prioridad y bloqueos que lo esperan (`needs_founder`). John confirma o reordena respondiendo.
 - **Notas de reunión**: `/nota` o audio largo → `notes (author, text, meeting_ref, created_at)` → resumen como respuesta. Si contiene tareas, el bot las propone una a una.
 - **Consultas**: "¿cómo va el proyecto X?", "¿qué está bloqueado?" → respuesta desde los agregados del dashboard (WP15). Solo lectura.
@@ -61,5 +61,5 @@ El equipo hace su check-in diario en el tablero web (WP14). Extenderlo a Telegra
 - [ ] Webhook rechaza requests sin el secret token (test).
 - [ ] Grep de copys del bot: cero lenguaje de vigilancia o sobre personas.
 
-OWNER — Fausto (webhook + integración) + David (flujos y copys) · Vale: audita copys · John: crea el bot con @BotFather, provee token + ANTHROPIC_API_KEY, y lo usa a diario (el mejor test).
+OWNER — Plataforma (webhook + integración) + Producto (flujos y copys) · Operaciones: audita copys · John: crea el bot con @BotFather, provee token + ANTHROPIC_API_KEY, y lo usa a diario (el mejor test).
 TAMAÑO — M (v1 solo-John) · Estimado: 1,5–2 días. Depende: WP14 (modelo). WP15 recomendado antes (el bot consulta sus agregados). WP17 para clasificar por cliente.

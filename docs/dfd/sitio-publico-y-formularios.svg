@@ -1,0 +1,261 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1970 3700" width="1970" height="3700" font-family="Segoe UI, Arial, sans-serif" font-size="13">
+<title>Sitio público y formularios (landing, manifiesto, método, empresas, contacto, encuentros, legales, menú y pie)</title>
+<defs><marker id="punta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker></defs>
+<rect width="1970" height="3700" fill="#ffffff"/>
+<rect x="50" y="45" width="1830" height="385" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="58" y="63" fill="#c0392b">Internet: navegadores del visitante y del founder</text>
+<rect x="380" y="505" width="180" height="195" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="388" y="523" fill="#c0392b">Servicio externo: explorador de la red de pruebas de Stellar</text>
+<rect x="380" y="775" width="1170" height="2095" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="388" y="793" fill="#c0392b">Servidor Next.js (Azure App Service)</text>
+<rect x="710" y="2945" width="510" height="385" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="718" y="2963" fill="#c0392b">Almacenamiento persistente (SQLite y archivos del paquete)</text>
+<rect x="710" y="3405" width="180" height="195" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="718" y="3423" fill="#c0392b">Configuración del despliegue (App Settings)</text>
+<path d="M185,150 Q251,533 425,880" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="278" y="524" text-anchor="middle" font-size="11" fill="#555">f1 Pide una ruta vieja</text>
+<path d="M425,880 Q359,497 185,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="332" y="506" text-anchor="middle" font-size="11" fill="#555">f2 Redirección permanente</text>
+<path d="M185,150 Q251,624 425,1070" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="278" y="617" text-anchor="middle" font-size="11" fill="#b03a2e">f3 Pide cualquier página pública *</text>
+<path d="M755,3050 Q691,2054 515,1070" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="663" y="2057" text-anchor="middle" font-size="11" fill="#555">f4 Acceso al trabajo y mutación anunciada</text>
+<path d="M515,1070 Q689,624 755,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="662" y="617" text-anchor="middle" font-size="11" fill="#555">f5 Banderas del menú</text>
+<path d="M515,1070 Q669,1019 755,880" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="652" y="997" text-anchor="middle" font-size="11" fill="#555">f6 Pinta el pie</text>
+<path d="M185,150 Q251,717 425,1260" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="278" y="711" text-anchor="middle" font-size="11" fill="#555">f7 Abre la landing</text>
+<path d="M755,3050 Q691,2147 515,1260" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="663" y="2151" text-anchor="middle" font-size="11" fill="#555">f8 Cifras en vivo y próximo rito</text>
+<path d="M755,1830 Q687,1523 515,1260" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="661" y="1534" text-anchor="middle" font-size="11" fill="#555">f9 Pruebas verificables</text>
+<path d="M755,1640 Q683,1420 515,1260" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="659" y="1435" text-anchor="middle" font-size="11" fill="#555">f10 Encuentros próximos</text>
+<path d="M425,1260 Q359,693 185,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="332" y="699" text-anchor="middle" font-size="11" fill="#555">f11 HTML de la landing</text>
+<path d="M185,150 Q255,406 425,610" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="280" y="393" text-anchor="middle" font-size="11" fill="#555">f12 Abre la transacción en el explorador</text>
+<path d="M185,150 Q249,810 425,1450" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="277" y="805" text-anchor="middle" font-size="11" fill="#555">f13 Abre el manifiesto</text>
+<path d="M425,1450 Q361,790 185,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="333" y="795" text-anchor="middle" font-size="11" fill="#555">f14 HTML del manifiesto</text>
+<path d="M185,150 Q249,903 425,1640" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="277" y="899" text-anchor="middle" font-size="11" fill="#555">f15 Abre el método</text>
+<path d="M425,1640 Q361,887 185,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="333" y="891" text-anchor="middle" font-size="11" fill="#555">f16 HTML del método</text>
+<path d="M185,150 Q249,998 425,1830" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="277" y="994" text-anchor="middle" font-size="11" fill="#555">f17 Abre /empresas</text>
+<path d="M425,1830 Q361,982 185,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="333" y="986" text-anchor="middle" font-size="11" fill="#555">f18 HTML comercial</text>
+<path d="M185,150 Q249,1093 425,2020" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="277" y="1089" text-anchor="middle" font-size="11" fill="#555">f19 Abre /empresas/servicios</text>
+<path d="M755,1450 Q583,1713 515,2020" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="609" y="1724" text-anchor="middle" font-size="11" fill="#555">f20 Seis líneas de servicio</text>
+<path d="M425,2020 Q361,1077 185,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="333" y="1081" text-anchor="middle" font-size="11" fill="#555">f21 HTML del catálogo</text>
+<path d="M185,150 Q249,1186 425,2210" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="277" y="1183" text-anchor="middle" font-size="11" fill="#555">f22 Abre el contacto</text>
+<path d="M470,2165 Q526,1180 470,195" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="498" y="1180" text-anchor="middle" font-size="11" fill="#555">f23 Monta el formulario</text>
+<path d="M755,1450 Q691,790 515,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="663" y="795" text-anchor="middle" font-size="11" fill="#555">f24 Opciones del selector</text>
+<path d="M185,150 Q305,206 425,150" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="305" y="178" text-anchor="middle" font-size="11" fill="#b03a2e">f25 Llena el formulario *</text>
+<path d="M515,150 Q581,624 755,1070" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="608" y="617" text-anchor="middle" font-size="11" fill="#b03a2e">f26 Envía la solicitud *</text>
+<path d="M845,1070 Q999,1019 1085,880" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="982" y="997" text-anchor="middle" font-size="11" fill="#b03a2e">f27 Cuenta el envío *</text>
+<path d="M800,1405 Q856,1260 800,1115" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="828" y="1260" text-anchor="middle" font-size="11" fill="#555">f28 Valida el interés</text>
+<path d="M845,1070 Q909,2066 1085,3050" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="937" y="2063" text-anchor="middle" font-size="11" fill="#b03a2e">f29 Guarda la solicitud *</text>
+<path d="M755,1070 Q689,596 515,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="662" y="603" text-anchor="middle" font-size="11" fill="#555">f30 Respuesta</text>
+<path d="M185,150 Q249,1281 425,2400" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="277" y="1278" text-anchor="middle" font-size="11" fill="#555">f31 Abre /encuentros</text>
+<path d="M755,1640 Q581,2004 515,2400" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="608" y="2012" text-anchor="middle" font-size="11" fill="#555">f32 Fechas publicadas y formatos</text>
+<path d="M470,2355 Q526,1370 470,385" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="498" y="1370" text-anchor="middle" font-size="11" fill="#555">f33 Monta el formulario de aviso</text>
+<path d="M185,150 Q271,289 425,340" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="288" y="267" text-anchor="middle" font-size="11" fill="#b03a2e">f34 Deja su correo *</text>
+<path d="M515,340 Q581,814 755,1260" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="608" y="807" text-anchor="middle" font-size="11" fill="#b03a2e">f35 Envía el aviso *</text>
+<path d="M845,1260 Q1013,1100 1085,880" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="989" y="1085" text-anchor="middle" font-size="11" fill="#b03a2e">f36 Cuenta el envío *</text>
+<path d="M845,1260 Q909,2163 1085,3050" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="937" y="2159" text-anchor="middle" font-size="11" fill="#b03a2e">f37 Guarda el aviso *</text>
+<path d="M755,1260 Q689,786 515,340" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="662" y="793" text-anchor="middle" font-size="11" fill="#555">f38 Respuesta</text>
+<path d="M185,150 Q249,1376 425,2590" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="277" y="1373" text-anchor="middle" font-size="11" fill="#555">f39 Abre /privacidad</text>
+<path d="M755,3510 Q689,3036 515,2590" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="662" y="3043" text-anchor="middle" font-size="11" fill="#555">f40 Responsable del tratamiento</text>
+<path d="M425,2590 Q361,1364 185,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="333" y="1367" text-anchor="middle" font-size="11" fill="#555">f41 HTML del aviso</text>
+<path d="M185,150 Q249,1471 425,2780" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="277" y="1468" text-anchor="middle" font-size="11" fill="#555">f42 Abre /acuerdo</text>
+<path d="M755,3240 Q685,2984 515,2780" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="660" y="2997" text-anchor="middle" font-size="11" fill="#555">f43 Texto y huella del acuerdo</text>
+<path d="M425,2780 Q361,1459 185,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="333" y="1462" text-anchor="middle" font-size="11" fill="#555">f44 HTML del acuerdo</text>
+<path d="M1745,150 Q1571,497 1505,880" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1598" y="506" text-anchor="middle" font-size="11" fill="#b03a2e">f45 Abre /admin *</text>
+<path d="M1175,3050 Q1351,1971 1415,880" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1323" y="1968" text-anchor="middle" font-size="11" fill="#b03a2e">f46 Lee solicitudes y avisos *</text>
+<path d="M1505,880 Q1679,533 1745,150" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1652" y="524" text-anchor="middle" font-size="11" fill="#b03a2e">f47 Listas de prospectos *</text>
+<path d="M845,1070 Q909,2161 1085,3240" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="937" y="2158" text-anchor="middle" font-size="11" fill="#b03a2e">f48 Guarda la prueba de la autorización *</text>
+<path d="M845,1260 Q909,2256 1085,3240" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="937" y="2253" text-anchor="middle" font-size="11" fill="#b03a2e">f49 Guarda la prueba de la autorización *</text>
+<path d="M755,2020 Q583,2283 515,2590" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="609" y="2294" text-anchor="middle" font-size="11" fill="#555">f50 Texto del aviso</text>
+<path d="M800,1975 Q856,1545 800,1115" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="828" y="1545" text-anchor="middle" font-size="11" fill="#555">f51 Versión vigente y huella</text>
+<path d="M800,1975 Q856,1640 800,1305" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="828" y="1640" text-anchor="middle" font-size="11" fill="#555">f52 Versión vigente y huella</text>
+<rect x="90" y="100" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="140" y="138" text-anchor="middle" fill="#222">Visitante o</text>
+<text x="140" y="154" text-anchor="middle" fill="#222">prospecto</text>
+<text x="140" y="170" text-anchor="middle" fill="#222">(navegador)</text>
+<rect x="1740" y="100" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1790" y="138" text-anchor="middle" fill="#222">Founder en</text>
+<text x="1790" y="154" text-anchor="middle" fill="#222">/admin</text>
+<text x="1790" y="170" text-anchor="middle" fill="#222">(navegador)</text>
+<rect x="420" y="560" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="590" text-anchor="middle" fill="#222">Explorador</text>
+<text x="470" y="606" text-anchor="middle" fill="#222">público de la</text>
+<text x="470" y="622" text-anchor="middle" fill="#222">red de pruebas</text>
+<text x="470" y="638" text-anchor="middle" fill="#222">(stellar.expert)</text>
+<circle cx="470" cy="880" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="876" text-anchor="middle" fill="#222">Redirecciones</text>
+<text x="470" y="892" text-anchor="middle" fill="#222">308</text>
+<circle cx="470" cy="1070" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="1058" text-anchor="middle" fill="#222">Layout raíz</text>
+<text x="470" y="1074" text-anchor="middle" fill="#222">(sesión, Nav,</text>
+<text x="470" y="1090" text-anchor="middle" fill="#222">banner, pie)</text>
+<circle cx="800" cy="150" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="138" text-anchor="middle" fill="#222">Menú</text>
+<text x="800" y="154" text-anchor="middle" fill="#222">contextual</text>
+<text x="800" y="170" text-anchor="middle" fill="#222">(navegador)</text>
+<circle cx="800" cy="880" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="884" text-anchor="middle" fill="#222">Pie de página</text>
+<circle cx="470" cy="1260" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="1264" text-anchor="middle" fill="#222">Landing /</text>
+<circle cx="470" cy="1450" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="1446" text-anchor="middle" fill="#222">Página</text>
+<text x="470" y="1462" text-anchor="middle" fill="#222">/manifiesto</text>
+<circle cx="470" cy="1640" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="1644" text-anchor="middle" fill="#222">Página /metodo</text>
+<circle cx="470" cy="1830" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="1826" text-anchor="middle" fill="#222">Página</text>
+<text x="470" y="1842" text-anchor="middle" fill="#222">/empresas</text>
+<circle cx="470" cy="2020" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="2016" text-anchor="middle" fill="#222">Página</text>
+<text x="470" y="2032" text-anchor="middle" fill="#222">/empresas/servicios</text>
+<circle cx="470" cy="2210" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="2206" text-anchor="middle" fill="#222">Página</text>
+<text x="470" y="2222" text-anchor="middle" fill="#222">/empresas/contacto</text>
+<circle cx="470" cy="2400" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="2396" text-anchor="middle" fill="#222">Página</text>
+<text x="470" y="2412" text-anchor="middle" fill="#222">/encuentros</text>
+<circle cx="470" cy="2590" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="2586" text-anchor="middle" fill="#222">Página</text>
+<text x="470" y="2602" text-anchor="middle" fill="#222">/privacidad</text>
+<circle cx="470" cy="2780" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="2776" text-anchor="middle" fill="#222">Página</text>
+<text x="470" y="2792" text-anchor="middle" fill="#222">/acuerdo</text>
+<circle cx="470" cy="150" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="138" text-anchor="middle" fill="#222">Formulario de</text>
+<text x="470" y="154" text-anchor="middle" fill="#222">contacto</text>
+<text x="470" y="170" text-anchor="middle" fill="#222">(navegador)</text>
+<circle cx="470" cy="340" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="320" text-anchor="middle" fill="#222">Formulario de</text>
+<text x="470" y="336" text-anchor="middle" fill="#222">aviso de</text>
+<text x="470" y="352" text-anchor="middle" fill="#222">encuentros</text>
+<text x="470" y="368" text-anchor="middle" fill="#222">(navegador)</text>
+<circle cx="800" cy="1070" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="1042" text-anchor="middle" fill="#222">POST</text>
+<text x="800" y="1058" text-anchor="middle" fill="#222">/api/empresas/contacto</text>
+<text x="800" y="1074" text-anchor="middle" fill="#222">(exige la</text>
+<text x="800" y="1090" text-anchor="middle" fill="#222">autorización</text>
+<circle cx="800" cy="1260" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="1232" text-anchor="middle" fill="#222">POST</text>
+<text x="800" y="1248" text-anchor="middle" fill="#222">/api/encuentros/aviso</text>
+<text x="800" y="1264" text-anchor="middle" fill="#222">(exige la</text>
+<text x="800" y="1280" text-anchor="middle" fill="#222">autorización</text>
+<circle cx="1460" cy="880" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="852" text-anchor="middle" fill="#222">Página /admin</text>
+<text x="1460" y="868" text-anchor="middle" fill="#222">(Solicitudes</text>
+<text x="1460" y="884" text-anchor="middle" fill="#222">de empresas y</text>
+<text x="1460" y="900" text-anchor="middle" fill="#222">Avisos de</text>
+<rect x="1080" y="3020" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="3020" x2="1180" y2="3020" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="3080" x2="1180" y2="3080" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="3046" text-anchor="middle" fill="#222">Tabla leads</text>
+<text x="1130" y="3062" text-anchor="middle" fill="#222">(SQLite)</text>
+<rect x="1080" y="3210" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="3210" x2="1180" y2="3210" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="3270" x2="1180" y2="3270" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="3172" text-anchor="middle" fill="#222">Tabla</text>
+<text x="1130" y="3188" text-anchor="middle" fill="#222">lead_consents:</text>
+<text x="1130" y="3204" text-anchor="middle" fill="#222">prueba de la</text>
+<text x="1130" y="3220" text-anchor="middle" fill="#222">autorización</text>
+<rect x="750" y="3020" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="750" y1="3020" x2="850" y2="3020" stroke="#222" stroke-width="1.5"/>
+<line x1="750" y1="3080" x2="850" y2="3080" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="2998" text-anchor="middle" fill="#222">Base SQLite:</text>
+<text x="800" y="3014" text-anchor="middle" fill="#222">proyectos,</text>
+<text x="800" y="3030" text-anchor="middle" fill="#222">entregas,</text>
+<text x="800" y="3046" text-anchor="middle" fill="#222">firmas,</text>
+<rect x="1080" y="850" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="850" x2="1180" y2="850" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="910" x2="1180" y2="910" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="868" text-anchor="middle" fill="#222">Contadores de</text>
+<text x="1130" y="884" text-anchor="middle" fill="#222">límite de tasa</text>
+<text x="1130" y="900" text-anchor="middle" fill="#222">en memoria</text>
+<rect x="750" y="1420" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="750" y1="1420" x2="850" y2="1420" stroke="#222" stroke-width="1.5"/>
+<line x1="750" y1="1480" x2="850" y2="1480" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="1430" text-anchor="middle" fill="#222">Catálogo de</text>
+<text x="800" y="1446" text-anchor="middle" fill="#222">servicios e</text>
+<text x="800" y="1462" text-anchor="middle" fill="#222">intereses</text>
+<text x="800" y="1478" text-anchor="middle" fill="#222">(constante)</text>
+<rect x="750" y="1610" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="750" y1="1610" x2="850" y2="1610" stroke="#222" stroke-width="1.5"/>
+<line x1="750" y1="1670" x2="850" y2="1670" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="1620" text-anchor="middle" fill="#222">Lista de</text>
+<text x="800" y="1636" text-anchor="middle" fill="#222">encuentros</text>
+<text x="800" y="1652" text-anchor="middle" fill="#222">publicados</text>
+<text x="800" y="1668" text-anchor="middle" fill="#222">(constante)</text>
+<rect x="750" y="1800" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="750" y1="1800" x2="850" y2="1800" stroke="#222" stroke-width="1.5"/>
+<line x1="750" y1="1860" x2="850" y2="1860" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="1810" text-anchor="middle" fill="#222">Pruebas de</text>
+<text x="800" y="1826" text-anchor="middle" fill="#222">testnet</text>
+<text x="800" y="1842" text-anchor="middle" fill="#222">versionadas</text>
+<text x="800" y="1858" text-anchor="middle" fill="#222">(src/data/pruebas-testnet.json)</text>
+<rect x="750" y="3210" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="750" y1="3210" x2="850" y2="3210" stroke="#222" stroke-width="1.5"/>
+<line x1="750" y1="3270" x2="850" y2="3270" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="3228" text-anchor="middle" fill="#222">Texto del</text>
+<text x="800" y="3244" text-anchor="middle" fill="#222">acuerdo</text>
+<text x="800" y="3260" text-anchor="middle" fill="#222">(CLA.md)</text>
+<rect x="750" y="3480" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="750" y1="3480" x2="850" y2="3480" stroke="#222" stroke-width="1.5"/>
+<line x1="750" y1="3540" x2="850" y2="3540" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="3490" text-anchor="middle" fill="#222">Configuración</text>
+<text x="800" y="3506" text-anchor="middle" fill="#222">del despliegue</text>
+<text x="800" y="3522" text-anchor="middle" fill="#222">(ZELENA_LEGAL_NAME,</text>
+<text x="800" y="3538" text-anchor="middle" fill="#222">ZELENA_PRIVACY_EMAIL)</text>
+<rect x="750" y="1990" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="750" y1="1990" x2="850" y2="1990" stroke="#222" stroke-width="1.5"/>
+<line x1="750" y1="2050" x2="850" y2="2050" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="1992" text-anchor="middle" fill="#222">Texto y</text>
+<text x="800" y="2008" text-anchor="middle" fill="#222">versión del</text>
+<text x="800" y="2024" text-anchor="middle" fill="#222">aviso de</text>
+<text x="800" y="2040" text-anchor="middle" fill="#222">privacidad</text>
+<text x="90" y="3680" font-size="11" fill="#777">Sitio público y formularios (landing, manifiesto, método, empresas, contacto, encuentros, legales, menú y pie) · docs/dfd/sitio-publico-y-formularios.json · commit 4032c7c · * = flujo con datos sensibles</text>
+</svg>

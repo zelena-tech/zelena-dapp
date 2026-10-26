@@ -1,35 +1,37 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
-import { FOUNDER_WALLET } from "@/lib/config";
+import { telegramStatus } from "@/lib/config";
+import { adminActor } from "@/lib/authz";
 import { getDb } from "@/lib/db";
 import { listAcademia, listProjects, getMilestones } from "@/lib/repo";
 import { Tag, StateBadge, shortWallet, EmptyState } from "@/components/ui";
-import { nextAction, type ProjectState } from "@/lib/state-machine";
+import { esBorrador, nextAction, type ProjectState } from "@/lib/state-machine";
 import { currentEpoch, getActiveGenome } from "@/lib/genome";
 import { latestEpochFitness } from "@/lib/epochs";
 import { genomeLineage, pendingMutation } from "@/lib/mutation";
 import { listLatentAudits } from "@/lib/audits";
+import { founderTeamWallet, linkForWallet, listBotActions } from "@/lib/bot-store";
 import AdminAction from "@/components/AdminAction";
+import BotLinkPanel from "@/components/BotLinkPanel";
 import GenomeMutationPanel from "@/components/GenomeMutationPanel";
 import LatentAuditForm from "@/components/LatentAuditForm";
+import { INTERES_ENCUENTROS, nombreInteres } from "@/lib/servicios";
+import { estadoCierreEpoca } from "@/lib/epocas";
+import { panelRitosAdmin, zonaRitos } from "@/lib/ritos";
+import EpocaPanel from "@/components/EpocaPanel";
+import RitosAdminPanel from "@/components/RitosAdminPanel";
+import { decisionesReemplazadas } from "@/lib/decisiones";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
   const session = await getSession();
   if (!session) redirect("/entrar");
+
   const db = getDb();
-  // Acceso al panel: el fundador por configuración, o cualquier wallet marcada
-  // como supervisora en la base (users.is_supervisor). Permite dar seguimiento
-  // desde la wallet propia sin reconfigurar FOUNDER_WALLET ni re-sembrar.
-  const supervisora =
-    session.wallet === FOUNDER_WALLET ||
-    (
-      db.prepare(`SELECT is_supervisor FROM users WHERE wallet = ?`).get(session.wallet) as
-        | { is_supervisor: number }
-        | undefined
-    )?.is_supervisor === 1;
-  if (!supervisora) redirect("/perfil");
+  // Gate por ROL contra la base (no por la wallet de una persona): así el founder
+  // que entra por la puerta corporativa (principal `pending:*`) conserva su panel.
+  if (!adminActor(session, db)) redirect("/perfil");
 
   const applications = db
     .prepare(
@@ -45,7 +47,8 @@ export default async function AdminPage() {
     status: string;
     project_title: string;
   }>;
-  const projects = listProjects();
+  // Con los borradores: aquí el founder los ve y los publica.
+  const projects = listProjects({ incluirBorradores: true });
   const academia = listAcademia(true);
   const epoch = currentEpoch(db);
   const fitness = latestEpochFitness(db);
@@ -55,6 +58,26 @@ export default async function AdminPage() {
   const latestVersion = lineage.length ? lineage[lineage.length - 1].version : 1;
   const numericGenes: Array<keyof typeof genome> = ["EPOCH_BUDGET", "ACADEMIA_BUDGET", "ACADEMIA_DAILY_CAP", "ACADEMIA_VOTE_WEIGHT"];
   const audits = listLatentAudits(db);
+  // Originales de las decisiones reemplazadas: en lo público solo se ve la vigente.
+  const reemplazadas = decisionesReemplazadas(db);
+  // WP19: log del asistente de Telegram + estado del alta.
+  const botActions = listBotActions(db, 50);
+  const botLink = linkForWallet(db, founderTeamWallet(db, session.wallet));
+  const botStatus = telegramStatus();
+  const leads = db
+    .prepare(`SELECT * FROM leads ORDER BY id DESC LIMIT 100`)
+    .all() as Array<{
+    id: number;
+    nombre: string;
+    email: string;
+    empresa: string | null;
+    interes: string;
+    mensaje: string | null;
+    created_at: string;
+  }>;
+  // La misma tabla guarda dos cosas distintas: pedidos de demo y avisos de /encuentros.
+  const avisos = leads.filter((l) => l.interes === INTERES_ENCUENTROS);
+  const solicitudes = leads.filter((l) => l.interes !== INTERES_ENCUENTROS);
 
   return (
     <div className="space-y-12">
@@ -62,6 +85,18 @@ export default async function AdminPage() {
         <h1 className="font-head text-4xl font-bold text-white">Admin · Founder</h1>
         <p className="mt-2 text-muted">Aprueba aplicaciones, avanza estados, aprueba hitos y modera la Academia.</p>
       </header>
+
+      {/* Épocas (WP31-D) — cerrar la actual y abrir la siguiente es UNA operación */}
+      <section>
+        <h2 className="mb-4 font-head text-2xl font-bold text-white">Épocas</h2>
+        <EpocaPanel estado={estadoCierreEpoca(db)} tz={zonaRitos(db)} />
+      </section>
+
+      {/* Ritos (WP31-D) — preparar, quién presenta y relata, abrir y cerrar; solo el conteo */}
+      <section>
+        <h2 className="mb-4 font-head text-2xl font-bold text-white">Ritos</h2>
+        <RitosAdminPanel {...panelRitosAdmin(db)} />
+      </section>
 
       {/* Motor de épocas · Fitness (WP07) — el algoritmo propone, el founder firma */}
       <section>
@@ -198,6 +233,122 @@ export default async function AdminPage() {
         </div>
       </section>
 
+      {/* Asistente de Telegram (WP19) — alta + log de todo lo que hizo el bot */}
+      <section>
+        <h2 className="mb-4 font-head text-2xl font-bold text-white">Asistente de Telegram</h2>
+        <div className="card space-y-5 p-6">
+          <BotLinkPanel
+            linked={!!botLink?.telegram_user_id}
+            linkedAt={botLink?.linked_at ?? null}
+            enabled={botStatus.enabled}
+            missing={botStatus.missing}
+            optional={botStatus.optional}
+          />
+
+          <div>
+            <p className="mb-2 text-sm font-semibold text-white">Log del bot</p>
+            <p className="mb-3 text-xs text-faint">
+              Toda acción del asistente queda aquí. Se registra qué se hizo y sobre qué pieza, nunca el texto del
+              mensaje ni el audio: solo se conserva la nota o la asignación resultante.
+            </p>
+            {botActions.length === 0 ? (
+              <EmptyState title="Sin actividad" message="Cuando el bot atienda un mensaje, aparecerá aquí." />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="text-faint">
+                    <tr>
+                      <th className="py-1 pr-3">Cuándo</th>
+                      <th className="py-1 pr-3">Acción</th>
+                      <th className="py-1 pr-3">Resultado</th>
+                      <th className="py-1 pr-3">Sobre</th>
+                      <th className="py-1">Detalle</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {botActions.map((a) => (
+                      <tr key={a.id} className="border-t border-line/40">
+                        <td className="py-1 pr-3 text-faint">{a.created_at}</td>
+                        <td className="py-1 pr-3 font-mono text-white">{a.action}</td>
+                        <td className="py-1 pr-3">
+                          <span
+                            className={`tag ${
+                              a.outcome === "ok"
+                                ? "tag-sas"
+                                : a.outcome === "error"
+                                  ? "border-red-900/60 text-red-400"
+                                  : "border-line text-muted"
+                            }`}
+                          >
+                            {a.outcome}
+                          </span>
+                        </td>
+                        <td className="py-1 pr-3 text-muted">{a.target ?? "—"}</td>
+                        <td className="py-1 text-muted">{a.detail ?? "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* Solicitudes comerciales desde /empresas/contacto */}
+      <section>
+        <h2 className="mb-4 font-head text-2xl font-bold text-white">Solicitudes de empresas</h2>
+        {solicitudes.length === 0 ? (
+          <EmptyState
+            title="Sin solicitudes"
+            message="Cuando alguien pida una demostración desde /empresas, aparecerá aquí."
+          />
+        ) : (
+          <div className="space-y-3">
+            {solicitudes.map((l) => (
+              <div key={l.id} className="card p-5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <span className="text-sm font-semibold text-white">{l.nombre}</span>
+                    {l.empresa ? <span className="ml-2 text-sm text-muted">· {l.empresa}</span> : null}
+                  </div>
+                  <span className="tag border-line text-muted">{nombreInteres(l.interes)}</span>
+                </div>
+                <a href={`mailto:${l.email}`} className="mt-1 inline-block text-sm text-primary hover:underline">
+                  {l.email}
+                </a>
+                {l.mensaje ? <p className="mt-2 text-sm text-muted">{l.mensaje}</p> : null}
+                <p className="mt-2 text-xs text-faint">{l.created_at} UTC</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Avisos desde /encuentros */}
+      <section>
+        <h2 className="mb-4 font-head text-2xl font-bold text-white">Avisos de encuentros</h2>
+        {avisos.length === 0 ? (
+          <EmptyState
+            title="Sin avisos"
+            message="Cuando alguien deje su correo en /encuentros para enterarse de la próxima fecha, aparecerá aquí."
+          />
+        ) : (
+          <div className="card divide-y divide-line p-0">
+            {avisos.map((l) => (
+              <div key={l.id} className="flex flex-wrap items-baseline justify-between gap-2 px-5 py-3">
+                <div className="text-sm">
+                  <span className="text-white">{l.nombre}</span>{" "}
+                  <a href={`mailto:${l.email}`} className="text-primary hover:underline">{l.email}</a>
+                  {l.mensaje ? <span className="ml-2 text-muted">· {l.mensaje.replace(/^Ciudad: /, "")}</span> : null}
+                </div>
+                <span className="text-xs text-faint">{l.created_at} UTC</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
       {/* Aplicaciones */}
       <section>
         <h2 className="mb-4 font-head text-2xl font-bold text-white">Aplicaciones</h2>
@@ -245,8 +396,17 @@ export default async function AdminPage() {
                     <span className="text-sm font-semibold text-white">{p.title}</span>
                     <Tag type={p.type} />
                     <StateBadge state={p.state} />
+                    {esBorrador(p) ? <span className="tag border-amber-700/50 text-amber-300">borrador</span> : null}
                   </div>
                   <div className="flex items-center gap-2">
+                    {esBorrador(p) ? (
+                      <AdminAction
+                        action="publishProject"
+                        payload={{ projectId: p.id }}
+                        label="Publicar"
+                        variant="primary"
+                      />
+                    ) : null}
                     {p.assignee_wallet ? (
                       <span className="text-xs text-faint">ejecutor: {shortWallet(p.assignee_wallet)}</span>
                     ) : null}
@@ -280,6 +440,38 @@ export default async function AdminPage() {
             );
           })}
         </div>
+      </section>
+
+      {/* Decisiones reemplazadas: el original, intacto y con su huella. Solo aquí (founder). */}
+      <section>
+        <h2 className="mb-4 font-head text-2xl font-bold text-white">Decisiones reemplazadas</h2>
+        <p className="mb-3 text-sm text-muted">
+          En Gobernanza y en Comunidad solo se ve la versión vigente. El original no se reescribe ni se borra: queda
+          en el registro con su huella completa, y solo se ve aquí.
+        </p>
+        {reemplazadas.length === 0 ? (
+          <EmptyState title="Ninguna" message="Cuando una decisión reemplace a otra, el original aparecerá aquí." />
+        ) : (
+          <div className="space-y-3">
+            {reemplazadas.map((d) => (
+              <div key={d.id} className="card p-5">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <span className="text-sm font-semibold text-white">
+                    #{d.id} · {d.title}
+                  </span>
+                  <span className="text-xs text-faint">{d.date}</span>
+                </div>
+                <p className="mt-2 text-sm text-muted">{d.reason}</p>
+                <p className="mt-2 break-all font-mono text-[11px] text-faint">hash: {d.hash}</p>
+                <p className="mt-2 text-xs text-paper">
+                  {d.reemplazadaPor
+                    ? `Reemplazada por #${d.reemplazadaPor.id} · ${d.reemplazadaPor.title} (${d.reemplazadaPor.date})`
+                    : "Oculta en lo público; su reemplazo todavía no está registrado."}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Academia */}

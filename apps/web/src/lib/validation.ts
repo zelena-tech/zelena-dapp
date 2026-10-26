@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { SLUGS_INTERES } from "./servicios";
+import { NONCE_RE } from "./login-signing";
+import { MENSAJE_SIN_AUTORIZACION } from "./aviso-privacidad";
 
 // Stellar public key: 'G' + 55 base32 chars. Aceptamos también wallets demo del seed.
 const wallet = z
@@ -14,7 +17,7 @@ export const inviteVerifySchema = z.object({
 
 /**
  * Nombres reservados: sin esto, cualquiera puede registrarse como
- * "John (Founder)" y aparecer junto al fundador en las listas públicas.
+ * "Founder (demo)" y aparecer junto al fundador en las listas públicas.
  */
 const RESERVADOS = ["founder", "fundador", "zelena", "admin", "guardian", "guardián", "soporte", "oficial"];
 
@@ -31,21 +34,29 @@ export const onboardSchema = z.object({
   code: z.string().trim().min(3).max(40),
   wallet,
   name: nombreVisible,
-  isDemo: z.boolean(),
+  // Ignorado por el servidor (lo decide el código de invitación, ver performOnboard).
+  isDemo: z.boolean().optional(),
   claHash: z.string().trim().length(64),
   signature: z.string().trim().min(4).max(400),
 });
 
 /**
  * Reingreso de una wallet YA registrada: no consume invitación, no crea usuario.
- * La autenticación es la firma ed25519 sobre el payload del CLA (solo el titular
- * de la llave puede producirla), así que no hay código de invitación involucrado.
+ * La autenticación es la firma ed25519 sobre un RETO de un solo uso que emite
+ * `/api/login/reto` (lib/login-reto.ts), nunca la firma fija del CLA: esa se guarda
+ * en la base y quien la leyera entraría para siempre. `.strict()`: un cuerpo con
+ * la forma vieja (`claHash`) se rechaza en vez de ignorar el campo.
  */
-export const loginSchema = z.object({
-  wallet,
-  claHash: z.string().trim().length(64),
-  signature: z.string().trim().min(4).max(400),
-});
+export const loginSchema = z
+  .object({
+    wallet,
+    nonce: z.string().trim().regex(NONCE_RE, "Reto inválido."),
+    signature: z.string().trim().min(4).max(400),
+  })
+  .strict();
+
+/** Pedir un reto de entrada. Con `wallet`, el reto solo sirve para esa wallet. */
+export const loginRetoSchema = z.object({ wallet: wallet.optional() }).strict();
 
 export const applySchema = z.object({
   projectId: z.number().int().positive(),
@@ -87,6 +98,7 @@ export const adminActionSchema = z.object({
     "revertGenome",
     "recordNoMutation",
     "createLatentAudit",
+    "publishProject",
   ]),
   applicationId: z.number().int().positive().optional(),
   projectId: z.number().int().positive().optional(),
@@ -111,3 +123,44 @@ export const adminActionSchema = z.object({
 
 export type OnboardInput = z.infer<typeof onboardSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+
+/**
+ * Autorización de datos personales (Ley 1581, hallazgo A3). La casilla del formulario
+ * viaja como `acepto: true` y la API rechaza (400) lo que llegue sin ella: falta,
+ * `false` o cualquier otro valor. `aviso` es la versión del aviso de privacidad que
+ * tenía la página (`AVISO_PRIVACIDAD_VERSION`); la ruta la compara con la vigente.
+ * Va al FINAL de cada esquema: si falta un dato, el error que se ve es el del dato.
+ */
+const autorizacionDeDatos = {
+  acepto: z.literal(true, { errorMap: () => ({ message: MENSAJE_SIN_AUTORIZACION }) }),
+  aviso: z.string().trim().max(40).optional(),
+};
+
+/**
+ * Formulario comercial de /empresas/contacto. Es público (no hay sesión), así
+ * que la ruta limita por IP. `sitio` es un campo trampa oculto para personas:
+ * se acepta cualquier valor aquí y la ruta descarta en silencio lo que llegue
+ * con él lleno, para no darle al bot una señal de que lo detectamos.
+ */
+export const leadSchema = z.object({
+  nombre: z.string().trim().min(2, "Escribe tu nombre.").max(80),
+  email: z.string().trim().email("Revisa el correo.").max(120),
+  empresa: z.string().trim().max(120).optional().default(""),
+  interes: z.enum(SLUGS_INTERES, { errorMap: () => ({ message: "Elige qué te interesa." }) }),
+  mensaje: z.string().trim().max(2000).optional().default(""),
+  sitio: z.string().max(500).optional().default(""),
+  ...autorizacionDeDatos,
+});
+
+/**
+ * Aviso de /encuentros: quien quiere enterarse de la próxima fecha. Mismo
+ * patrón que leadSchema (público, límite por IP, campo trampa `sitio`); se
+ * guarda en `leads` con interes = "encuentros" y la ciudad en `mensaje`.
+ */
+export const avisoEncuentrosSchema = z.object({
+  nombre: z.string().trim().min(2, "Escribe tu nombre.").max(80),
+  email: z.string().trim().email("Revisa el correo.").max(120),
+  ciudad: z.string().trim().max(80).optional().default(""),
+  sitio: z.string().max(500).optional().default(""),
+  ...autorizacionDeDatos,
+});

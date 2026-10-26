@@ -1,9 +1,10 @@
 /** Operaciones de administración (solo founder). Mutan estado con guardas. */
 import { getDb, type DB } from "./db";
-import { transition, nextAction, type ProjectState } from "./state-machine";
+import { transition, nextAction, esBorrador, type ProjectState } from "./state-machine";
 import { violatesB8, withinEpochBudget } from "./rules";
 import { FOUNDER_WALLET } from "./config";
 import { getActiveGenome, currentEpoch } from "./genome";
+import { puntosDeEpoca } from "./gamificacion";
 
 export function approveApplication(appId: number): void {
   const db = getDb();
@@ -12,9 +13,11 @@ export function approveApplication(appId: number): void {
     | undefined;
   if (!app) throw new Error("Aplicación no encontrada.");
   const project = db.prepare(`SELECT * FROM projects WHERE id = ?`).get(app.project_id) as
-    | { id: number; state: ProjectState }
+    | { id: number; state: ProjectState; draft: number }
     | undefined;
   if (!project) throw new Error("Proyecto no encontrado.");
+  // Un borrador no recibe aplicaciones ni se asigna (state-machine.ts): primero se publica.
+  if (esBorrador(project)) throw new Error("El proyecto está en borrador: publícalo antes de asignarlo.");
   const tx = db.transaction(() => {
     db.prepare(`UPDATE applications SET status = 'approved' WHERE id = ?`).run(appId);
     // Asigna el proyecto: Open → Assigned
@@ -81,15 +84,16 @@ export function approveMilestone(milestoneId: number, db: DB = getDb()): { point
   }
 
   const points = ms.amount_usd; // 1 USD = 1 punto ZWORK (fase Génesis)
-  const currentTotal = (
-    db.prepare(`SELECT COALESCE(SUM(points),0) AS n FROM points_ledger`).get() as { n: number }
-  ).n;
-  const epochBudget = getActiveGenome(db).EPOCH_BUDGET;
+  // Tope de la época ACTUAL en bucket `ejecucion` (WP31 §4.B.3). Antes se sumaba el
+  // ledger entero (todas las épocas y la Academia) contra el presupuesto de UNA época.
+  // Tareas aprobadas e hitos del Ágora comparten a propósito este presupuesto.
+  const periodId = currentEpoch(db);
+  const currentTotal = puntosDeEpoca(db, periodId, "ejecucion");
+  const epochBudget = getActiveGenome(db, periodId).EPOCH_BUDGET;
   if (!withinEpochBudget(currentTotal, points, epochBudget)) {
     throw new Error("Emisión rechazada: excede el presupuesto de época.");
   }
 
-  const periodId = currentEpoch(db);
   const tx = db.transaction(() => {
     db.prepare(`UPDATE milestones SET approved = 1 WHERE id = ?`).run(milestoneId);
     db.prepare(

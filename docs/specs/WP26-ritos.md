@@ -73,6 +73,6 @@ CRITERIOS DE ACEPTACIÓN
 - [ ] Copys: la asistencia se muestra como progreso propio; no hay ranking de
   personas (doc 16).
 
-OWNER — Fausto (`rites.ts` + QR + worker) · David (`/ritos`) · Vale (define los
+OWNER — Plataforma (`rites.ts` + QR + worker) · Producto (`/ritos`) · Operaciones (define los
 tres ritos y cierra el primero) · John (`RITES_SECRET` por gestor de secretos).
 TAMAÑO — M · Estimado: 1–2 días. Depende: WP14 (checkins), WP07 (fitness).

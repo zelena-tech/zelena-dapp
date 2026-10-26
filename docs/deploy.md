@@ -1,19 +1,28 @@
 # Deploy — Zelena Dapp v0.1
 
+> **Estado del motor de datos (decisión de John, WP16):** producción v1 = **Azure SQL
+> Database** con el driver `mssql`. **Desarrollo local sigue con SQLite** (rápido, sin
+> costo, sin red). El driver libSQL/Turso de WP03 se conserva para archivo local en
+> dev/CI pero **no se usa en producción**; WP05 (Vercel/Turso) queda *superseded* por
+> WP16. Ver la sección **Azure** más abajo.
+
 ## Correr local (dev)
 
 ```bash
 # Desde la raíz del monorepo (zelena-dapp/)
 npm install
-cp apps/web/.env.example apps/web/.env.local   # ajusta SESSION_SECRET
+cp apps/web/.env.example apps/web/.env.local   # opcional: nombres y comentarios, sin valores
 npm run dev                                     # http://localhost:3000
 ```
 
 La base SQLite se crea, migra y siembra sola en el primer arranque
-(`apps/web/data/zelena.db`, gitignored). Códigos de invitación seed: `GENESIS-0001` …
-`GENESIS-0006`. La wallet founder por defecto (acceso a `/admin`) está en `.env.example`;
-para entrar como founder, cambia `FOUNDER_WALLET` a la public key de tu wallet de prueba
-tras onboardearte, o usa el valor por defecto del seed.
+(`apps/web/data/zelena.db`, gitignored). Códigos de invitación seed, **solo fuera de
+producción**: `GENESIS-0001` … `GENESIS-0006` (en producción no se siembran y, si la base ya
+los tiene, cada arranque vence los que sigan sin usar). La wallet founder por defecto está en
+el código (sin `FOUNDER_WALLET`), pero es una wallet demo con la que nadie puede firmar. Para entrar como
+founder, cambia `FOUNDER_WALLET` a la public key de tu wallet de prueba tras onboardearte y
+**reinicia** la app: en cada arranque la fila de esa wallet queda `founder` (los gates leen
+`users.role`). O entra con `FOUNDER_BOOTSTRAP_CODE`.
 
 ## Build de producción
 
@@ -26,16 +35,23 @@ npx --workspace apps/web next start   # sirve el build en :3000
 
 ## Correr el anchor-worker (en tu máquina)
 
-El sandbox de desarrollo NO alcanza la red Stellar, por eso el anclaje es una **cola**.
-El worker corre localmente y ancla los hashes pendientes:
+El anclaje es una **cola** (`anchor_queue`). En el despliegue la procesa el workflow programado
+`.github/workflows/anclaje.yml`, que llama a `POST /api/anchor/run` cada 15 minutos. En local, el
+worker hace lo mismo sobre la base SQLite de `npm run dev`, cargando **la misma lógica**
+(`apps/web/src/lib/anchor.ts`, con su tope de intentos y su reserva de filas) con el type-stripping
+de Node (Node ≥ 22.6):
 
 ```bash
-# La cuenta de servicio se genera y se fondea con friendbot en el primer arranque,
+# La cuenta de servicio se genera en el primer arranque (y anchor.ts la fondea con friendbot),
 # o exporta la tuya:
 export SERVICE_ACCOUNT_SECRET=S....         # opcional (testnet)
-node packages/scripts/anchor-worker.mjs      # una pasada
-node packages/scripts/anchor-worker.mjs --watch   # en bucle cada 15s
+node packages/scripts/anchor-worker.mjs               # una pasada
+node packages/scripts/anchor-worker.mjs --watch       # en bucle cada 60 s
+node packages/scripts/anchor-worker.mjs --pendientes  # solo cuenta, sin red
 ```
+
+Una fila que falla `ANCLAJE_MAX_INTENTOS` veces (8) queda `failed` y no se reintenta sola;
+reintentarla es `UPDATE anchor_queue SET status = 'pending', attempts = 0 WHERE id = <id>`.
 
 Cada firma de CLA encolada se ancla con `manageData` en testnet; el `txId` queda visible en
 el perfil con link a stellar.expert. El secreto de la cuenta de servicio nunca va al repo
@@ -87,6 +103,253 @@ John (fuera del alcance de WP03).
 Variables de entorno de producción: `SESSION_SECRET`, `FOUNDER_WALLET`, `TURSO_DATABASE_URL` +
 `TURSO_AUTH_TOKEN` (o `DATABASE_URL` local), `STELLAR_NETWORK=testnet`. El
 `SERVICE_ACCOUNT_SECRET` vive solo donde corre el worker, jamás en el frontend.
+
+---
+
+# Azure (producción v1) — WP16
+
+Coherente con el tenant de Microsoft (Entra ID, WP13) y con el WMS que ya corre ahí.
+Todo lo de esta sección **excepto crear los recursos** está implementado y probado en
+la suite; crear la suscripción/recursos y el smoke test son el paso 6 de `docs/DESPLIEGUE-V1.md`.
+
+## Arquitectura de la capa de datos
+
+`apps/web/src/lib/db.ts` sigue siendo la **única** puerta a la persistencia y sigue
+siendo **síncrona**. Para Azure SQL se apilan dos piezas nuevas:
+
+| Archivo | Qué hace |
+|---|---|
+| `src/lib/sql-dialect.ts` | Traductor **puro** SQLite → T-SQL (tipos, fechas, `LIMIT`, `RETURNING`, `ON CONFLICT`, JSON, `PRAGMA`). Traduce el `schema.sql` **que exista en tiempo de ejecución**: no hay un `.sql` paralelo que se desincronice. |
+| `src/lib/db-sync-bridge.ts` + `src/lib/db-query.worker.mjs` | Puente **síncrono** sobre un backend asíncrono: el hilo principal bloquea con `Atomics.wait` sobre un `SharedArrayBuffer` mientras un `worker_thread` ejecuta la consulta. |
+| `src/lib/db-mssql-backend.mjs` | Backend real: `mssql`/tedious contra Azure SQL. Corre **solo** dentro del worker. |
+| `src/lib/db-mssql.ts` | Une las tres cosas y expone la interfaz `DB` de siempre. |
+| `src/lib/db-fake-backend.mjs` | Backend asíncrono **falso** (SQLite por debajo) para testear el puente sin Azure. |
+
+**Por qué un puente y no `async`:** `mssql` (tedious) es solo asíncrono y no existe
+cliente síncrono de Azure SQL para Node. Volver asíncrona la capa de datos obligaría a
+reescribir toda la lógica de negocio, que el spec de WP16 prohíbe tocar (es la misma
+trampa que WP03 evitó descartando `@libsql/client`). Efecto lateral **deseado**: como el
+hilo principal se bloquea, una transacción entera es un bloque síncrono → sigue siendo
+atómica frente a otras peticiones, igual que con `better-sqlite3` hoy.
+
+**Nunca degrada en silencio:** si hay configuración de Azure SQL y falta el paquete
+`mssql`, falta el worker, o el arranque/consulta excede su timeout → **lanza**. Caer a
+SQLite local en producción es el fallo exacto que esto existe para evitar.
+
+## Selección de driver (`resolveDriver`)
+
+1. `DATABASE_DRIVER` explícito (`mssql` | `libsql` | `sqlite`) manda.
+2. Si hay `AZURE_SQL_SERVER` (o `AZURE_SQL_CONNECTION_STRING`) → **`mssql`**.
+3. Si hay `TURSO_DATABASE_URL`/`DATABASE_URL` → `libsql`.
+4. Si no → SQLite local. **En local no hace falta configurar nada.**
+
+## Variables de entorno (App Settings o Key Vault — NUNCA en el repo ni en `.env*`)
+
+| Variable | Obligatoria | Para qué |
+|---|---|---|
+| `AZURE_SQL_SERVER` | sí | `zelena-sql.database.windows.net`. Su presencia activa el driver. |
+| `AZURE_SQL_DATABASE` | sí | nombre de la base (p. ej. `zelena`). |
+| `AZURE_SQL_PORT` | no | por defecto `1433`. |
+| `AZURE_SQL_CLIENT_ID` | no | *client id* de una managed identity **asignada por el usuario**. Si se omite, se usa la asignada por el sistema. |
+| `AZURE_SQL_USER` / `AZURE_SQL_PASSWORD` | no | **fallback** si la managed identity complica. Los dos o ninguno. |
+| `AZURE_SQL_CONNECTION_STRING` | no | alternativa a todo lo anterior. |
+| `AZURE_SQL_ENCRYPT` | no | solo `false` para pruebas locales; Azure SQL exige TLS. |
+| `DATABASE_DRIVER` | no | forzar driver (`sqlite` para depurar en producción con archivo local). |
+| `SESSION_SECRET` | sí | firma de la cookie de sesión. La app no arranca sin él en producción. |
+| `FOUNDER_WALLET` | sí | wallet real del founder, ya registrada. En cada arranque su fila pasa a `role='founder'` (solo promueve, nunca degrada); `/admin` lo decide `users.role`. Ver `DESPLIEGUE-V1.md`, "Acceso del founder". |
+| `FOUNDER_BOOTSTRAP_CODE` | no | escotilla de un solo uso (16–40 caracteres, se compara en mayúsculas): entrar con ella deja `founder` a la wallet, nueva o ya registrada. Vence a los 7 días de sembrarse. |
+| `SEED_DEMO` | no | `1` siembra y mantiene vivos los `GENESIS-000x` publicados. **Nunca** en el App Service interno. |
+| `SEED_COHORT` | no | `1` siembra el código de cohorte `ESPECIALIZACION-2026` y alarga su plazo en cada arranque. |
+| `ZELENA_OMITIR_VERIFICACION` | no | `1` hace que `start-azure.sh` arranque sin `scripts/verificar-paquete.mjs`. Solo para una emergencia consciente. |
+| `STELLAR_NETWORK` | sí | `testnet`. **Nunca** mainnet en v1. |
+| `SERVICE_ACCOUNT_SECRET` | worker / anclaje | cuenta de **testnet** del anclaje. Vive SOLO en el servidor (App Settings o donde corre el worker), jamás en el frontend. Sin ella, `POST /api/anchor/run` responde 500 y el workflow `anclaje.yml` falla a la vista. |
+| `ANCHOR_RUN_SECRET` | anclaje programado | 32 caracteres o más (`openssl rand -hex 32`). El mismo valor va en **App Settings** y en los **secrets del repo** de GitHub: `.github/workflows/anclaje.yml` lo manda en `x-anchor-secret` cada 15 minutos a `POST /api/anchor/run` (comparación en tiempo constante). Más corto o ausente, solo el founder con sesión puede disparar el anclaje. El workflow corre desde la rama por defecto: hay que llevarlo allí. |
+| `ZELENA_DB_WORKER` | no | ruta alternativa al worker del puente (por defecto `src/lib/db-query.worker.mjs`). |
+
+### Puerta corporativa Entra ID (WP13)
+
+Con `AUTH_ENTRA_ENABLED` apagado o ausente, la puerta corporativa **no existe**
+(`/api/auth/*` responde 503) y el flujo de invitación + wallet queda intacto. No la
+enciendas hasta tener las cuatro variables siguientes.
+
+| Variable | Obligatoria | Para qué |
+|---|---|---|
+| `AUTH_ENTRA_ENABLED` | no | flag de la puerta corporativa. Acepta `1\|true\|yes`; cualquier otra cosa = APAGADO. |
+| `AZURE_AD_CLIENT_ID` | WP13 | *Application (client) ID* del app registration (paso A1). |
+| `AZURE_AD_CLIENT_SECRET` | WP13 | el *Value* del client secret. El portal lo muestra **una sola vez**. |
+| `AZURE_AD_TENANT_ID` | WP13 | *Directory (tenant) ID*. Es contra este valor que se valida el claim `tid`: **es la restricción de tenant**. |
+| `NEXTAUTH_SECRET` | WP13 | secreto propio de NextAuth (independiente de `SESSION_SECRET`), firma el JWT efímero que vive hasta el intercambio. 32+ bytes aleatorios. |
+| `NEXTAUTH_URL` | WP13 | URL pública de la app. NextAuth construye la URL de callback con ella; si no coincide con la Redirect URI registrada, Entra rechaza el login. |
+| `ZELENA_CORPORATE_DOMAIN` | no | dominio corporativo aceptado; por defecto `zelena.tech`. |
+
+**Redirect URI a registrar en Entra** (no es una variable, pero va junta):
+`<NEXTAUTH_URL>/api/auth/callback/microsoft-entra-id` — coincide **exactamente** con
+la del paso A1 de `DESPLIEGUE-V1.md`.
+
+### Asistente de Telegram (WP19)
+
+Con `TELEGRAM_ENABLED` apagado el webhook responde **404**. El webhook además
+**rechaza si no hay `TELEGRAM_WEBHOOK_SECRET` configurado**, en vez de aceptar a
+cualquiera: un endpoint público sin secreto es escritura anónima en la base.
+
+| Variable | Obligatoria | Para qué |
+|---|---|---|
+| `TELEGRAM_ENABLED` | no | flag del bot. Por defecto APAGADO. |
+| `TELEGRAM_BOT_TOKEN` | WP19 | token de @BotFather. Solo entorno/Key Vault, **nunca** en una tabla. |
+| `TELEGRAM_WEBHOOK_SECRET` | WP19 | *secret token* del webhook, validado en cada request en tiempo constante. Necesario **también en local**, porque el script de polling hace de puente al mismo handler. |
+| `ANTHROPIC_API_KEY` | WP19 | clasificación de mensajes con *tool use*. |
+| `ANTHROPIC_BOT_MODEL` | no | por defecto `claude-haiku-4-5-20251001`. |
+| `ZELENA_APP_URL` | no | solo para el script de polling; por defecto `http://localhost:3000`. |
+
+**Cero secretos en la base de datos** (regla transversal): ninguna tabla guarda
+contraseñas, tokens ni claves. El log de arranque imprime servidor/base/método de
+autenticación, **nunca** la contraseña ni el token.
+
+## Autenticación a la base: managed identity (recomendado)
+
+1. App Service → *Identity* → System assigned → **On**.
+2. En la base (conectado como administrador de Entra):
+   ```sql
+   CREATE USER [zelena-workspace] FROM EXTERNAL PROVIDER;  -- nombre del App Service
+   ALTER ROLE db_datareader ADD MEMBER [zelena-workspace];
+   ALTER ROLE db_datawriter ADD MEMBER [zelena-workspace];
+   ALTER ROLE db_ddladmin  ADD MEMBER [zelena-workspace];   -- crea las tablas al arrancar
+   ```
+3. **No** configurar `AZURE_SQL_USER`/`AZURE_SQL_PASSWORD`: sin ellos el driver usa
+   managed identity automáticamente.
+
+El backend intenta primero `azure-active-directory-default` de tedious, que pide un
+token **fresco a `@azure/identity` en cada conexión nueva** (los tokens de Entra viven
+~1 h; así no hay problema de expiración). Si esa versión de tedious no lo soporta, cae a
+pedir el token a mano con `DefaultAzureCredential`; ese camino de compatibilidad **no
+renueva el token**, así que conexiones nuevas después de ~1 h fallarían — si aparece ese
+síntoma, actualizar `mssql`/`tedious`.
+
+`mssql` y `@azure/identity` están declarados como **`optionalDependencies`** de
+`apps/web` (igual que `libsql` y `better-sqlite3`): no hacen falta en desarrollo local,
+pero el App Service **sí** debe instalarlos.
+
+> **Paso pendiente de una sola vez (antes del primer despliegue):** el `package-lock.json`
+> de la raíz todavía no incluye `mssql` ni `@azure/identity` (WP16 no lo regeneró para no
+> chocar con el trabajo en paralelo). Correr **una vez** desde la raíz del monorepo:
+> ```bash
+> npm install                 # resuelve las nuevas optionalDependencies y actualiza el lock
+> git add package-lock.json   # el lock debe viajar al repo
+> ```
+> Sin eso, `npm ci` fallará por lockfile desincronizado y el driver de Azure SQL no
+> cargará (y entonces **lanza**, como debe: no arranca contra SQLite local por error).
+
+## Recursos y configuración de Azure
+
+- **Resource group** (su nombre vive en la configuración de Azure, no en el repo).
+- **App Service** Linux, **Node 20**, plan **B1** (el free tier duerme la app).
+  Arranque: `npm --workspace apps/web run build && npx --workspace apps/web next start`.
+  El árbol de `apps/web/src/lib` debe existir en el destino: en tiempo de ejecución se
+  leen `schema.sql` y el worker `db-query.worker.mjs` desde `process.cwd()/src/lib`.
+- **Azure SQL Database** tier **Basic** (o General Purpose Serverless con auto-pausa si
+  se prefiere que duerma fuera de horario).
+- **Red**: regla de firewall **"Allow Azure services"** o private endpoint.
+  **Nunca abrir a 0.0.0.0.** El *outbound* del App Service alcanza la base sin abrir nada más.
+- **Backups**: retención automática **≥ 7 días** (Basic trae 7 por defecto; confirmar en
+  *Backups → Retention policies*). Nada de datos reales que perder aún, pero la política
+  se activa antes del alta del equipo.
+- **Worker de anclaje**: **WebJob** de App Service (triggered, cada 15 min) o container
+  job, con la **cuenta de servicio de testnet**. **Jamás llaves de mainnet ahí.**
+
+## Costos estimados (mensual, USD)
+
+| Recurso | Estimado |
+|---|---|
+| App Service B1 | ~13 |
+| **Azure SQL Basic** (5 DTU, 2 GB) | **~5** |
+| Blob Storage (evidencia, WP19 fase B) | ~1 |
+| Entra ID (incluido en M365) | 0 |
+| Testnet Stellar | 0 |
+| API de Claude para el bot (uso personal de John) | ~2–5 |
+| **Total** | **~20–25** |
+
+Cifras de referencia para presupuestar; confirmar en la calculadora de Azure con la
+región y el tier exactos antes de crear los recursos. Azure SQL **Serverless con
+auto-pausa** puede bajar más el costo si la app solo se usa en horario laboral.
+
+## Límite conocido: rate limiting en memoria
+
+`apps/web/src/lib/rate-limit.ts` cuenta **en memoria, por proceso**. Es un control real
+**solo con UNA instancia** de App Service (el escenario de v1). Con más de una instancia
+—o con *Always On* desactivado y reinicios frecuentes— cada instancia tiene su propio
+contador y un reinicio lo pone a cero.
+
+**Regla:** antes de escalar a >1 instancia (o de activar autoescalado), mover el contador
+a almacenamiento compartido (Azure Cache for Redis con `INCR`+`EXPIRE`, o una tabla en
+Azure SQL). Mientras v1 corra en una instancia, no hay que tocarlo. Anotado también en
+`docs/DESPLIEGUE-V1.md` parte E.
+
+## Diferencias de dialecto ya resueltas (`sql-dialect.ts`)
+
+| SQLite | T-SQL |
+|---|---|
+| `INTEGER PRIMARY KEY AUTOINCREMENT` | `INT IDENTITY(1,1) PRIMARY KEY` |
+| `TEXT` | `NVARCHAR(MAX)`, y `NVARCHAR(200)` si la columna es clave o va indexada |
+| `REAL` | `FLOAT` (o `DECIMAL(18,6)` si se pide) |
+| banderas 0/1 (`is_*`, `approved`, `enabled`, …) | `BIT` (el worker las devuelve como 0/1, así que la app no cambia) |
+| `datetime('now')` · `CURRENT_TIMESTAMP` | `CONVERT(NVARCHAR(19), SYSUTCDATETIME(), 120)` |
+| `datetime('now','+30 days')` | `CONVERT(NVARCHAR(19), DATEADD(day, 30, SYSUTCDATETIME()), 120)` |
+| `date('now')` | `CONVERT(NVARCHAR(10), SYSUTCDATETIME(), 23)` |
+| `strftime('%Y-%m', x)` | `FORMAT(CONVERT(datetime2, x), 'yyyy-MM')` |
+| `LIMIT n` | `SELECT TOP (n)` |
+| `LIMIT n OFFSET m` | `OFFSET m ROWS FETCH NEXT n ROWS ONLY` |
+| `ORDER BY RANDOM()` | `ORDER BY NEWID()` |
+| `INSERT OR IGNORE` | `INSERT` con `BEGIN TRY/CATCH` que se traga **solo** el error de clave duplicada (2601/2627) |
+| `ON CONFLICT … DO NOTHING` | `IF NOT EXISTS (… WITH (UPDLOCK, HOLDLOCK)) INSERT …` |
+| `ON CONFLICT … DO UPDATE` | `MERGE … WITH (HOLDLOCK)`, `excluded.` → `src.` |
+| `RETURNING x` | cláusula `OUTPUT INSERTED.x` / `OUTPUT DELETED.x` |
+| JSON (`params` del genoma) | `NVARCHAR(MAX)` con `CHECK (ISJSON(col) = 1)`; lectura con `JSON_VALUE` |
+| `PRAGMA …` | no-op (WAL y `foreign_keys` son propiedades del motor) |
+| `lastInsertRowid` | `SELECT CAST(SCOPE_IDENTITY() AS BIGINT)` en el **mismo lote** que el INSERT |
+| `INSERT INTO periods (id, …) VALUES (1, …)` (id explícito sobre PK autoincremental, lo hace el seed) | `SET IDENTITY_INSERT periods ON; … OFF;` — las columnas IDENTITY se descubren del esquema ya traducido, no de una lista a mano |
+| `SELECT (a <= b) AS x` (booleano escalar) | `SELECT CASE WHEN a <= b THEN 1 ELSE 0 END AS x` — T-SQL no admite booleanos en la lista de selección (caso real: `checkInvite`) |
+| `FROM (SELECT … UNION ALL …)` sin alias | `FROM (…) AS __d1` — T-SQL exige alias en tablas derivadas (caso real: wallets activas en `epochs.ts`) |
+| `?` posicional | `@p0`, `@p1`, … (parámetros nombrados; el paso a nombrados es lo que permite reusar un valor en `IF NOT EXISTS`/`MERGE` sin duplicar bindings) |
+
+Dos diferencias que **no** se pueden traducir y hay que tener presentes al escribir SQL nuevo:
+
+- **`UNIQUE` sobre columna que admite NULL:** SQLite permite varios NULL; T-SQL solo uno.
+  Si hace falta, usar índice único filtrado (`WHERE col IS NOT NULL`). Hoy ninguna
+  constraint del esquema está sobre columna nullable.
+- **`GROUP BY`/`DISTINCT` sobre `NVARCHAR(MAX)`:** permitido, pero sin poder indexar.
+  Si una columna de agrupación crece en volumen (hoy: `axis`, `bucket`, `choice`),
+  acotar su longitud en `schema.sql` para que el traductor le dé `NVARCHAR(n)`.
+
+**Fechas:** se conservan como TEXTO con el formato de SQLite (`YYYY-MM-DD HH:MM:SS`, UTC)
+para que las comparaciones de cadena que hace la app sigan ordenando igual. `SYSUTCDATETIME()`
+desnudo daría `datetime2` con separador `T` y rompería `expires_at > datetime('now')`.
+
+**Consumo atómico de invitaciones (superficie crítica V5):** el `UPDATE` condicional se
+traduce con `UPDATE invites WITH (UPDLOCK, ROWLOCK) SET … WHERE … used_by IS NULL` dentro
+de la transacción → exactamente una transacción gana la carrera, igual que en SQLite.
+
+**Si algo no se puede traducir con fidelidad, el traductor LANZA** (`UnsupportedSqlError`)
+en vez de emitir T-SQL "parecido": una traducción silenciosamente incorrecta es peor que
+un error. Si aparece al añadir SQL nuevo, ampliar `sql-dialect.ts` **con su test**.
+
+Las 125 sentencias SQL que hoy escribe la app se revisaron una por una contra el
+traductor; las tres trampas que aparecieron (id explícito sobre IDENTITY, booleano
+escalar en `SELECT`, tabla derivada sin alias) están traducidas y con test. **Al añadir
+consultas nuevas conviene repetir la revisión** — el traductor no las conoce de antemano.
+
+## Qué queda por verificar contra la instancia real (paso 6)
+
+La suite (127 tests) cubre el traductor de dialecto (puro) y el puente síncrono de punta a
+punta contra un backend asíncrono falso. **No** cubre —porque necesita la suscripción:
+
+1. Que Azure SQL **acepte** el T-SQL generado (ejecutar el `schema.sql` traducido y correr
+   la suite con `DATABASE_DRIVER=mssql` apuntando a la instancia).
+2. Managed identity de verdad (token de Entra, permisos del usuario externo).
+3. Latencia real y el timeout del puente (`callTimeoutMs`, 30 s por defecto).
+4. El **worker de anclaje local** (`packages/scripts/anchor-worker.mjs`) abre **SQLite
+   directamente** (reutiliza `lib/anchor.ts`, no `lib/db.ts`). Tal cual **no** lee Azure SQL;
+   en el despliegue el anclaje lo hace la app misma (`/api/anchor/run`, que sí pasa por
+   `lib/db.ts`), así que el worker solo hace falta en desarrollo.
 
 ## Notas
 
