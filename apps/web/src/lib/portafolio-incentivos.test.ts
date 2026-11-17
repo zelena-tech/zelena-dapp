@@ -23,9 +23,9 @@ import {
   esRutaLanding,
 } from "./menu";
 import { RUTAS_SITEMAP } from "./seo";
-import { SLUGS_INTERES } from "./servicios";
+import { INTERESES, INTERES_A_LA_MEDIDA, SLUGS_INTERES } from "./servicios";
 import { CABECERA_EMPRESAS, PIE_EMPRESAS, contactoCon } from "../../app/_landing/copy-empresas";
-import { LINEAS, NECESIDADES, TRES_LINEAS } from "../../app/_landing/copy-portafolio";
+import { COLABORAR, CUATRO_LINEAS, LINEAS, NECESIDADES, PORTAFOLIO } from "../../app/_landing/copy-portafolio";
 import * as INCENTIVOS from "../../app/_landing/copy-incentivos";
 
 // El middleware importa la sesión con el alias "@/" (vitest no lo resuelve).
@@ -95,6 +95,14 @@ describe("cromo claro en español", () => {
     }
     expect(leer(PAGINAS[0])).toContain("ruta: RUTA_PORTAFOLIO,");
     expect(leer(PAGINAS[1])).toContain("ruta: RUTA_INCENTIVOS,");
+    // Los id escritos a mano no se repiten dentro de una página (un aria-labelledby
+    // repetido rotula la sección con el titular equivocado).
+    const ids = (r: string) => [...leer(r).matchAll(/\bid="([a-z-]+)"/g)].map((x) => x[1]);
+    const comunes = ["Explorador.tsx", "SeccionesPortafolio.tsx"].flatMap((n) => ids(`app/_landing/empresas/${n}`));
+    const dePortafolio = [...ids(PAGINAS[0]), ...comunes];
+    expect(dePortafolio.filter((id, i) => dePortafolio.indexOf(id) !== i)).toEqual([]);
+    const deIncentivos = [...ids(PAGINAS[1]), ...ids("app/_landing/empresas/SeccionesIncentivos.tsx")];
+    expect(deIncentivos.filter((id, i) => deIncentivos.indexOf(id) !== i)).toEqual([]);
     // El único <h1> lo pinta el hero compartido; cada página lo usa una vez.
     const h1 = DE_EMPRESAS.map(leer).join("\n").match(/<h1\b/g) ?? [];
     expect(h1).toHaveLength(1);
@@ -117,12 +125,29 @@ describe("cromo claro en español", () => {
   });
 });
 
-describe("portafolio · siete líneas que llevan a un contacto real", () => {
-  it("un producto, cinco servicios y un programa", () => {
+describe("portafolio · ocho líneas que llevan a un contacto real", () => {
+  it("un producto, un programa de incentivos y seis servicios", () => {
     const cuenta = (t: string) => LINEAS.filter((l) => l.tipo === t).length;
-    expect([cuenta("Producto"), cuenta("Servicio"), cuenta("Programa")]).toEqual([1, 5, 1]);
+    expect([cuenta("Producto"), cuenta("Programa"), cuenta("Servicio")]).toEqual([1, 1, 6]);
     expect(new Set(LINEAS.map((l) => l.id)).size).toBe(LINEAS.length);
-    expect([...TRES_LINEAS.cifras]).toEqual(["1 producto propio", "5 servicios", "1 programa de incentivos", "1 solo aliado"]);
+    expect([...CUATRO_LINEAS.cifras]).toEqual(["1 producto propio", "1 programa de incentivos", "6 servicios", "1 comunidad"]);
+  });
+
+  // Pedido del founder (2026-11-17): el programa de incentivos va al lado del WMS.
+  it("el WMS va primero y el programa de incentivos, a su lado; el filtro sigue ese orden", () => {
+    expect(LINEAS.slice(0, 2).map((l) => l.id)).toEqual(["wms", "incentivos"]);
+    expect(LINEAS.slice(2).every((l) => l.tipo === "Servicio")).toBe(true);
+    expect(PORTAFOLIO.filtros.map((f) => f.valor)).toEqual(["Todo", "Producto", "Programa", "Servicio"]);
+  });
+
+  // Pedido del founder (2026-11-17): un servicio para quien quiere construir algo propio.
+  it("el desarrollo a la medida es el sexto servicio, con su propio interés en el formulario", () => {
+    const medida = LINEAS.find((l) => l.id === "medida");
+    expect(medida).toMatchObject({ tipo: "Servicio", interes: INTERES_A_LA_MEDIDA });
+    expect(INTERESES.find((i) => i.slug === INTERES_A_LA_MEDIDA)?.nombre).toBe("Desarrollo a la medida");
+    expect(NECESIDADES.some((n) => n.lineas.includes("medida"))).toBe(true);
+    // Sin plazos ni precios publicados: publicados se vuelven un compromiso.
+    expect(JSON.stringify(medida)).not.toMatch(/semanas?|d[ií]as h[aá]biles|USD|garantiza/i);
   });
 
   it("cada línea pide un interés que el formulario ofrece", () => {
@@ -143,11 +168,45 @@ describe("portafolio · siete líneas que llevan a un contacto real", () => {
     expect([...ids].filter((id) => !recomendadas.has(id))).toEqual([]);
   });
 
-  it("los incentivos son la séptima línea: tienen página propia y entran por Harmony", () => {
+  it("los incentivos tienen página propia y entran por Harmony", () => {
     const inc = LINEAS.find((l) => l.id === "incentivos");
     expect(inc).toMatchObject({ tipo: "Programa", interes: "harmony", enlace: RUTA_INCENTIVOS });
-    expect(TRES_LINEAS.lineas.map((l) => l.verbo)).toEqual(["Ordenamos", "Operamos", "Reconocemos"]);
-    expect(TRES_LINEAS.lineas[2].href).toBe(RUTA_INCENTIVOS);
+    expect(CUATRO_LINEAS.lineas.map((l) => l.verbo)).toEqual(["Ordenamos", "Operamos", "Reconocemos", "Colaboramos"]);
+    expect(CUATRO_LINEAS.lineas[2].href).toBe(RUTA_INCENTIVOS);
+  });
+});
+
+/**
+ * Pedido del founder (2026-11-17): al portafolio le faltaba la parte de colaborar. Dice lo
+ * mismo que /metodo y lleva a páginas que existen; no promete pagos ni nombra la red.
+ */
+describe("portafolio · la parte de colaborar", () => {
+  it("es la cuarta línea y tiene su sección, con ancla", () => {
+    expect(CUATRO_LINEAS.lineas[3]).toMatchObject({ verbo: "Colaboramos", href: "#colaborar" });
+    expect(COLABORAR.ancla).toBe("colaborar");
+    expect(`${COLABORAR.h2.linea1} ${COLABORAR.h2.antes}${COLABORAR.h2.enfasis}`).toBe("Rediseñamos la forma de colaborar.");
+    expect(leer("app/empresas/portafolio/page.tsx")).toContain("<Colaborar />");
+    expect(leer("app/_landing/empresas/SeccionesPortafolio.tsx")).toContain("id={COLABORAR.ancla}");
+  });
+
+  it("sus puertas llevan a rutas reales: contacto a la medida, proyectos abiertos, método, comunidad y manifiesto", () => {
+    expect(COLABORAR.puertas.map((p) => p.href)).toEqual(["/empresas/contacto?interes=a-la-medida", "/agora", "/metodo"]);
+    expect(COLABORAR.comunidad.href).toBe("/comunidad");
+    expect(COLABORAR.manifiesto.href).toBe("/manifiesto");
+    for (const r of ["app/agora/page.tsx", "app/metodo/page.tsx", "app/comunidad/page.tsx", "app/manifiesto/page.tsx"]) {
+      expect(fs.existsSync(path.join(WEB, r)), r).toBe(true);
+    }
+    // La comunidad y el manifiesto son de la landing en inglés: el enlace lo marca.
+    const seccion = leer("app/_landing/empresas/SeccionesPortafolio.tsx");
+    expect(seccion).toContain('<SecondaryCta href={COLABORAR.comunidad.href} hrefLang="en"');
+    expect(seccion).toContain('<SecondaryCta href={COLABORAR.manifiesto.href} hrefLang="en"');
+  });
+
+  it("no promete pagos, ni cifras, ni nombra la red", () => {
+    const texto = JSON.stringify(COLABORAR);
+    expect(texto).not.toMatch(/USDC|d[oó]lar|pesos|red de pruebas|red principal|testnet|mainnet/i);
+    expect(texto).not.toMatch(/[$€%]|\b\d{3,}\b|\b(COP|USD)\b/);
+    expect(texto).toContain("Se califica la entrega, nunca a la persona.");
   });
 });
 
@@ -178,5 +237,18 @@ describe("incentivos · lo que la página puede afirmar", () => {
     expect(publico).toContain("su valor en pesos sube y baja con la tasa de cambio");
     expect(copy).not.toMatch(/rendimiento|rentabilidad|inter[eé]s(es)? (anual|mensual)|ganancia garantizada|sin riesgo|n[oó]mina/i);
     expect(publico).not.toMatch(/m[aá]s estable que el peso/i);
+    // Ni garantía de paridad ni absolutos que nadie respalda (revisión del 2026-11-17).
+    expect(publico).not.toMatch(/siempre vale|valer siempre|sin monto m[ií]nimo/i);
+    expect(publico).toContain("Sigue al dólar");
+  });
+
+  // En /empresas el supervisor revisa y aplica el multiplicador de calidad: esta página no
+  // puede decir que el incentivo no depende del criterio de nadie, ni prometer a Harmony
+  // el historial "que no se borra" (eso es de la comunidad, /metodo).
+  it("no contradice a /empresas: hay revisión de calidad, y el historial imborrable no es de Harmony", () => {
+    expect(leer("app/empresas/page.tsx")).toContain("El supervisor revisa y aplica el multiplicador de calidad.");
+    expect(publico).toContain("El supervisor revisa la calidad contra el criterio acordado");
+    expect(publico).not.toMatch(/criterio de un jefe|no se borra|historial de logros/i);
+    expect(JSON.stringify(LINEAS.find((l) => l.id === "incentivos"))).not.toMatch(/criterio de un jefe|historial de logros/i);
   });
 });

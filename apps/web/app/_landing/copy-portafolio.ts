@@ -1,18 +1,19 @@
 /**
  * Copy del portafolio de soluciones (/empresas/portafolio), en español y con el cromo
- * claro de la landing (pedido del founder, 2026-11-17): un producto propio, cinco
- * servicios y el programa de incentivos. Todo el texto vive aquí, no en el JSX.
+ * claro de la landing (pedido del founder, 2026-11-17): un producto propio, el programa
+ * de incentivos (a su lado), seis servicios (el sexto, el desarrollo a la medida) y la
+ * parte de colaborar: la comunidad. Todo el texto vive aquí, no en el JSX.
  * `interes` es el slug que entiende el formulario de contacto (lib/servicios.ts).
  *
  * Mismas reglas que el resto del copy público (ver copy-comun.ts y
  * sitio-publico.test.ts): ni clientes ni personas, ni la entidad legal, ni jerga.
  */
-import { ENLACES_EMPRESAS } from "./copy-empresas";
+import { ENLACES_EMPRESAS, contactoCon } from "./copy-empresas";
 
 export const META_PORTAFOLIO = {
   titulo: "Portafolio de soluciones · Zelena",
   descripcion:
-    "Ordenamos la operación de tu pyme: un producto propio (ZELENA WMS), cinco servicios que se contratan por separado y un programa de incentivos en dólares digitales para tu equipo.",
+    "Ordenamos la operación de tu pyme: un producto propio (ZELENA WMS), un programa de incentivos en dólares digitales para tu equipo y seis servicios que se contratan por separado, incluido el desarrollo a la medida.",
 } as const;
 
 export const HERO_PORTAFOLIO = {
@@ -26,18 +27,21 @@ export const HERO_PORTAFOLIO = {
 
 /**
  * Lo primero que ve quien llega con el enlace y no nos conoce: qué hace el negocio, en
- * tres verbos. Cada uno lleva a su parte.
+ * cuatro verbos. Cada uno lleva a su parte. `tono` es el color de la tarjeta; `enIngles`,
+ * que el destino es una página de la landing en inglés (se marca con hrefLang).
  */
-export const TRES_LINEAS = {
-  etiqueta: "Zelena en tres líneas",
+export const CUATRO_LINEAS = {
+  etiqueta: "Zelena en cuatro líneas",
   lineas: [
     {
       n: "01",
       verbo: "Ordenamos",
       que: "tus procesos, tu información y tu tecnología.",
-      como: "Cinco servicios: procesos, Odoo, datos, nube y dirección de TI.",
+      como: "Seis servicios, de los procesos al desarrollo a la medida.",
       href: "#portafolio",
       enlace: "Ver los servicios",
+      tono: "panel",
+      enIngles: false,
     },
     {
       n: "02",
@@ -46,6 +50,8 @@ export const TRES_LINEAS = {
       como: "ZELENA WMS: inventario exacto y despachos validados.",
       href: "#portafolio",
       enlace: "Ver el producto",
+      tono: "panel",
+      enIngles: false,
     },
     {
       n: "03",
@@ -54,9 +60,21 @@ export const TRES_LINEAS = {
       como: "Incentivos por desempeño, pagados en dólares digitales.",
       href: ENLACES_EMPRESAS.incentivos,
       enlace: "Ver los incentivos",
+      tono: "lima",
+      enIngles: false,
+    },
+    {
+      n: "04",
+      verbo: "Colaboramos",
+      que: "con una comunidad que construye.",
+      como: "Reglas públicas, trabajo por hitos y un historial que es de cada quien.",
+      href: "#colaborar",
+      enlace: "Ver cómo colaborar",
+      tono: "tinta",
+      enIngles: false,
     },
   ],
-  cifras: ["1 producto propio", "5 servicios", "1 programa de incentivos", "1 solo aliado"],
+  cifras: ["1 producto propio", "1 programa de incentivos", "6 servicios", "1 comunidad"],
 } as const;
 
 export const SITUACION = {
@@ -71,14 +89,14 @@ export const SITUACION = {
 export const PORTAFOLIO = {
   ancla: "portafolio",
   etiqueta: "02 · Portafolio",
-  h2: { linea1: "Un producto, cinco servicios", antes: "y un programa de ", enfasis: "incentivos." },
+  h2: { linea1: "Un producto, sus incentivos", antes: "y seis ", enfasis: "servicios." },
   intro: "Contrata solo lo que necesitas. Cada línea funciona por sí sola y todas se conectan entre sí.",
   filtroAria: "Filtrar el portafolio",
   filtros: [
     { valor: "Todo", nombre: "Todo" },
     { valor: "Producto", nombre: "Producto" },
-    { valor: "Servicio", nombre: "Servicios" },
     { valor: "Programa", nombre: "Incentivos" },
+    { valor: "Servicio", nombre: "Servicios" },
   ],
   verDetalle: "Ver detalle",
   recomendada: "Recomendada",
@@ -117,6 +135,48 @@ export const ALIADO = {
   paraQuienTitulo: "Para quién trabajamos",
   paraQuien:
     "Pymes en Colombia de 10 a 200 empleados que necesitan ordenar y digitalizar su operación, con foco en inventario, bodegas, despachos o distribución.",
+} as const;
+
+/**
+ * La parte de colaborar: Zelena también es una comunidad. Dice lo mismo que /metodo (una
+ * empresa o la comunidad trae un problema real; el proyecto se abre con su alcance, sus
+ * hitos y su forma de evaluación; se construye por hitos) y nada más: ni cifras, ni
+ * pagos, ni la red. Los detalles viven en /metodo y en /comunidad.
+ */
+export const COLABORAR = {
+  ancla: "colaborar",
+  etiqueta: "05 · Colaborar",
+  h2: { linea1: "Rediseñamos la forma", antes: "de ", enfasis: "colaborar." },
+  intro:
+    "Zelena también es una comunidad: reglas públicas, trabajo por hitos y un historial que es de quien lo construye.",
+  puertas: [
+    {
+      n: "01",
+      t: "Trae una necesidad",
+      d: "Un problema real de tu empresa se vuelve un proyecto con alcance, hitos y forma de evaluación, a la vista de todos.",
+      href: contactoCon("a-la-medida"),
+      enlace: "Contarnos tu idea",
+      enIngles: false,
+    },
+    {
+      n: "02",
+      t: "Construye con nosotros",
+      d: "Aplica a un proyecto abierto con tu enfoque, entrega por hitos y haz crecer un historial que es tuyo.",
+      href: ENLACES_EMPRESAS.proyectos,
+      enlace: "Ver proyectos abiertos",
+      enIngles: false,
+    },
+    {
+      n: "03",
+      t: "Conoce el método",
+      d: "Ocho pasos, de la necesidad al hito aprobado. Se califica la entrega, nunca a la persona.",
+      href: ENLACES_EMPRESAS.metodo,
+      enlace: "Leer el método",
+      enIngles: false,
+    },
+  ],
+  comunidad: { href: ENLACES_EMPRESAS.comunidad, nombre: "Conocer la comunidad" },
+  manifiesto: { href: ENLACES_EMPRESAS.manifiesto, nombre: "Leer el manifiesto" },
 } as const;
 
 export const CIERRE_PORTAFOLIO = {
@@ -176,6 +236,32 @@ export const LINEAS: Linea[] = [
     modalidad: "Implementación + mensualidad",
     soporte: "Lunes a viernes, 8:00 a 18:00",
     interes: "wms",
+  },
+  {
+    id: "incentivos",
+    tipo: "Programa",
+    icono: '<circle cx="12" cy="12" r="9"/><path d="M15 9.5C14.6 8.6 13.5 8 12 8C10.3 8 9 8.9 9 10.2C9 13 15 11.6 15 14.2C15 15.3 13.7 16 12 16C10.5 16 9.4 15.4 9 14.5M12 6V8M12 16V18"/>',
+    nombre: "Incentivos en Dólares Digitales",
+    corto: "Reconocemos el desempeño real de tu equipo con un incentivo que también sirve para ahorrar.",
+    entrada:
+      "Un programa de incentivos ligado a lo que el equipo de verdad hace en la operación, pagado en dólares digitales.",
+    que: "Harmony, nuestro programa de incentivos por desempeño: las reglas se definen antes, el resultado se mide en la operación y cada persona recibe su incentivo en dólares digitales.",
+    para: "Empresas que ya miden su operación —o van a medirla con ZELENA WMS— y quieren reconocer a su equipo con reglas claras.",
+    resuelve:
+      "Alta rotación, incentivos manuales que se abandonan, bonos decididos a ojo y equipos que no sienten suyo el resultado.",
+    incluye: [
+      "Diseño de las reglas del incentivo con tu equipo directivo",
+      "Medición automática desde la operación",
+      "Cierre por periodo con resultados visibles para cada persona",
+      "Pago en dólares digitales (USDC) a la billetera de cada persona",
+    ],
+    beneficios:
+      "Una herramienta de ahorro para tu equipo, más productividad donde se mide el trabajo y un sentido de pertenencia que se nota en la rotación.",
+    extra: { etiqueta: "Importante", texto: "El incentivo es adicional al salario: nunca lo reemplaza." },
+    modalidad: "Se diseña con cada empresa, por periodos",
+    soporte: "Lunes a viernes, 8:00 a 18:00",
+    interes: "harmony",
+    enlace: "/empresas/incentivos",
   },
   {
     id: "odoo",
@@ -297,31 +383,32 @@ export const LINEAS: Linea[] = [
     interes: "gestion-ti",
   },
   {
-    id: "incentivos",
-    tipo: "Programa",
-    icono: '<circle cx="12" cy="12" r="9"/><path d="M15 9.5C14.6 8.6 13.5 8 12 8C10.3 8 9 8.9 9 10.2C9 13 15 11.6 15 14.2C15 15.3 13.7 16 12 16C10.5 16 9.4 15.4 9 14.5M12 6V8M12 16V18"/>',
-    nombre: "Incentivos en Dólares Digitales",
-    corto: "Reconocemos el desempeño real de tu equipo con un incentivo que también sirve para ahorrar.",
+    id: "medida",
+    tipo: "Servicio",
+    icono: '<path d="M8 8l-4 4 4 4M16 8l4 4-4 4M13.5 5l-3 14"/>',
+    nombre: "Desarrollo a la Medida",
+    corto: "Si lo que necesitas todavía no existe, lo diseñamos y lo construimos contigo.",
     entrada:
-      "Un programa de incentivos ligado a lo que el equipo de verdad hace en la operación, pagado en dólares digitales.",
-    que: "Harmony, nuestro programa de incentivos por desempeño: las reglas se definen antes, el resultado se mide en la operación y cada persona recibe su incentivo en dólares digitales.",
-    para: "Empresas que ya miden su operación —o van a medirla con ZELENA WMS— y quieren reconocer a su equipo con reglas claras.",
+      "Convertimos una idea o un proceso propio en software que funciona: integraciones, aplicaciones y automatizaciones.",
+    que: "Diseño y desarrollo de software a la medida, desde una integración entre dos sistemas hasta una aplicación completa.",
+    para: "Empresas con una idea, un proceso propio o una necesidad que ningún sistema del mercado resuelve tal como la viven.",
     resuelve:
-      "Alta rotación, incentivos manuales que se abandonan, bonos que dependen del criterio de un jefe y equipos que no sienten suyo el resultado.",
+      "Procesos que se hacen a mano porque ningún sistema los cubre, sistemas que no se hablan y proyectos de tecnología que no arrancan por falta de equipo.",
     incluye: [
-      "Diseño de las reglas del incentivo con tu equipo directivo",
-      "Medición automática desde la operación",
-      "Cierre por periodo con resultados visibles para cada persona",
-      "Pago en dólares digitales (USDC) a la billetera de cada persona",
-      "Historial de logros a nombre de cada trabajador",
+      "Descubrimiento: entendemos el problema antes de escribir código",
+      "Diseño y prototipo que puedes probar",
+      "Desarrollo por hitos, con entregas cortas",
+      "Integración con tus sistemas: ERP, WMS, tienda en línea",
+      "Despliegue en la nube y acompañamiento",
     ],
-    beneficios:
-      "Una herramienta de ahorro para tu equipo, más productividad donde se mide el trabajo y un sentido de pertenencia que se nota en la rotación.",
-    extra: { etiqueta: "Importante", texto: "El incentivo es adicional al salario: nunca lo reemplaza." },
-    modalidad: "Se diseña con cada empresa, por periodos",
+    beneficios: "Una solución hecha para tu operación, documentada y lista para crecer contigo.",
+    extra: {
+      etiqueta: "Cómo lo construimos",
+      texto: "Con el método de Zelena: el alcance, los hitos y la forma de evaluar cada entrega se acuerdan antes de empezar.",
+    },
+    modalidad: "Proyecto por hitos, con el alcance acordado en cada fase",
     soporte: "Lunes a viernes, 8:00 a 18:00",
-    interes: "harmony",
-    enlace: "/empresas/incentivos",
+    interes: "a-la-medida",
   },
 ];
 
@@ -336,6 +423,7 @@ export const NECESIDADES: Array<{ texto: string; lineas: string[] }> = [
   { texto: "Nadie dirige nuestra tecnología", lineas: ["ti"] },
   { texto: "Vamos a crecer y no sabemos por dónde empezar", lineas: ["td", "ti"] },
   { texto: "Mi equipo rota mucho o no se siente reconocido", lineas: ["incentivos", "wms"] },
+  { texto: "Tengo una idea y nadie que la construya", lineas: ["medida"] },
 ];
 
 export const PASOS_CICLO = [
@@ -348,7 +436,7 @@ export const PASOS_CICLO = [
 export const POR_QUE = [
   { n: "I · procesos", titulo: "Empezamos por los procesos.", texto: "Entendemos y ordenamos tu operación antes de instalar cualquier sistema." },
   { n: "II · tecnología", titulo: "Tecnología propia.", texto: "Desarrollamos ZELENA WMS para la bodega de la pyme." },
-  { n: "III · un equipo", titulo: "Un solo responsable.", texto: "Bodega, ERP, datos, nube y tecnología con un mismo equipo." },
+  { n: "III · un equipo", titulo: "Un solo responsable.", texto: "Bodega, ERP, datos, nube y desarrollo con un mismo equipo." },
   { n: "IV · continuidad", titulo: "Seguimos a tu lado.", texto: "Soporte y mejoramiento continuo después de salir en vivo." },
 ];
 

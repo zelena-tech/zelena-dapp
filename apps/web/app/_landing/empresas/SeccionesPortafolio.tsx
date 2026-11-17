@@ -5,25 +5,29 @@ import e from "./empresas.module.css";
 import Chip from "../Chip";
 import { IconoFlechaDerecha } from "../Iconos";
 import { Titular } from "./Comunes";
-import { ALIADO, CICLO, PASOS_CICLO, POR_QUE, SECTORES, TRES_LINEAS } from "../copy-portafolio";
+import { SecondaryCta } from "../Ctas";
+import { ALIADO, CICLO, COLABORAR, CUATRO_LINEAS, PASOS_CICLO, POR_QUE, SECTORES } from "../copy-portafolio";
+
+const TONO_LINEA = { panel: e.lineaPanel, lima: e.lineaLima, tinta: e.lineaTinta } as const;
 
 /**
- * "Zelena en tres líneas": lo primero que lee quien llega con el enlace y no nos conoce.
- * Tres tarjetas (dos grises y la de incentivos en lima), cada una enlace a su parte.
+ * "Zelena en cuatro líneas": lo primero que lee quien llega con el enlace y no nos conoce.
+ * Cuatro tarjetas, cada una enlace a su parte: los servicios y el producto en gris, los
+ * incentivos en lima y la comunidad (colaborar) en tinta.
  */
-export function TresLineas() {
-  const ultimo = TRES_LINEAS.lineas.length - 1;
+export function CuatroLineas() {
   return (
-    <section className={s.seccion} aria-labelledby="tres-lineas-titulo">
-      <h2 id="tres-lineas-titulo" className={m.etiqueta} data-reveal="">
-        {TRES_LINEAS.etiqueta}
+    <section className={s.seccion} aria-labelledby="lineas-titulo">
+      <h2 id="lineas-titulo" className={m.etiqueta} data-reveal="">
+        {CUATRO_LINEAS.etiqueta}
       </h2>
       <ul className={e.tres} data-reveal="escalonado">
-        {TRES_LINEAS.lineas.map((l, i) => (
+        {CUATRO_LINEAS.lineas.map((l) => (
           <li key={l.verbo} className={e.tresItem}>
             <Link
               href={l.href}
-              className={`${e.linea} ${i === ultimo ? e.lineaLima : e.lineaPanel} ${s.elevable}`}
+              hrefLang={l.enIngles ? "en" : undefined}
+              className={`${e.linea} ${TONO_LINEA[l.tono]} ${s.elevable}`}
             >
               <span className={`${s.display} ${e.lineaNumero}`} aria-hidden="true">
                 {l.n}
@@ -40,7 +44,7 @@ export function TresLineas() {
         ))}
       </ul>
       <ul className={e.cifras} data-reveal="">
-        {TRES_LINEAS.cifras.map((c) => (
+        {CUATRO_LINEAS.cifras.map((c) => (
           <li key={c}>
             <Chip tono="panel" punto className={e.mayus}>
               {c}
@@ -57,7 +61,7 @@ export function CicloDeTrabajo() {
   return (
     <section id={CICLO.ancla} className={`${m.grupo} ${e.bloque} ${e.bloquePrimero} ${s.ancla}`} aria-labelledby="ciclo-titulo" data-reveal="seccion">
       <Titular id="ciclo-titulo" etiqueta={CICLO.etiqueta} h2={CICLO.h2} intro={CICLO.intro} enBloque />
-      <ol className={m.principios}>
+      <ol className={`${m.principios} ${e.cuatro}`}>
         {PASOS_CICLO.map((p) => (
           <li key={p.n} className={`${m.principio} ${s.elevable}`}>
             <span className={`${s.display} ${m.principioNumero}`} aria-hidden="true">
@@ -79,7 +83,7 @@ export function PorQue() {
       <h2 id="aliado-titulo" className={m.etiquetaOscura}>
         {ALIADO.etiqueta}
       </h2>
-      <p className={`${s.display} ${m.frase}`}>
+      <p className={`${s.display} ${m.frase} ${e.fraseAliado}`}>
         {ALIADO.frase} <span className={m.lima}>{ALIADO.enfasis}</span>
       </p>
       <ul className={e.razones}>
@@ -101,6 +105,43 @@ export function PorQue() {
             </li>
           ))}
         </ul>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Colaborar: Zelena también es una comunidad. Bloque gris con tres puertas (traer una
+ * necesidad, construir, conocer el método) y, debajo, la comunidad y el manifiesto, que
+ * son páginas de la landing en inglés.
+ */
+export function Colaborar() {
+  return (
+    <section
+      id={COLABORAR.ancla}
+      className={`${m.grupo} ${e.bloque} ${e.pegado} ${s.ancla}`}
+      aria-labelledby="colaborar-titulo"
+      data-reveal="seccion"
+    >
+      <Titular id="colaborar-titulo" etiqueta={COLABORAR.etiqueta} h2={COLABORAR.h2} intro={COLABORAR.intro} enBloque />
+      <ol className={m.principios}>
+        {COLABORAR.puertas.map((p) => (
+          <li key={p.n} className={`${m.principio} ${s.elevable}`}>
+            <span className={`${s.display} ${m.principioNumero}`} aria-hidden="true">
+              {p.n}
+            </span>
+            <h3 className={m.principioTitulo}>{p.t}</h3>
+            <p className={m.principioTexto}>{p.d}</p>
+            <Link href={p.href} hrefLang={p.enIngles ? "en" : undefined} className={e.puertaEnlace}>
+              {p.enlace}
+              <IconoFlechaDerecha tamano={14} trazo={2.5} />
+            </Link>
+          </li>
+        ))}
+      </ol>
+      <div className={e.colaborarAcciones}>
+        <SecondaryCta href={COLABORAR.comunidad.href} hrefLang="en" nombre={COLABORAR.comunidad.nombre} />
+        <SecondaryCta href={COLABORAR.manifiesto.href} hrefLang="en" nombre={COLABORAR.manifiesto.nombre} />
       </div>
     </section>
   );

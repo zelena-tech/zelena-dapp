@@ -4,8 +4,9 @@
  *
  * Lo que esta página afirma tiene que coincidir con /empresas (lo cuida
  * sitio-publico.test.ts): hoy el incentivo llega en USDC a la billetera de cada persona;
- * entregarlo en pesos a la cuenta bancaria es la meta, no lo que ya funciona. No promete
- * ganancias: el dólar digital sigue al dólar y su valor en pesos sube y baja.
+ * entregarlo en pesos a la cuenta bancaria es la meta, no lo que ya funciona; el
+ * supervisor revisa la calidad (no es "sin criterio de nadie"). No promete ganancias ni
+ * paridad: el dólar digital sigue al dólar y su valor en pesos sube y baja.
  */
 import { ENLACES_EMPRESAS, contactoCon } from "./copy-empresas";
 
@@ -31,13 +32,13 @@ export const DOLAR_DIGITAL = {
   puntos: [
     {
       n: "01",
-      t: "Siempre vale un dólar",
-      d: "Es un dólar en formato digital: está hecho para valer siempre un dólar estadounidense. Su nombre técnico es USDC.",
+      t: "Sigue al dólar",
+      d: "Es un dólar en formato digital: está hecho para valer un dólar estadounidense. Su nombre técnico es USDC.",
     },
     {
       n: "02",
       t: "Vive en el celular",
-      d: "Se recibe y se guarda en una billetera en el teléfono, sin cuenta en el exterior y sin monto mínimo.",
+      d: "Se recibe y se guarda en una billetera en el teléfono, sin cuenta en el exterior.",
     },
     {
       n: "03",
@@ -65,7 +66,7 @@ export const BENEFICIOS = {
     {
       n: "03",
       t: "Sentido de pertenencia",
-      d: "Cuando el reconocimiento es justo, visible y llega a tiempo, el equipo siente suyo el resultado. Cada logro queda en un historial a nombre de la persona: lo que hizo no se borra.",
+      d: "Cuando el reconocimiento es justo, visible y llega a tiempo, el equipo siente suyo el resultado. Cada persona ve sus propios resultados al cerrar cada periodo.",
     },
   ],
 } as const;
@@ -77,7 +78,7 @@ export const PASOS_INCENTIVOS = {
   pasos: [
     { n: "01", t: "Defines las reglas", d: "Qué se premia, cuánto y en qué periodo. El presupuesto lo pones tú y se conoce desde el principio." },
     { n: "02", t: "Se mide en la operación", d: "El trabajo real queda registrado en el sistema mientras ocurre. Nada de planillas ni cálculos a mano." },
-    { n: "03", t: "Se cierra el periodo", d: "Los resultados se calculan con las mismas reglas para todos y cada persona ve los suyos." },
+    { n: "03", t: "Se cierra el periodo", d: "El supervisor revisa la calidad contra el criterio acordado, los resultados se calculan con las mismas reglas para todos y cada persona ve los suyos." },
     { n: "04", t: "Cada quien recibe y decide", d: "El incentivo llega en dólares digitales a su billetera. Guardarlo como ahorro o usarlo lo decide cada persona." },
   ],
 } as const;
@@ -87,7 +88,7 @@ export const PARA_QUIEN = {
   empresa: {
     titulo: "Para la empresa",
     puntos: [
-      "Un incentivo que no depende del criterio de un jefe",
+      "Un incentivo con las mismas reglas para todos, no decidido a ojo",
       "Presupuesto definido por periodo, sin sorpresas",
       "Datos de desempeño para decidir mejor",
       "Un argumento real para que la gente se quede",
@@ -99,7 +100,7 @@ export const PARA_QUIEN = {
       "Reglas claras antes de empezar",
       "Un ahorro en dólares al alcance de la mano",
       "Reconocimiento a tiempo, no cuando alguien se acuerda",
-      "Un historial de logros que es suyo",
+      "Sus resultados a la vista en cada cierre",
     ],
   },
 } as const;

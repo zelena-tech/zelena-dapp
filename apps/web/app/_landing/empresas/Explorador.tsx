@@ -14,7 +14,7 @@ import { FICHA, LINEAS, NECESIDADES, PORTAFOLIO, SITUACION, type Linea, type Tip
  * La parte interactiva del portafolio: el buscador por situación, la rejilla de líneas
  * con su filtro y la ficha de detalle. El contenido viene de copy-portafolio.ts; aquí
  * solo vive el estado de la interfaz. Sin JavaScript se ven igual las situaciones y las
- * siete tarjetas, con su nombre y su resumen.
+ * ocho tarjetas, con su nombre y su resumen.
  */
 
 type Filtro = "Todo" | TipoLinea;
@@ -125,9 +125,9 @@ export default function Explorador() {
       </section>
 
       {/* ----- 02 · portafolio ----- */}
-      <section id={PORTAFOLIO.ancla} className={`${s.seccion} ${s.ancla}`} aria-labelledby="portafolio-titulo">
+      <section id={PORTAFOLIO.ancla} className={`${s.seccion} ${s.ancla}`} aria-labelledby="portafolio-lineas-titulo">
         <div className={e.cabezaPortafolio}>
-          <Titular id="portafolio-titulo" etiqueta={PORTAFOLIO.etiqueta} h2={PORTAFOLIO.h2} intro={PORTAFOLIO.intro} />
+          <Titular id="portafolio-lineas-titulo" etiqueta={PORTAFOLIO.etiqueta} h2={PORTAFOLIO.h2} intro={PORTAFOLIO.intro} />
           <div className={e.filtros} role="group" aria-label={PORTAFOLIO.filtroAria} data-reveal="">
             {PORTAFOLIO.filtros.map((f) => (
               <button
@@ -145,22 +145,23 @@ export default function Explorador() {
 
         <ul className={e.tarjetas} data-reveal="escalonado">
           {LINEAS.map((l) => {
-            const atenuada = filtro !== "Todo" && l.tipo !== filtro;
             const estilo = TARJETA[l.tipo];
+            const recomendada = recomendadas.has(l.id);
             return (
-              <li key={l.id} className={atenuada ? `${e.tarjetaItem} ${e.atenuada}` : e.tarjetaItem}>
+              // Oculta, no desmontada: el efecto de aparición ya animó a estos hijos.
+              <li key={l.id} className={e.tarjetaItem} hidden={filtro !== "Todo" && l.tipo !== filtro}>
                 <button
                   type="button"
                   className={`${e.tarjeta} ${estilo.clase} ${s.elevable}`}
                   onClick={() => abrir(l.id)}
-                  aria-label={`${l.nombre}: ${PORTAFOLIO.verDetalle.toLowerCase()}`}
+                  aria-label={`${l.nombre}, ${l.tipo.toLowerCase()}${recomendada ? `, ${PORTAFOLIO.recomendada.toLowerCase()}` : ""}: ${PORTAFOLIO.verDetalle.toLowerCase()}`}
                 >
                   <span className={e.tarjetaCabeza}>
                     <span className={e.tarjetaIcono}>
                       <Icono trazos={l.icono} />
                     </span>
                     <span className={e.tarjetaChips}>
-                      {recomendadas.has(l.id) ? (
+                      {recomendada ? (
                         <Chip tono="tinta" tamano="sm" punto className={e.mayus}>
                           {PORTAFOLIO.recomendada}
                         </Chip>
@@ -212,11 +213,14 @@ function Ficha({
   const [pestana, setPestana] = useState(0);
   const [config, setConfig] = useState(0);
   const botonCerrar = useRef<HTMLButtonElement>(null);
+  const caja = useRef<HTMLDivElement>(null);
 
-  // Otra línea (Anterior / Siguiente): la ficha vuelve a su primera pestaña.
+  // Otra línea (Anterior / Siguiente): la ficha vuelve a su primera pestaña. Si el control
+  // que tenía el foco ya no existe en la línea nueva, el foco vuelve a "Cerrar".
   useEffect(() => {
     setPestana(0);
     setConfig(0);
+    if (caja.current && !caja.current.contains(document.activeElement)) botonCerrar.current?.focus();
   }, [linea.id]);
 
   // Al abrir, el foco entra a la ficha.
@@ -226,16 +230,43 @@ function Ficha({
 
   useEffect(() => {
     const tecla = (ev: KeyboardEvent) => {
-      if (ev.key === "Escape") onCerrar();
+      if (ev.key === "Escape") {
+        onCerrar();
+        return;
+      }
+      // Diálogo modal: Tab y Mayús+Tab no salen de la ficha. La lista se consulta en cada
+      // pulsación porque cambia con la pestaña y con la línea.
+      if (ev.key === "Tab" && caja.current) {
+        const f = caja.current.querySelectorAll<HTMLElement>("a[href], button:not([disabled])");
+        if (f.length === 0) return;
+        const primero = f[0];
+        const ultimo = f[f.length - 1];
+        const activo = document.activeElement;
+        const fuera = !caja.current.contains(activo);
+        if (ev.shiftKey ? fuera || activo === primero : fuera || activo === ultimo) {
+          ev.preventDefault();
+          (ev.shiftKey ? ultimo : primero).focus();
+        }
+        return;
+      }
+      // Las flechas cambian de línea, salvo con un modificador (Alt+← es "atrás") o con el
+      // foco en un grupo de botones (pestañas, configuraciones).
+      if (ev.defaultPrevented || ev.altKey || ev.ctrlKey || ev.metaKey || ev.shiftKey) return;
+      if (ev.target instanceof Element && ev.target.closest('[role="group"]')) return;
       if (ev.key === "ArrowRight") onSiguiente();
       if (ev.key === "ArrowLeft") onAnterior();
     };
     document.addEventListener("keydown", tecla);
+    // Sin scroll detrás de la ficha; se reserva el hueco de la barra para que la página no salte.
     const previo = document.body.style.overflow;
+    const previoRelleno = document.body.style.paddingRight;
+    const hueco = window.innerWidth - document.documentElement.clientWidth;
     document.body.style.overflow = "hidden";
+    if (hueco > 0) document.body.style.paddingRight = `${hueco}px`;
     return () => {
       document.removeEventListener("keydown", tecla);
       document.body.style.overflow = previo;
+      document.body.style.paddingRight = previoRelleno;
     };
   }, [onCerrar, onSiguiente, onAnterior]);
 
@@ -261,7 +292,7 @@ function Ficha({
         if (ev.target === ev.currentTarget) onCerrar();
       }}
     >
-      <div className={e.ficha}>
+      <div className={e.ficha} ref={caja}>
         <header className={e.fichaCabeza}>
           <span className={e.fichaIcono}>
             <Icono trazos={linea.icono} tamano={26} />

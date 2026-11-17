@@ -7,7 +7,7 @@
  * Mismas reglas que copy-comun.ts. Importa con rutas relativas (no "@/") para que los
  * tests de vitest puedan leerlo.
  */
-import { RUTA_INCENTIVOS, RUTA_PORTAFOLIO } from "../../src/lib/menu";
+import { RUTA_COMUNIDAD, RUTA_INCENTIVOS, RUTA_MANIFIESTO, RUTA_PORTAFOLIO } from "../../src/lib/menu";
 
 /** Las dos páginas de este cromo: las pestañas de su cabecera. */
 export type PaginaEmpresas = "portafolio" | "incentivos";
@@ -20,6 +20,11 @@ export const ENLACES_EMPRESAS = {
   servicios: "/empresas/servicios",
   /** El formulario de contacto en español; admite `?interes=<slug>`. */
   contacto: "/empresas/contacto",
+  /** La parte de colaborar: la comunidad y el manifiesto (landing, en inglés), el método y los proyectos (en español). */
+  comunidad: RUTA_COMUNIDAD,
+  manifiesto: RUTA_MANIFIESTO,
+  metodo: "/metodo",
+  proyectos: "/agora",
 } as const;
 
 /** Enlace al formulario con la línea ya elegida. */

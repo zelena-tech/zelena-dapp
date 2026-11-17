@@ -5,7 +5,7 @@ import MarcoEmpresas from "../../_landing/empresas/MarcoEmpresas";
 import s from "../../_landing/landing.module.css";
 import { CierreEmpresas, HeroEmpresas } from "../../_landing/empresas/Comunes";
 import Explorador from "../../_landing/empresas/Explorador";
-import { CicloDeTrabajo, PorQue, TresLineas } from "../../_landing/empresas/SeccionesPortafolio";
+import { CicloDeTrabajo, Colaborar, CuatroLineas, PorQue } from "../../_landing/empresas/SeccionesPortafolio";
 import { CIERRE_PORTAFOLIO, HERO_PORTAFOLIO, META_PORTAFOLIO } from "../../_landing/copy-portafolio";
 
 // Igual que las páginas de la landing: el layout raíz lee la sesión.
@@ -25,19 +25,20 @@ export const metadata = metadatos({
 
 /**
  * El portafolio de soluciones, en español y con el diseño de zelena.tech (pedido del
- * founder, 2026-11-17): qué hace Zelena en tres líneas, el buscador por situación, las
- * siete líneas con su ficha, cómo trabajamos y por qué. Todo el texto vive en
- * copy-portafolio.ts.
+ * founder, 2026-11-17): qué hace Zelena en cuatro líneas, el buscador por situación, las
+ * ocho líneas con su ficha (el WMS y sus incentivos primero), cómo trabajamos, por qué y
+ * la parte de colaborar. Todo el texto vive en copy-portafolio.ts.
  */
 export default function Portafolio() {
   return (
     <MarcoEmpresas pagina="portafolio">
       <HeroEmpresas id="portafolio-titulo" {...HERO_PORTAFOLIO} />
       <div className={s.anchoContenido}>
-        <TresLineas />
+        <CuatroLineas />
         <Explorador />
         <CicloDeTrabajo />
         <PorQue />
+        <Colaborar />
         <CierreEmpresas id="cierre-titulo" {...CIERRE_PORTAFOLIO} />
       </div>
     </MarcoEmpresas>

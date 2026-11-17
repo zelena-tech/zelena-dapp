@@ -66,12 +66,14 @@
 }
 
 /* ------------------------------------------------------------------ */
-/* Zelena en tres líneas                                               */
+/* Zelena en cuatro líneas                                             */
 /* ------------------------------------------------------------------ */
 
+/* Cuatro en una fila desde 1100px de ventana, dos desde 700px, una en teléfono (el tramo
+   intermedio lo fijan las reglas del final de la hoja: nunca 3 + 1). */
 .tres {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 232px), 1fr));
   gap: 12px;
   margin: 18px 0 0;
   padding: 0;
@@ -86,7 +88,7 @@
   flex-direction: column;
   gap: 10px;
   border-radius: 24px;
-  padding: clamp(24px, 3vw, 32px);
+  padding: clamp(22px, 2.4vw, 28px);
   color: var(--tinta);
 }
 .lineaPanel {
@@ -94,6 +96,17 @@
 }
 .lineaLima {
   background: var(--lima);
+}
+.lineaTinta {
+  background: var(--tinta);
+  color: var(--blanco);
+}
+.linea.lineaTinta .lineaNumero,
+.linea.lineaTinta .lineaEnlace {
+  color: var(--lima);
+}
+.lineaTinta .lineaComo {
+  color: var(--claro-sobre-tinta);
 }
 .linea .lineaNumero {
   font-size: 22px;
@@ -103,13 +116,20 @@
 .lineaLima .lineaNumero {
   color: var(--verde-profundo);
 }
+/* El verbo más largo ("Reconocemos", "Colaboramos": 11 letras, unos 5,8em de ancho) tiene
+   que caber en la tarjeta más angosta (cuatro columnas). El tamaño sigue al ancho de la
+   tarjeta (cqi), no al de la ventana; 34px es el respaldo sin unidades de contenedor. */
+.linea {
+  container-type: inline-size;
+}
 .linea .lineaVerbo {
-  font-size: clamp(44px, 5vw, 60px);
+  font-size: 34px;
+  font-size: clamp(32px, 16.5cqi, 60px);
   line-height: 0.9;
 }
 .lineaQue {
   margin-top: 4px;
-  font-size: 19px;
+  font-size: 18px;
   font-weight: 700;
   line-height: 1.25;
   text-wrap: balance;
@@ -281,7 +301,7 @@
 
 .tarjetas {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
   gap: 12px;
   margin: 36px 0 0;
   padding: 0;
@@ -289,10 +309,10 @@
 }
 .tarjetaItem {
   display: flex;
-  transition: opacity 0.2s ease;
 }
-.atenuada {
-  opacity: 0.32;
+/* `display: flex` le ganaría al atributo `hidden` del navegador. */
+.tarjetaItem[hidden] {
+  display: none;
 }
 .tarjeta {
   flex: 1;
@@ -315,7 +335,6 @@
   background: var(--lima);
 }
 .tarjetaTinta {
-  --foco: var(--lima);
   background: var(--tinta);
   color: var(--blanco);
 }
@@ -401,7 +420,9 @@
   background: var(--blanco);
   border-radius: 28px 28px 0 0;
   box-shadow: var(--sombra-alzada);
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 @media (min-width: 640px) {
   .velo {
@@ -486,6 +507,14 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+/* Teléfonos y pantallas bajas: sin scroll anidado; se desplaza la ficha completa. */
+@media (max-height: 700px), (max-width: 480px) {
+  .fichaCuerpo {
+    flex: none;
+    min-height: 0;
+    overflow-y: visible;
+  }
 }
 .definiciones {
   margin: 0;
@@ -712,7 +741,7 @@
 }
 
 /* Las dos tarjetas de "qué gana cada parte": un poco menos de aire arriba que en la home. */
-.dosTarjetas {
+ul.dosTarjetas {
   margin-top: 18px;
 }
 
@@ -749,4 +778,68 @@
   font-weight: 600;
   line-height: 1.35;
   text-wrap: pretty;
+}
+
+/* ------------------------------------------------------------------ */
+/* 05 · Colaborar                                                      */
+/* ------------------------------------------------------------------ */
+
+.puertaEnlace {
+  margin-top: auto;
+  padding-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--tinta);
+}
+.puertaEnlace:hover {
+  color: var(--verde-texto);
+}
+.colaborarAcciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Ajustes por ancho                                                   */
+/* ------------------------------------------------------------------ */
+
+/* Rejillas de cuatro elementos: 1, 2 o 4 columnas; nunca 3 + 1 (auto-fit dejaba una
+   tarjeta sola entre ~820 y ~1085px). Por debajo de 700px manda el auto-fit de cada una. */
+@media (min-width: 700px) {
+  .tres,
+  .razones,
+  .pasos.pasosCuatro,
+  .cuatro.cuatro {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1100px) {
+  .tres,
+  .pasos.pasosCuatro {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1200px) {
+  .razones {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* En teléfonos angostos una palabra larga ("PRODUCTIVIDAD", "REDISEÑAMOS") no cabe a 44px
+   dentro del bloque y se partiría por la mitad: el titular sigue al ancho (11vw = 44px a 400px). */
+@media (max-width: 400px) {
+  .bloque .h2 {
+    font-size: 11vw;
+  }
+}
+@media (max-width: 363px) {
+  .bloque.pegado .fraseAliado {
+    font-size: 11vw;
+  }
 }

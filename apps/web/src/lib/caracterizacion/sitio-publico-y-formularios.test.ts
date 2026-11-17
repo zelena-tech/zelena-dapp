@@ -161,7 +161,7 @@ describe("flujo principal · /empresas/contacto → POST /api/empresas/contacto 
     expect(leads()[0]).toMatchObject({ empresa: null, mensaje: null });
   });
 
-  it("el selector ofrece Harmony, las seis líneas del catálogo y 'otro'; la ruta acepta solo esos slugs", () => {
+  it("el selector ofrece Harmony, las seis líneas del catálogo, el desarrollo a la medida y 'otro'; la ruta acepta solo esos slugs", () => {
     expect(INTERESES.map((i) => i.slug)).toEqual([
       "harmony",
       "gestion-ti",
@@ -170,6 +170,7 @@ describe("flujo principal · /empresas/contacto → POST /api/empresas/contacto 
       "transformacion",
       "datos",
       "cloud",
+      "a-la-medida",
       "otro",
     ]);
     expect(SLUGS_INTERES).not.toContain(INTERES_ENCUENTROS);

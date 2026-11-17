@@ -82,11 +82,15 @@ export const SERVICIOS: Servicio[] = [
 ];
 
 // Opciones del formulario: las seis líneas, más Harmony (el producto de
-// incentivos, que no es un servicio del catálogo) y una salida para quien aún
-// no sabe qué necesita.
+// incentivos, que no es un servicio del catálogo), el desarrollo a la medida
+// (la línea del portafolio para quien quiere construir algo propio; pedido del
+// founder, 2026-11-17) y una salida para quien aún no sabe qué necesita.
+export const INTERES_A_LA_MEDIDA = "a-la-medida";
+
 export const INTERESES: Array<{ slug: string; nombre: string }> = [
   { slug: "harmony", nombre: "Harmony · Incentivos por desempeño" },
   ...SERVICIOS.map(({ slug, nombre }) => ({ slug, nombre })),
+  { slug: INTERES_A_LA_MEDIDA, nombre: "Desarrollo a la medida" },
   { slug: "otro", nombre: "Todavía no sé, quiero conversarlo" },
 ];
 
