@@ -59,9 +59,10 @@ export const MENU_PUBLICO: readonly EnlaceMenu[] = [
 
 /** Menú de /empresas: a quien llega como empresa le hablamos de su operación. */
 export const MENU_EMPRESAS: readonly EnlaceMenu[] = [
-  { href: "/empresas#productos", label: "Productos" },
-  { href: "/empresas#como-funciona", label: "Cómo funciona" },
+  { href: "/empresas/portafolio", label: "Portafolio" },
+  { href: "/empresas/incentivos", label: "Incentivos" },
   { href: "/empresas/servicios", label: "Servicios" },
+  { href: "/empresas#como-funciona", label: "Cómo funciona" },
   { href: "/", label: "Zelena" },
 ];
 
@@ -163,6 +164,8 @@ export const FOOTER_GRUPOS: ReadonlyArray<{ titulo: string; enlaces: readonly En
   {
     titulo: "Empresas",
     enlaces: [
+      { href: "/empresas/portafolio", label: "Portafolio" },
+      { href: "/empresas/incentivos", label: "Incentivos" },
       { href: "/empresas/servicios", label: "Servicios" },
       { href: "/empresas/contacto", label: "Contacto" },
     ],

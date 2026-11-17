@@ -207,7 +207,20 @@ export default function Empresas() {
       </section>
 
       {/* ===== PUERTAS ===== */}
-      <section className="grid gap-10 md:grid-cols-2">
+      <section className="grid gap-10 md:grid-cols-2 lg:grid-cols-3">
+        <Link href="/empresas/portafolio" className="group flex flex-col gap-4 border-t border-primary pt-7">
+          <span className="text-[13px] uppercase tracking-[0.18em] text-primary">Portafolio</span>
+          <span className="text-2xl normal-case leading-snug text-paper">
+            Todo lo que hacemos, y por dónde empezar según lo que pasa en tu empresa.
+          </span>
+          <span className="text-sm text-primary">
+            Ver el portafolio{" "}
+            <span aria-hidden className="inline-block transition-transform duration-150 group-hover:translate-x-0.5">
+              →
+            </span>
+          </span>
+        </Link>
+
         <Link href="/empresas/servicios" className="group flex flex-col gap-4 border-t border-line pt-7">
           <span className="text-[13px] uppercase tracking-[0.18em] text-primary">Servicios</span>
           <span className="text-2xl normal-case leading-snug text-paper">

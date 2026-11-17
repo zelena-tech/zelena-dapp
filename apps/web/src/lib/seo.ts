@@ -92,6 +92,8 @@ export const RUTAS_SITEMAP: readonly string[] = [
   "/manifiesto",
   "/metodo",
   "/empresas",
+  "/empresas/portafolio",
+  "/empresas/incentivos",
   "/empresas/servicios",
   "/empresas/contacto",
   "/encuentros",

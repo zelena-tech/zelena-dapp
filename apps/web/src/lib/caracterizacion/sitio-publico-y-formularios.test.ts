@@ -346,7 +346,12 @@ describe("menú, pie y redirecciones", () => {
     const legal = FOOTER_GRUPOS.find((x) => x.titulo === "Legal");
     expect(legal?.enlaces.map((e) => e.href)).toEqual(["/acuerdo", "/privacidad", URL_LICENCIA]);
     const empresas = FOOTER_GRUPOS.find((x) => x.titulo === "Empresas");
-    expect(empresas?.enlaces.map((e) => e.href)).toEqual(["/empresas/servicios", "/empresas/contacto"]);
+    expect(empresas?.enlaces.map((e) => e.href)).toEqual([
+      "/empresas/portafolio",
+      "/empresas/incentivos",
+      "/empresas/servicios",
+      "/empresas/contacto",
+    ]);
     expect(AVISO_LEGAL).toMatch(/red de pruebas de Stellar/);
     // 67a78df: el pie enlaza el manifiesto, ya no el whitepaper.
     const enlaces = FOOTER_GRUPOS.flatMap((x) => x.enlaces.map((e) => e.href));
