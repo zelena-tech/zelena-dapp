@@ -42,6 +42,23 @@ export function esRutaLanding(ruta: string | null | undefined): boolean {
   return !!ruta && RUTAS_LANDING.includes(ruta);
 }
 
+/** El portafolio de soluciones y la página de incentivos, para empresas. */
+export const RUTA_PORTAFOLIO = "/empresas/portafolio";
+export const RUTA_INCENTIVOS = "/empresas/incentivos";
+
+/**
+ * Páginas en ESPAÑOL que llevan el cromo claro de la landing (pedido del founder,
+ * 2026-11-17: el diseño de zelena.tech). Traen su propia cabecera y su pie, como las de
+ * `RUTAS_LANDING`, pero el documento sigue en español: por eso no entran en esa lista
+ * (que también decide el `<html lang="en">`). Solo la ruta exacta.
+ */
+export const RUTAS_CROMO_CLARO_ES: readonly string[] = [RUTA_PORTAFOLIO, RUTA_INCENTIVOS];
+
+/** ¿La ruta trae el cromo claro en español? (decide el cromo en MarcoSitio). */
+export function esRutaCromoClaroEs(ruta: string | null | undefined): boolean {
+  return !!ruta && RUTAS_CROMO_CLARO_ES.includes(ruta);
+}
+
 /**
  * Cabecera con la que el middleware le dice al layout raíz el idioma de la página ("en"
  * en la landing), para el `<html lang>`. Si alguien la manda a mano en otra ruta, solo
@@ -59,8 +76,8 @@ export const MENU_PUBLICO: readonly EnlaceMenu[] = [
 
 /** Menú de /empresas: a quien llega como empresa le hablamos de su operación. */
 export const MENU_EMPRESAS: readonly EnlaceMenu[] = [
-  { href: "/empresas/portafolio", label: "Portafolio" },
-  { href: "/empresas/incentivos", label: "Incentivos" },
+  { href: RUTA_PORTAFOLIO, label: "Portafolio" },
+  { href: RUTA_INCENTIVOS, label: "Incentivos" },
   { href: "/empresas/servicios", label: "Servicios" },
   { href: "/empresas#como-funciona", label: "Cómo funciona" },
   { href: "/", label: "Zelena" },
@@ -164,8 +181,8 @@ export const FOOTER_GRUPOS: ReadonlyArray<{ titulo: string; enlaces: readonly En
   {
     titulo: "Empresas",
     enlaces: [
-      { href: "/empresas/portafolio", label: "Portafolio" },
-      { href: "/empresas/incentivos", label: "Incentivos" },
+      { href: RUTA_PORTAFOLIO, label: "Portafolio" },
+      { href: RUTA_INCENTIVOS, label: "Incentivos" },
       { href: "/empresas/servicios", label: "Servicios" },
       { href: "/empresas/contacto", label: "Contacto" },
     ],

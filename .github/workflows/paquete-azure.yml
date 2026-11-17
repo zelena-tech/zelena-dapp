@@ -113,6 +113,13 @@ jobs:
             grep -q '<html lang="en"' "$E/${par%% *}.html" || falla "${par##* } sin <html lang=\"en\">"
           done
           grep -q '<html lang="es"' "$E/metodo.html" || falla "/metodo sin <html lang=\"es\">"
+          # El portafolio y los incentivos llevan el cromo claro de la landing, pero en español.
+          for p in portafolio incentivos; do
+            curl -s "http://127.0.0.1:8080/empresas/$p" > "$E/$p.html"
+            grep -q '<html lang="es"' "$E/$p.html" || falla "/empresas/$p sin <html lang=\"es\">"
+            grep -q 'data-landing="" lang="es"' "$E/$p.html" || falla "/empresas/$p sin la raíz data-landing en español"
+            grep -Eq '<h1 id="'"$p"'-titulo"' "$E/$p.html" || falla "/empresas/$p sin su H1 en el HTML del servidor"
+          done
           # Imágenes para compartir: "/" sin ninguna (un opengraph-image en app/ le ganaría a la
           # página), y las páginas de la comunidad en español con la de public/og/.
           if grep -Eq 'og:image|twitter:image' "$E/inicio.html"; then falla "/ lleva una imagen para compartir"; fi

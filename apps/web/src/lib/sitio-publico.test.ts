@@ -40,8 +40,8 @@ function recorrer(dir: string, filtro: RegExp): string[] {
 const PRIVADAS = /^app\/(api|equipo|admin|clientes|perfil)\//;
 // WP33: PruebaEnVivo, PruebaTestnet y ProximoEncuentro salieron con la landing anterior
 // (sus cifras y fechas las pinta ahora /comunidad, desde lib/landing-datos.ts).
-const COMPONENTES_PUBLICOS = ["Nav", "NavContextual", "Footer", "IntroEcosistema", "PruebasTestnetLista", "PortafolioInteractivo", "ui"];
-const LIBS_PUBLICAS = ["menu", "metodo", "servicios", "portafolio", "encuentros", "aviso-privacidad", "seo", "landing-datos", "votos"];
+const COMPONENTES_PUBLICOS = ["Nav", "NavContextual", "Footer", "IntroEcosistema", "PruebasTestnetLista", "ui"];
+const LIBS_PUBLICAS = ["menu", "metodo", "servicios", "encuentros", "aviso-privacidad", "seo", "landing-datos", "votos"];
 
 /** Todo lo de la landing en inglés: componentes, copy y hojas de estilo, a cualquier profundidad. */
 const archivosLanding = (): string[] =>
@@ -401,7 +401,7 @@ describe("E1-10 · la landing en inglés (/, /comunidad, la demo y el manifiesto
     LANDING.filter(
       (r) =>
         r.endsWith(".tsx") &&
-        (r.startsWith(`app/_landing/${carpeta}/`) || !/\/(home|comunidad|demo|manifiesto)\//.test(r))
+        (r.startsWith(`app/_landing/${carpeta}/`) || !/\/(home|comunidad|demo|manifiesto|empresas)\//.test(r))
     );
 
   it("las cuatro páginas van dentro del cromo de la landing: raíz data-landing en inglés, clara y dinámica", () => {

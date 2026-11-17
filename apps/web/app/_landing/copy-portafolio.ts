@@ -1,10 +1,130 @@
 /**
- * Portafolio de soluciones de ZELENA para empresas.
- *
- * El contenido vive aquí y no incrustado en el JSX, igual que en el resto de
- * /empresas: un producto propio, cinco servicios y el programa de incentivos.
+ * Copy del portafolio de soluciones (/empresas/portafolio), en español y con el cromo
+ * claro de la landing (pedido del founder, 2026-11-17): un producto propio, cinco
+ * servicios y el programa de incentivos. Todo el texto vive aquí, no en el JSX.
  * `interes` es el slug que entiende el formulario de contacto (lib/servicios.ts).
+ *
+ * Mismas reglas que el resto del copy público (ver copy-comun.ts y
+ * sitio-publico.test.ts): ni clientes ni personas, ni la entidad legal, ni jerga.
  */
+import { ENLACES_EMPRESAS } from "./copy-empresas";
+
+export const META_PORTAFOLIO = {
+  titulo: "Portafolio de soluciones · Zelena",
+  descripcion:
+    "Ordenamos la operación de tu pyme: un producto propio (ZELENA WMS), cinco servicios que se contratan por separado y un programa de incentivos en dólares digitales para tu equipo.",
+} as const;
+
+export const HERO_PORTAFOLIO = {
+  chip: "Portafolio de soluciones",
+  h1: { antes: "Ordenamos la operación de tu ", resaltado: "pyme.", despues: "" },
+  lead:
+    "Primero tus procesos, después tu bodega y tu gestión. Tecnología propia y servicios para que tu inventario cuadre, tus despachos salgan bien y decidas con datos. Y cuando la operación ya se mide, un incentivo que reconoce a quien la hace posible.",
+  primario: { href: "#situacion", nombre: "Encontrar mi solución" },
+  secundario: { href: "#portafolio", nombre: "Ver el portafolio" },
+} as const;
+
+/**
+ * Lo primero que ve quien llega con el enlace y no nos conoce: qué hace el negocio, en
+ * tres verbos. Cada uno lleva a su parte.
+ */
+export const TRES_LINEAS = {
+  etiqueta: "Zelena en tres líneas",
+  lineas: [
+    {
+      n: "01",
+      verbo: "Ordenamos",
+      que: "tus procesos, tu información y tu tecnología.",
+      como: "Cinco servicios: procesos, Odoo, datos, nube y dirección de TI.",
+      href: "#portafolio",
+      enlace: "Ver los servicios",
+    },
+    {
+      n: "02",
+      verbo: "Operamos",
+      que: "tu bodega con tecnología propia.",
+      como: "ZELENA WMS: inventario exacto y despachos validados.",
+      href: "#portafolio",
+      enlace: "Ver el producto",
+    },
+    {
+      n: "03",
+      verbo: "Reconocemos",
+      que: "el trabajo real de tu equipo.",
+      como: "Incentivos por desempeño, pagados en dólares digitales.",
+      href: ENLACES_EMPRESAS.incentivos,
+      enlace: "Ver los incentivos",
+    },
+  ],
+  cifras: ["1 producto propio", "5 servicios", "1 programa de incentivos", "1 solo aliado"],
+} as const;
+
+export const SITUACION = {
+  ancla: "situacion",
+  etiqueta: "01 · Tu situación",
+  h2: { linea1: "¿Qué pasa hoy", antes: "en tu ", enfasis: "empresa?" },
+  intro: "Elige una o varias situaciones y te mostramos qué solución te sirve.",
+  vacio: "Tus soluciones recomendadas aparecen aquí.",
+  recomendamos: "Te recomendamos",
+} as const;
+
+export const PORTAFOLIO = {
+  ancla: "portafolio",
+  etiqueta: "02 · Portafolio",
+  h2: { linea1: "Un producto, cinco servicios", antes: "y un programa de ", enfasis: "incentivos." },
+  intro: "Contrata solo lo que necesitas. Cada línea funciona por sí sola y todas se conectan entre sí.",
+  filtroAria: "Filtrar el portafolio",
+  filtros: [
+    { valor: "Todo", nombre: "Todo" },
+    { valor: "Producto", nombre: "Producto" },
+    { valor: "Servicio", nombre: "Servicios" },
+    { valor: "Programa", nombre: "Incentivos" },
+  ],
+  verDetalle: "Ver detalle",
+  recomendada: "Recomendada",
+} as const;
+
+export const FICHA = {
+  cerrar: "Cerrar",
+  anterior: "Anterior",
+  siguiente: "Siguiente",
+  pestanasAria: "Secciones de la ficha",
+  que: "Qué es",
+  paraQuien: "Para quién",
+  resuelve: "Qué resuelve",
+  incluye: "Qué incluye",
+  configuraciones: "Configuraciones",
+  configuracionesIntro: "Puntos de partida según el tipo de empresa. Elige uno:",
+  beneficiosYModalidad: "Beneficios y modalidad",
+  beneficios: "Beneficios",
+  modalidad: "Modalidad",
+  soporte: "Soporte",
+  paginaCompleta: "Ver la página completa",
+  quiero: "Quiero esta solución",
+} as const;
+
+export const CICLO = {
+  ancla: "como-trabajamos",
+  etiqueta: "03 · Cómo trabajamos",
+  h2: { linea1: "El mismo ciclo", antes: "en todas las ", enfasis: "líneas." },
+  intro: "Cuatro pasos, una sola forma de trabajar. Por eso un servicio abre la puerta al siguiente.",
+} as const;
+
+export const ALIADO = {
+  etiqueta: "04 · Por qué Zelena",
+  frase: "Un solo aliado,",
+  enfasis: "no cinco proveedores.",
+  paraQuienTitulo: "Para quién trabajamos",
+  paraQuien:
+    "Pymes en Colombia de 10 a 200 empleados que necesitan ordenar y digitalizar su operación, con foco en inventario, bodegas, despachos o distribución.",
+} as const;
+
+export const CIERRE_PORTAFOLIO = {
+  titulo: { linea1: "Hablemos de", linea2: "tu operación." },
+  texto: "Cuéntanos qué está pasando en tu empresa y te proponemos por dónde empezar.",
+  primario: { href: ENLACES_EMPRESAS.contacto, nombre: "Hablemos" },
+  secundario: { href: ENLACES_EMPRESAS.incentivos, nombre: "Ver los incentivos" },
+} as const;
 
 export type TipoLinea = "Producto" | "Servicio" | "Programa";
 

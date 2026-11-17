@@ -1,13 +1,15 @@
 "use client";
 import { useEffect, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
-import { esRutaLanding } from "@/lib/menu";
+import { esRutaCromoClaroEs, esRutaLanding } from "@/lib/menu";
 
 /**
  * El cromo del sitio según la ruta (WP33). Un solo layout raíz: en las rutas de la
  * landing en inglés (`RUTAS_LANDING`: "/", "/comunidad", la demo y el manifiesto) la página trae su propio
  * cromo claro (cabecera, `<main>` y pie) y aquí no se pinta nada alrededor; en el resto,
- * el de siempre: glow, menú, aviso de mutación, `<main>` y pie.
+ * el de siempre: glow, menú, aviso de mutación, `<main>` y pie. El portafolio y los
+ * incentivos (`RUTAS_CROMO_CLARO_ES`) también traen el cromo claro, pero en español: el
+ * idioma del documento solo cambia a inglés en las rutas de la landing.
  *
  * `usePathname` también responde en el servidor, así que el HTML ya sale con el cromo
  * correcto (sin parpadeo). Menú, aviso y pie llegan ya pintados desde el servidor.
@@ -30,7 +32,7 @@ export default function MarcoSitio({
   useEffect(() => {
     document.documentElement.lang = landing ? "en" : "es";
   }, [landing]);
-  if (landing) return <>{children}</>;
+  if (landing || esRutaCromoClaroEs(ruta)) return <>{children}</>;
   return (
     <>
       {/* Glow de fondo, sutil, marca Zelena */}
