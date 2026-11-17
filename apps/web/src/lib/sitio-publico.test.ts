@@ -388,7 +388,8 @@ describe("E1-9 · aviso de privacidad y casilla de autorización", () => {
  * prueba verificable en /metodo#compruebalo.
  */
 describe("E1-10 · la landing en inglés (/, /comunidad, la demo y el manifiesto)", () => {
-  const inicio = leer("app/page.tsx");
+  // Desde el 2026-11-17 la inicio "/" es el portafolio en español (pedido del founder) y la landing en inglés vive en /en.
+  const inicio = leer("app/en/page.tsx");
   const comunidad = leer("app/comunidad/page.tsx");
   const demo = leer("app/book-a-demo/page.tsx");
   const manifiesto = leer("app/manifiesto/page.tsx");
@@ -415,7 +416,7 @@ describe("E1-10 · la landing en inglés (/, /comunidad, la demo y el manifiesto
       expect(src).toContain('export const dynamic = "force-dynamic";');
       expect(src).toContain('idioma: "en",');
     }
-    expect(inicio).toContain('ruta: "/",');
+    expect(inicio).toContain("ruta: RUTA_INICIO_EN,");
     expect(comunidad).toContain('ruta: "/comunidad",');
     expect(demo).toContain("ruta: RUTA_DEMO,");
     expect(manifiesto).toContain("ruta: RUTA_MANIFIESTO,");

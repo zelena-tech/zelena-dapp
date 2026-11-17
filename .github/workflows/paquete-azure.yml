@@ -87,7 +87,7 @@ jobs:
           sh "$E/app/start.sh" > "$E/server.log" 2>&1 &
           for i in $(seq 1 40); do curl -sf -o /dev/null http://127.0.0.1:8080/api/cla && break; sleep 1; done
           falla() { echo "FALLA: $1"; tail -80 "$E/server.log"; exit 1; }
-          for p in / /manifiesto /book-a-demo /metodo /comunidad /comunidad/ritos /encuentros /empresas /empresas/portafolio /empresas/incentivos /empresas/servicios /empresas/contacto /agora /academia /gobernanza /entrar /privacidad /acuerdo /robots.txt /sitemap.xml /landing/avatar-beanie-cut.png /landing/zelena-wordmark.svg /og/sitio-es.png; do
+          for p in / /en /manifiesto /book-a-demo /metodo /comunidad /comunidad/ritos /encuentros /empresas /empresas/incentivos /empresas/servicios /empresas/contacto /agora /academia /gobernanza /entrar /privacidad /acuerdo /robots.txt /sitemap.xml /landing/avatar-beanie-cut.png /landing/zelena-wordmark.svg /og/sitio-es.png; do
             c=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:8080$p"); echo "$p $c"; [ "$c" = 200 ] || falla "$p respondió $c"
           done
           # La landing en inglés (WP33): public/ viajó en el paquete (imagen y wordmark con su
@@ -97,9 +97,10 @@ jobs:
             t=$(curl -s -o /dev/null -w "%{content_type}" "http://127.0.0.1:8080$p"); echo "$p $t"
             case "$t" in "$tipo"*) ;; *) falla "$p con tipo '$t' (se esperaba $tipo)" ;; esac
           done
-          curl -s http://127.0.0.1:8080/ > "$E/inicio.html"
-          grep -Eq '<h1 [^>]*>Performance-based payroll' "$E/inicio.html" || falla "/ sin el H1 en inglés en el HTML del servidor"
-          grep -q 'data-landing="" lang="en"' "$E/inicio.html" || falla "/ sin la raíz data-landing en inglés"
+          # Desde el 2026-11-17 la landing en inglés vive en /en; la inicio "/" es el portafolio.
+          curl -s http://127.0.0.1:8080/en > "$E/inicio.html"
+          grep -Eq '<h1 [^>]*>Performance-based payroll' "$E/inicio.html" || falla "/en sin el H1 en inglés en el HTML del servidor"
+          grep -q 'data-landing="" lang="en"' "$E/inicio.html" || falla "/en sin la raíz data-landing en inglés"
           curl -s http://127.0.0.1:8080/comunidad > "$E/comunidad.html"
           grep -Eq '<h1 [^>]*>The value you deliver' "$E/comunidad.html" || falla "/comunidad sin el H1 en inglés en el HTML del servidor"
           # La demo y el manifiesto también son de la landing desde 2026-10-26.
@@ -109,16 +110,17 @@ jobs:
           grep -q '<h1 id="manifiesto-titulo"' "$E/manifiesto.html" || falla "/manifiesto sin su H1 en el HTML del servidor"
           # El idioma del documento sigue a la página (WCAG 3.1.1): inglés en la landing, español en el resto.
           curl -s http://127.0.0.1:8080/metodo > "$E/metodo.html"
-          for par in "inicio /" "comunidad /comunidad" "demo /book-a-demo" "manifiesto /manifiesto"; do
+          for par in "inicio /en" "comunidad /comunidad" "demo /book-a-demo" "manifiesto /manifiesto"; do
             grep -q '<html lang="en"' "$E/${par%% *}.html" || falla "${par##* } sin <html lang=\"en\">"
           done
           grep -q '<html lang="es"' "$E/metodo.html" || falla "/metodo sin <html lang=\"es\">"
-          # El portafolio y los incentivos llevan el cromo claro de la landing, pero en español.
-          for p in portafolio incentivos; do
-            curl -s "http://127.0.0.1:8080/empresas/$p" > "$E/$p.html"
-            grep -q '<html lang="es"' "$E/$p.html" || falla "/empresas/$p sin <html lang=\"es\">"
-            grep -q 'data-landing="" lang="es"' "$E/$p.html" || falla "/empresas/$p sin la raíz data-landing en español"
-            grep -Eq '<h1 id="'"$p"'-titulo"' "$E/$p.html" || falla "/empresas/$p sin su H1 en el HTML del servidor"
+          # La inicio (el portafolio) y los incentivos llevan el cromo claro de la landing, en español.
+          for par in "portafolio /" "incentivos /empresas/incentivos"; do
+            p="${par%% *}"; ruta="${par##* }"
+            curl -s "http://127.0.0.1:8080$ruta" > "$E/$p.html"
+            grep -q '<html lang="es"' "$E/$p.html" || falla "$ruta sin <html lang=\"es\">"
+            grep -q 'data-landing="" lang="es"' "$E/$p.html" || falla "$ruta sin la raíz data-landing en español"
+            grep -Eq '<h1 id="'"$p"'-titulo"' "$E/$p.html" || falla "$ruta sin su H1 en el HTML del servidor"
           done
           # Imágenes para compartir: "/" sin ninguna (un opengraph-image en app/ le ganaría a la
           # página), y las páginas de la comunidad en español con la de public/og/.
@@ -138,7 +140,7 @@ jobs:
           c=$(curl -s -o /dev/null -w "%{http_code}" -H "Host: zelena.tech" "http://127.0.0.1:8080/.well-known/acme"); echo "apex /.well-known/acme $c"
           [ "$c" != 308 ] || falla "/.well-known/ se redirigió"
           # Rutas que cambiaron de nombre o salieron del sitio (el whitepaper): redirección permanente.
-          for p in /ecosistema /academia/por-que-sas-dao /whitepaper; do
+          for p in /ecosistema /academia/por-que-sas-dao /whitepaper /empresas/portafolio; do
             c=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:8080$p"); echo "$p $c"; [ "$c" = 308 ] || falla "$p respondió $c (se esperaba 308)"
           done
           for p in /equipo/hoy /equipo/proyectos /equipo/talento /equipo/avisos /admin /perfil /clientes; do

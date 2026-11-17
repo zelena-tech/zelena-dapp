@@ -12,7 +12,7 @@
  *
  * Importa con rutas relativas (no "@/") para que los tests de vitest puedan leerlo.
  */
-import { RUTA_COMUNIDAD, RUTA_DEMO, RUTA_MANIFIESTO, RUTA_RITOS, URL_LICENCIA } from "../../src/lib/menu";
+import { RUTA_COMUNIDAD, RUTA_DEMO, RUTA_INICIO_EN, RUTA_MANIFIESTO, RUTA_RITOS, URL_LICENCIA } from "../../src/lib/menu";
 
 /**
  * Las páginas de la landing: las dos de la cabecera (Home y Community) y dos más que no
@@ -25,7 +25,10 @@ export const ANCLA_PROYECTOS = "open-projects";
 
 /** Mapa de enlaces: cada CTA lleva a una ruta real del sitio. */
 export const ENLACES = {
-  inicio: "/",
+  /** La home en inglés (/en): "/" es la inicio en español desde el 2026-11-17. */
+  inicio: RUTA_INICIO_EN,
+  /** La inicio en español: el portafolio. */
+  espanol: "/",
   comunidad: RUTA_COMUNIDAD,
   /** "explore projects": la sección de proyectos de /comunidad. */
   proyectosAbiertos: `${RUTA_COMUNIDAD}#${ANCLA_PROYECTOS}`,
@@ -91,5 +94,6 @@ export const PIE = {
     { href: ENLACES.academia, label: "Academy", externo: false },
     { href: ENLACES.encuentros, label: "Meetups", externo: false },
     { href: ENLACES.empresas, label: "For companies", externo: false },
+    { href: ENLACES.espanol, label: "En español", externo: false },
   ] as readonly EnlacePie[],
 } as const;

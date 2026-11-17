@@ -35,15 +35,24 @@ export const RUTA_MANIFIESTO = "/manifiesto";
  * y no el del sitio en español. Solo la ruta exacta: /comunidad/ritos y lo que cuelga
  * de /comunidad siguen con el cromo de siempre.
  */
-export const RUTAS_LANDING: readonly string[] = ["/", RUTA_COMUNIDAD, RUTA_DEMO, RUTA_MANIFIESTO];
+/**
+ * La home en inglés. Desde el 2026-11-17 la inicio "/" es el portafolio en español (pedido
+ * del founder) y la landing en inglés vive aquí, sin cambios.
+ */
+export const RUTA_INICIO_EN = "/en";
+
+export const RUTAS_LANDING: readonly string[] = [RUTA_INICIO_EN, RUTA_COMUNIDAD, RUTA_DEMO, RUTA_MANIFIESTO];
 
 /** ¿La ruta es de la landing? (decide el cromo en MarcoSitio). */
 export function esRutaLanding(ruta: string | null | undefined): boolean {
   return !!ruta && RUTAS_LANDING.includes(ruta);
 }
 
-/** El portafolio de soluciones y la página de incentivos, para empresas. */
-export const RUTA_PORTAFOLIO = "/empresas/portafolio";
+/**
+ * El portafolio de soluciones (la inicio desde el 2026-11-17: /empresas/portafolio redirige
+ * aquí) y la página de incentivos, para empresas.
+ */
+export const RUTA_PORTAFOLIO = "/";
 export const RUTA_INCENTIVOS = "/empresas/incentivos";
 
 /**
@@ -80,7 +89,7 @@ export const MENU_EMPRESAS: readonly EnlaceMenu[] = [
   { href: RUTA_INCENTIVOS, label: "Incentivos" },
   { href: "/empresas/servicios", label: "Servicios" },
   { href: "/empresas#como-funciona", label: "Cómo funciona" },
-  { href: "/", label: "Zelena" },
+  { href: RUTA_INICIO_EN, label: "In English" },
 ];
 
 /**

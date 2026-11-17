@@ -83,6 +83,8 @@ const nextConfig = {
       { source: "/academia/por-que-sas-dao", destination: "/academia/construir-sin-riesgo", permanent: true },
       // El whitepaper salió del sitio: el manifiesto cumple la misma función y es más claro.
       { source: "/whitepaper", destination: "/manifiesto", permanent: true },
+      // El portafolio pasó a ser la inicio (founder, 2026-11-17); la landing en inglés vive en /en.
+      { source: "/empresas/portafolio", destination: "/", permanent: true },
       // La pantalla de seguimiento de la línea anterior (a6194b9) la reemplaza el tablero de Seguimiento.
       { source: "/equipo/seguimiento", destination: "/equipo/dashboard", permanent: true },
       // Host canónico: www. El dominio sin www llega directo al App Service (registro A en

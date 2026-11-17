@@ -349,7 +349,7 @@ describe("menú, pie y redirecciones", () => {
     expect(legal?.enlaces.map((e) => e.href)).toEqual(["/acuerdo", "/privacidad", URL_LICENCIA]);
     const empresas = FOOTER_GRUPOS.find((x) => x.titulo === "Empresas");
     expect(empresas?.enlaces.map((e) => e.href)).toEqual([
-      "/empresas/portafolio",
+      "/",
       "/empresas/incentivos",
       "/empresas/servicios",
       "/empresas/contacto",

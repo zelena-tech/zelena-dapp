@@ -129,7 +129,10 @@ describe("menuPara (E1-2)", () => {
         expect(m).toEqual([...MENU_EMPRESAS]);
       }
     }
-    expect(MENU_EMPRESAS.map((e) => e.label)).toContain("Zelena");
+    // "/" ya es la inicio en español (el portafolio, 2026-11-17): el enlace a la landing en
+    // inglés reemplaza al de "Zelena".
+    expect(MENU_EMPRESAS.map((e) => e.href)).toContain("/en");
+    expect(MENU_EMPRESAS.map((e) => e.label)).toContain("In English");
     expect(MENU_EMPRESAS.some((e) => /DAO/.test(e.label))).toBe(false);
     expect(esRutaEmpresas("/empresasx")).toBe(false);
   });
@@ -148,7 +151,8 @@ describe("menuPara (E1-2)", () => {
 describe("rutas de la landing (WP33)", () => {
   // La demo y el manifiesto entraron el 2026-10-26 (pedido del founder): mismo cromo y en inglés.
   it("/, /comunidad, la demo y el manifiesto, exactas", () => {
-    expect([...RUTAS_LANDING]).toEqual(["/", "/comunidad", "/book-a-demo", "/manifiesto"]);
+    // Desde el 2026-11-17 la inicio "/" es el portafolio en español (pedido del founder) y la landing en inglés vive en /en.
+    expect([...RUTAS_LANDING]).toEqual(["/en", "/comunidad", "/book-a-demo", "/manifiesto"]);
     for (const r of RUTAS_LANDING) expect(esRutaLanding(r)).toBe(true);
     for (const r of [
       "/comunidad/ritos",

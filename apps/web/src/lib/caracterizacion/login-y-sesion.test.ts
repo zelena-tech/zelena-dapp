@@ -660,7 +660,7 @@ describe("login-y-sesion · puerta corporativa (Entra) detrás del flag", () => 
       "/admin/:path*",
       "/equipo/:path*",
       "/clientes/:path*",
-      "/",
+      "/en",
       "/comunidad",
       "/book-a-demo",
       "/manifiesto",

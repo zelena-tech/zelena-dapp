@@ -64,7 +64,7 @@ export const config = {
     "/admin/:path*",
     "/equipo/:path*",
     "/clientes/:path*",
-    "/",
+    "/en",
     "/comunidad",
     "/book-a-demo",
     "/manifiesto",

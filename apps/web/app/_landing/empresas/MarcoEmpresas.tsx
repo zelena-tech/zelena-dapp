@@ -29,7 +29,7 @@ export default function MarcoEmpresas({ pagina, children }: { pagina: PaginaEmpr
       </a>
       <div className={s.interior}>
         <header className={s.cabecera}>
-          <Link href={ENLACES_EMPRESAS.inicio} hrefLang="en" className={s.logo} aria-label={CABECERA_EMPRESAS.logoAria}>
+          <Link href={ENLACES_EMPRESAS.inicio} className={s.logo} aria-label={CABECERA_EMPRESAS.logoAria}>
             <Wordmark />
           </Link>
           <nav aria-label={CABECERA_EMPRESAS.navAria} className={s.navPrincipal}>

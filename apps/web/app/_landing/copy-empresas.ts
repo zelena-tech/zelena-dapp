@@ -7,13 +7,16 @@
  * Mismas reglas que copy-comun.ts. Importa con rutas relativas (no "@/") para que los
  * tests de vitest puedan leerlo.
  */
-import { RUTA_COMUNIDAD, RUTA_INCENTIVOS, RUTA_MANIFIESTO, RUTA_PORTAFOLIO } from "../../src/lib/menu";
+import { RUTA_COMUNIDAD, RUTA_INCENTIVOS, RUTA_INICIO_EN, RUTA_MANIFIESTO, RUTA_PORTAFOLIO } from "../../src/lib/menu";
 
 /** Las dos páginas de este cromo: las pestañas de su cabecera. */
 export type PaginaEmpresas = "portafolio" | "incentivos";
 
 export const ENLACES_EMPRESAS = {
+  /** La inicio (el portafolio) desde el 2026-11-17. */
   inicio: "/",
+  /** La home en inglés. */
+  ingles: RUTA_INICIO_EN,
   portafolio: RUTA_PORTAFOLIO,
   incentivos: RUTA_INCENTIVOS,
   empresas: "/empresas",
@@ -54,11 +57,11 @@ export const PIE_EMPRESAS = {
   linea: "© 2026 Zelena · Software e incentivos para la logística de LATAM, sobre Stellar",
   navAria: "Pie",
   enlaces: [
-    { href: ENLACES_EMPRESAS.inicio, label: "Inicio", enIngles: true },
-    { href: ENLACES_EMPRESAS.portafolio, label: "Portafolio", enIngles: false },
+    { href: ENLACES_EMPRESAS.portafolio, label: "Inicio", enIngles: false },
     { href: ENLACES_EMPRESAS.incentivos, label: "Incentivos", enIngles: false },
     { href: ENLACES_EMPRESAS.servicios, label: "Servicios", enIngles: false },
     { href: ENLACES_EMPRESAS.empresas, label: "Para empresas", enIngles: false },
     { href: ENLACES_EMPRESAS.contacto, label: "Contacto", enIngles: false },
+    { href: ENLACES_EMPRESAS.ingles, label: "In English", enIngles: true },
   ] as readonly EnlacePieEmpresas[],
 } as const;

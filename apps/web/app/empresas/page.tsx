@@ -208,7 +208,7 @@ export default function Empresas() {
 
       {/* ===== PUERTAS ===== */}
       <section className="grid gap-10 md:grid-cols-2 lg:grid-cols-3">
-        <Link href="/empresas/portafolio" className="group flex flex-col gap-4 border-t border-primary pt-7">
+        <Link href="/" className="group flex flex-col gap-4 border-t border-primary pt-7">
           <span className="text-[13px] uppercase tracking-[0.18em] text-primary">Portafolio</span>
           <span className="text-2xl normal-case leading-snug text-paper">
             Todo lo que hacemos, y por dónde empezar según lo que pasa en tu empresa.

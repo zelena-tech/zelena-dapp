@@ -13,7 +13,7 @@
  */
 import { ENLACES_EMPRESAS, contactoCon } from "./copy-empresas";
 export const META_PORTAFOLIO = {
-  titulo: "Portafolio de soluciones · Zelena",
+  titulo: "Zelena · La tecnología de las grandes empresas, para tu pyme",
   descripcion:
     "La tecnología de las grandes empresas, para tu pyme: dos productos propios (ZELENA WMS y ZELENA Social Listening), un programa de incentivos en dólares digitales y seis servicios, incluido el desarrollo a la medida.",
 } as const;

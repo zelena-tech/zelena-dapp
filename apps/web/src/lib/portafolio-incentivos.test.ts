@@ -44,7 +44,8 @@ import { middleware } from "../../middleware";
 const WEB = process.cwd(); // apps/web
 const leer = (r: string) => fs.readFileSync(path.join(WEB, r), "utf8");
 
-const PAGINAS = ["app/empresas/portafolio/page.tsx", "app/empresas/incentivos/page.tsx"] as const;
+// El portafolio es la inicio desde el 2026-11-17 (app/page.tsx); /empresas/portafolio redirige.
+const PAGINAS = ["app/page.tsx", "app/empresas/incentivos/page.tsx"] as const;
 const DE_EMPRESAS = fs
   .readdirSync(path.join(WEB, "app/_landing/empresas"))
   .filter((n) => n.endsWith(".tsx"))
@@ -52,15 +53,15 @@ const DE_EMPRESAS = fs
 
 describe("cromo claro en español", () => {
   it("las dos rutas, exactas, y ninguna es de la landing en inglés", () => {
-    expect([...RUTAS_CROMO_CLARO_ES]).toEqual(["/empresas/portafolio", "/empresas/incentivos"]);
-    expect(RUTA_PORTAFOLIO).toBe("/empresas/portafolio");
+    expect([...RUTAS_CROMO_CLARO_ES]).toEqual(["/", "/empresas/incentivos"]);
+    expect(RUTA_PORTAFOLIO).toBe("/");
     expect(RUTA_INCENTIVOS).toBe("/empresas/incentivos");
     for (const r of RUTAS_CROMO_CLARO_ES) {
       expect(esRutaCromoClaroEs(r), r).toBe(true);
       expect(esRutaLanding(r), r).toBe(false);
       expect(RUTAS_LANDING, r).not.toContain(r);
     }
-    for (const r of ["/empresas", "/empresas/servicios", "/empresas/contacto", "/empresas/portafolio/x", "/", ""]) {
+    for (const r of ["/empresas", "/empresas/servicios", "/empresas/contacto", "/empresas/portafolio", "/en", ""]) {
       expect(esRutaCromoClaroEs(r), r).toBe(false);
     }
     expect(esRutaCromoClaroEs(null)).toBe(false);
@@ -134,10 +135,10 @@ describe("cromo claro en español", () => {
     expect(RUTAS_SITEMAP).toContain(RUTA_PORTAFOLIO);
     expect(RUTAS_SITEMAP).toContain(RUTA_INCENTIVOS);
     const pie = PIE_EMPRESAS.enlaces.map((e) => e.href);
-    for (const h of ["/", RUTA_PORTAFOLIO, RUTA_INCENTIVOS, "/empresas/contacto"]) expect(pie).toContain(h);
-    // Solo la home está en inglés: es el único enlace del pie que lo marca.
-    expect(PIE_EMPRESAS.enlaces.filter((e) => e.enIngles).map((e) => e.href)).toEqual(["/"]);
-    expect(leer("app/empresas/page.tsx")).toContain('href="/empresas/portafolio"');
+    for (const h of [RUTA_PORTAFOLIO, RUTA_INCENTIVOS, "/empresas/contacto", "/en"]) expect(pie).toContain(h);
+    // Solo la landing en inglés está en inglés: es el único enlace del pie que lo marca.
+    expect(PIE_EMPRESAS.enlaces.filter((e) => e.enIngles).map((e) => e.href)).toEqual(["/en"]);
+    expect(leer("app/empresas/page.tsx")).toContain('<Link href="/" className="group');
   });
 });
 
@@ -200,7 +201,7 @@ describe("portafolio · la parte de colaborar", () => {
     expect(CUATRO_LINEAS.lineas[3]).toMatchObject({ verbo: "Colaboramos", href: "#colaborar" });
     expect(COLABORAR.ancla).toBe("colaborar");
     expect(`${COLABORAR.h2.linea1} ${COLABORAR.h2.antes}${COLABORAR.h2.enfasis}`).toBe("Rediseñamos la forma de colaborar.");
-    expect(leer("app/empresas/portafolio/page.tsx")).toContain("<Colaborar />");
+    expect(leer("app/page.tsx")).toContain("<Colaborar />");
     expect(leer("app/_landing/empresas/SeccionesPortafolio.tsx")).toContain("id={COLABORAR.ancla}");
   });
 
@@ -340,6 +341,38 @@ describe("portafolio · ZELENA Social Listening", () => {
     const texto = JSON.stringify(social);
     expect(texto).not.toMatch(/demograf|edad de (tu|la) audiencia|g[eé]nero de (tu|la) audiencia|ventas|ROI|retorno/i);
     expect(texto).toContain("Solo se leen publicaciones públicas");
+  });
+});
+
+/**
+ * Pedido del founder (2026-11-17): zelena.tech/ abre el portafolio (la historia nueva, en
+ * español). La landing en inglés no se borra: vive en /en, con su idioma y su cromo, y
+ * /empresas/portafolio redirige a la inicio para no romper los enlaces ya compartidos.
+ */
+describe("la inicio es el portafolio", () => {
+  it("/ pinta el portafolio en español y /en la landing en inglés", async () => {
+    expect(leer("app/page.tsx")).toContain("<HeroPortafolio />");
+    expect(leer("app/en/page.tsx")).toContain('<LandingShell pagina="home">');
+    expect(fs.existsSync(path.join(WEB, "app/empresas/portafolio/page.tsx"))).toBe(false);
+    const idioma = async (ruta: string) =>
+      (await middleware(new NextRequest(`http://localhost${ruta}`))).headers.get(`x-middleware-request-${CABECERA_IDIOMA}`);
+    expect(await idioma("/")).toBeNull();
+    expect(await idioma("/en")).toBe("en");
+    expect(RUTAS_SITEMAP).toContain("/en");
+    expect(RUTAS_SITEMAP).not.toContain("/empresas/portafolio");
+  });
+
+  it("/empresas/portafolio redirige con 308 a la inicio", async () => {
+    const mod = (await import("../../next.config.mjs")) as {
+      default: { redirects: () => Promise<Array<{ source: string; destination: string; permanent: boolean }>> };
+    };
+    expect(await mod.default.redirects()).toContainEqual({ source: "/empresas/portafolio", destination: "/", permanent: true });
+  });
+
+  it("la landing en inglés enlaza a la inicio en español, y su logo y su pestaña Home van a /en", async () => {
+    const { CABECERA, PIE } = await import("../../app/_landing/copy-comun");
+    expect(CABECERA.pestanas[0].href).toBe("/en");
+    expect(PIE.enlaces.map((e) => e.href)).toContain("/");
   });
 });
 

@@ -119,7 +119,8 @@ describe("imágenes para compartir", () => {
   });
 
   it('las páginas de la landing no llevan imagen; la tarjeta de Twitter es "summary" y concuerda', () => {
-    for (const r of ["app/page.tsx", "app/comunidad/page.tsx", "app/book-a-demo/page.tsx", "app/manifiesto/page.tsx"]) {
+    // Desde el 2026-11-17 la inicio "/" es el portafolio en español (pedido del founder) y la landing en inglés vive en /en.
+    for (const r of ["app/en/page.tsx", "app/comunidad/page.tsx", "app/book-a-demo/page.tsx", "app/manifiesto/page.tsx"]) {
       const src = leer(r);
       expect(src, r).toContain('idioma: "en",');
       expect(src, r).not.toMatch(/imagen:/);
@@ -177,7 +178,7 @@ describe("fuentes e imágenes de la landing", () => {
 
 describe("cabecera, enlaces y pie (en inglés, a rutas reales)", () => {
   it("Home y Community son dos rutas, y la cabecera marca la activa con aria-current", () => {
-    expect(CABECERA.pestanas.map((t) => t.href)).toEqual(["/", "/comunidad"]);
+    expect(CABECERA.pestanas.map((t) => t.href)).toEqual(["/en", "/comunidad"]);
     expect(leer("app/_landing/Header.tsx")).toContain('aria-current={t.pagina === activa ? "page" : undefined}');
   });
 
