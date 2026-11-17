@@ -86,9 +86,12 @@ export const SERVICIOS: Servicio[] = [
 // (la línea del portafolio para quien quiere construir algo propio; pedido del
 // founder, 2026-11-17) y una salida para quien aún no sabe qué necesita.
 export const INTERES_A_LA_MEDIDA = "a-la-medida";
+/** ZELENA Social Listening: el segundo producto propio, al lado del WMS (founder, 2026-11-17). */
+export const INTERES_SOCIAL_LISTENING = "social-listening";
 
 export const INTERESES: Array<{ slug: string; nombre: string }> = [
   { slug: "harmony", nombre: "Harmony · Incentivos por desempeño" },
+  { slug: INTERES_SOCIAL_LISTENING, nombre: "ZELENA Social Listening" },
   ...SERVICIOS.map(({ slug, nombre }) => ({ slug, nombre })),
   { slug: INTERES_A_LA_MEDIDA, nombre: "Desarrollo a la medida" },
   { slug: "otro", nombre: "Todavía no sé, quiero conversarlo" },

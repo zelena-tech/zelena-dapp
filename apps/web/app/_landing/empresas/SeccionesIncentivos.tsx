@@ -30,7 +30,7 @@ export function DolarDigital() {
 export function Beneficios() {
   return (
     <section id="beneficios" className={`${m.grupo} ${e.bloque} ${e.bloquePrimero} ${s.ancla}`} aria-labelledby="beneficios-titulo" data-reveal="seccion">
-      <Titular id="beneficios-titulo" etiqueta={BENEFICIOS.etiqueta} h2={BENEFICIOS.h2} intro={BENEFICIOS.intro} enBloque />
+      <Titular id="beneficios-titulo" etiqueta={BENEFICIOS.etiqueta} h2={BENEFICIOS.h2} intro={BENEFICIOS.intro} sinAparicion />
       <ol className={m.principios}>
         {BENEFICIOS.puntos.map((x) => (
           <li key={x.n} className={`${m.principio} ${s.elevable}`}>

@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import s from "../landing.module.css";
 import m from "../manifiesto/manifiesto.module.css";
 import e from "./empresas.module.css";
@@ -11,10 +11,11 @@ import { contactoCon } from "../copy-empresas";
 import { FICHA, LINEAS, NECESIDADES, PORTAFOLIO, SITUACION, type Linea, type TipoLinea } from "../copy-portafolio";
 
 /**
- * La parte interactiva del portafolio: el buscador por situación, la rejilla de líneas
- * con su filtro y la ficha de detalle. El contenido viene de copy-portafolio.ts; aquí
- * solo vive el estado de la interfaz. Sin JavaScript se ven igual las situaciones y las
- * ocho tarjetas, con su nombre y su resumen.
+ * La parte interactiva del portafolio: "tacha lo que te pasa" (cada situación es un
+ * botón; al tacharla se marca en lima cómo la resolvemos y se recomiendan sus líneas), la
+ * rejilla de líneas con su filtro y la ficha de detalle. `entre` se pinta entre las dos
+ * secciones (un solo aliado). El contenido viene de copy-portafolio.ts; aquí solo vive el
+ * estado. Sin JavaScript se ven igual cada situación con su solución y las ocho tarjetas.
  */
 
 type Filtro = "Todo" | TipoLinea;
@@ -44,7 +45,7 @@ function Icono({ trazos, tamano = 22 }: { trazos: string; tamano?: number }) {
   );
 }
 
-export default function Explorador() {
+export default function Explorador({ entre }: { entre?: ReactNode }) {
   const [elegidas, setElegidas] = useState<ReadonlySet<number>>(new Set());
   const [filtro, setFiltro] = useState<Filtro>("Todo");
   const [abierta, setAbierta] = useState<number | null>(null);
@@ -80,19 +81,24 @@ export default function Explorador() {
 
   return (
     <>
-      {/* ----- 01 · tu situación ----- */}
+      {/* ----- Tacha lo que te pasa ----- */}
       <section
         id={SITUACION.ancla}
-        className={`${m.grupo} ${e.bloque} ${e.bloquePrimero} ${s.ancla}`}
+        className={`${m.grupo} ${e.bloque} ${e.pegado} ${s.ancla}`}
         aria-labelledby="situacion-titulo"
-        data-reveal="seccion"
       >
-        <Titular id="situacion-titulo" etiqueta={SITUACION.etiqueta} h2={SITUACION.h2} intro={SITUACION.intro} enBloque />
-        <ul className={e.situaciones}>
+        <Titular id="situacion-titulo" h2={SITUACION.h2} intro={SITUACION.intro} sinAparicion />
+        <ul className={e.tachas} aria-label={SITUACION.listaAria}>
           {NECESIDADES.map((n, i) => (
-            <li key={n.texto}>
-              <button type="button" className={e.situacion} aria-pressed={elegidas.has(i)} onClick={() => alternar(i)}>
-                {n.texto}
+            <li key={n.texto} className={e.tachaFila}>
+              <button type="button" className={e.tacha} aria-pressed={elegidas.has(i)} onClick={() => alternar(i)}>
+                <span className={e.tachaProblema}>{n.texto}</span>
+                <span className={e.tachaSolucion}>
+                  <span className={e.tachaCheck} aria-hidden="true">
+                    <IconoCheck tamano={11} trazo={3.25} />
+                  </span>
+                  <span className={e.tachaSolucionTexto}>{n.solucion}</span>
+                </span>
               </button>
             </li>
           ))}
@@ -102,7 +108,12 @@ export default function Explorador() {
             <p className={e.resultadoVacio}>{SITUACION.vacio}</p>
           ) : (
             <>
-              <p className={m.etiqueta}>{SITUACION.recomendamos}</p>
+              <div className={e.resultadoCabeza}>
+                <p className={m.etiqueta}>{SITUACION.recomendamos}</p>
+                <button type="button" className={e.borrar} onClick={() => setElegidas(new Set())}>
+                  {SITUACION.borrar}
+                </button>
+              </div>
               <ul className={e.recomendadas}>
                 {[...recomendadas].map((id) => {
                   const l = LINEAS.find((x) => x.id === id);
@@ -124,11 +135,13 @@ export default function Explorador() {
         </div>
       </section>
 
-      {/* ----- 02 · portafolio ----- */}
+      {entre}
+
+      {/* ----- Todo lo que hacemos ----- */}
       <section id={PORTAFOLIO.ancla} className={`${s.seccion} ${s.ancla}`} aria-labelledby="portafolio-lineas-titulo">
         <div className={e.cabezaPortafolio}>
-          <Titular id="portafolio-lineas-titulo" etiqueta={PORTAFOLIO.etiqueta} h2={PORTAFOLIO.h2} intro={PORTAFOLIO.intro} />
-          <div className={e.filtros} role="group" aria-label={PORTAFOLIO.filtroAria} data-reveal="">
+          <Titular id="portafolio-lineas-titulo" h2={PORTAFOLIO.h2} intro={PORTAFOLIO.intro} sinAparicion />
+          <div className={e.filtros} role="group" aria-label={PORTAFOLIO.filtroAria}>
             {PORTAFOLIO.filtros.map((f) => (
               <button
                 key={f.valor}
@@ -143,12 +156,11 @@ export default function Explorador() {
           </div>
         </div>
 
-        <ul className={e.tarjetas} data-reveal="escalonado">
+        <ul className={e.tarjetas}>
           {LINEAS.map((l) => {
             const estilo = TARJETA[l.tipo];
             const recomendada = recomendadas.has(l.id);
             return (
-              // Oculta, no desmontada: el efecto de aparición ya animó a estos hijos.
               <li key={l.id} className={e.tarjetaItem} hidden={filtro !== "Todo" && l.tipo !== filtro}>
                 <button
                   type="button"

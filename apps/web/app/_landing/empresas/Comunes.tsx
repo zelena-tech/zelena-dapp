@@ -48,34 +48,37 @@ export function HeroEmpresas({
 }
 
 /**
- * Etiqueta mono, H2 en dos líneas (la última parte en verde) e introducción opcional.
- * `enBloque`: el titular va dentro de un bloque que ya aparece entero (data-reveal
- * "seccion"), así que no lleva sus propias marcas (no se anidan, ver Reveal.tsx).
+ * Etiqueta mono (opcional), H2 en dos líneas (la parte `enfasis`, si la hay, en verde) e
+ * introducción opcional. `sinAparicion`: no lleva marcas de aparición al hacer scroll,
+ * porque va dentro de un bloque que ya aparece entero (no se anidan, ver Reveal.tsx) o
+ * porque la página no usa ese efecto (el portafolio).
  */
 export function Titular({
   id,
   etiqueta,
   h2,
   intro,
-  enBloque = false,
+  sinAparicion = false,
 }: {
   id: string;
-  etiqueta: string;
+  etiqueta?: string;
   h2: { linea1: string; antes: string; enfasis: string };
   intro?: string;
-  enBloque?: boolean;
+  sinAparicion?: boolean;
 }) {
-  const marca = (valor: string) => (enBloque ? {} : { "data-reveal": valor });
+  const marca = (valor: string) => (sinAparicion ? {} : { "data-reveal": valor });
   return (
     <div className={e.titular}>
-      <p className={m.etiqueta} {...marca("")}>
-        {etiqueta}
-      </p>
+      {etiqueta ? (
+        <p className={m.etiqueta} {...marca("")}>
+          {etiqueta}
+        </p>
+      ) : null}
       <h2 id={id} className={`${s.titulo2} ${e.h2}`} {...marca("titulo")}>
         {h2.linea1}{" "}
         <br />
         {h2.antes}
-        <span className={m.verde}>{h2.enfasis}</span>
+        {h2.enfasis ? <span className={m.verde}>{h2.enfasis}</span> : null}
       </h2>
       {intro ? (
         <p className={`${s.cuerpo} ${e.intro}`} {...marca("")}>

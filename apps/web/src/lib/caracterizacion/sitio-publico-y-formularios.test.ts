@@ -164,6 +164,7 @@ describe("flujo principal · /empresas/contacto → POST /api/empresas/contacto 
   it("el selector ofrece Harmony, las seis líneas del catálogo, el desarrollo a la medida y 'otro'; la ruta acepta solo esos slugs", () => {
     expect(INTERESES.map((i) => i.slug)).toEqual([
       "harmony",
+      "social-listening",
       "gestion-ti",
       "odoo",
       "wms",

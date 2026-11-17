@@ -25,7 +25,16 @@ import {
 import { RUTAS_SITEMAP } from "./seo";
 import { INTERESES, INTERES_A_LA_MEDIDA, SLUGS_INTERES } from "./servicios";
 import { CABECERA_EMPRESAS, PIE_EMPRESAS, contactoCon } from "../../app/_landing/copy-empresas";
-import { COLABORAR, CUATRO_LINEAS, LINEAS, NECESIDADES, PORTAFOLIO } from "../../app/_landing/copy-portafolio";
+import {
+  COLABORAR,
+  CUATRO_LINEAS,
+  HERO_PORTAFOLIO,
+  IMPACTO,
+  LINEAS,
+  NECESIDADES,
+  PORTAFOLIO,
+} from "../../app/_landing/copy-portafolio";
+import { CLIENTES } from "../../app/_landing/copy-home";
 import * as INCENTIVOS from "../../app/_landing/copy-incentivos";
 
 // El middleware importa la sesión con el alias "@/" (vitest no lo resuelve).
@@ -103,10 +112,17 @@ describe("cromo claro en español", () => {
     expect(dePortafolio.filter((id, i) => dePortafolio.indexOf(id) !== i)).toEqual([]);
     const deIncentivos = [...ids(PAGINAS[1]), ...ids("app/_landing/empresas/SeccionesIncentivos.tsx")];
     expect(deIncentivos.filter((id, i) => deIncentivos.indexOf(id) !== i)).toEqual([]);
-    // El único <h1> lo pinta el hero compartido; cada página lo usa una vez.
-    const h1 = DE_EMPRESAS.map(leer).join("\n").match(/<h1\b/g) ?? [];
-    expect(h1).toHaveLength(1);
-    for (const r of PAGINAS) expect(leer(r).match(/<HeroEmpresas\b/g) ?? [], r).toHaveLength(1);
+    // Un solo <h1> por página: el de incentivos lo pinta el hero compartido (Comunes) y el
+    // del portafolio, su hero propio (el del tachado). Cada página usa el suyo una vez.
+    const h1De = (r: string) => (leer(r).match(/<h1\b/g) ?? []).length;
+    expect(h1De("app/_landing/empresas/Comunes.tsx")).toBe(1);
+    expect(h1De("app/_landing/empresas/SeccionesPortafolio.tsx")).toBe(1);
+    for (const r of ["Explorador.tsx", "SeccionesIncentivos.tsx", "MarcoEmpresas.tsx"]) {
+      expect(h1De(`app/_landing/empresas/${r}`), r).toBe(0);
+    }
+    expect(leer(PAGINAS[0]).match(/<HeroPortafolio \/>/g) ?? []).toHaveLength(1);
+    expect(leer(PAGINAS[0])).not.toMatch(/<HeroEmpresas\b/);
+    expect(leer(PAGINAS[1]).match(/<HeroEmpresas\b/g) ?? []).toHaveLength(1);
     for (const r of DE_EMPRESAS) expect(leer(r), r).not.toMatch(/font-serif|text-paper|bg-surface|btn-primary/);
   });
 
@@ -125,18 +141,17 @@ describe("cromo claro en español", () => {
   });
 });
 
-describe("portafolio · ocho líneas que llevan a un contacto real", () => {
-  it("un producto, un programa de incentivos y seis servicios", () => {
+describe("portafolio · nueve líneas que llevan a un contacto real", () => {
+  it("dos productos propios, un programa de incentivos y seis servicios", () => {
     const cuenta = (t: string) => LINEAS.filter((l) => l.tipo === t).length;
-    expect([cuenta("Producto"), cuenta("Programa"), cuenta("Servicio")]).toEqual([1, 1, 6]);
+    expect([cuenta("Producto"), cuenta("Programa"), cuenta("Servicio")]).toEqual([2, 1, 6]);
     expect(new Set(LINEAS.map((l) => l.id)).size).toBe(LINEAS.length);
-    expect([...CUATRO_LINEAS.cifras]).toEqual(["1 producto propio", "1 programa de incentivos", "6 servicios", "1 comunidad"]);
   });
 
   // Pedido del founder (2026-11-17): el programa de incentivos va al lado del WMS.
   it("el WMS va primero y el programa de incentivos, a su lado; el filtro sigue ese orden", () => {
-    expect(LINEAS.slice(0, 2).map((l) => l.id)).toEqual(["wms", "incentivos"]);
-    expect(LINEAS.slice(2).every((l) => l.tipo === "Servicio")).toBe(true);
+    expect(LINEAS.slice(0, 3).map((l) => l.id)).toEqual(["wms", "incentivos", "social"]);
+    expect(LINEAS.slice(3).every((l) => l.tipo === "Servicio")).toBe(true);
     expect(PORTAFOLIO.filtros.map((f) => f.valor)).toEqual(["Todo", "Producto", "Programa", "Servicio"]);
   });
 
@@ -252,3 +267,79 @@ describe("incentivos · lo que la página puede afirmar", () => {
     expect(JSON.stringify(LINEAS.find((l) => l.id === "incentivos"))).not.toMatch(/criterio de un jefe|historial de logros/i);
   });
 });
+
+/**
+ * Pedido del founder (2026-11-17): el portafolio cuenta una historia (la tecnología de
+ * las grandes empresas, al alcance de una pyme) y nombra a empresas reales. Solo las que
+ * él autorizó para la home, y solo con lo que el sitio ya sostiene: nada de cifras de
+ * impacto inventadas.
+ */
+describe("portafolio · la historia y los clientes", () => {
+  it("el titular tacha 'solo para ellas' y el lector de pantalla oye la frase completa", () => {
+    const h = HERO_PORTAFOLIO.h1;
+    expect(`${h.linea1} ${h.tachadoLeido} ${h.resaltado}`).toBe(
+      "La tecnología de las grandes empresas, ya no solo para ellas: para tu pyme."
+    );
+    const hero = leer("app/_landing/empresas/SeccionesPortafolio.tsx");
+    expect(hero).toContain('<span className={e.tachado} aria-hidden="true">');
+    expect(hero).toContain("<span className={s.srOnly}>{h.h1.tachadoLeido}</span>");
+    // El único movimiento al cargar respeta "menos movimiento".
+    const css = leer("app/_landing/empresas/empresas.module.css");
+    expect(css).toMatch(/@media \(prefers-reduced-motion: no-preference\) \{\s*\.tachado::after/);
+  });
+
+  it("los clientes son exactamente los autorizados para la home, con su Instagram", () => {
+    expect(CLIENTES.map((c) => c.nombre)).toEqual(["Bloomshell", "Montoc", "Burbay"]);
+    const seccion = leer("app/_landing/empresas/SeccionesPortafolio.tsx");
+    expect(seccion).toContain('import { CLIENTES } from "../copy-home";');
+    expect(seccion).toContain("href={`https://www.instagram.com/${c.instagram}/`}");
+    expect(seccion).toContain('rel="noopener noreferrer"');
+    // Ningún nombre de empresa escrito a mano en el copy del portafolio: salen de CLIENTES.
+    expect(leer("app/_landing/copy-portafolio.ts")).not.toMatch(/Bloomshell|Montoc|Burbay/);
+  });
+
+  it("lo que se afirma del impacto sale de lo que el sitio ya sostiene, sin cifras inventadas", () => {
+    expect(IMPACTO.historia).toContain("Llevamos dos años construyendo junto a operaciones reales en Colombia.");
+    const texto = JSON.stringify({ IMPACTO, HERO_PORTAFOLIO });
+    // "10 a 200 personas" es el público al que apuntamos (ya publicado), no una cifra de impacto.
+    expect(texto).not.toMatch(/\d+ ?%|millones|miles de|cientos de|\d+ (empresas|clientes|bodegas)/i);
+  });
+
+  it("cada situación para tachar trae su solución, y la lista vive en botones con estado", () => {
+    for (const n of NECESIDADES) expect(n.solucion.length, n.texto).toBeGreaterThan(10);
+    const explorador = leer("app/_landing/empresas/Explorador.tsx");
+    expect(explorador).toContain("aria-pressed={elegidas.has(i)}");
+    expect(explorador).toContain("{n.solucion}");
+  });
+
+  it("sin etiquetas numeradas encima de los titulares ni aparición al hacer scroll en el portafolio", () => {
+    expect(leer("app/_landing/copy-portafolio.ts")).not.toMatch(/etiqueta: "0\d ·/);
+    for (const r of ["SeccionesPortafolio.tsx", "Explorador.tsx"]) {
+      expect(leer(`app/_landing/empresas/${r}`), r).not.toMatch(/data-reveal=/);
+    }
+  });
+});
+
+/**
+ * Pedido del founder (2026-11-17): ZELENA Social Listening entra como segundo producto
+ * propio. Dice solo lo que el producto hace hoy (captura de métricas públicas, histórico,
+ * metas, gestión de creadoras, comentarios clasificados): nada de demografía de la
+ * audiencia ni de ventas, que no se obtienen.
+ */
+describe("portafolio · ZELENA Social Listening", () => {
+  const social = LINEAS.find((l) => l.id === "social");
+
+  it("es un producto, con su interés en el formulario y situaciones que lo recomiendan", () => {
+    expect(social).toMatchObject({ tipo: "Producto", nombre: "ZELENA Social Listening", interes: "social-listening" });
+    expect(SLUGS_INTERES).toContain("social-listening");
+    expect(NECESIDADES.filter((n) => n.lineas.includes("social")).length).toBeGreaterThanOrEqual(2);
+    expect(CUATRO_LINEAS.lineas[1].como).toContain("ZELENA Social Listening");
+  });
+
+  it("no promete lo que no se obtiene: ni demografía de la audiencia, ni ventas, ni acceso a la cuenta", () => {
+    const texto = JSON.stringify(social);
+    expect(texto).not.toMatch(/demograf|edad de (tu|la) audiencia|g[eé]nero de (tu|la) audiencia|ventas|ROI|retorno/i);
+    expect(texto).toContain("Solo se leen publicaciones públicas");
+  });
+});
+

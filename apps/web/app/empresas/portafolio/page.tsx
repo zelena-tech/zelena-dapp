@@ -3,10 +3,16 @@ import { metadatos } from "@/lib/seo";
 import { RUTA_PORTAFOLIO } from "@/lib/menu";
 import MarcoEmpresas from "../../_landing/empresas/MarcoEmpresas";
 import s from "../../_landing/landing.module.css";
-import { CierreEmpresas, HeroEmpresas } from "../../_landing/empresas/Comunes";
+import { CierreEmpresas } from "../../_landing/empresas/Comunes";
 import Explorador from "../../_landing/empresas/Explorador";
-import { CicloDeTrabajo, Colaborar, CuatroLineas, PorQue } from "../../_landing/empresas/SeccionesPortafolio";
-import { CIERRE_PORTAFOLIO, HERO_PORTAFOLIO, META_PORTAFOLIO } from "../../_landing/copy-portafolio";
+import {
+  CicloDeTrabajo,
+  Colaborar,
+  CuatroLineas,
+  HeroPortafolio,
+  Impacto,
+} from "../../_landing/empresas/SeccionesPortafolio";
+import { CIERRE_PORTAFOLIO, META_PORTAFOLIO } from "../../_landing/copy-portafolio";
 
 // Igual que las páginas de la landing: el layout raíz lee la sesión.
 export const dynamic = "force-dynamic";
@@ -24,20 +30,20 @@ export const metadata = metadatos({
 });
 
 /**
- * El portafolio de soluciones, en español y con el diseño de zelena.tech (pedido del
- * founder, 2026-11-17): qué hace Zelena en cuatro líneas, el buscador por situación, las
- * ocho líneas con su ficha (el WMS y sus incentivos primero), cómo trabajamos, por qué y
- * la parte de colaborar. Todo el texto vive en copy-portafolio.ts.
+ * El portafolio de soluciones, en español y con el diseño de zelena.tech. Desde el
+ * 2026-11-17 cuenta una historia (pedido del founder): la tecnología de las grandes
+ * empresas, al alcance de una pyme. Titular, la creencia y la prueba (empresas reales),
+ * tacha lo que te pasa, un solo aliado, todo lo que hacemos, cómo trabajamos, colaborar y
+ * el cierre. Todo el texto vive en copy-portafolio.ts.
  */
 export default function Portafolio() {
   return (
     <MarcoEmpresas pagina="portafolio">
-      <HeroEmpresas id="portafolio-titulo" {...HERO_PORTAFOLIO} />
+      <HeroPortafolio />
       <div className={s.anchoContenido}>
-        <CuatroLineas />
-        <Explorador />
+        <Impacto />
+        <Explorador entre={<CuatroLineas />} />
         <CicloDeTrabajo />
-        <PorQue />
         <Colaborar />
         <CierreEmpresas id="cierre-titulo" {...CIERRE_PORTAFOLIO} />
       </div>
