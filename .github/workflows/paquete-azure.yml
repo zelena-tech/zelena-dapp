@@ -87,7 +87,7 @@ jobs:
           sh "$E/app/start.sh" > "$E/server.log" 2>&1 &
           for i in $(seq 1 40); do curl -sf -o /dev/null http://127.0.0.1:8080/api/cla && break; sleep 1; done
           falla() { echo "FALLA: $1"; tail -80 "$E/server.log"; exit 1; }
-          for p in / /en /manifiesto /book-a-demo /metodo /comunidad /comunidad/ritos /encuentros /empresas /empresas/incentivos /empresas/servicios /empresas/contacto /agora /academia /gobernanza /entrar /privacidad /acuerdo /robots.txt /sitemap.xml /landing/avatar-beanie-cut.png /landing/zelena-wordmark.svg /og/sitio-es.png; do
+          for p in / /en /manifiesto /book-a-demo /metodo /comunidad /comunidad/ritos /encuentros /empresas/incentivos /empresas/contacto /agora /academia /gobernanza /entrar /privacidad /acuerdo /robots.txt /sitemap.xml /landing/avatar-beanie-cut.png /landing/zelena-wordmark.svg /og/sitio-es.png; do
             c=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:8080$p"); echo "$p $c"; [ "$c" = 200 ] || falla "$p respondió $c"
           done
           # La landing en inglés (WP33): public/ viajó en el paquete (imagen y wordmark con su
@@ -122,6 +122,12 @@ jobs:
             grep -q 'data-landing="" lang="es"' "$E/$p.html" || falla "$ruta sin la raíz data-landing en español"
             grep -Eq '<h1 id="'"$p"'-titulo"' "$E/$p.html" || falla "$ruta sin su H1 en el HTML del servidor"
           done
+          # Desde el 2026-11-17 el contacto también (founder: nada del diseño viejo). Pinta el
+          # hero de "Book a demo" en español, así que su H1 es el de la demo.
+          curl -s http://127.0.0.1:8080/empresas/contacto > "$E/contacto.html"
+          grep -q '<html lang="es"' "$E/contacto.html" || falla "/empresas/contacto sin <html lang=\"es\">"
+          grep -q 'data-landing="" lang="es"' "$E/contacto.html" || falla "/empresas/contacto sin la raíz data-landing en español"
+          grep -q '<h1 id="demo-titulo"' "$E/contacto.html" || falla "/empresas/contacto sin su H1 en el HTML del servidor"
           # Imágenes para compartir: "/" sin ninguna (un opengraph-image en app/ le ganaría a la
           # página), y las páginas de la comunidad en español con la de public/og/.
           if grep -Eq 'og:image|twitter:image' "$E/inicio.html"; then falla "/ lleva una imagen para compartir"; fi
@@ -142,6 +148,12 @@ jobs:
           # Rutas que cambiaron de nombre o salieron del sitio (el whitepaper): redirección permanente.
           for p in /ecosistema /academia/por-que-sas-dao /whitepaper /empresas/portafolio; do
             c=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:8080$p"); echo "$p $c"; [ "$c" = 308 ] || falla "$p respondió $c (se esperaba 308)"
+          done
+          # Las páginas para empresas del diseño viejo van a la inicio (307, temporal: next.config.mjs).
+          for par in "/empresas /" "/empresas/servicios /#servicios"; do
+            p="${par%% *}"; destino="${par##* }"
+            r=$(curl -s -o /dev/null -w "%{http_code} %{redirect_url}" "http://127.0.0.1:8080$p"); echo "$p $r"
+            [ "$r" = "307 http://127.0.0.1:8080$destino" ] || falla "$p respondió '$r' (se esperaba 307 a $destino)"
           done
           for p in /equipo/hoy /equipo/proyectos /equipo/talento /equipo/avisos /admin /perfil /clientes; do
             c=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:8080$p"); echo "$p $c"; [ "$c" = 307 ] || falla "$p respondió $c sin sesión"
