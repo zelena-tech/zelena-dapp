@@ -68,7 +68,7 @@ CRITERIOS DE ACEPTACIÓN
 - [ ] Copys: la misión describe un entregable con criterio de aceptación; se
   califican entregas, nunca personas (doc 16).
 
-OWNER — Fausto (acción `tomar` + emisión + genoma v2) · David (`/misiones`) ·
-Vale (curadora de la biblioteca inicial).
+OWNER — Plataforma (acción `tomar` + emisión + genoma v2) · Producto (`/misiones`) ·
+Operaciones (curadora de la biblioteca inicial).
 TAMAÑO — M · Estimado: 2 días. Depende: WP26 (ritos), WP08 (genoma versionado),
 WP14 y WP17 cerrados.

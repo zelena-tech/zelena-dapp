@@ -1,11 +1,12 @@
 /**
  * Renderizador Markdown propio y LIMITADO. Devuelve elementos React (nunca
  * dangerouslySetInnerHTML), así que no hay superficie de XSS por HTML crudo.
- * Soporta: h1-h4, párrafos, listas, citas, hr, tablas y **negrita** / `code`.
+ * Soporta: h1-h4, párrafos, listas (con líneas de continuación sangradas), citas, hr,
+ * tablas y **negrita** / `code`.
  */
 import React from "react";
 
-type Token =
+export type Token =
   | { t: "h"; level: number; text: string }
   | { t: "p"; text: string }
   | { t: "ul"; items: string[] }
@@ -42,7 +43,39 @@ function inline(text: string, keyBase: string): React.ReactNode[] {
   return nodes;
 }
 
-function tokenize(md: string): Token[] {
+const RE_UL = /^\s*[-*]\s+/;
+const RE_OL = /^\s*\d+\.\s+/;
+
+/**
+ * Línea de continuación de un ítem de lista: con sangría (2 o más espacios) y sin abrir
+ * otro ítem. CLA.md parte sus cláusulas así (sangría de 3 espacios) y antes cada línea
+ * partida cortaba la lista: salían 5 `<ol>` numerados 1, 1, 2, 1, 1 y quedaban `**`
+ * sueltos donde la negrita cruzaba de línea. CLA.md no se toca (su sha256 es lo que se
+ * firma): lo arregla el renderizador.
+ */
+function esContinuacion(l: string): boolean {
+  return /^\s{2,}\S/.test(l) && !RE_UL.test(l) && !RE_OL.test(l);
+}
+
+/** Lee los ítems de una lista desde `i`, uniendo a cada ítem sus líneas de continuación. */
+function leerItems(lines: string[], i: number, re: RegExp): { items: string[]; i: number } {
+  const items: string[] = [];
+  while (i < lines.length) {
+    if (re.test(lines[i])) {
+      items.push(lines[i].replace(re, ""));
+      i++;
+    } else if (items.length > 0 && esContinuacion(lines[i])) {
+      items[items.length - 1] += " " + lines[i].trim();
+      i++;
+    } else {
+      break;
+    }
+  }
+  return { items, i };
+}
+
+/** Bloques del Markdown (exportado para los tests). */
+export function tokenize(md: string): Token[] {
   const lines = md.replace(/\r\n/g, "\n").split("\n");
   const tokens: Token[] = [];
   let i = 0;
@@ -90,23 +123,17 @@ function tokenize(md: string): Token[] {
       continue;
     }
     // unordered list
-    if (/^\s*[-*]\s+/.test(line)) {
-      const items: string[] = [];
-      while (i < lines.length && /^\s*[-*]\s+/.test(lines[i])) {
-        items.push(lines[i].replace(/^\s*[-*]\s+/, ""));
-        i++;
-      }
-      tokens.push({ t: "ul", items });
+    if (RE_UL.test(line)) {
+      const r = leerItems(lines, i, RE_UL);
+      i = r.i;
+      tokens.push({ t: "ul", items: r.items });
       continue;
     }
     // ordered list
-    if (/^\s*\d+\.\s+/.test(line)) {
-      const items: string[] = [];
-      while (i < lines.length && /^\s*\d+\.\s+/.test(lines[i])) {
-        items.push(lines[i].replace(/^\s*\d+\.\s+/, ""));
-        i++;
-      }
-      tokens.push({ t: "ol", items });
+    if (RE_OL.test(line)) {
+      const r = leerItems(lines, i, RE_OL);
+      i = r.i;
+      tokens.push({ t: "ol", items: r.items });
       continue;
     }
     // paragraph (accumulate until blank)

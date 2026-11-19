@@ -13,3 +13,6 @@ next-env.d.ts
 /node_modules/
 .env
 .env.local
+
+# artefacto de tsc --noEmit (incremental)
+tsconfig.tsbuildinfo

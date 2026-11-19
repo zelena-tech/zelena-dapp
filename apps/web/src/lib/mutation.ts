@@ -9,7 +9,14 @@
  */
 import type { DB } from "./db";
 import { sha256Hex } from "./crypto";
-import { getActiveGenome, currentEpoch, clearGenomeCache, type Genome } from "./genome";
+import {
+  getActiveGenome,
+  currentEpoch,
+  clearGenomeCache,
+  mezclarConDefaults,
+  type Genome,
+  type GenomeV1,
+} from "./genome";
 
 // Genes numéricos escalares mutables (los objetos/arrays quedan fuera del alcance M1).
 export const NUMERIC_GENES = ["EPOCH_BUDGET", "ACADEMIA_BUDGET", "ACADEMIA_DAILY_CAP", "ACADEMIA_VOTE_WEIGHT"] as const;
@@ -39,7 +46,7 @@ function nextVersion(db: DB): number {
 }
 
 /** Validación PURA de una mutación contra el genoma actual (testeable sin DB). */
-export function validateMutation(current: Genome, changes: GeneChange[], justification: string): void {
+export function validateMutation(current: GenomeV1, changes: GeneChange[], justification: string): void {
   if (!justification || justification.trim().length < 10) {
     throw new MutationError("La justificación es obligatoria (mínimo 10 caracteres).");
   }
@@ -110,7 +117,11 @@ export function proposeMutation(db: DB, changes: GeneChange[], justification: st
   return result;
 }
 
-/** Revierte a los parámetros de una versión previa, como versión nueva efectiva la época siguiente. */
+/**
+ * Revierte a los parámetros de una versión previa, como versión nueva efectiva la época
+ * siguiente. Guarda la versión COMPLETA (`{ ...GENOME_DEFAULTS, ...params destino }`):
+ * revertir a la v1 no borra las claves nuevas de WP31 del linaje.
+ */
 export function revertToVersion(db: DB, targetVersion: number, justification: string): MutationResult {
   const epoch = currentEpoch(db);
   const targetEpoch = epoch + 1;
@@ -136,7 +147,7 @@ export function revertToVersion(db: DB, targetVersion: number, justification: st
     const decId = dec.lastInsertRowid as number;
     db.prepare(
       `INSERT INTO genome_versions (version, params, effective_from_epoch, decision_log_id) VALUES (?, ?, ?, ?)`
-    ).run(version, src.params, targetEpoch, decId);
+    ).run(version, JSON.stringify(mezclarConDefaults(src.params)), targetEpoch, decId);
     db.prepare(
       `INSERT INTO mutation_decisions (epoch, kind, genome_version, decision_log_id) VALUES (?, 'mutation', ?, ?)`
     ).run(targetEpoch, version, decId);
@@ -175,27 +186,41 @@ export interface PendingMutation {
   reason: string;
 }
 
-/** Mutación anunciada (efectiva la época siguiente) para el banner de la cohorte, o null. */
+/**
+ * Mutación anunciada (efectiva la época siguiente) para el banner de la cohorte, o null.
+ *
+ * Ignora las versiones que no cambian ningún gen numérico (`NUMERIC_GENES`) respecto a
+ * la versión que reemplazan (la anterior del linaje): la v2 de WP31 solo añade claves y
+ * no es una mutación que anunciar. Si sobre una mutación pendiente se publicó una
+ * versión así, se anuncia la mutación, con su razón.
+ */
 export function pendingMutation(db: DB): PendingMutation | null {
   const epoch = currentEpoch(db);
   const target = epoch + 1;
-  const row = db
+  const rows = db
     .prepare(
       `SELECT gv.version AS version, gv.params AS params, dl.reason AS reason
        FROM genome_versions gv LEFT JOIN decision_log dl ON dl.id = gv.decision_log_id
-       WHERE gv.effective_from_epoch = ? ORDER BY gv.version DESC LIMIT 1`
+       WHERE gv.effective_from_epoch = ? ORDER BY gv.version DESC`
     )
-    .get(target) as { version: number; params: string; reason: string | null } | undefined;
-  if (!row) return null;
+    .all(target) as Array<{ version: number; params: string; reason: string | null }>;
+  if (rows.length === 0) return null;
   const current = getActiveGenome(db, epoch) as unknown as Record<string, number>;
-  const next = JSON.parse(row.params) as Record<string, number>;
-  const changes: Array<{ key: string; from: number; to: number }> = [];
-  for (const key of NUMERIC_GENES) {
-    if (typeof next[key] === "number" && next[key] !== current[key]) {
-      changes.push({ key, from: current[key], to: next[key] });
+  const anterior = db.prepare(`SELECT params FROM genome_versions WHERE version < ? ORDER BY version DESC LIMIT 1`);
+  for (const row of rows) {
+    const next = mezclarConDefaults(row.params) as unknown as Record<string, number>;
+    const prevRow = anterior.get(row.version) as { params: string } | undefined;
+    const prev = prevRow ? (mezclarConDefaults(prevRow.params) as unknown as Record<string, number>) : current;
+    if (!NUMERIC_GENES.some((key) => next[key] !== prev[key])) continue;
+    const changes: Array<{ key: string; from: number; to: number }> = [];
+    for (const key of NUMERIC_GENES) {
+      if (typeof next[key] === "number" && next[key] !== current[key]) {
+        changes.push({ key, from: current[key], to: next[key] });
+      }
     }
+    return { version: row.version, targetEpoch: target, changes, reason: row.reason ?? "" };
   }
-  return { version: row.version, targetEpoch: target, changes, reason: row.reason ?? "" };
+  return null;
 }
 
 export interface LineageEntry {

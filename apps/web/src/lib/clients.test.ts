@@ -28,84 +28,84 @@ function freshDb(): DB {
   db.pragma("foreign_keys = ON");
   db.exec(fs.readFileSync(SCHEMA, "utf8"));
   for (const [w, n] of [
-    ["W_JOHN", "John"],
-    ["W_FAUSTO", "Fausto"],
-    ["W_VALE", "Vale"],
-    ["W_ANGELA", "Angela"],
+    ["W_FUNDADOR", "Founder"],
+    ["W_PLATAFORMA", "Plataforma"],
+    ["W_OPERACIONES", "Operaciones"],
+    ["W_CONTENIDO", "Contenido"],
   ]) {
     db.prepare(`INSERT INTO users (wallet, display_name, is_founder) VALUES (?, ?, ?)`).run(
       w,
       n,
-      w === "W_JOHN" ? 1 : 0
+      w === "W_FUNDADOR" ? 1 : 0
     );
   }
   return db;
 }
 
-const john: Actor = { wallet: "W_JOHN", isFounder: true };
-const fausto: Actor = { wallet: "W_FAUSTO", isFounder: false };
-const vale: Actor = { wallet: "W_VALE", isFounder: false };
-const angela: Actor = { wallet: "W_ANGELA", isFounder: false };
+const fundador: Actor = { wallet: "W_FUNDADOR", isFounder: true };
+const plataforma: Actor = { wallet: "W_PLATAFORMA", isFounder: false };
+const operaciones: Actor = { wallet: "W_OPERACIONES", isFounder: false };
+const contenido: Actor = { wallet: "W_CONTENIDO", isFounder: false };
 
 describe("WP17 · entornos por cliente", () => {
   let db: DB;
-  let montoc: number;
+  let clienteUno: number;
 
   beforeEach(() => {
     db = freshDb();
-    montoc = createClient(db, { name: "Montoc", status: "activo", industry: "distribución" });
-    addMember(db, montoc, "W_FAUSTO", "lead");
-    addMember(db, montoc, "W_VALE", "colaborador");
-    addMember(db, montoc, "W_ANGELA", "lectura");
+    clienteUno = createClient(db, { name: "Cliente Uno", status: "activo", industry: "distribución" });
+    addMember(db, clienteUno, "W_PLATAFORMA", "lead");
+    addMember(db, clienteUno, "W_OPERACIONES", "colaborador");
+    addMember(db, clienteUno, "W_CONTENIDO", "lectura");
   });
 
   it("un no-miembro no ve el cliente ni en listados ni por URL directa", () => {
     const otro = createClient(db, { name: "Cliente Ajeno" });
-    addMember(db, otro, "W_VALE", "lead");
+    addMember(db, otro, "W_OPERACIONES", "lead");
 
-    // Fausto no participa en 'Cliente Ajeno'.
-    expect(listClientsFor(db, fausto).map((c) => c.slug)).toEqual(["montoc"]);
+    // Plataforma no participa en 'Cliente Ajeno'.
+    expect(listClientsFor(db, plataforma).map((c) => c.slug)).toEqual(["cliente-uno"]);
     // Por URL directa: null → la vista responde 404, no 403. El cliente no se revela.
-    expect(getClientForActor(db, "cliente-ajeno", fausto)).toBeNull();
-    expect(accessLevelFor(db, otro, fausto)).toBeNull();
+    expect(getClientForActor(db, "cliente-ajeno", plataforma)).toBeNull();
+    expect(accessLevelFor(db, otro, plataforma)).toBeNull();
   });
 
   it("el founder ve todos los clientes", () => {
     createClient(db, { name: "Otro" });
-    expect(listClientsFor(db, john)).toHaveLength(2);
-    expect(accessLevelFor(db, montoc, john)).toBe("lead");
+    expect(listClientsFor(db, fundador)).toHaveLength(2);
+    expect(accessLevelFor(db, clienteUno, fundador)).toBe("lead");
   });
 
   it("el nivel 'lectura' NO accede al inventario de credenciales (a nivel de datos, no de UI)", () => {
     addCredential(
       db,
-      montoc,
-      { name: "Shopify Admin API", type: "api", location: "Key Vault kv-zelena / montoc-shopify-admin" },
-      fausto
+      clienteUno,
+      { name: "Shopify Admin API", type: "api", location: "Key Vault kv-ejemplo / cliente-uno-shopify-admin" },
+      plataforma
     );
-    expect(listCredentials(db, montoc, fausto)).toHaveLength(1);
-    expect(listCredentials(db, montoc, vale)).toHaveLength(1);
-    expect(() => listCredentials(db, montoc, angela)).toThrow(ClientAccessError);
+    expect(listCredentials(db, clienteUno, plataforma)).toHaveLength(1);
+    expect(listCredentials(db, clienteUno, operaciones)).toHaveLength(1);
+    expect(() => listCredentials(db, clienteUno, contenido)).toThrow(ClientAccessError);
   });
 
   it("'lectura' sí ve la marca: la restricción es del inventario, no del cliente entero", () => {
-    addBrandAsset(db, montoc, { kind: "color", label: "Verde primario", value: "#3CE109" });
-    expect(listBrandAssets(db, montoc, angela)).toHaveLength(1);
+    addBrandAsset(db, clienteUno, { kind: "color", label: "Verde primario", value: "#3CE109" });
+    expect(listBrandAssets(db, clienteUno, contenido)).toHaveLength(1);
   });
 
   it("solo un lead puede registrar credenciales", () => {
-    const input = { name: "DB prod", type: "db", location: "Key Vault / montoc-pg" };
-    expect(() => addCredential(db, montoc, input, vale)).toThrow(ClientAccessError);
-    expect(addCredential(db, montoc, input, fausto)).toBeGreaterThan(0);
+    const input = { name: "DB prod", type: "db", location: "Key Vault / cliente-uno-pg" };
+    expect(() => addCredential(db, clienteUno, input, operaciones)).toThrow(ClientAccessError);
+    expect(addCredential(db, clienteUno, input, plataforma)).toBeGreaterThan(0);
   });
 
   it("toda consulta al inventario queda registrada en el log de auditoría", () => {
-    addCredential(db, montoc, { name: "Token de despliegue", type: "api", location: "1Password / bóveda Clientes" }, fausto);
-    listCredentials(db, montoc, fausto);
-    listCredentials(db, montoc, vale);
-    const log = credentialAccessLog(db, montoc);
+    addCredential(db, clienteUno, { name: "Token de despliegue", type: "api", location: "1Password / bóveda Clientes" }, plataforma);
+    listCredentials(db, clienteUno, plataforma);
+    listCredentials(db, clienteUno, operaciones);
+    const log = credentialAccessLog(db, clienteUno);
     expect(log).toHaveLength(2);
-    expect(log.map((l) => l.wallet).sort()).toEqual(["W_FAUSTO", "W_VALE"]);
+    expect(log.map((l) => l.wallet).sort()).toEqual(["W_OPERACIONES", "W_PLATAFORMA"]);
     expect(log.every((l) => l.action === "list")).toBe(true);
   });
 
@@ -118,7 +118,7 @@ describe("WP17 · entornos por cliente", () => {
           name: "Servidor",
           type: "servidor",
           location: "Key Vault / x",
-          notes: "usar postgres://admin:sup3rclave@db.montoc.co:5432/odoo",
+          notes: "usar postgres://admin:sup3rclave@db.cliente-uno.test:5432/odoo",
         },
       },
       {
@@ -127,24 +127,24 @@ describe("WP17 · entornos por cliente", () => {
       },
     ];
     for (const c of casos) {
-      expect(() => addCredential(db, montoc, c.cred as never, fausto)).toThrow(ClientError);
+      expect(() => addCredential(db, clienteUno, c.cred as never, plataforma)).toThrow(ClientError);
     }
     // Y nada se escribió.
-    expect(listCredentials(db, montoc, fausto)).toHaveLength(0);
+    expect(listCredentials(db, clienteUno, plataforma)).toHaveLength(0);
   });
 
   it("acepta una referencia legible que NO es un secreto", () => {
     const id = addCredential(
       db,
-      montoc,
+      clienteUno,
       {
         name: "Azure SQL producción",
         type: "db",
-        location: "Key Vault kv-zelena / secret montoc-sql-prod (managed identity)",
+        location: "Key Vault kv-ejemplo / secret cliente-uno-sql-prod (managed identity)",
         scope: "db_datareader",
-        notes: "Rota cada 90 días. Dueño: TI Montoc.",
+        notes: "Rota cada 90 días. Dueño: TI del cliente.",
       },
-      fausto
+      plataforma
     );
     expect(id).toBeGreaterThan(0);
   });
@@ -187,7 +187,7 @@ describe("garantía de cero secretos en el esquema (criterio de aceptación auto
   it("findSecretLike reconoce los formatos comunes", () => {
     expect(findSecretLike("shpat_" + "0".repeat(32))).toMatch(/Shopify/);
     expect(findSecretLike("-----BEGIN RSA PRIVATE KEY-----")).toMatch(/privada/);
-    expect(findSecretLike("Key Vault kv-zelena / montoc-shopify")).toBeNull();
+    expect(findSecretLike("Key Vault kv-ejemplo / cliente-uno-shopify")).toBeNull();
     expect(findSecretLike(null)).toBeNull();
   });
 });

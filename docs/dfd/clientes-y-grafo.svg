@@ -1,0 +1,196 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1640 3160" width="1640" height="3160" font-family="Segoe UI, Arial, sans-serif" font-size="13">
+<title>Clientes y grafo de operación: /clientes, client_members, grafo importado de zelena-ops e inventario de credenciales sin secretos</title>
+<defs><marker id="punta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker></defs>
+<rect width="1640" height="3160" fill="#ffffff"/>
+<rect x="50" y="45" width="1500" height="195" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="58" y="63" fill="#c0392b">Navegador o máquina del usuario (no confiable)</text>
+<rect x="380" y="315" width="1170" height="955" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="388" y="333" fill="#c0392b">Servidor Next.js en Azure App Service</text>
+<rect x="1040" y="1345" width="510" height="1715" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="1048" y="1363" fill="#c0392b">Base SQLite (/home/data/zelena.db)</text>
+<path d="M185,150 Q263,323 425,420" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="284" y="304" text-anchor="middle" font-size="11" fill="#b03a2e">f1 Abrir /clientes *</text>
+<path d="M515,420 Q635,476 755,420" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="635" y="448" text-anchor="middle" font-size="11" fill="#b03a2e">f2 Petición con JWT verificado *</text>
+<path d="M845,420 Q965,476 1085,420" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="965" y="448" text-anchor="middle" font-size="11" fill="#b03a2e">f3 ¿Es del equipo interno? *</text>
+<path d="M1175,420 Q1241,947 1415,1450" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1268" y="941" text-anchor="middle" font-size="11" fill="#555">f4 Rol leído de la base</text>
+<path d="M755,420 Q601,471 515,610" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="618" y="493" text-anchor="middle" font-size="11" fill="#555">f5 Render de la lista</text>
+<path d="M515,610 Q635,666 755,610" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="635" y="638" text-anchor="middle" font-size="11" fill="#555">f6 Mis clientes</text>
+<path d="M845,610 Q911,1046 1085,1450" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="1038" text-anchor="middle" font-size="11" fill="#b03a2e">f7 Leer clientes *</text>
+<path d="M845,610 Q911,1137 1085,1640" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="1131" text-anchor="middle" font-size="11" fill="#555">f8 Nivel de acceso</text>
+<path d="M515,610 Q587,830 755,990" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="611" y="815" text-anchor="middle" font-size="11" fill="#555">f9 Cobertura por cliente</text>
+<path d="M425,610 Q355,354 185,150" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="330" y="367" text-anchor="middle" font-size="11" fill="#b03a2e">f10 Lista *</text>
+<path d="M755,420 Q587,580 515,800" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="611" y="595" text-anchor="middle" font-size="11" fill="#555">f11 Render del cliente</text>
+<path d="M515,800 Q669,749 755,610" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="652" y="727" text-anchor="middle" font-size="11" fill="#555">f12 Cliente si participo (si no, 404)</text>
+<path d="M845,610 Q911,1230 1085,1830" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="1225" text-anchor="middle" font-size="11" fill="#555">f13 Marca</text>
+<path d="M515,800 Q601,939 755,990" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="618" y="917" text-anchor="middle" font-size="11" fill="#555">f14 Grafo, nodo e impacto</text>
+<path d="M845,990 Q909,1705 1085,2400" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="937" y="1700" text-anchor="middle" font-size="11" fill="#b03a2e">f15 Leer nodos *</text>
+<path d="M845,990 Q909,1798 1085,2590" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="937" y="1794" text-anchor="middle" font-size="11" fill="#555">f16 Leer aristas</text>
+<path d="M845,990 Q909,1893 1085,2780" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="937" y="1889" text-anchor="middle" font-size="11" fill="#555">f17 Historia de cobertura</text>
+<path d="M515,800 Q635,856 755,800" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="635" y="828" text-anchor="middle" font-size="11" fill="#b03a2e">f18 Pestaña Accesos (colaborador o lead) *</text>
+<path d="M845,800 Q911,1420 1085,2020" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="1415" text-anchor="middle" font-size="11" fill="#b03a2e">f19 Leer inventario *</text>
+<path d="M845,800 Q909,1515 1085,2210" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="937" y="1510" text-anchor="middle" font-size="11" fill="#555">f20 Registrar la consulta</text>
+<path d="M515,800 Q587,1020 755,1180" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="611" y="1005" text-anchor="middle" font-size="11" fill="#555">f21 Backlog del cliente</text>
+<path d="M845,1180 Q909,2083 1085,2970" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="937" y="2079" text-anchor="middle" font-size="11" fill="#555">f22 Trabajo abierto</text>
+<path d="M425,800 Q357,455 185,150" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="331" y="465" text-anchor="middle" font-size="11" fill="#b03a2e">f23 Entorno del cliente *</text>
+<path d="M1415,150 Q1245,354 1175,610" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1270" y="367" text-anchor="middle" font-size="11" fill="#b03a2e">f24 Importar grafo *</text>
+<path d="M1130,565 Q1186,515 1130,465" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1158" y="515" text-anchor="middle" font-size="11" fill="#b03a2e">f25 ¿Rol founder? *</text>
+<path d="M1085,610 Q965,554 845,610" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="965" y="582" text-anchor="middle" font-size="11" fill="#555">f26 Resolver el slug</text>
+<path d="M1175,610 Q1329,559 1415,420" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1312" y="537" text-anchor="middle" font-size="11" fill="#b03a2e">f27 importGraph *</text>
+<path d="M1415,420 Q1239,1404 1175,2400" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1267" y="1407" text-anchor="middle" font-size="11" fill="#b03a2e">f28 Proyectar nodos *</text>
+<path d="M1415,420 Q1239,1499 1175,2590" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1267" y="1502" text-anchor="middle" font-size="11" fill="#555">f29 Proyectar aristas</text>
+<path d="M1415,420 Q1239,1594 1175,2780" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1267" y="1597" text-anchor="middle" font-size="11" fill="#555">f30 Historia</text>
+<path d="M1175,610 Q1345,406 1415,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1320" y="393" text-anchor="middle" font-size="11" fill="#555">f31 Resultado</text>
+<rect x="90" y="100" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="140" y="138" text-anchor="middle" fill="#222">Miembro del</text>
+<text x="140" y="154" text-anchor="middle" fill="#222">equipo interno</text>
+<text x="140" y="170" text-anchor="middle" fill="#222">(navegador)</text>
+<rect x="1410" y="100" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="114" text-anchor="middle" fill="#222">Founder que</text>
+<text x="1460" y="130" text-anchor="middle" fill="#222">importa</text>
+<text x="1460" y="146" text-anchor="middle" fill="#222">grafo.json de</text>
+<text x="1460" y="162" text-anchor="middle" fill="#222">zelena-ops</text>
+<circle cx="470" cy="420" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="408" text-anchor="middle" fill="#222">Middleware de</text>
+<text x="470" y="424" text-anchor="middle" fill="#222">sesión</text>
+<text x="470" y="440" text-anchor="middle" fill="#222">(/clientes)</text>
+<circle cx="800" cy="420" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="392" text-anchor="middle" fill="#222">Puerta de</text>
+<text x="800" y="408" text-anchor="middle" fill="#222">/clientes:</text>
+<text x="800" y="424" text-anchor="middle" fill="#222">solo equipo</text>
+<text x="800" y="440" text-anchor="middle" fill="#222">interno</text>
+<circle cx="1130" cy="420" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="384" text-anchor="middle" fill="#222">Actor de</text>
+<text x="1130" y="400" text-anchor="middle" fill="#222">clientes por</text>
+<text x="1130" y="416" text-anchor="middle" fill="#222">rol leído de</text>
+<text x="1130" y="432" text-anchor="middle" fill="#222">la base</text>
+<circle cx="470" cy="610" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="590" text-anchor="middle" fill="#222">Página</text>
+<text x="470" y="606" text-anchor="middle" fill="#222">/clientes (mis</text>
+<text x="470" y="622" text-anchor="middle" fill="#222">clientes y</text>
+<text x="470" y="638" text-anchor="middle" fill="#222">cobertura)</text>
+<circle cx="470" cy="800" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="756" text-anchor="middle" fill="#222">Página</text>
+<text x="470" y="772" text-anchor="middle" fill="#222">/clientes/[slug]</text>
+<text x="470" y="788" text-anchor="middle" fill="#222">(Operación,</text>
+<text x="470" y="804" text-anchor="middle" fill="#222">Backlog,</text>
+<circle cx="800" cy="610" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="598" text-anchor="middle" fill="#222">Permiso por</text>
+<text x="800" y="614" text-anchor="middle" fill="#222">participación</text>
+<text x="800" y="630" text-anchor="middle" fill="#222">(clients.ts)</text>
+<circle cx="800" cy="800" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="772" text-anchor="middle" fill="#222">Inventario de</text>
+<text x="800" y="788" text-anchor="middle" fill="#222">credenciales</text>
+<text x="800" y="804" text-anchor="middle" fill="#222">sin valores</text>
+<text x="800" y="820" text-anchor="middle" fill="#222">(listCredentials,</text>
+<circle cx="800" cy="990" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="946" text-anchor="middle" fill="#222">Lectura del</text>
+<text x="800" y="962" text-anchor="middle" fill="#222">grafo</text>
+<text x="800" y="978" text-anchor="middle" fill="#222">(listNodes,</text>
+<text x="800" y="994" text-anchor="middle" fill="#222">getNode,</text>
+<circle cx="800" cy="1180" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="1168" text-anchor="middle" fill="#222">Backlog del</text>
+<text x="800" y="1184" text-anchor="middle" fill="#222">cliente</text>
+<text x="800" y="1200" text-anchor="middle" fill="#222">(assignmentsForClient)</text>
+<circle cx="1130" cy="610" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="606" text-anchor="middle" fill="#222">POST</text>
+<text x="1130" y="622" text-anchor="middle" fill="#222">/api/clientes/grafo</text>
+<circle cx="1460" cy="420" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="392" text-anchor="middle" fill="#222">Importador del</text>
+<text x="1460" y="408" text-anchor="middle" fill="#222">grafo: escaneo</text>
+<text x="1460" y="424" text-anchor="middle" fill="#222">de secretos y</text>
+<text x="1460" y="440" text-anchor="middle" fill="#222">proyección</text>
+<rect x="1410" y="1420" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1410" y1="1420" x2="1510" y2="1420" stroke="#222" stroke-width="1.5"/>
+<line x1="1410" y1="1480" x2="1510" y2="1480" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="1430" text-anchor="middle" fill="#222">SQLite · users</text>
+<text x="1460" y="1446" text-anchor="middle" fill="#222">(rol,</text>
+<text x="1460" y="1462" text-anchor="middle" fill="#222">supervisión,</text>
+<text x="1460" y="1478" text-anchor="middle" fill="#222">estado)</text>
+<rect x="1080" y="1420" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="1420" x2="1180" y2="1420" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="1480" x2="1180" y2="1480" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="1446" text-anchor="middle" fill="#222">SQLite ·</text>
+<text x="1130" y="1462" text-anchor="middle" fill="#222">clients</text>
+<rect x="1080" y="1610" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="1610" x2="1180" y2="1610" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="1670" x2="1180" y2="1670" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="1612" text-anchor="middle" fill="#222">SQLite ·</text>
+<text x="1130" y="1628" text-anchor="middle" fill="#222">client_members</text>
+<text x="1130" y="1644" text-anchor="middle" fill="#222">(lead,</text>
+<text x="1130" y="1660" text-anchor="middle" fill="#222">colaborador,</text>
+<rect x="1080" y="1800" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="1800" x2="1180" y2="1800" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="1860" x2="1180" y2="1860" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="1826" text-anchor="middle" fill="#222">SQLite ·</text>
+<text x="1130" y="1842" text-anchor="middle" fill="#222">brand_assets</text>
+<rect x="1080" y="1990" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="1990" x2="1180" y2="1990" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="2050" x2="1180" y2="2050" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="1992" text-anchor="middle" fill="#222">SQLite ·</text>
+<text x="1130" y="2008" text-anchor="middle" fill="#222">credential_inventory</text>
+<text x="1130" y="2024" text-anchor="middle" fill="#222">(dónde vive,</text>
+<text x="1130" y="2040" text-anchor="middle" fill="#222">nunca el</text>
+<rect x="1080" y="2180" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="2180" x2="1180" y2="2180" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="2240" x2="1180" y2="2240" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="2198" text-anchor="middle" fill="#222">SQLite ·</text>
+<text x="1130" y="2214" text-anchor="middle" fill="#222">credential_access_log</text>
+<text x="1130" y="2230" text-anchor="middle" fill="#222">(append-only)</text>
+<rect x="1080" y="2370" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="2370" x2="1180" y2="2370" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="2430" x2="1180" y2="2430" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="2380" text-anchor="middle" fill="#222">SQLite ·</text>
+<text x="1130" y="2396" text-anchor="middle" fill="#222">graph_nodes</text>
+<text x="1130" y="2412" text-anchor="middle" fill="#222">(proyección de</text>
+<text x="1130" y="2428" text-anchor="middle" fill="#222">solo lectura)</text>
+<rect x="1080" y="2560" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="2560" x2="1180" y2="2560" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="2620" x2="1180" y2="2620" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="2586" text-anchor="middle" fill="#222">SQLite ·</text>
+<text x="1130" y="2602" text-anchor="middle" fill="#222">graph_edges</text>
+<rect x="1080" y="2750" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="2750" x2="1180" y2="2750" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="2810" x2="1180" y2="2810" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="2760" text-anchor="middle" fill="#222">SQLite ·</text>
+<text x="1130" y="2776" text-anchor="middle" fill="#222">graph_imports</text>
+<text x="1130" y="2792" text-anchor="middle" fill="#222">(historia de</text>
+<text x="1130" y="2808" text-anchor="middle" fill="#222">cobertura)</text>
+<rect x="1080" y="2940" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="2940" x2="1180" y2="2940" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="3000" x2="1180" y2="3000" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="2942" text-anchor="middle" fill="#222">SQLite ·</text>
+<text x="1130" y="2958" text-anchor="middle" fill="#222">assignments</text>
+<text x="1130" y="2974" text-anchor="middle" fill="#222">(trabajo</text>
+<text x="1130" y="2990" text-anchor="middle" fill="#222">abierto del</text>
+<text x="90" y="3140" font-size="11" fill="#777">Clientes y grafo de operación: /clientes, client_members, grafo importado de zelena-ops e inventario de credenciales sin secretos · docs/dfd/clientes-y-grafo.json · commit 0e07d8f · * = flujo con datos sensibles</text>
+</svg>

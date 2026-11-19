@@ -63,6 +63,6 @@ CRITERIOS DE ACEPTACIÓN
 - [ ] Copys revisados con la regla del doc 16: el motivo califica el ajuste al
   bounty, jamás a la persona.
 
-OWNER — Fausto (máquina + modelo + API) · David (bloque en `/agora`) · Vale (valida
+OWNER — Plataforma (máquina + modelo + API) · Producto (bloque en `/agora`) · Operaciones (valida
 los tests de la máquina: es la función pura única).
 TAMAÑO — S–M · Estimado: 1 día. Depende: WP14. Secuencial con WP23.

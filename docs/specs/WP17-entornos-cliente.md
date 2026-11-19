@@ -58,5 +58,5 @@ RESULTADO ESPERADO — Cada cliente tiene un espacio donde el equipo asignado ve
 - [ ] Las asignaciones de un cliente aparecen en su backlog y en `/equipo/hoy` de sus miembros.
 - [ ] Paleta de marca: click en un color lo copia al portapapeles.
 
-OWNER — Fausto (modelo/RBAC) + David (UI) · Juan dueño del inventario de credenciales · AGENTE: modelo + RBAC + vistas + tests de permisos · HUMANO (John): define los clientes iniciales y quién participa en cada uno; Vale valida los tests de permisos (es la superficie crítica).
+OWNER — Plataforma (modelo/RBAC) + Producto (UI) · Finanzas dueño del inventario de credenciales · AGENTE: modelo + RBAC + vistas + tests de permisos · HUMANO (John): define los clientes iniciales y quién participa en cada uno; Operaciones valida los tests de permisos (es la superficie crítica).
 TAMAÑO — L · Estimado: 2 días. Depende: WP13 (roles), WP14 (asignaciones — la pestaña Backlog queda vacía hasta que exista).

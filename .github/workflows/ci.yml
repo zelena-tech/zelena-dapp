@@ -1,18 +1,62 @@
+# CI de cada pull request (hallazgo M25 de la auditoría: antes solo hacía lint y build,
+# con Node 20, y tsc y las pruebas solo corrían en paquete-azure.yml, que no se dispara
+# en los PR). Mismo Node que producción (App Service NODE:22-lts) y mismo truco que
+# paquete-azure.yml para los binarios de Linux de las herramientas de test.
 name: CI
+
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   web:
-    runs-on: ubuntu-latest
+    # 22.04 como paquete-azure.yml: glibc compatible con la imagen Node 22 de App Service.
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
-        with: { node-version: 20 }
-      - run: npm install --workspace apps/web
-      - run: npm --workspace apps/web run lint
-      - run: npm --workspace apps/web run build
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar (lockfile de la raíz)
+        run: npm ci
+
+      # El lockfile se genera en Windows y npm omite los binarios opcionales de otras
+      # plataformas (npm/cli#4828). Rollup y esbuild son de vitest: se instalan los de
+      # Linux con la versión exacta ya resuelta, sin tocar package.json ni el lockfile.
+      - name: Binarios de Linux de las herramientas de test
+        run: |
+          RV=$(node -p "require('rollup/package.json').version")
+          EV=$(node -p "require('esbuild/package.json').version")
+          npm install --no-save --no-package-lock "@rollup/rollup-linux-x64-gnu@$RV" "@esbuild/linux-x64@$EV"
+
+      - name: Tipos
+        working-directory: apps/web
+        run: npx tsc --noEmit -p .
+
+      - name: Tests
+        working-directory: apps/web
+        run: npm test
+
+      - name: Lint
+        run: npm --workspace apps/web run lint
+
+      - name: Build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: npm --workspace apps/web run build
+
   cla-check:
     runs-on: ubuntu-latest
     steps:

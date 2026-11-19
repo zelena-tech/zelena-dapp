@@ -1,0 +1,160 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1970 2370" width="1970" height="2370" font-family="Segoe UI, Arial, sans-serif" font-size="13">
+<title>SLA, recordatorios y avisos</title>
+<defs><marker id="punta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker></defs>
+<rect width="1970" height="2370" fill="#ffffff"/>
+<rect x="50" y="45" width="180" height="195" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="58" y="63" fill="#c0392b">Internet: navegador de la persona</text>
+<rect x="1700" y="315" width="180" height="195" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="1708" y="333" fill="#c0392b">GitHub (runner de Actions y GitHub Secrets)</text>
+<rect x="1370" y="585" width="180" height="195" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="1378" y="603" fill="#c0392b">Tercero: Telegram</text>
+<rect x="380" y="855" width="1500" height="575" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="388" y="873" fill="#c0392b">Azure App Service: proceso Next.js</text>
+<rect x="1040" y="1505" width="840" height="765" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="1048" y="1523" fill="#c0392b">Datos y configuración del servidor (SQLite / Azure SQL y App Settings)</text>
+<path d="M1745,420 Q1573,668 1505,960" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1599" y="679" text-anchor="middle" font-size="11" fill="#b03a2e">f1 Disparo cada 15 min (L-V) *</text>
+<path d="M1460,2135 Q1516,1570 1460,1005" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1488" y="1570" text-anchor="middle" font-size="11" fill="#b03a2e">f2 Secreto y flag *</text>
+<path d="M1415,960 Q1295,904 1175,960" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1295" y="932" text-anchor="middle" font-size="11" fill="#555">f3 Corrida</text>
+<path d="M1085,1610 Q1017,1265 845,960" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="991" y="1275" text-anchor="middle" font-size="11" fill="#555">f4 Piezas abiertas</text>
+<path d="M845,960 Q965,1016 1085,960" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="965" y="988" text-anchor="middle" font-size="11" fill="#555">f5 Piezas recordables</text>
+<path d="M1415,1610 Q1347,1265 1175,960" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1321" y="1275" text-anchor="middle" font-size="11" fill="#555">f6 Configuración del motor</text>
+<path d="M1175,960 Q1261,1099 1415,1150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1278" y="1077" text-anchor="middle" font-size="11" fill="#555">f7 Planificar</text>
+<path d="M1505,1150 Q1659,1099 1745,960" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1642" y="1077" text-anchor="middle" font-size="11" fill="#555">f8 Vencimientos por fase</text>
+<path d="M1415,1150 Q1329,1011 1175,960" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1312" y="1033" text-anchor="middle" font-size="11" fill="#555">f9 Plan</text>
+<path d="M1745,1610 Q1667,1437 1505,1340" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1646" y="1456" text-anchor="middle" font-size="11" fill="#b03a2e">f10 Quién recibe *</text>
+<path d="M1415,1340 Q1343,1120 1175,960" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1319" y="1135" text-anchor="middle" font-size="11" fill="#b03a2e">f11 Destinatarios *</text>
+<path d="M1415,1800 Q1349,1364 1175,960" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1322" y="1372" text-anchor="middle" font-size="11" fill="#555">f12 Ya procesado / pendiente de Telegram</text>
+<path d="M1130,1005 Q1074,1380 1130,1755" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1102" y="1380" text-anchor="middle" font-size="11" fill="#555">f13 Dejar aviso</text>
+<path d="M1175,960 Q1241,1396 1415,1800" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1268" y="1388" text-anchor="middle" font-size="11" fill="#555">f14 Reservar y marcar envío</text>
+<path d="M1415,1990 Q1349,1463 1175,960" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1322" y="1469" text-anchor="middle" font-size="11" fill="#b03a2e">f15 Chat de la persona *</text>
+<path d="M1415,2180 Q1349,1560 1175,960" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1322" y="1565" text-anchor="middle" font-size="11" fill="#b03a2e">f16 Token del bot *</text>
+<path d="M1175,960 Q1337,863 1415,690" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1316" y="844" text-anchor="middle" font-size="11" fill="#b03a2e">f17 Mensaje urgente o resumen del día *</text>
+<path d="M1505,960 Q1677,712 1745,420" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1651" y="701" text-anchor="middle" font-size="11" fill="#555">f18 Resultado de la corrida</text>
+<path d="M185,150 Q251,664 425,1150" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="278" y="657" text-anchor="middle" font-size="11" fill="#b03a2e">f19 Abrir la bandeja *</text>
+<path d="M1085,1800 Q1017,1455 845,1150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="991" y="1465" text-anchor="middle" font-size="11" fill="#555">f20 Avisos propios</text>
+<path d="M755,1150 Q635,1094 515,1150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="635" y="1122" text-anchor="middle" font-size="11" fill="#555">f21 Lista y enlaces</text>
+<path d="M425,1150 Q359,636 185,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="332" y="643" text-anchor="middle" font-size="11" fill="#555">f22 Bandeja pintada</text>
+<path d="M185,150 Q251,757 425,1340" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="278" y="751" text-anchor="middle" font-size="11" fill="#b03a2e">f23 Marcar como leídos *</text>
+<path d="M515,1340 Q669,1289 755,1150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="652" y="1267" text-anchor="middle" font-size="11" fill="#555">f24 Marcar solo los propios</text>
+<path d="M845,1150 Q913,1495 1085,1800" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="939" y="1485" text-anchor="middle" font-size="11" fill="#555">f25 is_leido = 1</text>
+<path d="M425,1340 Q359,733 185,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="332" y="739" text-anchor="middle" font-size="11" fill="#555">f26 Conteo</text>
+<path d="M755,960 Q635,904 515,960" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="635" y="932" text-anchor="middle" font-size="11" fill="#555">f27 Semáforo por pieza</text>
+<path d="M425,960 Q359,539 185,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="332" y="547" text-anchor="middle" font-size="11" fill="#555">f28 Badge de plazo</text>
+<rect x="90" y="100" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="140" y="138" text-anchor="middle" fill="#222">Persona del</text>
+<text x="140" y="154" text-anchor="middle" fill="#222">equipo</text>
+<text x="140" y="170" text-anchor="middle" fill="#222">(navegador)</text>
+<rect x="1740" y="370" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1790" y="408" text-anchor="middle" fill="#222">GitHub Actions</text>
+<text x="1790" y="424" text-anchor="middle" fill="#222">(workflow</text>
+<text x="1790" y="440" text-anchor="middle" fill="#222">programado)</text>
+<rect x="1410" y="640" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="686" text-anchor="middle" fill="#222">Bot API de</text>
+<text x="1460" y="702" text-anchor="middle" fill="#222">Telegram</text>
+<circle cx="1460" cy="960" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="956" text-anchor="middle" fill="#222">Ruta del cron</text>
+<text x="1460" y="972" text-anchor="middle" fill="#222">/api/cron/recordatorios</text>
+<circle cx="1130" cy="960" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="948" text-anchor="middle" fill="#222">Corrida del</text>
+<text x="1130" y="964" text-anchor="middle" fill="#222">motor de</text>
+<text x="1130" y="980" text-anchor="middle" fill="#222">recordatorios</text>
+<circle cx="1460" cy="1150" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="1130" text-anchor="middle" fill="#222">Planificador</text>
+<text x="1460" y="1146" text-anchor="middle" fill="#222">de</text>
+<text x="1460" y="1162" text-anchor="middle" fill="#222">recordatorios</text>
+<text x="1460" y="1178" text-anchor="middle" fill="#222">(puro)</text>
+<circle cx="1460" cy="1340" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="1336" text-anchor="middle" fill="#222">Resolución de</text>
+<text x="1460" y="1352" text-anchor="middle" fill="#222">destinatarios</text>
+<circle cx="1790" cy="960" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1790" y="948" text-anchor="middle" fill="#222">Cálculo de SLA</text>
+<text x="1790" y="964" text-anchor="middle" fill="#222">en horas</text>
+<text x="1790" y="980" text-anchor="middle" fill="#222">hábiles (puro)</text>
+<circle cx="800" cy="960" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="948" text-anchor="middle" fill="#222">Cargadores de</text>
+<text x="800" y="964" text-anchor="middle" fill="#222">SLA desde la</text>
+<text x="800" y="980" text-anchor="middle" fill="#222">base</text>
+<circle cx="470" cy="960" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="940" text-anchor="middle" fill="#222">Semáforo en</text>
+<text x="470" y="956" text-anchor="middle" fill="#222">/equipo/hoy,</text>
+<text x="470" y="972" text-anchor="middle" fill="#222">tablero y</text>
+<text x="470" y="988" text-anchor="middle" fill="#222">dashboard</text>
+<circle cx="470" cy="1150" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="1146" text-anchor="middle" fill="#222">Página</text>
+<text x="470" y="1162" text-anchor="middle" fill="#222">/equipo/avisos</text>
+<circle cx="470" cy="1340" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="1328" text-anchor="middle" fill="#222">API</text>
+<text x="470" y="1344" text-anchor="middle" fill="#222">/api/avisos</text>
+<text x="470" y="1360" text-anchor="middle" fill="#222">(GET y POST)</text>
+<circle cx="800" cy="1150" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="1130" text-anchor="middle" fill="#222">Bandeja de</text>
+<text x="800" y="1146" text-anchor="middle" fill="#222">avisos (crear,</text>
+<text x="800" y="1162" text-anchor="middle" fill="#222">listar,</text>
+<text x="800" y="1178" text-anchor="middle" fill="#222">marcar)</text>
+<rect x="1080" y="1580" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="1580" x2="1180" y2="1580" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="1640" x2="1180" y2="1640" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="1606" text-anchor="middle" fill="#222">assignments +</text>
+<text x="1130" y="1622" text-anchor="middle" fill="#222">assignment_events</text>
+<rect x="1410" y="1580" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1410" y1="1580" x2="1510" y2="1580" stroke="#222" stroke-width="1.5"/>
+<line x1="1410" y1="1640" x2="1510" y2="1640" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="1590" text-anchor="middle" fill="#222">genome_versions</text>
+<text x="1460" y="1606" text-anchor="middle" fill="#222">(claves SLA_*,</text>
+<text x="1460" y="1622" text-anchor="middle" fill="#222">REMINDER_*,</text>
+<text x="1460" y="1638" text-anchor="middle" fill="#222">BUSINESS_*)</text>
+<rect x="1740" y="1580" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1740" y1="1580" x2="1840" y2="1580" stroke="#222" stroke-width="1.5"/>
+<line x1="1740" y1="1640" x2="1840" y2="1640" stroke="#222" stroke-width="1.5"/>
+<text x="1790" y="1598" text-anchor="middle" fill="#222">users +</text>
+<text x="1790" y="1614" text-anchor="middle" fill="#222">project_members</text>
+<text x="1790" y="1630" text-anchor="middle" fill="#222">+ roster_links</text>
+<rect x="1080" y="1770" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="1770" x2="1180" y2="1770" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="1830" x2="1180" y2="1830" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="1804" text-anchor="middle" fill="#222">avisos</text>
+<rect x="1410" y="1770" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1410" y1="1770" x2="1510" y2="1770" stroke="#222" stroke-width="1.5"/>
+<line x1="1410" y1="1830" x2="1510" y2="1830" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="1804" text-anchor="middle" fill="#222">reminders_sent</text>
+<rect x="1410" y="1960" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1410" y1="1960" x2="1510" y2="1960" stroke="#222" stroke-width="1.5"/>
+<line x1="1410" y1="2020" x2="1510" y2="2020" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="1994" text-anchor="middle" fill="#222">telegram_links</text>
+<rect x="1410" y="2150" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1410" y1="2150" x2="1510" y2="2150" stroke="#222" stroke-width="1.5"/>
+<line x1="1410" y1="2210" x2="1510" y2="2210" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="2144" text-anchor="middle" fill="#222">Variables de</text>
+<text x="1460" y="2160" text-anchor="middle" fill="#222">entorno</text>
+<text x="1460" y="2176" text-anchor="middle" fill="#222">(CRON_SECRET,</text>
+<text x="1460" y="2192" text-anchor="middle" fill="#222">SLA_REMINDERS_ENABLED,</text>
+<text x="90" y="2350" font-size="11" fill="#777">SLA, recordatorios y avisos · docs/dfd/sla-recordatorios-y-avisos.json · commit 0e07d8f · * = flujo con datos sensibles</text>
+</svg>

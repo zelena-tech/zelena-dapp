@@ -2,13 +2,15 @@
 
 Regla operativa de John: **organizar → automatizar → descentralizar.** Este plano muestra cómo una sola base de datos sirve a las tres fases sin reescribirse.
 
+> **Estado hoy (v1, hallazgo M1 de la auditoría del 2026-10-21).** Las puertas que existen son dos: la **wallet** (Freighter o la wallet que se crea en el navegador, que es una cuenta real) con un código de invitación la primera vez, y **Microsoft** con el correo @zelena.tech, solo cuando el founder encienda `AUTH_ENTRA_ENABLED` (apagado, no se ofrece). Privy, las passkeys y el login con correo personal **no existen**: son la fase "automatizar" (WP04) y necesitan enviar correos, fuera del alcance de v1. El correo de respaldo (`recovery`) se guarda como contacto; ningún login lo lee.
+
 ## Identidad: dos puertas, un registro
 
 ```mermaid
 graph TB
     subgraph Puertas
         E["Puerta corporativa<br/>Microsoft Entra ID<br/>@zelena.tech"]
-        I["Puerta de comunidad<br/>invitación + Privy<br/>correo personal"]
+        I["Puerta de comunidad<br/>invitación + wallet<br/>(Privy: futuro, WP04)"]
     end
 
     E --> U
@@ -24,7 +26,7 @@ graph TB
 
 **El principio (doc 15 §2):** la identidad es el registro, no el correo. Por eso:
 
-- Un miembro del core que sale de la organización pierde la puerta corporativa, **no su progreso**: el correo de respaldo y la wallet siguen siendo suyos, y sigue entrando como contribuidor de comunidad.
+- Un miembro del core que sale de la organización pierde la puerta corporativa, **no su progreso**: su wallet sigue siendo suya y con ella sigue como contribuidor de comunidad. El correo de respaldo es de contacto (el login con correo personal no existe en v1).
 - Un voluntario que después se contrata no crea cuenta nueva: se le vincula el corporativo al mismo registro.
 - La wallet se exige solo cuando hace falta (firmar CLA, recibir puntos o pagos), no para ver tus tareas del día.
 

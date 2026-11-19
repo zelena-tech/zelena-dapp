@@ -57,7 +57,7 @@ concepto de un abogado laboralista antes de escribir la primera línea.
 
 > No soy abogado. Esto es el mapa de por qué el diseño importa y qué preguntar —
 > no un concepto jurídico. La consulta con laboralista es **distinta** de la
-> tributaria que ya tiene Juan (retención en la fuente, WP23): esa es DIAN, esta
+> tributaria que ya tiene Finanzas (retención en la fuente, WP23): esa es DIAN, esta
 > es Ministerio de Trabajo.
 
 ## Tres decisiones de diseño que empujan al lado seguro
@@ -153,8 +153,8 @@ solo: la célula dedicada rinde más en el cliente cuyo contexto ya está mapead
   cuándo (test).
 - [ ] Consumo vs. comprometido por proyecto cuadra con las asignaciones cerradas.
 
-OWNER — Fausto (modelo + permisos) · David (vistas de capacidad y avance) ·
-Vale (dueña de los tests de permisos: aquí son la frontera legal, no un detalle) ·
+OWNER — Plataforma (modelo + permisos) · Producto (vistas de capacidad y avance) ·
+Operaciones (dueña de los tests de permisos: aquí son la frontera legal, no un detalle) ·
 **John: agendar concepto con abogado laboralista antes del primer contrato de
 célula dedicada.** Es un gate comercial, no técnico: no bloquea construir.
 TAMAÑO — M · Depende: WP14, WP17, WP23.

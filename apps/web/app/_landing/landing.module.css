@@ -1,0 +1,553 @@
+/*
+ * Landing en inglés (WP33): tokens del diseño "Zelena Stellar Web" y piezas comunes
+ * (cromo, botones, chips, tipografía). Los tokens viven como propiedades personalizadas
+ * en .raiz: cualquier módulo de una sección los usa con var(--tinta), var(--lima)…
+ *
+ * Ajustes de contraste sobre el diseño (revisión a11y): el verde de TEXTO sobre claro es
+ * --verde-texto (#2F7D0A); --verde (#3FA00E) queda para puntos, rellenos, bordes y texto
+ * de 24px o más sobre blanco. El gris más claro permitido para texto sobre claro es
+ * --gris-suave (#5F6862); --gris-sobre-tinta (#8A938D) y --gris-sobre-tinta-2 (#7A837D)
+ * solo sobre tinta.
+ */
+
+.raiz {
+  /* Color */
+  --tinta: #0c0f0a;
+  --lima: #9dff4f;
+  --lima-hover: #b5ff7a;
+  --verde: #3fa00e;
+  --verde-texto: #2f7d0a;
+  --verde-profundo: #23620a;
+  --sobre-lima: #1b3a0c;
+  --sobre-lima-2: #1f4d0a;
+  --lima-claro: #cfffa6;
+  --lima-tinte: #e2f9cf;
+  --blanco: #ffffff;
+  --panel: #eef1ec;
+  --panel-2: #f4f6f2;
+  --borde: #e6e9e4;
+  --borde-2: #e1e6de;
+  --gris-cuerpo: #4a524d;
+  --gris-suave: #5f6862;
+  --gris-sobre-tinta: #8a938d;
+  --gris-sobre-tinta-2: #7a837d;
+  --claro-sobre-tinta: #b4bdb7;
+  --claro-sobre-tinta-2: #c9cfcb;
+  /* El verde del logo oficial (Diseño Marca/LogoZelena.png): solo para el wordmark, no para texto. */
+  --marca: #3de10a;
+  /* Anillo de foco: tinta sobre claro y lima; en bloques oscuros, .superficieOscura lo pasa a lima. */
+  --foco: var(--tinta);
+
+  /* Tipografía */
+  --fuente-display: "Archivo Variable", "Helvetica Neue", Bahnschrift, "Arial Narrow", Arial, sans-serif;
+  --fuente-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --fuente-manuscrita: "Caveat", "Segoe Print", cursive;
+
+  /* Radios y sombras */
+  --radio-pill: 999px;
+  --radio-xl: 32px;
+  --radio-lg: 28px;
+  --radio-md: 22px;
+  --radio-sm: 16px;
+  --sombra-suave: 0 20px 44px rgba(12, 15, 10, 0.12);
+  --sombra-alzada: 0 22px 44px rgba(12, 15, 10, 0.16);
+  --sombra-vidrio: inset 0 0 0 1px rgba(255, 255, 255, 0.85), 0 18px 36px rgba(20, 40, 30, 0.12);
+
+  /* Maquetación */
+  --pad-pagina: clamp(10px, 1.6vw, 20px);
+  --pad-interno: clamp(10px, 3.4vw, 44px);
+  --ancho-hero: 1240px;
+  --ancho-contenido: 1080px;
+  --espacio-seccion: clamp(56px, 8vw, 96px);
+  --alto-cabecera: 72px;
+
+  background-color: var(--blanco);
+  color: var(--tinta);
+  font-family: var(--fuente-display);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  padding: 0 var(--pad-pagina);
+  /* Ningún bloque (rotado, con sombra o en órbita) abre scroll horizontal. */
+  overflow-x: clip;
+}
+
+.interior {
+  padding: 0 var(--pad-interno);
+}
+
+/* Foco visible con contraste sobre blanco, panel y lima; lima sobre tinta y verde oscuro. */
+.raiz :focus-visible {
+  outline: 2px solid var(--foco);
+  outline-offset: 3px;
+}
+.superficieOscura {
+  --foco: var(--lima);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Enlace para saltar al contenido: invisible hasta recibir el foco. */
+.saltar {
+  position: absolute;
+  left: 16px;
+  top: -100px;
+  z-index: 50;
+  background: var(--tinta);
+  color: var(--blanco);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 16px;
+  border-radius: var(--radio-pill);
+}
+.saltar:focus {
+  top: 12px;
+}
+
+.principal {
+  display: block;
+}
+.principal:focus {
+  outline: none;
+}
+
+/* ------------------------------------------------------------------ */
+/* Cabecera                                                            */
+/* ------------------------------------------------------------------ */
+
+.cabecera {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  max-width: var(--ancho-hero);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 0;
+  flex-wrap: wrap;
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+/* El wordmark va en el verde de la marca (pedido del founder, 2026-10-26; antes, en tinta). */
+.logo {
+  display: block;
+  line-height: 0;
+  color: var(--marca);
+  padding: 4px 0;
+}
+.logo svg {
+  display: block;
+  height: 20px;
+  width: auto;
+}
+
+.navPrincipal {
+  display: flex;
+  justify-content: center;
+}
+
+.segmentos {
+  display: flex;
+  gap: 4px;
+  background: var(--panel);
+  padding: 4px;
+  border-radius: var(--radio-pill);
+  list-style: none;
+  margin: 0;
+}
+
+.segmento {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  padding: 8px 16px;
+  border-radius: var(--radio-pill);
+  color: var(--gris-cuerpo);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+.segmento:hover {
+  color: var(--tinta);
+}
+.segmento[aria-current="page"] {
+  background: var(--tinta);
+  color: var(--blanco);
+}
+
+.cuenta {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--tinta);
+  padding: 9px 18px;
+  border-radius: var(--radio-pill);
+  box-shadow: inset 0 0 0 1px var(--tinta);
+  white-space: nowrap;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+.cuenta:hover {
+  background: var(--tinta);
+  color: var(--blanco);
+}
+
+@media (max-width: 559px) {
+  .raiz {
+    --alto-cabecera: 96px;
+  }
+  /* Dos filas (logo y cuenta; debajo, Home | Community) en 96px o menos. */
+  .cabecera {
+    padding: 8px 0;
+    gap: 6px;
+  }
+  .navPrincipal {
+    order: 3;
+    flex-basis: 100%;
+  }
+  .segmento {
+    padding: 6px 14px;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Pie                                                                 */
+/* ------------------------------------------------------------------ */
+
+/* Las dos páginas terminan en el bloque lima de cierre: el pie va pegado a él, con el
+   mismo aire del diseño (clamp 20–32px), no con el espacio de una sección. */
+.pie {
+  max-width: var(--ancho-contenido);
+  margin: clamp(20px, 3vw, 32px) auto 0;
+  padding: 28px 0 40px;
+  border-top: 1px solid var(--borde);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--gris-suave);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.pieFila {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px 24px;
+  flex-wrap: wrap;
+}
+
+.pieEnlaces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 24px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pieEnlace {
+  display: inline-block;
+  padding: 6px 0;
+  color: var(--gris-suave);
+  transition: color 0.2s ease;
+}
+.pieEnlace:hover {
+  color: var(--tinta);
+}
+
+
+/* ------------------------------------------------------------------ */
+/* Botones                                                             */
+/* ------------------------------------------------------------------ */
+
+/* Primario: píldora de tinta con el nombre y el círculo lima con la flecha. */
+.ctaPrimario {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.2;
+  background: var(--tinta);
+  color: var(--blanco);
+  padding: 7px 7px 7px 22px;
+  border-radius: var(--radio-pill);
+  transition: background-color 0.2s ease;
+}
+.ctaPrimario:hover {
+  background: var(--verde-profundo);
+  color: var(--blanco);
+}
+
+.ctaFlecha {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--lima);
+  color: var(--tinta);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Secundario: píldora con contorno; al pasar, tinta con texto lima. */
+.ctaSecundario {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.2;
+  padding: 14px 24px;
+  border-radius: var(--radio-pill);
+  box-shadow: inset 0 0 0 1.5px var(--tinta);
+  color: var(--tinta);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+.ctaSecundario:hover {
+  background: var(--tinta);
+  color: var(--lima);
+}
+.ctaSecundarioOscuro {
+  box-shadow: inset 0 0 0 1.5px var(--blanco);
+  color: var(--blanco);
+}
+.ctaSecundarioOscuro:hover {
+  background: var(--lima);
+  color: var(--tinta);
+}
+
+/* ------------------------------------------------------------------ */
+/* Chips (píldoras mono)                                               */
+/* ------------------------------------------------------------------ */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--fuente-mono);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.25;
+  padding: 6px 12px;
+  border-radius: var(--radio-pill);
+  white-space: nowrap;
+}
+.chipSm {
+  gap: 6px;
+  font-size: 11px;
+  padding: 5px 10px;
+}
+.chipPanel {
+  background: var(--panel);
+  color: var(--tinta);
+}
+.chipBlanco {
+  background: var(--blanco);
+  color: var(--tinta);
+}
+.chipTinta {
+  background: var(--tinta);
+  color: var(--lima);
+}
+.chipVerde {
+  background: var(--blanco);
+  color: var(--verde-profundo);
+}
+.chipLima {
+  background: var(--lima);
+  color: var(--tinta);
+}
+.chipPunto {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--verde);
+}
+.chipTinta .chipPunto {
+  background: var(--lima);
+}
+.chipVerde .chipPunto {
+  background: var(--verde-profundo);
+}
+.chipLima .chipPunto {
+  background: var(--tinta);
+}
+
+/* ------------------------------------------------------------------ */
+/* Tipografía                                                          */
+/* ------------------------------------------------------------------ */
+
+/* Display: Archivo condensado (font-stretch 65%, necesita wdth.css), 800 y en mayúsculas. */
+.display {
+  font-family: var(--fuente-display);
+  font-weight: 800;
+  font-stretch: 65%;
+  text-transform: uppercase;
+  line-height: 0.9;
+  letter-spacing: -0.01em;
+}
+.titulo1 {
+  font-family: var(--fuente-display);
+  font-weight: 800;
+  font-stretch: 65%;
+  text-transform: uppercase;
+  line-height: 0.9;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+  font-size: clamp(40px, 5.6vw, 84px);
+  margin: 0;
+}
+.titulo2 {
+  font-family: var(--fuente-display);
+  font-weight: 800;
+  font-stretch: 65%;
+  text-transform: uppercase;
+  line-height: 0.9;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+  font-size: clamp(44px, 6vw, 84px);
+  margin: 0;
+}
+/* El resaltado lima de una palabra del titular ("LATAM"). */
+.resaltado {
+  background: var(--lima);
+  padding: 0 0.08em;
+  border-radius: 0.08em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+/* Eyebrow: mono 12px en verde de texto (sin indicaciones de terminal desde 2026-10-26). */
+.eyebrow {
+  font-family: var(--fuente-mono);
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--verde-texto);
+  margin: 0;
+}
+.superficieOscura .eyebrow {
+  color: var(--lima);
+}
+.lead {
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--gris-suave);
+  text-wrap: pretty;
+  margin: 0;
+}
+.cuerpo {
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--gris-cuerpo);
+  text-wrap: pretty;
+  margin: 0;
+}
+.mono {
+  font-family: var(--fuente-mono);
+}
+.manuscrita {
+  font-family: var(--fuente-manuscrita);
+  font-weight: 600;
+}
+
+/* ------------------------------------------------------------------ */
+/* Maquetación                                                         */
+/* ------------------------------------------------------------------ */
+
+.anchoHero {
+  max-width: var(--ancho-hero);
+  margin-left: auto;
+  margin-right: auto;
+}
+.anchoContenido {
+  max-width: var(--ancho-contenido);
+  margin-left: auto;
+  margin-right: auto;
+}
+.seccion {
+  padding-top: var(--espacio-seccion);
+}
+/* Destino de un ancla: que el header pegajoso no lo tape. */
+.ancla {
+  scroll-margin-top: calc(var(--alto-cabecera) + 16px);
+}
+
+/* ------------------------------------------------------------------ */
+/* Superficies, imágenes y movimiento                                  */
+/* ------------------------------------------------------------------ */
+
+/* Vidrio: blanco translúcido con desenfoque. En móvil o táctil, sin desenfoque (costoso). */
+.vidrio {
+  background: rgba(255, 255, 255, 0.66);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  box-shadow: var(--sombra-vidrio);
+  border-radius: var(--radio-sm);
+}
+@media (max-width: 979px), (pointer: coarse) {
+  .vidrio {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: rgba(255, 255, 255, 0.9);
+  }
+}
+
+.pixel {
+  image-rendering: pixelated;
+}
+
+/* Alzado al pasar, solo con ratón (en táctil el hover se queda pegado). */
+@media (hover: hover) and (pointer: fine) {
+  .elevable {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  .elevable:hover {
+    transform: translateY(-6px);
+    box-shadow: var(--sombra-alzada);
+  }
+}
+
+/* Flotar: solo si la persona no pidió menos movimiento. Usa `translate`, así que se
+   suma a un `transform: rotate(...)` del propio elemento. Se ajusta con variables:
+   --flota-amp (10px), --flota-dur (5.2s), --flota-retraso (0s). */
+@media (prefers-reduced-motion: no-preference) {
+  .flota {
+    animation: flotar var(--flota-dur, 5.2s) ease-in-out var(--flota-retraso, 0s) infinite;
+  }
+}
+@keyframes flotar {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 calc(-1 * var(--flota-amp, 10px));
+  }
+}
+
+/* Red de seguridad: con menos movimiento, nada se anima ni transiciona en la landing. */
+@media (prefers-reduced-motion: reduce) {
+  .raiz *,
+  .raiz *::before,
+  .raiz *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

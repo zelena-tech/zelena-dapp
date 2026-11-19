@@ -20,8 +20,9 @@ import {
   type Actor,
 } from "@/lib/clients";
 import { listNodes, getNode, coverage, exposureMap, coverageHistory } from "@/lib/client-graph";
-import { listBacklog } from "@/lib/assignments";
-import { FOUNDER_WALLET } from "@/lib/config";
+import { assignmentsForClient, PRIORITY_LABEL } from "@/lib/team";
+import { clientActor } from "@/lib/authz";
+import { TeamStatusBadge } from "@/components/TeamStatusBadge";
 import { EmptyState, StatCard } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -64,8 +65,11 @@ export default async function ClientePage({
   const session = await getSession();
   if (!session) redirect("/entrar");
 
-  const actor: Actor = { wallet: session.wallet, isFounder: session.wallet === FOUNDER_WALLET };
   const db = getDb();
+  // Equipo interno por ROL leído de la base; founder por rol, no por FOUNDER_WALLET.
+  // Quien no es del equipo interno ni siquiera sabe que el cliente existe: 404.
+  const actor: Actor | null = clientActor(session, db);
+  if (!actor) notFound();
 
   // getClientForActor devuelve null tanto si el cliente no existe como si el
   // actor no participa. Las dos rutas terminan en el mismo 404, a propósito.
@@ -317,7 +321,8 @@ function Vecinos({
 // ─── Resto de pestañas ───────────────────────────────────────────────────
 
 function BacklogTab({ clientId }: { clientId: number }) {
-  const items = listBacklog(getDb(), { clientId });
+  // Módulo equipo de v1 (lib/team.ts): mismas filas que /equipo, filtradas por cliente.
+  const items = assignmentsForClient(getDb(), clientId);
   if (items.length === 0) {
     return <EmptyState title="Sin trabajo abierto" message="Las asignaciones de este cliente aparecerán aquí." />;
   }
@@ -326,11 +331,11 @@ function BacklogTab({ clientId }: { clientId: number }) {
       {items.map((a) => (
         <li key={a.id} className="card p-4">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="tag border-line text-muted">{a.status}</span>
-            <span className="tag border-line text-muted">{a.priority}</span>
+            <TeamStatusBadge status={a.status} />
+            <span className="tag border-line text-muted">{PRIORITY_LABEL[a.priority]}</span>
             <span className="text-white">{a.title}</span>
           </div>
-          {a.blockedReason ? <p className="mt-1 text-sm text-red-300">Bloqueada: {a.blockedReason}</p> : null}
+          {a.blocked_reason ? <p className="mt-1 text-sm text-red-300">Bloqueada: {a.blocked_reason}</p> : null}
         </li>
       ))}
     </ul>

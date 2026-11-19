@@ -1,0 +1,242 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2300 2100" width="2300" height="2100" font-family="Segoe UI, Arial, sans-serif" font-size="13">
+<title>Gamificación y épocas: emisión al aprobar, puntos y reputación, tope por época, insignias, cierre y apertura de época con raíz Merkle</title>
+<defs><marker id="punta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker></defs>
+<rect width="2300" height="2100" fill="#ffffff"/>
+<rect x="50" y="45" width="1500" height="195" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="58" y="63" fill="#c0392b">Navegador (Internet)</text>
+<rect x="380" y="315" width="1500" height="575" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="388" y="333" fill="#c0392b">Proceso Next.js en App Service</text>
+<rect x="1040" y="965" width="840" height="765" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="1048" y="983" fill="#c0392b">Base SQLite (/home/data)</text>
+<rect x="2030" y="1805" width="180" height="195" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="2038" y="1823" fill="#c0392b">Red pública Stellar testnet</text>
+<path d="M185,150 Q263,323 425,420" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="284" y="304" text-anchor="middle" font-size="11" fill="#b03a2e">g1 Empezar y enviar a revisión *</text>
+<path d="M755,150 Q593,247 515,420" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="614" y="266" text-anchor="middle" font-size="11" fill="#b03a2e">g2 Aprobar entrega *</text>
+<path d="M515,420 Q635,476 755,420" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="635" y="448" text-anchor="middle" font-size="11" fill="#b03a2e">g3 Resolver actor *</text>
+<path d="M845,420 Q911,856 1085,1260" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="848" text-anchor="middle" font-size="11" fill="#555">g4 Leer rol, estado, acuerdo</text>
+<path d="M515,420 Q601,559 755,610" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="618" y="537" text-anchor="middle" font-size="11" fill="#555">g5 Aplicar acción</text>
+<path d="M845,610 Q913,955 1085,1260" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="939" y="945" text-anchor="middle" font-size="11" fill="#555">g6 Cuatro ojos y B8</text>
+<path d="M845,610 Q915,866 1085,1070" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="940" y="853" text-anchor="middle" font-size="11" fill="#555">g7 Transición y evento</text>
+<path d="M845,610 Q999,559 1085,420" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="982" y="537" text-anchor="middle" font-size="11" fill="#555">g8 ¿A tiempo?</text>
+<path d="M845,610 Q965,666 1085,610" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="965" y="638" text-anchor="middle" font-size="11" fill="#555">g9 Gancho de emisión (misma transacción)</text>
+<path d="M1175,610 Q1241,1046 1415,1450" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1268" y="1038" text-anchor="middle" font-size="11" fill="#555">g10 Época actual</text>
+<path d="M1175,610 Q1243,955 1415,1260" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1269" y="945" text-anchor="middle" font-size="11" fill="#555">g11 Premios y presupuesto de la época</text>
+<path d="M1175,610 Q1329,559 1415,420" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1312" y="537" text-anchor="middle" font-size="11" fill="#555">g12 Presupuesto restante</text>
+<path d="M1415,420 Q1241,923 1175,1450" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1268" y="929" text-anchor="middle" font-size="11" fill="#555">g13 Sumar lo emitido en la época</text>
+<path d="M1130,655 Q1074,1030 1130,1405" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1102" y="1030" text-anchor="middle" font-size="11" fill="#b03a2e">g14 Acreditar puntos *</text>
+<path d="M1175,610 Q1245,866 1415,1070" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1270" y="853" text-anchor="middle" font-size="11" fill="#b03a2e">g15 Acreditar reputación *</text>
+<path d="M515,420 Q677,323 755,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="656" y="304" text-anchor="middle" font-size="11" fill="#555">g16 Resultado y emisión</text>
+<path d="M1505,150 Q1583,323 1745,420" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1604" y="304" text-anchor="middle" font-size="11" fill="#b03a2e">g17 Aprobar hito *</text>
+<path d="M1745,420 Q1591,471 1505,610" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1608" y="493" text-anchor="middle" font-size="11" fill="#555">g18 Aprobar hito</text>
+<path d="M1505,610 Q1571,1137 1745,1640" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1598" y="1131" text-anchor="middle" font-size="11" fill="#555">g19 Leer y marcar el hito</text>
+<path d="M1415,610 Q1241,1014 1175,1450" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1268" y="1022" text-anchor="middle" font-size="11" fill="#b03a2e">g20 Acreditar puntos del hito *</text>
+<path d="M1460,655 Q1404,840 1460,1025" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1432" y="840" text-anchor="middle" font-size="11" fill="#b03a2e">g21 Reputación del hito *</text>
+<path d="M185,150 Q255,406 425,610" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="280" y="393" text-anchor="middle" font-size="11" fill="#b03a2e">g22 Ver Tu progreso *</text>
+<path d="M515,610 Q601,749 755,800" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="618" y="727" text-anchor="middle" font-size="11" fill="#555">g23 Señales, insignias y temporada</text>
+<path d="M845,800 Q923,973 1085,1070" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="944" y="954" text-anchor="middle" font-size="11" fill="#555">g24 Aprobaciones por otra persona</text>
+<path d="M845,800 Q911,1236 1085,1640" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="938" y="1228" text-anchor="middle" font-size="11" fill="#555">g25 Asistencia y anfitrionía</text>
+<path d="M845,800 Q913,1145 1085,1450" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="939" y="1135" text-anchor="middle" font-size="11" fill="#555">g26 Puntos de la temporada</text>
+<path d="M425,610 Q355,354 185,150" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="330" y="367" text-anchor="middle" font-size="11" fill="#b03a2e">g27 Tu progreso e insignias *</text>
+<path d="M1415,150 Q1243,455 1175,800" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1269" y="465" text-anchor="middle" font-size="11" fill="#b03a2e">g28 Cerrar o abrir época *</text>
+<path d="M1085,800 Q1013,580 845,420" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="989" y="595" text-anchor="middle" font-size="11" fill="#b03a2e">g29 Exigir founder *</text>
+<path d="M1175,800 Q1295,856 1415,800" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1295" y="828" text-anchor="middle" font-size="11" fill="#555">g30 Cerrar y abrir</text>
+<path d="M1505,800 Q1583,973 1745,1070" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1604" y="954" text-anchor="middle" font-size="11" fill="#555">g31 Precondiciones</text>
+<path d="M1415,800 Q1243,1105 1175,1450" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1269" y="1115" text-anchor="middle" font-size="11" fill="#b03a2e">g32 Hojas de puntos *</text>
+<path d="M1460,845 Q1404,935 1460,1025" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1432" y="935" text-anchor="middle" font-size="11" fill="#b03a2e">g33 Hojas de reputación *</text>
+<path d="M1505,800 Q1659,749 1745,610" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1642" y="727" text-anchor="middle" font-size="11" fill="#555">g34 Calcular raíz</text>
+<path d="M1460,845 Q1404,1125 1460,1405" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1432" y="1125" text-anchor="middle" font-size="11" fill="#555">g35 Cerrar N y abrir N+1</text>
+<path d="M1460,845 Q1404,1030 1460,1215" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1432" y="1030" text-anchor="middle" font-size="11" fill="#555">g36 Presupuestos de la época nueva</text>
+<path d="M1505,800 Q1573,1145 1745,1450" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1599" y="1135" text-anchor="middle" font-size="11" fill="#555">g37 Encolar la raíz</text>
+<path d="M1505,800 Q1575,1056 1745,1260" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1600" y="1043" text-anchor="middle" font-size="11" fill="#555">g38 Acta del cierre</text>
+<path d="M1175,800 Q1347,495 1415,150" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1321" y="485" text-anchor="middle" font-size="11" fill="#555">g39 Resultado</text>
+<path d="M1790,845 Q1734,1125 1790,1405" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1762" y="1125" text-anchor="middle" font-size="11" fill="#555">g40 Pendientes y resultado</text>
+<path d="M1835,800 Q1901,1367 2075,1910" fill="none" stroke="#b03a2e" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1928" y="1361" text-anchor="middle" font-size="11" fill="#b03a2e">g41 manageData *</text>
+<path d="M1745,800 Q1573,1105 1505,1450" fill="none" stroke="#555" stroke-width="1.3" marker-end="url(#punta)"/>
+<text x="1599" y="1115" text-anchor="middle" font-size="11" fill="#555">g42 Marcar anclada</text>
+<rect x="90" y="100" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="140" y="138" text-anchor="middle" fill="#222">Dueña de la</text>
+<text x="140" y="154" text-anchor="middle" fill="#222">entrega</text>
+<text x="140" y="170" text-anchor="middle" fill="#222">(navegador)</text>
+<rect x="750" y="100" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="114" text-anchor="middle" fill="#222">Revisor:</text>
+<text x="800" y="130" text-anchor="middle" fill="#222">founder,</text>
+<text x="800" y="146" text-anchor="middle" fill="#222">supervisor o</text>
+<text x="800" y="162" text-anchor="middle" fill="#222">rol</text>
+<rect x="1410" y="100" width="100" height="100" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="138" text-anchor="middle" fill="#222">Founder</text>
+<text x="1460" y="154" text-anchor="middle" fill="#222">(navegador,</text>
+<text x="1460" y="170" text-anchor="middle" fill="#222">/admin)</text>
+<circle cx="470" cy="420" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="416" text-anchor="middle" fill="#222">POST</text>
+<text x="470" y="432" text-anchor="middle" fill="#222">/api/equipo/asignacion</text>
+<circle cx="800" cy="420" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="392" text-anchor="middle" fill="#222">Puertas por</text>
+<text x="800" y="408" text-anchor="middle" fill="#222">rol leído de</text>
+<text x="800" y="424" text-anchor="middle" fill="#222">la base</text>
+<text x="800" y="440" text-anchor="middle" fill="#222">(equipoActor /</text>
+<circle cx="800" cy="610" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="582" text-anchor="middle" fill="#222">Aplicar</text>
+<text x="800" y="598" text-anchor="middle" fill="#222">acción: cuatro</text>
+<text x="800" y="614" text-anchor="middle" fill="#222">ojos + máquina</text>
+<text x="800" y="630" text-anchor="middle" fill="#222">de estados +</text>
+<circle cx="1130" cy="420" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="400" text-anchor="middle" fill="#222">¿Aprobada a</text>
+<text x="1130" y="416" text-anchor="middle" fill="#222">tiempo? (horas</text>
+<text x="1130" y="432" text-anchor="middle" fill="#222">hábiles del</text>
+<text x="1130" y="448" text-anchor="middle" fill="#222">genoma)</text>
+<circle cx="1130" cy="610" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="598" text-anchor="middle" fill="#222">Emitir puntos</text>
+<text x="1130" y="614" text-anchor="middle" fill="#222">y reputación</text>
+<text x="1130" y="630" text-anchor="middle" fill="#222">al aprobar</text>
+<circle cx="1460" cy="420" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="408" text-anchor="middle" fill="#222">Tope de la</text>
+<text x="1460" y="424" text-anchor="middle" fill="#222">época (bucket</text>
+<text x="1460" y="440" text-anchor="middle" fill="#222">ejecución)</text>
+<circle cx="1790" cy="420" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1790" y="408" text-anchor="middle" fill="#222">POST</text>
+<text x="1790" y="424" text-anchor="middle" fill="#222">/api/admin</text>
+<text x="1790" y="440" text-anchor="middle" fill="#222">(approveMilestone)</text>
+<circle cx="1460" cy="610" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="590" text-anchor="middle" fill="#222">Aprobar hito</text>
+<text x="1460" y="606" text-anchor="middle" fill="#222">del Ágora</text>
+<text x="1460" y="622" text-anchor="middle" fill="#222">(comparte el</text>
+<text x="1460" y="638" text-anchor="middle" fill="#222">tope)</text>
+<circle cx="470" cy="610" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="470" y="590" text-anchor="middle" fill="#222">Páginas</text>
+<text x="470" y="606" text-anchor="middle" fill="#222">/equipo/hoy y</text>
+<text x="470" y="622" text-anchor="middle" fill="#222">/perfil (Tu</text>
+<text x="470" y="638" text-anchor="middle" fill="#222">progreso)</text>
+<circle cx="800" cy="800" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="800" y="780" text-anchor="middle" fill="#222">Señales,</text>
+<text x="800" y="796" text-anchor="middle" fill="#222">insignias y</text>
+<text x="800" y="812" text-anchor="middle" fill="#222">progreso de la</text>
+<text x="800" y="828" text-anchor="middle" fill="#222">temporada</text>
+<circle cx="1130" cy="800" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="796" text-anchor="middle" fill="#222">GET/POST</text>
+<text x="1130" y="812" text-anchor="middle" fill="#222">/api/admin/epoca</text>
+<circle cx="1460" cy="800" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="780" text-anchor="middle" fill="#222">Cerrar la</text>
+<text x="1460" y="796" text-anchor="middle" fill="#222">época y abrir</text>
+<text x="1460" y="812" text-anchor="middle" fill="#222">la siguiente</text>
+<text x="1460" y="828" text-anchor="middle" fill="#222">(atómico)</text>
+<circle cx="1790" cy="610" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1790" y="598" text-anchor="middle" fill="#222">Raíz Merkle de</text>
+<text x="1790" y="614" text-anchor="middle" fill="#222">las hojas de</text>
+<text x="1790" y="630" text-anchor="middle" fill="#222">la época</text>
+<circle cx="1790" cy="800" r="50" fill="#fdfefe" stroke="#222" stroke-width="1.5"/>
+<text x="1790" y="780" text-anchor="middle" fill="#222">Anclaje en</text>
+<text x="1790" y="796" text-anchor="middle" fill="#222">testnet</text>
+<text x="1790" y="812" text-anchor="middle" fill="#222">(feature de</text>
+<text x="1790" y="828" text-anchor="middle" fill="#222">anclaje)</text>
+<rect x="1080" y="1040" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="1040" x2="1180" y2="1040" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="1100" x2="1180" y2="1100" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="1066" text-anchor="middle" fill="#222">assignments y</text>
+<text x="1130" y="1082" text-anchor="middle" fill="#222">assignment_events</text>
+<rect x="1080" y="1230" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="1230" x2="1180" y2="1230" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="1290" x2="1180" y2="1290" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="1240" text-anchor="middle" fill="#222">users y</text>
+<text x="1130" y="1256" text-anchor="middle" fill="#222">roster_links</text>
+<text x="1130" y="1272" text-anchor="middle" fill="#222">(identidades,</text>
+<text x="1130" y="1288" text-anchor="middle" fill="#222">invited_by)</text>
+<rect x="1080" y="1420" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="1420" x2="1180" y2="1420" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="1480" x2="1180" y2="1480" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="1446" text-anchor="middle" fill="#222">points_ledger</text>
+<text x="1130" y="1462" text-anchor="middle" fill="#222">(append-only)</text>
+<rect x="1410" y="1040" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1410" y1="1040" x2="1510" y2="1040" stroke="#222" stroke-width="1.5"/>
+<line x1="1410" y1="1100" x2="1510" y2="1100" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="1066" text-anchor="middle" fill="#222">reputation_events</text>
+<text x="1460" y="1082" text-anchor="middle" fill="#222">(append-only)</text>
+<rect x="1410" y="1230" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1410" y1="1230" x2="1510" y2="1230" stroke="#222" stroke-width="1.5"/>
+<line x1="1410" y1="1290" x2="1510" y2="1290" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="1224" text-anchor="middle" fill="#222">genome_versions</text>
+<text x="1460" y="1240" text-anchor="middle" fill="#222">(TASK_POINTS,</text>
+<text x="1460" y="1256" text-anchor="middle" fill="#222">TASK_REP,</text>
+<text x="1460" y="1272" text-anchor="middle" fill="#222">ON_TIME_BONUS_PCT,</text>
+<rect x="1410" y="1420" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1410" y1="1420" x2="1510" y2="1420" stroke="#222" stroke-width="1.5"/>
+<line x1="1410" y1="1480" x2="1510" y2="1480" stroke="#222" stroke-width="1.5"/>
+<text x="1460" y="1446" text-anchor="middle" fill="#222">periods</text>
+<text x="1460" y="1462" text-anchor="middle" fill="#222">(épocas)</text>
+<rect x="1740" y="1040" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1740" y1="1040" x2="1840" y2="1040" stroke="#222" stroke-width="1.5"/>
+<line x1="1740" y1="1100" x2="1840" y2="1100" stroke="#222" stroke-width="1.5"/>
+<text x="1790" y="1042" text-anchor="middle" fill="#222">epoch_fitness</text>
+<text x="1790" y="1058" text-anchor="middle" fill="#222">y</text>
+<text x="1790" y="1074" text-anchor="middle" fill="#222">mutation_decisions</text>
+<text x="1790" y="1090" text-anchor="middle" fill="#222">(precondiciones</text>
+<rect x="1740" y="1230" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1740" y1="1230" x2="1840" y2="1230" stroke="#222" stroke-width="1.5"/>
+<line x1="1740" y1="1290" x2="1840" y2="1290" stroke="#222" stroke-width="1.5"/>
+<text x="1790" y="1264" text-anchor="middle" fill="#222">decision_log</text>
+<rect x="1740" y="1420" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1740" y1="1420" x2="1840" y2="1420" stroke="#222" stroke-width="1.5"/>
+<line x1="1740" y1="1480" x2="1840" y2="1480" stroke="#222" stroke-width="1.5"/>
+<text x="1790" y="1454" text-anchor="middle" fill="#222">anchor_queue</text>
+<rect x="1740" y="1610" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1740" y1="1610" x2="1840" y2="1610" stroke="#222" stroke-width="1.5"/>
+<line x1="1740" y1="1670" x2="1840" y2="1670" stroke="#222" stroke-width="1.5"/>
+<text x="1790" y="1628" text-anchor="middle" fill="#222">projects y</text>
+<text x="1790" y="1644" text-anchor="middle" fill="#222">milestones</text>
+<text x="1790" y="1660" text-anchor="middle" fill="#222">(Ágora)</text>
+<rect x="1080" y="1610" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="1080" y1="1610" x2="1180" y2="1610" stroke="#222" stroke-width="1.5"/>
+<line x1="1080" y1="1670" x2="1180" y2="1670" stroke="#222" stroke-width="1.5"/>
+<text x="1130" y="1612" text-anchor="middle" fill="#222">rite_attendance</text>
+<text x="1130" y="1628" text-anchor="middle" fill="#222">y</text>
+<text x="1130" y="1644" text-anchor="middle" fill="#222">rite_sessions</text>
+<text x="1130" y="1660" text-anchor="middle" fill="#222">(señales de</text>
+<rect x="2070" y="1880" width="100" height="60" fill="#fdfefe" stroke="none"/>
+<line x1="2070" y1="1880" x2="2170" y2="1880" stroke="#222" stroke-width="1.5"/>
+<line x1="2070" y1="1940" x2="2170" y2="1940" stroke="#222" stroke-width="1.5"/>
+<text x="2120" y="1890" text-anchor="middle" fill="#222">Stellar</text>
+<text x="2120" y="1906" text-anchor="middle" fill="#222">testnet</text>
+<text x="2120" y="1922" text-anchor="middle" fill="#222">(Horizon,</text>
+<text x="2120" y="1938" text-anchor="middle" fill="#222">manageData)</text>
+<text x="90" y="2080" font-size="11" fill="#777">Gamificación y épocas: emisión al aprobar, puntos y reputación, tope por época, insignias, cierre y apertura de época con raíz Merkle · docs/dfd/gamificacion-y-epocas.json · commit 0e07d8f · * = flujo con datos sensibles</text>
+</svg>

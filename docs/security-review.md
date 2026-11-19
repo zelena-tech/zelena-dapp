@@ -133,6 +133,28 @@ producción si falta. **Esfuerzo: S.**
   pre-autenticación reutilizada); la sesión se crea de cero en `onboard`. No se identificó un
   vector de fijación de sesión distinto de H1/H2.
 
+### Reingreso por reto de un solo uso (corregido en la versión que quitó el whitepaper)
+- **Hallazgo (verificación final, importante):** `/api/login` aceptaba siempre la MISMA firma
+  ed25519 sobre un texto fijo (`zelena-cla-testnet-v1:<hash del CLA>`), sin reto, sin caducidad
+  y sin un solo uso. Esa firma además se guarda en claro en `cla_signatures.signature`: quien
+  leyera una copia de la base tenía una sesión permanente de cualquier wallet, también la del
+  founder.
+- **Arreglo:** reto-respuesta. `GET`/`POST /api/login/reto` emite 32 bytes aleatorios
+  (base64url) que caducan en 5 minutos; el servidor guarda solo su sha256
+  (`lib/login-reto.ts`). La wallet firma `zelena-login-testnet-v1:<sitio>:<reto>` (el host de `SITE_URL` o `www.zelena.tech`, para que la persona vea en su wallet dónde entra)
+  (`lib/login-signing.ts`; Freighter con `signMessage`/SEP-53, la de prueba en el navegador) y
+  `performLogin` consume el reto ANTES de mirar la firma (un intento por reto), exige que sea de
+  esa wallet si se pidió con ella y verifica la firma. El separador de dominio es distinto del
+  del CLA: una firma del acuerdo nunca vale para entrar. El cliente arma el mensaje con el reto
+  (no firma lo que diga el servidor). `loginSchema` es `.strict()`: el cuerpo viejo con
+  `claHash` se rechaza. Tests en `src/lib/login-reto.test.ts` (firma del CLA, replay, reto
+  caducado, ajeno, inventado y gastado por un intento fallido).
+- **Sin cambio:** la firma del CLA en el alta (`performOnboard`) sigue igual: es el acto legal
+  y se ancla en testnet.
+- **Límite:** los retos viven en memoria del proceso; vale con UNA instancia (la de v1). Antes
+  de escalar, pasarlos a una tabla. Las cookies emitidas antes del cambio duran hasta 24 h:
+  rotar `SESSION_SECRET` al desplegar las corta todas.
+
 ---
 
 ## 2. Onboarding e invitaciones
@@ -194,6 +216,17 @@ confiable (lo setea el edge); si se despliega detrás de un proxy propio mal con
 `x-forwarded-for` (Vercel lo hace); si se despliega en VPS propio, hay que fijar el proxy para que
 sobreescriba el header en vez de reenviar el del cliente. Considerar subir la entropía del código
 a 4-5 bytes sin costo real de UX. **Esfuerzo: S.**
+
+**Estado (2026-10-21):** `clientIp()` ya no confía en el primer valor de `x-forwarded-for`.
+Detrás de Azure Front Door toma `X-Azure-ClientIP` (la escribe Front Door) **solo si** la petición
+trae `X-Azure-FDID` igual a `AZURE_FRONT_DOOR_ID` (el ID de nuestro perfil de Front Door); si no, el
+**último** valor de `x-forwarded-for` (el del último proxy), sin el puerto que agrega App Service.
+Antes la creía sin condición: hablándole directo a App Service (`*.azurewebsites.net`) con una
+`X-Azure-ClientIP` distinta en cada petición, el límite no cortaba nunca (revisión del release:
+25 peticiones a `/api/login/reto`, 0 respuestas 429). Además, App Service debe aceptar solo tráfico
+de nuestro Front Door (restricción de acceso por la etiqueta `AzureFrontDoor.Backend` y la cabecera
+`X-Azure-FDID`): es paso obligatorio de `docs/DESPLIEGUE-V1.md`, A2. El mapa en memoria se poda de
+entradas vencidas al pasar de 10.000 claves.
 
 ---
 

@@ -1,92 +1,113 @@
 import Link from "next/link";
-import { FOUNDER_WALLET } from "@/lib/config";
+import { getDb } from "@/lib/db";
+import { accesoEquipo as tieneAccesoEquipo, claimsPuedenAdministrar, clientActor } from "@/lib/authz";
+import { listClientsFor } from "@/lib/clients";
+import { esEquipoInterno, puedeVerTodoElEquipo } from "@/lib/roles";
+import { esDemoSegunBase } from "@/lib/salir";
 import type { SessionData } from "@/lib/jwt";
 import { Logo, shortWallet } from "./ui";
 import SalirButton from "./SalirButton";
+import NavContextual from "./NavContextual";
 
-const LINKS = [
-  { href: "/ecosistema", label: "Ecosistema" },
-  { href: "/equipo/hoy", label: "Mi día" },
-  { href: "/equipo/proyectos", label: "Proyectos" },
-  { href: "/clientes", label: "Clientes" },
-  { href: "/agora", label: "Ágora" },
-  { href: "/academia", label: "Academia" },
-  { href: "/gobernanza", label: "Gobernanza" },
-  { href: "/whitepaper", label: "Whitepaper" },
-];
+// La sesión se resuelve aquí, en el servidor. Qué enlaces y qué botón se
+// muestran depende de la ruta, que solo se conoce en el cliente: eso lo decide
+// NavContextual con `menuPara` (lib/menu.ts).
+
+/**
+ * ¿Entra al trabajo (Mi día, Proyectos)? Se resuelve contra la base con la misma regla
+ * que la puerta de `/equipo` (`equipoActor`): el equipo interno y quien trabaja por
+ * proyecto (contributor con el acuerdo firmado y al menos una membresía). Si la base no
+ * responde, el enlace no se dibuja: la página tampoco abriría.
+ */
+function accesoAlTrabajo(session: SessionData | null): boolean {
+  if (!session) return false;
+  try {
+    return tieneAccesoEquipo(session, getDb());
+  } catch (e) {
+    console.error("[nav] acceso al trabajo", e);
+    return false;
+  }
+}
+
+/**
+ * ¿Hay algún cliente que esta sesión pueda ver? Mientras no haya clientes (y hoy no se
+ * pueden crear desde la web), "Clientes" llevaría a una página vacía: no se dibuja. La
+ * regla es la de la propia página (`clientActor` + `listClientsFor`): el founder ve todos,
+ * el resto los clientes donde participa. Si la base no responde, no se dibuja.
+ */
+function hayClientes(session: SessionData | null): boolean {
+  if (!session) return false;
+  try {
+    const db = getDb();
+    const actor = clientActor(session, db);
+    return !!actor && listClientsFor(db, actor).length > 0;
+  } catch (e) {
+    console.error("[nav] clientes", e);
+    return false;
+  }
+}
+
+/**
+ * ¿Se ofrece "Salir y borrar mi wallet de este equipo"? Solo a una cuenta de demostración
+ * SEGÚN LA BASE, nunca según la cookie: la migración del arranque pasa a reales las cuentas
+ * con la wallet del navegador y su cookie conserva `isDemo` hasta 24 h; a una cuenta real,
+ * borrar esa llave le quita el acceso para siempre (lib/salir.ts). Si la base no responde,
+ * no se ofrece.
+ */
+function cuentaDemo(session: SessionData): boolean {
+  try {
+    return esDemoSegunBase(getDb(), session.wallet);
+  } catch (e) {
+    console.error("[nav] cuenta de demostración", e);
+    return false;
+  }
+}
 
 export default function Nav({ session }: { session: SessionData | null }) {
-  const isFounder = session?.wallet === FOUNDER_WALLET;
+  // Por ROL, no por la wallet de una persona. Aquí basta con los claims de la
+  // cookie: esto solo decide si se DIBUJA un enlace; la puerta real vive en cada
+  // página de /admin, /equipo y /clientes, que resuelven el rol contra la base.
+  const isFounder = claimsPuedenAdministrar(session ?? {});
+  const esInterno = !!session && esEquipoInterno(session);
+  // Acceso al trabajo (Mi día, Proyectos): por la base, no por la cookie (WP31).
+  const accesoEquipo = accesoAlTrabajo(session);
+  const puedeVerTodo = !!session && puedeVerTodoElEquipo(session);
+  const conClientes = esInterno && hayClientes(session);
+
+  // Botón de perfil en una sola línea y con el nombre recortado: con el menú completo del
+  // founder (Seguimiento y Clientes incluidos) se partía en dos a 1280 px. El nombre
+  // entero va en el title.
+  const accesoDao = session ? (
+    <Link
+      href="/perfil"
+      className="btn btn-ghost whitespace-nowrap px-3 py-1.5"
+      title={session.name ? `${session.name} · ${session.wallet}` : session.wallet}
+    >
+      <span className="h-2 w-2 shrink-0 rounded-full bg-primary" />
+      <span className="max-w-[7rem] truncate">{session.name || shortWallet(session.wallet)}</span>
+    </Link>
+  ) : (
+    <Link href="/entrar" className="btn btn-primary py-1.5">
+      Entrar
+    </Link>
+  );
+
   return (
     <header className="sticky top-0 z-30 border-b border-line/60 bg-bg/80 backdrop-blur">
-      <nav className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3">
+      <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
         <Link href="/" className="shrink-0" aria-label="Inicio">
           <Logo />
         </Link>
-
-        {/* Escritorio */}
-        <div className="hidden items-center gap-1 md:flex">
-          {LINKS.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className="rounded-md px-3 py-1.5 text-sm text-muted transition-colors duration-150 hover:bg-glow hover:text-primary"
-            >
-              {l.label}
-            </Link>
-          ))}
-          {isFounder ? (
-            <Link href="/admin" className="rounded-md px-3 py-1.5 text-sm text-amber-300 transition-colors hover:bg-amber-950/30">
-              Admin
-            </Link>
-          ) : null}
-        </div>
-
-        <div className="flex items-center gap-2">
-          {session ? (
-            <Link href="/perfil" className="btn btn-ghost py-1.5" title={session.wallet}>
-              <span className="h-2 w-2 rounded-full bg-primary" />
-              {session.name || shortWallet(session.wallet)}
-            </Link>
-          ) : (
-            <Link href="/entrar" className="btn btn-primary py-1.5">
-              Entrar
-            </Link>
-          )}
-
-          {/* Móvil: menú desplegable sin JavaScript. Antes los enlaces
-              simplemente desaparecían por debajo de 768 px y la app quedaba
-              sin navegación en el teléfono, que es donde entra la cohorte. */}
-          <details className="relative md:hidden">
-            <summary
-              className="btn btn-ghost cursor-pointer py-1.5 marker:content-none [&::-webkit-details-marker]:hidden"
-              aria-label="Abrir el menú"
-            >
-              Menú
-            </summary>
-            <div className="absolute right-0 z-40 mt-2 w-60 border border-line-strong bg-surface p-2 shadow-glow">
-              {LINKS.map((l) => (
-                <Link
-                  key={l.href}
-                  href={l.href}
-                  className="block px-3 py-2.5 text-sm text-muted transition-colors hover:bg-glow hover:text-primary"
-                >
-                  {l.label}
-                </Link>
-              ))}
-              {isFounder ? (
-                <Link href="/admin" className="block px-3 py-2.5 text-sm text-amber-300 hover:bg-amber-950/30">
-                  Admin
-                </Link>
-              ) : null}
-              {session ? (
-                <div className="mt-2 border-t border-line pt-2">
-                  <SalirButton esDemo={session.isDemo} />
-                </div>
-              ) : null}
-            </div>
-          </details>
-        </div>
+        <NavContextual
+          isFounder={isFounder}
+          conSesion={!!session}
+          accesoEquipo={accesoEquipo}
+          esInterno={esInterno}
+          puedeVerTodo={puedeVerTodo}
+          conClientes={conClientes}
+          accesoDao={accesoDao}
+          salir={session ? <SalirButton esDemo={cuentaDemo(session)} /> : null}
+        />
       </nav>
     </header>
   );

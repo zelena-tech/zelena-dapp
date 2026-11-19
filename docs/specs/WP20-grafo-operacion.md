@@ -74,9 +74,9 @@ Esto es lo que convierte el grafo en algo confiable: no es que sepamos todo, es 
 - [x] Un `kind` desconocido se rechaza en vez de guardarse (test).
 - [x] Las aristas que apuntan a nodos inexistentes se descartan (test).
 - [x] Un no-miembro del cliente no puede leer el grafo por API (test, no solo UI).
-- [x] `impactOf()` responde "¿qué se rompe si tumbamos esto?" recorriendo transitivamente (test sobre el grafo real de Montoc).
+- [x] `impactOf()` responde "¿qué se rompe si tumbamos esto?" recorriendo transitivamente (test sobre el grafo real de un cliente).
 - [x] La cobertura calcula `pct_verified`, preguntas abiertas y bus factor ≤1 (test).
 - [ ] La pestaña Operación muestra los nodos con su confianza y enlaza al detalle (validación humana en localhost).
 
-OWNER — Fausto (modelo + importador) · David (pestaña Operación) · AGENTE: modelo, importador, consultas y tests · HUMANO (John): decide qué clientes tienen grafo y quién participa; Vale valida los criterios.
+OWNER — Plataforma (modelo + importador) · Producto (pestaña Operación) · AGENTE: modelo, importador, consultas y tests · HUMANO (John): decide qué clientes tienen grafo y quién participa; Operaciones valida los criterios.
 TAMAÑO — M · Depende: WP17 (clients y RBAC), WP14 (para el enganche `graph_node_id`).

@@ -4,19 +4,21 @@
  * Recibe el grafo.json que produce `construir_grafo.py` del repositorio
  * PRIVADO zelena-ops y reconstruye la proyección de solo lectura.
  * Solo el founder puede importar: es la operación que cambia lo que todo el
- * equipo cree que sabe de un cliente.
+ * equipo cree que sabe de un cliente. "Founder" = rol leído de la base
+ * (`adminActor`), no la wallet de una persona en una variable de entorno.
  */
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { getClientForActor, type Actor } from "@/lib/clients";
 import { importGraph, GraphImportError, type GraphJson } from "@/lib/client-graph";
-import { FOUNDER_WALLET } from "@/lib/config";
+import { adminActor } from "@/lib/authz";
 
 export async function POST(req: Request) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "No autenticado." }, { status: 401 });
-  if (session.wallet !== FOUNDER_WALLET) {
+  const admin = adminActor(session, getDb());
+  if (!admin) {
     return NextResponse.json({ error: "Solo el founder importa grafos." }, { status: 403 });
   }
 
@@ -25,7 +27,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Faltan 'slug' y 'grafo'." }, { status: 400 });
   }
 
-  const actor: Actor = { wallet: session.wallet, isFounder: true };
+  const actor: Actor = { wallet: admin.wallet, isFounder: true };
   const cliente = getClientForActor(getDb(), body.slug, actor);
   if (!cliente) return NextResponse.json({ error: "No encontrado." }, { status: 404 });
 

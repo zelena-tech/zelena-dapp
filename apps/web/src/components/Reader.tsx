@@ -25,7 +25,13 @@ export default function Reader({
   const [questions, setQuestions] = useState<Q[]>([]);
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [msg, setMsg] = useState("");
-  const [result, setResult] = useState<{ passed: boolean; correct: number; points: number } | null>(null);
+  // Si no apruebas, el servidor no dice cuántas acertaste (hallazgo A2): `correct` llega null.
+  const [result, setResult] = useState<{
+    passed: boolean;
+    correct: number | null;
+    points: number;
+    reintentarEnMin: number | null;
+  } | null>(null);
   const [loading, setLoading] = useState(false);
   const beatRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -124,7 +130,12 @@ export default function Reader({
         setMsg(data.error ?? "No se pudo calificar el quiz.");
         return;
       }
-      setResult({ passed: data.passed, correct: data.correct, points: data.points ?? 0 });
+      setResult({
+        passed: data.passed,
+        correct: typeof data.correct === "number" ? data.correct : null,
+        points: data.points ?? 0,
+        reintentarEnMin: typeof data.reintentarEnMin === "number" ? data.reintentarEnMin : null,
+      });
       setPhase("done");
       router.refresh();
     } catch {
@@ -234,7 +245,10 @@ export default function Reader({
                 +{result.points} puntos
               </div>
               <p className="mt-2 text-sm text-muted">
-                Aprobaste con {result.correct}/3. Puntos acreditados al eje Investigación / Contenido.
+                {result.correct !== null ? `Aprobaste con ${result.correct}/3. ` : "Aprobaste. "}
+                {result.points > 0
+                  ? "Puntos acreditados al eje Investigación / Contenido."
+                  : "Este contenido ya te había dado sus puntos."}
               </p>
               <Link href="/perfil" className="btn btn-ghost mt-4">Ver mi perfil</Link>
             </>
@@ -242,7 +256,8 @@ export default function Reader({
             <>
               <div className="font-head text-2xl font-bold text-red-400">No aprobado</div>
               <p className="mt-2 text-sm text-muted">
-                {result.correct}/3 correctas. Necesitas 2. Vuelve a leer e inténtalo de nuevo.
+                Necesitas 2 de 3. Vuelve a leer con calma
+                {result.reintentarEnMin ? `: podrás intentarlo de nuevo en ${result.reintentarEnMin} min` : ""}.
               </p>
               <button className="btn btn-ghost mt-4" onClick={() => { setPhase("idle"); setVisibleSecs(0); setResult(null); setAnswers({}); }}>
                 Reintentar

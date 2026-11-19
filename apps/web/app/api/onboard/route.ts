@@ -31,7 +31,10 @@ export async function POST(req: NextRequest) {
     wallet: result.wallet,
     name: result.name,
     tier: result.tier,
-    isFounder: false,
+    // El rol lo decide performOnboard (contributor, o founder por la escotilla).
+    isFounder: result.role === "founder",
+    role: result.role,
+    isSupervisor: result.isSupervisor,
     claSigned: true,
     isDemo: result.isDemo,
   });

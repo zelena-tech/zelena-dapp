@@ -58,6 +58,6 @@ CRITERIOS DE ACEPTACIÓN
 - [ ] Copys revisados: el siguiente paso es una oportunidad, no una evaluación;
   el motivo de una aplicación no elegida habla del bounty, no de la persona.
 
-OWNER — David (UI de `/entrar` y perfil) · Fausto (regla pura + API) · Vale
+OWNER — Producto (UI de `/entrar` y perfil) · Plataforma (regla pura + API) · Operaciones
 (copys del doc 16).
 TAMAÑO — M · Estimado: 1–1,5 días. Depende: WP25, WP27.

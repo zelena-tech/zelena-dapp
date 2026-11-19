@@ -1,7 +1,8 @@
 /** Consultas de lectura/derivación sobre la DB. Reputación y puntos DERIVADOS. */
-import { getDb } from "./db";
+import { getDb, type DB } from "./db";
 import { REPUTATION_AXES, type Axis } from "./config";
 import { getActiveGenome } from "./genome";
+import { recuentoVotos } from "./votos";
 
 export interface UserRow {
   wallet: string;
@@ -75,20 +76,40 @@ export function claSignature(wallet: string) {
     | undefined;
 }
 
-export function cohortStats() {
-  const db = getDb();
-  const contributors = (db.prepare(`SELECT COUNT(*) AS n FROM users`).get() as { n: number }).n;
-  const bounties = (db.prepare(`SELECT COUNT(*) AS n FROM projects`).get() as { n: number }).n;
+export function cohortStats(db: DB = getDb()) {
+  // Cohorte PUBLICA de la DAO = quienes entraron por la puerta de comunidad, o sea
+  // `role = 'contributor'`. El equipo interno (`founder`/`core`) no es cohorte.
+  //
+  // Antes esto filtraba por el FORMATO del principal (`NOT LIKE 'pending:%'`), y esa
+  // era la logica equivocada: servia para excluir al roster de WP14, pero contaba
+  // como cohorte a cualquier miembro del equipo que entrara por Entra, porque su
+  // principal es `entra:<oid>` y no `pending:*`. Verificado: al dar de alta a una
+  // persona `core` por Entra la cuenta publica subia de 4 a 5.
+  //
+  // Filtrar por ROL no depende del formato del principal, asi que sigue siendo
+  // correcto cuando la identidad se unifique (WP25) o aparezcan wallets reales.
+  // Nota: el founder queda FUERA del conteo. Cuando WP25 deje una sola fila de
+  // founder se puede decidir si vuelve a contarse como contribuidor #1.
+  const contributors = (
+    db.prepare(`SELECT COUNT(*) AS n FROM users WHERE role = 'contributor'`).get() as { n: number }
+  ).n;
+  // Los borradores del Ágora no son públicos: no se cuentan.
+  const bounties = (db.prepare(`SELECT COUNT(*) AS n FROM projects WHERE draft = 0`).get() as { n: number }).n;
   const points = (db.prepare(`SELECT COALESCE(SUM(points),0) AS n FROM points_ledger`).get() as { n: number }).n;
   const clas = (db.prepare(`SELECT COUNT(*) AS n FROM cla_signatures`).get() as { n: number }).n;
   const genome = getActiveGenome(db);
   return { contributors, bounties, points, clas, epochBudget: genome.EPOCH_BUDGET, academiaBudget: genome.ACADEMIA_BUDGET };
 }
 
-export function listProjects(filters?: { type?: string; state?: string }) {
+/**
+ * Proyectos del Ágora. Por defecto SOLO los publicados: un borrador (`draft = 1`) no
+ * existe para el público. `/admin` pide `incluirBorradores` para poder publicarlos.
+ */
+export function listProjects(filters?: { type?: string; state?: string; incluirBorradores?: boolean }) {
   const db = getDb();
   const clauses: string[] = [];
   const params: string[] = [];
+  if (!filters?.incluirBorradores) clauses.push("draft = 0");
   if (filters?.type && (filters.type === "SAS" || filters.type === "DAO")) {
     clauses.push("type = ?");
     params.push(filters.type);
@@ -115,10 +136,16 @@ export interface ProjectRow {
   description: string;
   acceptance: string;
   created_at: string;
+  /** 1 = borrador: no se ve en público ni recibe aplicaciones (state-machine.ts). */
+  draft: number;
+  /** 'seed' | 'agora' | null (ver agora-borradores.ts). */
+  origin: string | null;
 }
 
-export function getProject(id: number): ProjectRow | undefined {
-  return getDb().prepare(`SELECT * FROM projects WHERE id = ?`).get(id) as ProjectRow | undefined;
+/** Un proyecto del Ágora. Un borrador no existe para el público (`/agora/[id]` → 404). */
+export function getProject(id: number, opts?: { incluirBorradores?: boolean }): ProjectRow | undefined {
+  const borrador = opts?.incluirBorradores ? "" : " AND draft = 0";
+  return getDb().prepare(`SELECT * FROM projects WHERE id = ?${borrador}`).get(id) as ProjectRow | undefined;
 }
 
 export function getMilestones(projectId: number) {
@@ -151,15 +178,8 @@ export function getApplications(projectId: number) {
   }>;
 }
 
-export function listDecisions() {
-  return getDb().prepare(`SELECT * FROM decision_log ORDER BY id`).all() as Array<{
-    id: number;
-    date: string;
-    title: string;
-    reason: string;
-    hash: string;
-  }>;
-}
+// Las decisiones se leen con lib/decisiones.ts: en lo público solo las vigentes
+// (`decisionesVigentes`); las reemplazadas, completas, solo en /admin.
 
 export function getOpenProposal() {
   return getDb().prepare(`SELECT * FROM proposals WHERE status = 'open' ORDER BY id LIMIT 1`).get() as
@@ -167,13 +187,9 @@ export function getOpenProposal() {
     | undefined;
 }
 
+/** Recuento de una votación, sin los votos de cuentas de demostración (lib/votos.ts). */
 export function voteTally(proposalId: number) {
-  const rows = getDb()
-    .prepare(`SELECT choice, COUNT(*) AS n FROM votes WHERE proposal_id = ? GROUP BY choice`)
-    .all(proposalId) as Array<{ choice: string; n: number }>;
-  const out = { favor: 0, contra: 0, abstencion: 0 };
-  for (const r of rows) (out as Record<string, number>)[r.choice] = r.n;
-  return out;
+  return recuentoVotos(getDb(), proposalId);
 }
 
 export function userVote(proposalId: number, wallet: string) {

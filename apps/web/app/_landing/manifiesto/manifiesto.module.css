@@ -1,0 +1,213 @@
+/*
+ * Manifiesto (/manifiesto): apertura, la creencia en tinta, los tres grupos de principios
+ * en gris con tarjetas blancas y el cierre en lima. Los tokens (--tinta, --lima…) los pone
+ * la raíz de la landing. Las reglas que ajustan una clase compartida (titulo1, titulo2,
+ * display) van con dos clases para ganarle siempre, sin depender del orden de las hojas.
+ */
+
+.mayus {
+  text-transform: uppercase;
+}
+
+/* Etiqueta mono en verde de texto ("I · The work"). */
+.etiqueta {
+  margin: 0;
+  font-family: var(--fuente-mono);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-transform: uppercase;
+  color: var(--verde-texto);
+}
+.etiquetaOscura {
+  margin: 0;
+  font-family: var(--fuente-mono);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-transform: uppercase;
+  color: var(--lima);
+}
+
+/* Verde de texto (no el verde de rellenos): sobre el panel, el otro no da contraste. */
+.verde {
+  color: var(--verde-texto);
+}
+.lima {
+  color: var(--lima);
+}
+
+/* ------------------------------------------------------------------ */
+/* Apertura                                                            */
+/* ------------------------------------------------------------------ */
+
+.hero {
+  max-width: var(--ancho-contenido);
+  margin: 8px auto 0;
+  padding-top: clamp(28px, 4vw, 56px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.hero .h1 {
+  margin-top: 20px;
+  font-size: clamp(48px, 7.4vw, 112px);
+  line-height: 0.88;
+}
+
+.origen {
+  width: 100%;
+  margin-top: clamp(32px, 4vw, 56px);
+  padding-top: 24px;
+  border-top: 1px solid var(--borde);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+@media (min-width: 860px) {
+  .origen {
+    grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.6fr);
+    gap: 40px;
+  }
+}
+.origenTextos {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 640px;
+}
+.origenParrafo {
+  margin: 0;
+  font-size: clamp(17px, 1.5vw, 19px);
+  line-height: 1.6;
+  color: var(--gris-cuerpo);
+  text-wrap: pretty;
+}
+
+/* ------------------------------------------------------------------ */
+/* La creencia: bloque de tinta                                        */
+/* ------------------------------------------------------------------ */
+
+.creencia {
+  margin-top: var(--espacio-seccion);
+  background: var(--tinta);
+  color: var(--blanco);
+  border-radius: clamp(22px, 3vw, 32px);
+  padding: clamp(32px, 5vw, 64px);
+}
+.creencia .frase {
+  margin: 18px 0 0;
+  max-width: 900px;
+  font-size: clamp(40px, 5.6vw, 80px);
+  line-height: 0.92;
+  text-wrap: balance;
+}
+.nota {
+  margin: 24px 0 0;
+  max-width: 560px;
+  font-size: 17px;
+  line-height: 1.55;
+  color: var(--claro-sobre-tinta);
+  text-wrap: pretty;
+}
+
+/* ------------------------------------------------------------------ */
+/* Grupos de principios: bloque gris con tarjetas blancas              */
+/* ------------------------------------------------------------------ */
+
+.grupo {
+  margin-top: 12px;
+  background: var(--panel);
+  border-radius: clamp(22px, 3vw, 32px);
+  padding: clamp(28px, 5vw, 64px);
+}
+.grupo .grupoTitulo {
+  margin-top: 14px;
+}
+.grupo .grupoIntro {
+  margin-top: 16px;
+  max-width: 520px;
+}
+
+.principios {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 10px;
+  margin: 32px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.principio {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px;
+  border-radius: 20px;
+  background: var(--blanco);
+}
+.principio .principioNumero {
+  font-size: 44px;
+  color: var(--verde);
+}
+.principioTitulo {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+.principioTexto {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--gris-suave);
+  text-wrap: pretty;
+}
+
+/* ------------------------------------------------------------------ */
+/* Cierre: bloque lima con la invitación                               */
+/* ------------------------------------------------------------------ */
+
+.cierre {
+  margin-top: var(--espacio-seccion);
+  background: var(--lima);
+  color: var(--tinta);
+  border-radius: clamp(22px, 3vw, 32px);
+  padding: clamp(48px, 7vw, 96px) clamp(20px, 4vw, 56px);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.cierre .cierreTitulo {
+  margin: 0;
+  font-size: clamp(48px, 7.4vw, 108px);
+  line-height: 0.88;
+  text-wrap: balance;
+}
+/* Sobre lima, el gris de cuerpo no da contraste: el verde oscuro de --sobre-lima. */
+.cierreTextos {
+  margin-top: 22px;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--sobre-lima);
+  text-wrap: pretty;
+}
+.cierreTextos p {
+  margin: 0;
+}
+.cierreFuerte {
+  font-weight: 700;
+  color: var(--tinta);
+}
+.cierreAcciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 28px;
+}

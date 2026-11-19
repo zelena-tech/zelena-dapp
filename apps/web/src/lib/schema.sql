@@ -5,6 +5,16 @@
 PRAGMA journal_mode = WAL;
 PRAGMA foreign_keys = ON;
 
+-- users.wallet es la clave de usuario de TODO el esquema (projects.assignee_wallet,
+-- points_ledger.wallet, assignments.owner_wallet…). Mientras el equipo interno no
+-- tenga wallet ni login Entra (WP13) su principal es el placeholder determinista
+-- `pending:<slug>` (ver lib/roles.ts); WP13 vincula la identidad real.
+--
+-- role e is_supervisor (WP14): `role` es la posición en el registro de contribuidor
+-- (WP13: founder|core|contributor) y `is_supervisor` es un flag SEPARADO, porque
+-- supervisor no es un rol (plano 07 §5: Operaciones es `core` Y supervisora del dashboard).
+-- El default es conservador (contributor / no supervisor) y se deriva de is_founder
+-- al sembrar el roster, para no cambiar el significado de ninguna fila existente.
 CREATE TABLE IF NOT EXISTS users (
   wallet        TEXT PRIMARY KEY,
   display_name  TEXT NOT NULL,
@@ -14,12 +24,52 @@ CREATE TABLE IF NOT EXISTS users (
   is_demo       INTEGER NOT NULL DEFAULT 0,
   is_founder    INTEGER NOT NULL DEFAULT 0,
   cla_signed    INTEGER NOT NULL DEFAULT 0,
-  -- WP13: el correo corporativo es un ALIAS de acceso, no una identidad nueva.
-  -- La wallet sigue siendo la PK de toda la reputacion ya acumulada.
-  email          TEXT,
-  recovery_email TEXT,               -- correo personal de continuidad (plano 05)
-  is_supervisor  INTEGER NOT NULL DEFAULT 0,
+  role          TEXT NOT NULL DEFAULT 'contributor', -- founder | core | contributor
+  is_supervisor INTEGER NOT NULL DEFAULT 0,          -- flag independiente de role
+  -- WP13 (puerta corporativa Entra ID). `entra_oid` es el `oid` del token: un GUID
+  -- opaco por tenant, NO un correo (los correos viven en user_emails). NULL = esta
+  -- fila todavia no tiene identidad corporativa vinculada.
+  --
+  -- Por que la unicidad NO va aqui como `UNIQUE` de columna: es NULLABLE y la
+  -- mayoria de filas la tienen a NULL. SQLite admite varios NULL en un UNIQUE, pero
+  -- SQL Server (Azure, WP16) trata los NULL como iguales y solo admitiria UNO: un
+  -- `UNIQUE` de columna funcionaria en local y romperia el alta en produccion al
+  -- segundo usuario sin vincular. La unicidad vive en el indice PARCIAL unico
+  -- `idx_users_entra_oid ... WHERE entra_oid IS NOT NULL` (al final del archivo), que
+  -- es la forma portable: indice parcial en SQLite, indice filtrado en T-SQL.
+  -- lib/entra.ts conserva su comprobacion en la misma transaccion, para dar un
+  -- mensaje util en vez de un error de constraint.
+  entra_oid     TEXT,
+  auth_provider TEXT NOT NULL DEFAULT 'invite',      -- entra | invite
   created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Correos vinculados al registro de contribuidor (doc 15 §2, plano 05: la identidad
+-- ES el registro; los correos son credenciales vinculadas, no la identidad).
+--
+--  - `kind = 'primary'`   → con el que entra. El corporativo entra SIEMPRE como primary.
+--  - `kind = 'recovery'`  → segundo correo personal, de CONTACTO: si la persona sale
+--    de la organizacion pierde la puerta corporativa pero NO su progreso, y este
+--    correo es por donde se la ubica. NO es una puerta: ningun login lo lee (no hay
+--    login con correo personal; sin la cuenta corporativa se entra con una wallet).
+--  - `is_corporate = 1`   → es del dominio del tenant (@zelena.tech). Un correo
+--    corporativo NO puede ser recovery: moriria con la baja.
+--
+-- UNIQUE (email) es la garantia de "un humano = UN registro" (criterio 5): dos
+-- filas de `users` no pueden reclamar el mismo correo, asi que la puerta corporativa
+-- y la de comunidad convergen en el mismo principal. `email` es NOT NULL, por lo
+-- que este UNIQUE si se traduce fielmente a T-SQL.
+CREATE TABLE IF NOT EXISTS user_emails (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  wallet       TEXT NOT NULL,        -- principal de users (pending:<slug> | entra:<oid> | wallet Stellar)
+  email        TEXT NOT NULL,        -- normalizado en minusculas por lib/entra.ts
+  kind         TEXT NOT NULL DEFAULT 'primary',  -- primary | recovery
+  is_corporate INTEGER NOT NULL DEFAULT 0,
+  -- El prefijo `is_` no es cosmetico: es lo que hace que lib/sql-dialect.ts (WP16)
+  -- materialice la columna como BIT en Azure SQL y no como INT.
+  is_verified  INTEGER NOT NULL DEFAULT 0,       -- 1 = lo verifico el proveedor (Entra)
+  created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (email)
 );
 
 CREATE TABLE IF NOT EXISTS invites (
@@ -53,18 +103,19 @@ CREATE TABLE IF NOT EXISTS anchor_queue (
   ref          TEXT NOT NULL,        -- clave logica (ej. wallet o period id)
   data_key     TEXT NOT NULL,        -- key para manageData (<= 64 bytes)
   payload_hash TEXT NOT NULL,        -- hash a anclar (hex)
-  status       TEXT NOT NULL DEFAULT 'pending', -- pending | anchored | failed
+  status       TEXT NOT NULL DEFAULT 'pending', -- pending | processing | anchored | failed (lib/anchor.ts)
   tx_id        TEXT,
-  attempts     INTEGER NOT NULL DEFAULT 0,
+  attempts     INTEGER NOT NULL DEFAULT 0,    -- envíos; al llegar a ANCLAJE_MAX_INTENTOS queda 'failed'
   last_error   TEXT,
-  created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+  claimed_at   TEXT                           -- cuándo la reservó una pasada ('processing'); NULL si no
 );
 
 CREATE TABLE IF NOT EXISTS projects (
   id            INTEGER PRIMARY KEY AUTOINCREMENT,
-  campaign      TEXT NOT NULL,        -- LUMA | CREDIFONO
+  campaign      TEXT NOT NULL,        -- campaña del proyecto de cliente
   title         TEXT NOT NULL,
-  type          TEXT NOT NULL,        -- SAS | DAO  (inmutable tras intake)
+  type          TEXT NOT NULL,        -- cliente | comunidad (valores y etiquetas en agora-labels.ts; inmutable tras intake)
   budget_usd    INTEGER NOT NULL,
   weeks         INTEGER NOT NULL,
   state         TEXT NOT NULL DEFAULT 'Open', -- Open|Assigned|Delivered|Scored|Distributed
@@ -73,7 +124,13 @@ CREATE TABLE IF NOT EXISTS projects (
   summary       TEXT NOT NULL,
   description   TEXT NOT NULL,
   acceptance    TEXT NOT NULL,        -- criterios de aceptacion (texto)
-  created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  -- Borrador (decisión del founder, 2026-10-21): 1 = no se ve en público ni recibe
+  -- aplicaciones; su estado del ciclo (`state`) no cambia. Se publica desde /admin.
+  draft         INTEGER NOT NULL DEFAULT 0,
+  -- De dónde salió la fila: 'seed' (proyecto sembrado), 'agora' (puente desde el
+  -- tablero) o NULL (sin clasificar). Solo lo usa la migración de borradores.
+  origin        TEXT
 );
 
 CREATE TABLE IF NOT EXISTS milestones (
@@ -143,6 +200,18 @@ CREATE TABLE IF NOT EXISTS decision_log (
   reason      TEXT NOT NULL,
   hash        TEXT NOT NULL,
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Reemplazos de decisiones (decisión del founder, 2026-10-21). Solo inserción: la
+-- decisión reemplazada sigue INTACTA en decision_log (con su huella) y en lo público se
+-- muestra solo la vigente; el original lo ve el founder en /admin (lib/decisiones.ts).
+CREATE TABLE IF NOT EXISTS decision_replacements (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  decision_id     INTEGER NOT NULL UNIQUE,   -- la reemplazada
+  replaced_by_id  INTEGER NOT NULL,          -- la vigente que la reemplaza
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (decision_id) REFERENCES decision_log(id),
+  FOREIGN KEY (replaced_by_id) REFERENCES decision_log(id)
 );
 
 -- Reporte de fitness por epoca (WP07). Append-only: una fila por calculo de cierre.
@@ -254,6 +323,12 @@ CREATE TABLE IF NOT EXISTS academia_quiz (
 );
 
 -- Una sesion de lectura activa por wallet a la vez (server-side timing).
+-- Hallazgo A2: `quiz_ids` guarda las preguntas servidas (JSON) y la calificacion exige
+-- exactamente esas; `graded_at` (epoch ms) marca la UNICA calificacion de la sesion y
+-- cuenta para la espera tras un intento fallido. `quiz_orden` (revision de A2) guarda,
+-- alineado con `quiz_ids`, el orden barajado en que se mostraron las opciones de cada
+-- pregunta: la respuesta se traduce con el antes de calificar. Las tres van tambien en
+-- COLUMNAS_NUEVAS.
 CREATE TABLE IF NOT EXISTS reading_sessions (
   token         TEXT PRIMARY KEY,
   wallet        TEXT NOT NULL,
@@ -263,6 +338,9 @@ CREATE TABLE IF NOT EXISTS reading_sessions (
   last_beat     INTEGER NOT NULL,     -- epoch ms
   completed     INTEGER NOT NULL DEFAULT 0,
   passed        INTEGER NOT NULL DEFAULT 0,
+  quiz_ids      TEXT,                 -- JSON de los ids servidos (NULL = quiz no pedido)
+  graded_at     INTEGER,              -- epoch ms de la calificacion (NULL = sin calificar)
+  quiz_orden    TEXT,                 -- JSON: por pregunta, indice guardado de cada opcion mostrada
   FOREIGN KEY (content_id) REFERENCES academia_content(id)
 );
 
@@ -277,12 +355,6 @@ CREATE TABLE IF NOT EXISTS academia_awards (
   created_at  TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE (wallet, content_id)
 );
-
-CREATE INDEX IF NOT EXISTS idx_rep_wallet ON reputation_events(wallet);
-CREATE INDEX IF NOT EXISTS idx_points_wallet ON points_ledger(wallet);
-CREATE INDEX IF NOT EXISTS idx_ms_project ON milestones(project_id);
-CREATE INDEX IF NOT EXISTS idx_app_project ON applications(project_id);
-CREATE INDEX IF NOT EXISTS idx_reading_wallet ON reading_sessions(wallet);
 
 -- =====================================================================
 -- WP17 · Entornos por cliente
@@ -328,7 +400,7 @@ CREATE TABLE IF NOT EXISTS brand_assets (
 );
 
 -- SIN columna de secreto. `location` es una REFERENCIA legible por humanos
--- ("Key Vault kv-zelena / secret azure-wms-prod"), nunca el valor.
+-- ("Key Vault <boveda> / secret <nombre-del-secreto>"), nunca el valor.
 CREATE TABLE IF NOT EXISTS credential_inventory (
   id           INTEGER PRIMARY KEY AUTOINCREMENT,
   client_id    INTEGER NOT NULL,
@@ -367,7 +439,7 @@ CREATE TABLE IF NOT EXISTS credential_access_log (
 CREATE TABLE IF NOT EXISTS graph_nodes (
   id             INTEGER PRIMARY KEY AUTOINCREMENT,
   client_id      INTEGER NOT NULL,
-  node_id        TEXT NOT NULL,        -- montoc.variante.facturacion-credito
+  node_id        TEXT NOT NULL,        -- <cliente>.variante.facturacion-credito
   kind           TEXT NOT NULL,        -- proceso | variante | sistema | modulo | ...
   name           TEXT NOT NULL,
   state          TEXT NOT NULL,        -- activo | propuesto | deprecado | roto
@@ -424,80 +496,371 @@ CREATE INDEX IF NOT EXISTS idx_gnodes_client ON graph_nodes(client_id, kind);
 CREATE INDEX IF NOT EXISTS idx_gedges_from ON graph_edges(client_id, from_node);
 CREATE INDEX IF NOT EXISTS idx_gedges_to ON graph_edges(client_id, to_node);
 
--- =====================================================================
--- WP13 (parcial) · Enlace identidad: correo corporativo <-> wallet
--- =====================================================================
--- Las columnas users.email / users.recovery_email se declaran arriba, en el
--- CREATE TABLE. Para bases YA existentes las agrega applyMigrations() en
--- db.ts: un ALTER TABLE aqui reventaria en el segundo arranque, porque
--- schema.sql se ejecuta completo cada vez que se abre la conexion.
-CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email) WHERE email IS NOT NULL;
+-- ============================================================================
+-- MÓDULO EQUIPO (WP14) — el trabajo real del equipo interno.
+-- Dos vistas de la misma pieza de trabajo: `assignments` es la vista interna;
+-- `projects` (Ágora) es la vista pública/bounty. El puente es
+-- assignments.published_as_project_id — se enlaza, NUNCA se duplica.
+-- ============================================================================
 
--- =====================================================================
--- WP14 · Modulo equipo: iniciativas y asignaciones
--- =====================================================================
+-- Iniciativa = contenedor de trabajo (WMS, DAO, Harmony, Productos Nuevos,
+-- Sistema Operativo…). El horizonte es de la iniciativa (spec WP14); cuando sus
+-- asignaciones tienen horizontes distintos, la iniciativa toma el MÁS urgente.
 CREATE TABLE IF NOT EXISTS initiatives (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   slug       TEXT NOT NULL UNIQUE,
-  name       TEXT NOT NULL,            -- WMS | Odoo | DAO | Interno | Cliente-X
-  horizon    TEXT NOT NULL DEFAULT 'ahora', -- ahora | siguiente | parqueado
-  client_id  INTEGER,                  -- NULL = iniciativa interna
+  name       TEXT NOT NULL,
+  horizon    TEXT NOT NULL DEFAULT 'Ahora',   -- Ahora | Siguiente | Parqueado
+  client_id  INTEGER,                         -- WP17: NULL = iniciativa interna
   notes      TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (client_id) REFERENCES clients(id)
 );
 
+-- Máquina de estados en lib/team-state-machine.ts (función PURA, igual que la del
+-- Ágora en lib/state-machine.ts; son dos máquinas distintas y no se comparten):
+--   Backlog → Asignada → En curso → En revisión → Hecha
+--   rama Bloqueada (motivo OBLIGATORIO) y retorno al estado previo. Sin saltos.
+-- status_before_block guarda el estado desde el que se bloqueó para poder volver.
+-- blocked_at permite al dashboard (WP15) contar días bloqueado.
+-- needs_founder = bandeja de gates de John (decisión, visual, inversión).
+-- import_key = idempotencia del importador de CSV; NULL para lo creado en la app.
 CREATE TABLE IF NOT EXISTS assignments (
-  id                  INTEGER PRIMARY KEY AUTOINCREMENT,
-  title               TEXT NOT NULL,
-  description         TEXT,
-  initiative_id       INTEGER,
-  client_id           INTEGER,          -- NULL = trabajo interno sin cliente
-  owner_wallet        TEXT,             -- NULL mientras esta en Backlog
-  status              TEXT NOT NULL DEFAULT 'Backlog',
-  priority            TEXT NOT NULL DEFAULT 'media',  -- alta | media | baja
-  size                TEXT NOT NULL DEFAULT 'M',      -- S | M | L
-  due_date            TEXT,
-  acceptance_criteria TEXT,
-  spec_url            TEXT,             -- enlace al PR/issue de GitHub (nunca se duplica el trabajo)
-  graph_node_id       TEXT,             -- referencia al nodo del grafo (WP20), por referencia
-  blocked_reason      TEXT,             -- obligatorio cuando status = Bloqueada
-  published_as_project_id INTEGER,      -- puente con el Agora
-  created_by          TEXT,
-  created_at          TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at          TEXT NOT NULL DEFAULT (datetime('now')),
+  id                      INTEGER PRIMARY KEY AUTOINCREMENT,
+  title                   TEXT NOT NULL,
+  description             TEXT NOT NULL DEFAULT '',
+  initiative_id           INTEGER,
+  client_id               INTEGER,                         -- WP17: NULL = trabajo interno
+  owner_wallet            TEXT,
+  status                  TEXT NOT NULL DEFAULT 'Backlog',
+  status_before_block     TEXT,
+  priority                TEXT NOT NULL DEFAULT 'Normal',  -- Urgent | High | Normal | Low
+  size                    TEXT,                            -- S | M | L (opcional)
+  horizon                 TEXT NOT NULL DEFAULT 'Ahora',   -- horizonte propio de la fila
+  due_date                TEXT,                            -- YYYY-MM-DD
+  acceptance_criteria     TEXT NOT NULL DEFAULT '',
+  spec_url                TEXT,
+  graph_node_id           TEXT,                            -- WP20: nodo del grafo, por referencia
+  blocked_reason          TEXT,
+  blocked_at              TEXT,
+  needs_founder           INTEGER NOT NULL DEFAULT 0,
+  published_as_project_id INTEGER,                         -- puente con el Ágora
+  created_by              TEXT,
+  import_key              TEXT UNIQUE,
+  created_at              TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at              TEXT NOT NULL DEFAULT (datetime('now')),
+  closed_at               TEXT,                            -- cuándo pasó a Hecha
   FOREIGN KEY (initiative_id) REFERENCES initiatives(id),
   FOREIGN KEY (client_id) REFERENCES clients(id),
+  FOREIGN KEY (owner_wallet) REFERENCES users(wallet),
   FOREIGN KEY (published_as_project_id) REFERENCES projects(id)
 );
 
--- Append-only: historial completo de transiciones (trazabilidad, digest, fitness).
+-- Append-only: historial de transiciones. Se califican ENTREGAS (doc 16), así que
+-- esto registra qué le pasó a la pieza de trabajo, nunca un juicio sobre la persona.
+-- `day` alimenta el digest diario de WP15 sin recalcular fechas.
 CREATE TABLE IF NOT EXISTS assignment_events (
   id            INTEGER PRIMARY KEY AUTOINCREMENT,
   assignment_id INTEGER NOT NULL,
-  from_status   TEXT,
-  to_status     TEXT NOT NULL,
   action        TEXT NOT NULL,
-  actor_wallet  TEXT NOT NULL,
+  from_status   TEXT NOT NULL,
+  to_status     TEXT NOT NULL,
   reason        TEXT,
+  actor_wallet  TEXT NOT NULL,
+  day           TEXT NOT NULL,                             -- YYYY-MM-DD
   created_at    TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (assignment_id) REFERENCES assignments(id)
 );
 
--- Rito 1 del playbook: un check-in por persona por dia, editable el mismo dia.
+-- Check-in diario async (rito 1): hecho / haciendo / bloqueado.
+-- UNIQUE (wallet, day) = uno por persona por día, editable el mismo día.
 CREATE TABLE IF NOT EXISTS checkins (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   wallet     TEXT NOT NULL,
-  day        TEXT NOT NULL,            -- YYYY-MM-DD
-  done       TEXT NOT NULL,
-  doing      TEXT NOT NULL,
-  blocked    TEXT,
+  day        TEXT NOT NULL,                                -- YYYY-MM-DD
+  done       TEXT NOT NULL DEFAULT '',
+  doing      TEXT NOT NULL DEFAULT '',
+  blocked    TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE (wallet, day),
   FOREIGN KEY (wallet) REFERENCES users(wallet)
 );
 
-CREATE INDEX IF NOT EXISTS idx_assign_owner ON assignments(owner_wallet, status);
-CREATE INDEX IF NOT EXISTS idx_assign_client ON assignments(client_id);
+CREATE INDEX IF NOT EXISTS idx_assign_owner ON assignments(owner_wallet);
 CREATE INDEX IF NOT EXISTS idx_assign_initiative ON assignments(initiative_id);
-CREATE INDEX IF NOT EXISTS idx_aevents_assignment ON assignment_events(assignment_id);
+CREATE INDEX IF NOT EXISTS idx_assign_client ON assignments(client_id);
+CREATE INDEX IF NOT EXISTS idx_assign_status ON assignments(status);
+CREATE INDEX IF NOT EXISTS idx_assign_events ON assignment_events(assignment_id);
+CREATE INDEX IF NOT EXISTS idx_assign_events_day ON assignment_events(day);
+CREATE INDEX IF NOT EXISTS idx_checkins_day ON checkins(day);
+
+-- ============================================================================
+-- WP31-A · PROYECTOS Y TALENTO — iniciativa = proyecto.
+-- La membresía define qué ve y qué puede hacer cada persona en un proyecto.
+-- Roles, no personas: se edita desde /equipo/talento y desde el tablero.
+-- ============================================================================
+
+-- Una fila por (proyecto, persona, rol). Una persona puede tener varios roles en
+-- el mismo proyecto (en uno pequeño, quien estructura también revisa).
+CREATE TABLE IF NOT EXISTS project_members (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  initiative_id INTEGER NOT NULL,
+  wallet        TEXT NOT NULL,
+  rol_proyecto  TEXT NOT NULL,                    -- estructura | ejecuta | revisa | vende
+  vinculo       TEXT NOT NULL DEFAULT 'interno',  -- interno | externo
+  added_by      TEXT,
+  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (initiative_id, wallet, rol_proyecto),
+  FOREIGN KEY (initiative_id) REFERENCES initiatives(id),
+  FOREIGN KEY (wallet) REFERENCES users(wallet)
+);
+
+-- Vínculo de una fila del roster (`pending:<slug>`) con la cuenta real que la
+-- absorbió. Existe para que el arranque no vuelva a crear la fila pendiente.
+CREATE TABLE IF NOT EXISTS roster_links (
+  slug       TEXT PRIMARY KEY,
+  wallet     TEXT NOT NULL UNIQUE,
+  linked_by  TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (wallet) REFERENCES users(wallet)
+);
+
+-- Append-only. Cambios de talento: roles, supervisión, membresías, vinculación,
+-- proyectos e importaciones. Describe el cambio; nunca juzga a la persona.
+-- Sin FK a users a propósito: la historia sobrevive a una vinculación.
+CREATE TABLE IF NOT EXISTS talent_events (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  actor_wallet  TEXT NOT NULL,
+  target_wallet TEXT,
+  initiative_id INTEGER,
+  action        TEXT NOT NULL,  -- rol | supervisor | miembro_alta | miembro_baja | vincular | proyecto_crear | proyecto_editar | importar
+  detail        TEXT,
+  created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_pmembers_wallet ON project_members(wallet);
+CREATE INDEX IF NOT EXISTS idx_pmembers_initiative ON project_members(initiative_id);
+CREATE INDEX IF NOT EXISTS idx_talent_events_target ON talent_events(target_wallet);
+
+-- WP13: indice PARCIAL unico. entra_oid es nullable (la mayoria de filas lo tienen a
+-- NULL) y un UNIQUE normal pasaria en SQLite pero rompe en SQL Server, que trata los
+-- NULL como iguales entre si y solo admitiria UNA fila sin vincular. El filtro
+-- `WHERE entra_oid IS NOT NULL` es la forma portable: indice parcial en SQLite,
+-- indice filtrado en T-SQL. WP13 lo dejo NO unico porque lib/sql-dialect.ts
+-- descartaba la clausula WHERE en silencio; ese bug ya esta corregido y con test, asi
+-- que la unicidad vuelve a la base. La comprobacion de lib/entra.ts se conserva: da
+-- un mensaje util en vez de un error de constraint.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_entra_oid ON users(entra_oid) WHERE entra_oid IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_user_emails_wallet ON user_emails(wallet);
+
+CREATE INDEX IF NOT EXISTS idx_rep_wallet ON reputation_events(wallet);
+CREATE INDEX IF NOT EXISTS idx_points_wallet ON points_ledger(wallet);
+CREATE INDEX IF NOT EXISTS idx_ms_project ON milestones(project_id);
+CREATE INDEX IF NOT EXISTS idx_app_project ON applications(project_id);
+CREATE INDEX IF NOT EXISTS idx_reading_wallet ON reading_sessions(wallet);
+
+-- ============================================================================
+-- ASISTENTE DE TELEGRAM (WP19) — el bot personal de John.
+--
+-- CERO SECRETOS AQUI. El token del bot y la API key viven en variables de
+-- entorno / Key Vault, nunca en una fila. El codigo de alta se guarda HASHEADO
+-- (sha256): la dapp muestra el texto plano una sola vez y la base solo conserva
+-- con que comparar.
+--
+-- Tampoco se guarda ningun dato de horas, ubicacion ni "ultima vez visto": el
+-- seguimiento es por objetivos, no por horas (NO-alcance explicito de WP19).
+-- El texto crudo de los mensajes y los audios NO se persisten: solo la pieza
+-- resultante (la nota o la asignacion) y una linea de log sin contenido.
+-- ============================================================================
+
+-- Identidad: telegram_user_id -> principal de `users`. La PK de users (wallet)
+-- NUNCA muta (regla heredada de WP13): esto VINCULA, no reescribe.
+-- Alta en dos pasos: la dapp crea la fila con link_code_hash y sin
+-- telegram_user_id; John envia `/start CODIGO` y ahi se completa el vinculo.
+-- is_authorized = permiso de ESCRITURA. v1: exactamente uno (John).
+CREATE TABLE IF NOT EXISTS telegram_links (
+  id               INTEGER PRIMARY KEY AUTOINCREMENT,
+  wallet           TEXT NOT NULL,
+  telegram_user_id TEXT,             -- NULL mientras el alta esta pendiente
+  link_code_hash   TEXT,             -- sha256 del codigo de un solo uso; NULL al consumirse
+  code_expires_at  TEXT,
+  is_authorized    INTEGER NOT NULL DEFAULT 0,
+  linked_at        TEXT,             -- cuando se consumio el codigo
+  created_at       TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (wallet) REFERENCES users(wallet)
+);
+
+-- Indices PARCIALES unicos (misma leccion que idx_users_entra_oid de WP13): las
+-- dos columnas son nullable y un UNIQUE normal pasaria en SQLite pero en SQL
+-- Server solo admitiria UNA fila sin vincular.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_telegram_links_uid ON telegram_links(telegram_user_id) WHERE telegram_user_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_telegram_links_code ON telegram_links(link_code_hash) WHERE link_code_hash IS NOT NULL;
+
+-- Notas de reunion: la pieza RESULTANTE de un `/nota` o de un audio. Es lo unico
+-- que se conserva del mensaje original.
+CREATE TABLE IF NOT EXISTS notes (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  author      TEXT NOT NULL,
+  text        TEXT NOT NULL,
+  meeting_ref TEXT,
+  created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (author) REFERENCES users(wallet)
+);
+
+-- Estado PENDIENTE de confirmacion. Nada se escribe en assignments/checkins/notes
+-- sin que John toque `Confirmar`: la pieza propuesta espera aqui, no alla. Evita
+-- asignaciones fantasma salidas de una reunion.
+-- payload_json = la pieza YA ESTRUCTURADA (titulo, responsable, fecha...), nunca
+-- el mensaje crudo.
+CREATE TABLE IF NOT EXISTS bot_drafts (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  wallet       TEXT NOT NULL,
+  tool         TEXT NOT NULL,        -- una de las 5 herramientas
+  payload_json TEXT NOT NULL,
+  status       TEXT NOT NULL DEFAULT 'pendiente',  -- pendiente | confirmado | descartado
+  created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+  resolved_at  TEXT,
+  FOREIGN KEY (wallet) REFERENCES users(wallet)
+);
+
+-- Log de TODA accion del bot, visible en admin. Append-only.
+-- `detail` describe la pieza (titulo, id, alcance), nunca el mensaje del usuario.
+-- `sender_ref` solo se llena cuando el remitente NO esta registrado: es el minimo
+-- para diagnosticar un id desconocido que insiste, y no lleva contenido alguno.
+CREATE TABLE IF NOT EXISTS bot_actions (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  wallet     TEXT,
+  sender_ref TEXT,
+  action     TEXT NOT NULL,
+  outcome    TEXT NOT NULL,          -- ok | rechazado | ignorado | no_entendido | error
+  target     TEXT,
+  detail     TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_bot_actions_wallet ON bot_actions(wallet);
+CREATE INDEX IF NOT EXISTS idx_bot_drafts_wallet ON bot_drafts(wallet);
+CREATE INDEX IF NOT EXISTS idx_notes_author ON notes(author);
+
+-- Solicitudes comerciales desde /empresas/contacto y avisos de /encuentros
+-- (interes = INTERES_ENCUENTROS). Sin relacion con users: quien escribe es un
+-- prospecto, no un miembro de la DAO, y no tiene wallet. Anadida como excepcion
+-- autorizada por John (2026-09-23); este archivo se ejecuta en cada arranque.
+CREATE TABLE IF NOT EXISTS leads (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  nombre     TEXT NOT NULL,
+  email      TEXT NOT NULL,
+  empresa    TEXT,
+  interes    TEXT NOT NULL,            -- slug de src/lib/servicios.ts
+  mensaje    TEXT,
+  estado     TEXT NOT NULL DEFAULT 'nuevo',
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_leads_creado ON leads(created_at);
+
+-- Prueba de la autorizacion de datos (Ley 1581, hallazgo A3): una fila por solicitud
+-- de `leads` que llego con la casilla del aviso marcada. Tabla NUEVA (no toca `leads`)
+-- y de SOLO INSERCION: guarda la version del aviso de /privacidad que se acepto, su
+-- huella (sha256 del texto canonico, lib/aviso-privacidad.ts) y el instante en UTC.
+-- No guarda la IP ni datos del navegador. La escribe lib/consentimiento.ts en la misma
+-- transaccion que la fila de `leads`.
+CREATE TABLE IF NOT EXISTS lead_consents (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  lead_id       INTEGER NOT NULL,
+  formulario    TEXT NOT NULL,            -- empresas/contacto | encuentros
+  aviso_version TEXT NOT NULL,            -- AVISO_PRIVACIDAD_VERSION aceptada
+  aviso_sha256  TEXT NOT NULL,            -- huella del texto aceptado
+  accepted_at   TEXT NOT NULL,            -- UTC, AAAA-MM-DD HH:MM:SS
+  FOREIGN KEY (lead_id) REFERENCES leads(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_lead_consents_lead ON lead_consents(lead_id);
+
+-- ============================================================================
+-- WP31 · RITOS — la cadencia vive en el genoma (RITES_CADENCE); aquí, lo que pasó.
+-- ============================================================================
+
+-- Una ocurrencia real de un rito. Se crea al prepararla; las futuras se calculan
+-- desde el genoma y no se guardan.
+CREATE TABLE IF NOT EXISTS rite_sessions (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  kind            TEXT NOT NULL,                   -- sync | demo | retro
+  scheduled_for   TEXT NOT NULL,                   -- inicio programado, ISO UTC con Z
+  duration_min    INTEGER NOT NULL,
+  state           TEXT NOT NULL DEFAULT 'Planned', -- Planned | Open | Closed
+  host_wallet     TEXT,
+  recorder_wallet TEXT,
+  lugar           TEXT,                            -- dónde ocurre (texto público), opcional
+  join_url        TEXT,                            -- enlace de conexión; solo se muestra con sesión
+  summary         TEXT,                            -- resumen público, opcional
+  notes_url       TEXT,                            -- enlace al acta, opcional
+  opened_at       TEXT,
+  closed_at       TEXT,
+  hash            TEXT,                            -- sha256 del cierre; se ancla en testnet
+  decision_log_id INTEGER,
+  created_by      TEXT,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (kind, scheduled_for),
+  FOREIGN KEY (host_wallet) REFERENCES users(wallet),
+  FOREIGN KEY (recorder_wallet) REFERENCES users(wallet),
+  FOREIGN KEY (decision_log_id) REFERENCES decision_log(id)
+);
+
+-- Asistencia. Capa 1 = código rotativo. Estar es lo normal: faltar no resta nada.
+CREATE TABLE IF NOT EXISTS rite_attendance (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  session_id INTEGER NOT NULL,
+  wallet     TEXT NOT NULL,
+  layer      INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (session_id, wallet, layer),
+  FOREIGN KEY (session_id) REFERENCES rite_sessions(id),
+  FOREIGN KEY (wallet) REFERENCES users(wallet)
+);
+
+-- ============================================================================
+-- WP31 · AVISOS Y RECORDATORIOS DE SLA
+-- Sin horas, sin "última conexión", sin fecha de lectura: solo la entrega.
+-- ============================================================================
+
+-- Bandeja in-app. is_leido lo marca la persona; no existe "cuándo leyó".
+CREATE TABLE IF NOT EXISTS avisos (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  wallet        TEXT NOT NULL,
+  clave         TEXT NOT NULL,       -- idempotencia: <tipo>:<asignación>:<hito>
+  tipo          TEXT NOT NULL,
+  assignment_id INTEGER,
+  texto         TEXT NOT NULL,
+  is_leido      INTEGER NOT NULL DEFAULT 0,
+  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (wallet, clave),
+  FOREIGN KEY (wallet) REFERENCES users(wallet),
+  FOREIGN KEY (assignment_id) REFERENCES assignments(id)
+);
+
+-- Lo ya procesado por el motor de recordatorios: una fila por (clave, persona),
+-- así nunca se crea dos veces el mismo aviso. Solo cambia is_telegram (0 → 1) cuando
+-- Telegram confirma el envío; lo que sigue en 0 se reintenta en la corrida siguiente.
+-- La clave 'digest:AAAA-MM-DD' marca el resumen diario ya enviado a esa persona.
+CREATE TABLE IF NOT EXISTS reminders_sent (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  clave        TEXT NOT NULL,
+  wallet       TEXT NOT NULL,
+  dia          TEXT NOT NULL,                -- AAAA-MM-DD en la zona horaria del genoma
+  is_inmediato INTEGER NOT NULL DEFAULT 0,   -- 1 = sale en la corrida (P1); 0 = va al resumen del día
+  is_telegram  INTEGER NOT NULL DEFAULT 0,   -- 1 = Telegram confirmó el envío
+  created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (clave, wallet),
+  FOREIGN KEY (wallet) REFERENCES users(wallet)
+);
+
+CREATE INDEX IF NOT EXISTS idx_rite_sessions_state ON rite_sessions(state);
+CREATE INDEX IF NOT EXISTS idx_rite_attendance_wallet ON rite_attendance(wallet);
+CREATE INDEX IF NOT EXISTS idx_avisos_wallet ON avisos(wallet);
+CREATE INDEX IF NOT EXISTS idx_reminders_wallet ON reminders_sent(wallet, dia);
+
+-- Idempotencia de emisión por ref (§3.4): índices sobre tablas existentes, sin columnas nuevas.
+CREATE INDEX IF NOT EXISTS idx_rep_ref ON reputation_events(ref);
+CREATE INDEX IF NOT EXISTS idx_points_ref ON points_ledger(ref);

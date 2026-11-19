@@ -164,6 +164,48 @@ body::after {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
   .cursor::after { animation: none; }
   .skeleton::after { animation: none; }
+}
+
+/* ---- Landing en inglés (WP33): "/" y "/comunidad" traen su cromo claro ----
+   La raíz de la landing es <div data-landing lang="en">. Mientras está en la página, el
+   documento pasa a claro: controles y barras de scroll claras, fondo blanco (también en
+   el rebote de iOS) y sin el glow ni las scanlines del tema oscuro. La landing además se
+   pinta su propio fondo blanco, por si el navegador no sabe :has(). */
+:root:has([data-landing]) {
+  color-scheme: light;
+  background-color: #ffffff;
+  /* El header pegajoso no tapa el destino de un ancla (#open-projects…) ni el foco. */
+  scroll-padding-top: 88px;
+}
+@media (max-width: 559px) {
+  :root:has([data-landing]) { scroll-padding-top: 112px; }
+}
+body:has([data-landing]) {
+  background-color: #ffffff;
+  color: #0c0f0a;
+  /* Red de seguridad contra el scroll horizontal; `clip` no rompe position: sticky. */
+  overflow-x: clip;
+}
+body:has([data-landing])::before,
+body:has([data-landing])::after {
+  display: none;
+}
+/* La capa base pone Space Mono en mayúsculas a h1–h3. Dentro de la landing no: la
+   especificidad es la de un elemento (gana a la capa base por ir después y pierde
+   ante cualquier clase de los módulos de la landing). */
+:where([data-landing]) h1,
+:where([data-landing]) h2,
+:where([data-landing]) h3 {
+  font-family: inherit;
+  font-weight: inherit;
+  letter-spacing: normal;
+  text-transform: none;
+  overflow-wrap: break-word;
+}
+:where([data-landing]) ::selection {
+  background: #9dff4f;
+  color: #0c0f0a;
 }

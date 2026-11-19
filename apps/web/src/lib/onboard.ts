@@ -10,8 +10,11 @@ import type { DB } from "./db";
 import { consumeInvite, InviteConsumeError } from "./invites";
 import { claCanonicalHash } from "./cla";
 import { claSigningPayload } from "./cla-signing";
+import { loginSigningPayload, sitioDesdeUrl } from "./login-signing";
+import { almacenRetos, type AlmacenRetos } from "./login-reto";
 import { verifyWalletSignature } from "./crypto";
-import { CLA_VERSION } from "./config";
+import { CLA_VERSION, esCodigoDemo, isBootstrapCode } from "./config";
+import { effectiveRole, isRole, type Role } from "./roles";
 
 export class OnboardError extends Error {
   status: number;
@@ -34,7 +37,12 @@ export interface OnboardInput {
   code: string;
   wallet: string;
   name: string;
-  isDemo: boolean;
+  /**
+   * Lo que declara el navegador. Se IGNORA: si la cuenta es de demostración lo decide el
+   * servidor por el código de invitación (`esCodigoDemo`). Se acepta para no romper un
+   * cliente viejo que todavía lo mande.
+   */
+  isDemo?: boolean;
   claHash: string;
   signature: string;
 }
@@ -42,12 +50,37 @@ export interface OnboardInput {
 export interface OnboardResult {
   wallet: string;
   name: string;
-  tier: "Bronze";
+  /** `Bronze` en un alta nueva; el de la fila si la escotilla promovió una wallet ya registrada. */
+  tier: string;
   isDemo: boolean;
+  /** Rol con el que nació la fila (`contributor`, o `founder` por la escotilla). */
+  role: Role;
+  isSupervisor: boolean;
+}
+
+/** Consume el cupo traduciendo el fallo a un `OnboardError` con motivo para el wizard. */
+function consumirCupo(db: DB, code: string, wallet: string): string {
+  try {
+    return consumeInvite(db, code, wallet);
+  } catch (e) {
+    if (e instanceof InviteConsumeError) {
+      throw new OnboardError(
+        409,
+        e.reason === "used" ? "Este código ya no tiene cupos disponibles." : e.message,
+        e.reason === "used" ? "cupos_agotados" : e.reason === "expired" ? "codigo_expirado" : "codigo_invalido"
+      );
+    }
+    throw new OnboardError(400, "No se pudo usar la invitación.", "invitacion_invalida");
+  }
 }
 
 export function performOnboard(db: DB, input: OnboardInput): OnboardResult {
-  const { code, wallet, name, isDemo, claHash, signature } = input;
+  const { code, wallet, name, claHash, signature } = input;
+  // Cuenta REAL o de demostración (decisión del founder, 2026-10-21). La decide el código,
+  // nunca el navegador: quien entra con una invitación válida y firma el acuerdo con la
+  // wallet que creó en su navegador tiene una cuenta real (se suma a proyectos y registra
+  // asistencia). `is_demo` queda para las cuentas sembradas y los códigos de demostración.
+  const isDemo = esCodigoDemo(code);
 
   // 1. El hash recibido debe coincidir con el texto canónico del servidor.
   if (claHash !== claCanonicalHash()) {
@@ -60,52 +93,83 @@ export function performOnboard(db: DB, input: OnboardInput): OnboardResult {
     throw new OnboardError(400, "Firma inválida: no corresponde a la wallet declarada.", "firma_invalida");
   }
 
+  // La puerta de comunidad (invitación + CLA) da rol `contributor` y nunca
+  // supervisión: `core` solo lo otorga el alta corporativa (WP13) o el roster.
+  //
+  // ÚNICA excepción: la escotilla de arranque (`FOUNDER_BOOTSTRAP_CODE`). Sin ella,
+  // entrar con ese código daba `contributor` y el founder quedaba fuera de /admin
+  // y de /equipo — o sea, la escotilla no resolvía el deadlock que existe para
+  // resolver. Ese código es un secreto de App Settings, de un solo uso, y por
+  // diseño concede administración: es la llave de root del despliegue.
+  const esArranque = isBootstrapCode(code);
+  const role: Role = esArranque ? "founder" : "contributor";
+
   // 3, 4 y 5 en UNA SOLA TRANSACCIÓN. Antes el cupo se consumía en su propia
   // transacción y el alta en otra: si el proceso moría o el INSERT fallaba en
   // medio, el cupo quedaba quemado sin usuario y nadie podía recuperarlo. Con
   // node:sqlite la transacción anidada de consumeInvite se une a esta (ver
   // db.ts), y con better-sqlite3/libsql se resuelve con savepoints.
-  const tx = db.transaction((): string => {
+  const tx = db.transaction((): OnboardResult => {
     // Wallet ya registrada.
-    const existing = db.prepare(`SELECT wallet FROM users WHERE wallet = ?`).get(wallet);
-    if (existing) throw new OnboardError(409, "Esta wallet ya está registrada.", "wallet_registrada");
-
-    // Consumo del cupo (solo tras firma válida).
-    let issuer: string;
-    try {
-      issuer = consumeInvite(db, code, wallet);
-    } catch (e) {
-      if (e instanceof InviteConsumeError) {
-        throw new OnboardError(
-          409,
-          e.reason === "used"
-            ? "Este código ya no tiene cupos disponibles."
-            : e.message,
-          e.reason === "used" ? "cupos_agotados" : e.reason === "expired" ? "codigo_expirado" : "codigo_invalido"
-        );
+    const existing = db
+      .prepare(`SELECT display_name, tier, is_demo, cla_signed FROM users WHERE wallet = ?`)
+      .get(wallet) as { display_name: string; tier: string; is_demo: number; cla_signed: number } | undefined;
+    if (existing) {
+      // La escotilla sobre una wallet YA registrada la PROMUEVE en vez de dar 409
+      // (hallazgo de verificación, 2026-09-30). Si John entró antes con la cohorte o
+      // con una invitación, su fila nació contributor y el 409 dejaba la escotilla
+      // inservible justo en el caso para el que existe. La firma ya probó que quien
+      // pide es el dueño de la wallet, y el código de arranque ya concede founder a
+      // una wallet nueva: sobre una existente no concede nada más. Se consume igual
+      // (un solo uso) y no se reescribe la fila ni se duplica la firma del CLA.
+      if (!esArranque || existing.cla_signed !== 1) {
+        throw new OnboardError(409, "Esta wallet ya está registrada.", "wallet_registrada");
       }
-      throw new OnboardError(400, "No se pudo usar la invitación.", "invitacion_invalida");
+      consumirCupo(db, code, wallet);
+      db.prepare(`UPDATE users SET role = 'founder', is_supervisor = 1 WHERE wallet = ?`).run(wallet);
+      return {
+        wallet,
+        name: existing.display_name,
+        tier: existing.tier,
+        isDemo: existing.is_demo === 1,
+        role: "founder",
+        isSupervisor: true,
+      };
     }
 
+    // Consumo del cupo (solo tras firma válida).
+    const issuer = consumirCupo(db, code, wallet);
+
+    // 5. Alta: usuario + firma + cola de anclaje (misma transacción que el cupo).
     db.prepare(
-      `INSERT INTO users (wallet, display_name, tier, invited_by, is_demo, cla_signed) VALUES (?, ?, 'Bronze', ?, ?, 1)`
-    ).run(wallet, name, issuer, isDemo ? 1 : 0);
+      `INSERT INTO users (wallet, display_name, tier, invited_by, is_demo, cla_signed, role, is_supervisor)
+       VALUES (?, ?, 'Bronze', ?, ?, 1, ?, ?)`
+    ).run(wallet, name, issuer, isDemo ? 1 : 0, role, esArranque ? 1 : 0);
     db.prepare(
       `INSERT INTO cla_signatures (wallet, cla_version, cla_hash, signature, anchor_status) VALUES (?, ?, ?, ?, 'pending')`
     ).run(wallet, CLA_VERSION, claHash, signature);
     db.prepare(
       `INSERT INTO anchor_queue (kind, ref, data_key, payload_hash, status) VALUES ('cla', ?, ?, ?, 'pending')`
     ).run(wallet, `cla:v${CLA_VERSION}:${wallet.slice(0, 12)}`, claHash);
-    return issuer;
+    return { wallet, name, tier: "Bronze", isDemo, role, isSupervisor: esArranque };
   });
-  tx();
+  return tx();
+}
 
-  return { wallet, name, tier: "Bronze", isDemo };
+/**
+ * Sitio que nombra el mensaje de entrada: el host de `SITE_URL` o `www.zelena.tech`
+ * (lib/login-signing.ts). Lo usan `/api/login/reto` (lo manda con el reto) y
+ * `performLogin` (verifica la firma sobre ese mismo texto).
+ */
+export function sitioDeEntrada(env: NodeJS.ProcessEnv = process.env): string {
+  return sitioDesdeUrl(env.SITE_URL);
 }
 
 export interface LoginInput {
   wallet: string;
-  claHash: string;
+  /** Reto de un solo uso emitido por `/api/login/reto` (lib/login-reto.ts). */
+  nonce: string;
+  /** Firma ed25519 (base64) de `loginSigningPayload(sitio, nonce)`. */
   signature: string;
 }
 
@@ -114,34 +178,81 @@ export interface LoginResult {
   name: string;
   tier: string;
   isDemo: boolean;
+  /**
+   * Rol y supervisión LEÍDOS DE LA BASE, para firmar la cookie. La cookie sigue
+   * siendo una pista: los gates (`adminActor`, `equipoInternoActor`) releen la fila.
+   */
+  role: Role;
+  isSupervisor: boolean;
 }
 
 /**
  * Reingreso de una wallet ya registrada (WP-demo). No consume invitación ni
- * escribe nada: firma la sesión si —y solo si— la firma ed25519 sobre el payload
- * del CLA corresponde a esa wallet. Es autenticación real, no un bypass: quien
- * no tenga la llave privada no puede producir la firma.
+ * escribe en la base: firma la sesión si —y solo si— la wallet firmó un RETO
+ * vigente y sin usar que emitió el servidor (`/api/login/reto`).
+ *
+ * Reto-respuesta (hallazgo de la verificación final). Antes se aceptaba la firma del
+ * CLA, que es siempre la misma y vive en `cla_signatures`: quien la capturara, o
+ * leyera una copia de la base, entraba para siempre con esa wallet (también la del
+ * founder). Ahora:
+ *   1. el reto se CONSUME antes de mirar la firma: un solo intento por reto, así una
+ *      firma vieja o repetida ya no entra;
+ *   2. la firma tiene que ser sobre `zelena-login-testnet-v1:<sitio>:<reto>`; una firma del
+ *      CLA (`zelena-cla-testnet-v1:…`) no sirve aquí por su separador de dominio;
+ *   3. un reto pedido para otra wallet tampoco sirve.
+ * La firma del CLA en el alta (`performOnboard`) sigue igual: es legal y está anclada.
  *
  * Existe porque el onboarding es de un solo uso por wallet (409) y sin esto
  * nadie podía volver a entrar tras perder la cookie — en un despliegue nuevo,
  * ni el propio fundador.
  */
-export function performLogin(db: DB, input: LoginInput): LoginResult {
-  const { wallet, claHash, signature } = input;
+export function performLogin(
+  db: DB,
+  input: LoginInput,
+  retos: AlmacenRetos = almacenRetos(),
+  sitio: string = sitioDeEntrada()
+): LoginResult {
+  const { wallet, nonce, signature } = input;
 
-  if (claHash !== claCanonicalHash()) {
-    throw new OnboardError(400, "El hash del CLA no coincide con la versión oficial.", "cla_desactualizado");
+  if (retos.consumir(nonce, wallet) !== "ok") {
+    throw new OnboardError(
+      401,
+      "El reto de entrada caducó o ya se usó. Vuelve a intentarlo.",
+      "reto_invalido"
+    );
   }
-  if (!verifyWalletSignature(wallet, claSigningPayload(claHash), signature)) {
+  if (!verifyWalletSignature(wallet, loginSigningPayload(sitio, nonce), signature)) {
     throw new OnboardError(401, "Firma inválida: no corresponde a la wallet declarada.", "firma_invalida");
   }
   const user = db
-    .prepare(`SELECT wallet, display_name, tier, is_demo, cla_signed FROM users WHERE wallet = ?`)
+    .prepare(
+      `SELECT wallet, display_name, tier, is_demo, cla_signed, role, is_supervisor, is_founder
+       FROM users WHERE wallet = ?`
+    )
     .get(wallet) as
-    | { wallet: string; display_name: string; tier: string; is_demo: number; cla_signed: number }
+    | {
+        wallet: string;
+        display_name: string;
+        tier: string;
+        is_demo: number;
+        cla_signed: number;
+        role: string | null;
+        is_supervisor: number;
+        is_founder: number;
+      }
     | undefined;
   if (!user) throw new OnboardError(404, "Esta wallet no está registrada. Usa un código de invitación.", "no_registrada");
   if (!user.cla_signed) throw new OnboardError(403, "Esta wallet no tiene el CLA firmado.", "sin_cla");
 
-  return { wallet: user.wallet, name: user.display_name, tier: user.tier, isDemo: user.is_demo === 1 };
+  // `isRole` descarta un valor corrupto; el fallback deriva de is_founder (dato de
+  // la base), nunca de una variable de entorno con la wallet de una persona.
+  const role: Role = isRole(user.role) ? user.role : effectiveRole({ isFounder: !!user.is_founder });
+  return {
+    wallet: user.wallet,
+    name: user.display_name,
+    tier: user.tier,
+    isDemo: user.is_demo === 1,
+    role,
+    isSupervisor: user.is_supervisor === 1,
+  };
 }

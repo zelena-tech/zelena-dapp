@@ -72,8 +72,8 @@ CRITERIOS DE ACEPTACIÓN
   bloquea el resto del WP).
 - [ ] Aditivo: dos columnas nullable; cero cambios sobre filas ya ancladas.
 
-OWNER — Fausto (crypto + worker + verificación) · John (multisig, secretos) ·
-Vale (lee la spec del merkle como si fuera un tercero y confirma que puede
+OWNER — Plataforma (crypto + worker + verificación) · John (multisig, secretos) ·
+Operaciones (lee la spec del merkle como si fuera un tercero y confirma que puede
 reproducirla).
 TAMAÑO — M · Estimado: 1–1,5 días + la tarea humana. Depende: WP01. Secuencial
 con WP26 por el worker.
