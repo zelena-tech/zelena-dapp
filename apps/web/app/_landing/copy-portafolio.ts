@@ -1,9 +1,13 @@
 /**
- * Copy del portafolio de soluciones (/empresas/portafolio), en español y con el cromo
- * claro de la landing. Desde el 2026-11-17 la página cuenta una historia (pedido del
- * founder): la tecnología que tienen las grandes empresas, al alcance de una pyme, con
- * empresas reales que ya trabajan con nosotros. El recurso visual es TACHAR: en el
- * titular se tacha "solo para ellas", y quien visita tacha lo que le pasa hoy.
+ * Copy de la inicio (zelena.tech/): el portafolio de soluciones, en español y con el cromo
+ * claro de la landing. La historia va en tres tiempos (pedido del founder, 2026-11-17): la
+ * frase de gancho, a quiénes hemos impactado y los servicios. Después, cómo trabajamos,
+ * colaborar (con el manifiesto) y el cierre. Se le habla a "tu negocio" o "tu empresa",
+ * nunca a "tu pyme" (pedido del founder): nadie se presenta a sí mismo como pyme.
+ *
+ * El recurso visual es TACHAR: en el titular se tacha "complicarte", y quien visita tacha
+ * en los servicios lo que le pasa hoy (una fila de píldoras, no una lista larga: la lista
+ * hacía eterno llegar a los servicios).
  *
  * Lo que se afirma sale de lo que el sitio ya sostiene: dos años construyendo con
  * operaciones reales en Colombia (copy-home.ts) y los clientes que el founder autorizó a
@@ -13,104 +17,58 @@
  */
 import { ENLACES_EMPRESAS, contactoCon } from "./copy-empresas";
 export const META_PORTAFOLIO = {
-  titulo: "Zelena · La tecnología de las grandes empresas, para tu pyme",
+  titulo: "Zelena · Tecnología para mejorar tu negocio",
   descripcion:
-    "La tecnología de las grandes empresas, para tu pyme: dos productos propios (ZELENA WMS y ZELENA Social Listening), un programa de incentivos en dólares digitales y seis servicios, incluido el desarrollo a la medida.",
+    "Tecnología para mejorar tu negocio: dos productos propios (ZELENA WMS y ZELENA Social Listening), un programa de incentivos en dólares digitales y seis servicios, incluido el desarrollo a la medida.",
 } as const;
 
 export const HERO_PORTAFOLIO = {
-  chip: "Portafolio de soluciones",
+  chip: "Tecnología para empresas",
   h1: {
-    linea1: "La tecnología de las grandes empresas,",
-    /** Se ve tachado; el lector de pantalla oye `tachadoLeido` en su lugar. */
-    tachado: "solo para ellas",
-    tachadoLeido: "ya no solo para ellas:",
-    resaltado: "para tu pyme.",
+    linea1: "Tecnología para",
+    /** Se ve tachado y es decorativo: el lector de pantalla oye "Tecnología para mejorar tu negocio." */
+    tachado: "complicarte",
+    resaltado: "mejorar tu negocio.",
   },
   lead:
-    "Sistema de bodega, social listening, ERP, datos, nube e incentivos para el equipo: lo que una gran empresa tiene hace años, hecho a la medida del tamaño, el presupuesto y el ritmo de una pyme.",
-  primario: { href: "#situacion", nombre: "Tacha lo que te pasa" },
-  secundario: { href: "#portafolio", nombre: "Ver el portafolio" },
+    "Bodega, ERP, datos, nube, redes sociales e incentivos para tu equipo: la tecnología que usan las grandes empresas, a la medida del tamaño, el presupuesto y el ritmo de tu negocio.",
+  primario: { href: "#servicios", nombre: "Ver los servicios" },
+  secundario: { href: ENLACES_EMPRESAS.contacto, nombre: "Hablemos" },
 } as const;
 
 /**
- * La creencia y la prueba, en un bloque de tinta: por qué existimos y con quién ya
- * trabajamos. Los clientes son los de la home (CLIENTES de copy-home.ts), los que el
- * founder autorizó a mostrar; aquí solo va el texto que los acompaña.
+ * A quiénes hemos impactado, en un bloque de tinta: con quién ya trabajamos y desde
+ * cuándo. Los clientes son los de la home (CLIENTES de copy-home.ts), los que el founder
+ * autorizó a mostrar; aquí solo va el texto que los acompaña.
  */
 export const IMPACTO = {
-  frase: "El tamaño de una empresa no debería decidir la tecnología que puede usar.",
+  ancla: "impacto",
+  titulo: "A quiénes hemos impactado.",
   historia:
     "Llevamos dos años construyendo junto a operaciones reales en Colombia. Nuestros productos se hicieron dentro de empresas de verdad, con los problemas de todos los días.",
   clientes: "Algunas de las empresas con las que trabajamos",
   enInstagram: "en Instagram",
   otraPestana: "(se abre en otra pestaña)",
   paraQuien:
-    "Trabajamos con pymes de 10 a 200 personas que necesitan ordenar su operación y crecer: inventario, despachos, gestión y presencia digital.",
+    "Trabajamos con empresas de 10 a 200 personas que necesitan ordenar su operación y crecer: inventario, despachos, gestión y presencia digital.",
 } as const;
 
-/** "Tacha lo que te pasa": cada frase es un botón; al tacharla aparece la solución. */
+/**
+ * "Tacha lo que te pasa", dentro de los servicios: una fila de píldoras. Cada una es un
+ * botón; al tacharla, las líneas que lo resuelven se marcan "Para ti" en la rejilla.
+ */
 export const SITUACION = {
-  ancla: "situacion",
-  h2: { linea1: "Tacha lo que", antes: "te pasa hoy.", enfasis: "" },
-  intro: "Toca cada frase que se parezca a tu empresa. Al lado aparece cómo lo resolvemos.",
-  vacio: "Lo que taches aparece aquí, con la línea que lo resuelve.",
+  pregunta: "¿Qué te pasa hoy?",
+  instruccion: "Tacha lo que se parezca a tu empresa y te marcamos por dónde empezar.",
   recomendamos: "Para lo que tachaste",
   borrar: "Quitar lo tachado",
   listaAria: "Situaciones de tu empresa",
 } as const;
 
-/**
- * Un solo aliado: qué hace el negocio en cuatro verbos. Cada uno lleva a su parte. `tono`
- * es el color de la tarjeta; `enIngles`, que el destino es una página de la landing en
- * inglés (se marca con hrefLang).
- */
-export const CUATRO_LINEAS = {
-  titulo: { linea1: "Un solo aliado", linea2: "para toda la operación." },
-  lineas: [
-    {
-      verbo: "Ordenamos",
-      que: "tus procesos, tu información y tu tecnología.",
-      como: "Seis servicios, de los procesos al desarrollo a la medida.",
-      href: "#portafolio",
-      enlace: "Ver los servicios",
-      tono: "panel",
-      enIngles: false,
-    },
-    {
-      verbo: "Operamos",
-      que: "con tecnología propia, de la bodega a las redes.",
-      como: "ZELENA WMS para el inventario y ZELENA Social Listening para tus campañas.",
-      href: "#portafolio",
-      enlace: "Ver los productos",
-      tono: "panel",
-      enIngles: false,
-    },
-    {
-      verbo: "Reconocemos",
-      que: "el trabajo real de tu equipo.",
-      como: "Incentivos por desempeño, pagados en dólares digitales.",
-      href: ENLACES_EMPRESAS.incentivos,
-      enlace: "Ver los incentivos",
-      tono: "lima",
-      enIngles: false,
-    },
-    {
-      verbo: "Colaboramos",
-      que: "con una comunidad que construye.",
-      como: "Reglas públicas, trabajo por hitos y un historial que es de cada quien.",
-      href: "#colaborar",
-      enlace: "Ver cómo colaborar",
-      tono: "tinta",
-      enIngles: false,
-    },
-  ],
-} as const;
-
 export const PORTAFOLIO = {
-  ancla: "portafolio",
-  h2: { linea1: "Todo lo que hacemos,", antes: "línea por línea.", enfasis: "" },
-  intro: "Contrata solo lo que necesitas. Cada línea funciona por sí sola y todas se conectan entre sí.",
+  ancla: "servicios",
+  h2: { linea1: "Todo lo que hacemos", antes: "por tu negocio.", enfasis: "" },
+  intro: "Contrata solo lo que necesitas. Cada servicio funciona por sí solo y todos se conectan entre sí.",
   filtroAria: "Filtrar el portafolio",
   filtros: [
     { valor: "Todo", nombre: "Todo" },
@@ -148,10 +106,11 @@ export const CICLO = {
 } as const;
 
 /**
- * La parte de colaborar: democratizar la tecnología también es abrir el trabajo. Dice lo
- * mismo que /metodo (una empresa o la comunidad trae un problema real; el proyecto se abre
- * con su alcance, sus hitos y su forma de evaluación; se construye por hitos) y nada más:
- * ni cifras, ni pagos, ni la red. Los detalles viven en /metodo y en /comunidad.
+ * La parte de colaborar: democratizar la tecnología también es abrir el trabajo. Tres
+ * puertas, y el manifiesto es una de ellas (pedido del founder: "falta el manifiesto").
+ * Dice lo mismo que /comunidad y /manifiesto, y nada más: ni cifras, ni pagos, ni la red.
+ * Todas llevan a páginas con el diseño de zelena.tech (pedido del founder: nada del diseño
+ * viejo); la comunidad y el manifiesto están en inglés y se marcan con hrefLang.
  */
 export const COLABORAR = {
   ancla: "colaborar",
@@ -168,26 +127,25 @@ export const COLABORAR = {
     },
     {
       t: "Construye con nosotros",
-      d: "Aplica a un proyecto abierto con tu enfoque, entrega por hitos y haz crecer un historial que es tuyo.",
-      href: ENLACES_EMPRESAS.proyectos,
-      enlace: "Ver proyectos abiertos",
-      enIngles: false,
+      d: "Súmate a la comunidad: proyectos con alcance claro, entregas por hitos y un historial que es tuyo.",
+      href: ENLACES_EMPRESAS.comunidad,
+      enlace: "Conocer la comunidad",
+      enIngles: true,
     },
     {
-      t: "Conoce el método",
-      d: "Ocho pasos, de la necesidad al hito aprobado. Se califica la entrega, nunca a la persona.",
-      href: ENLACES_EMPRESAS.metodo,
-      enlace: "Leer el método",
-      enIngles: false,
+      t: "Lee el manifiesto",
+      d: "Lo que creemos: lo que entregas decide lo que recibes. Se califica la entrega, nunca a la persona.",
+      href: ENLACES_EMPRESAS.manifiesto,
+      enlace: "Leer el manifiesto",
+      enIngles: true,
     },
   ],
-  comunidad: { href: ENLACES_EMPRESAS.comunidad, nombre: "Conocer la comunidad" },
-  manifiesto: { href: ENLACES_EMPRESAS.manifiesto, nombre: "Leer el manifiesto" },
 } as const;
 
 export const CIERRE_PORTAFOLIO = {
-  titulo: { linea1: "La misma tecnología,", linea2: "a la medida de tu pyme." },
-  texto: "Cuéntanos qué está pasando en tu empresa y te proponemos por dónde empezar.",
+  titulo: { linea1: "La misma tecnología,", linea2: "a la medida de tu negocio." },
+  texto:
+    "El tamaño de una empresa no debería decidir la tecnología que puede usar. Cuéntanos qué está pasando en la tuya y te proponemos por dónde empezar.",
   primario: { href: ENLACES_EMPRESAS.contacto, nombre: "Hablemos" },
   secundario: { href: ENLACES_EMPRESAS.incentivos, nombre: "Ver los incentivos" },
 } as const;
@@ -306,8 +264,8 @@ export const LINEAS: Linea[] = [
     nombre: "Implementación Odoo",
     corto: "Un solo sistema para ventas, compras, inventario, contabilidad y factura electrónica DIAN.",
     entrada: "Implementamos y sostenemos Odoo, configurado según el tipo de empresa, sobre una base ya validada.",
-    que: "ERP Odoo (versión 19 Enterprise) configurado y adaptado por ZELENA para pymes colombianas.",
-    para: "Pymes que hoy trabajan con Excel y un software contable (Siigo, Alegra, World Office) o con un ERP antiguo.",
+    que: "ERP Odoo (versión 19 Enterprise) configurado y adaptado por ZELENA para empresas colombianas.",
+    para: "Empresas que hoy trabajan con Excel y un software contable (Siigo, Alegra, World Office) o con un ERP antiguo.",
     resuelve:
       "Información en varios sistemas que no se hablan: doble digitación, inventario que no coincide con la contabilidad, cierres lentos y gerencia sin datos.",
     incluye: [
@@ -337,7 +295,7 @@ export const LINEAS: Linea[] = [
     corto: "Ordenamos y documentamos la operación antes de automatizarla.",
     entrada: "Entendemos, rediseñamos y documentamos tus procesos y la estructura de tu empresa.",
     que: "Consultoría para entender, rediseñar y documentar los procesos y la estructura de la empresa.",
-    para: "Pymes que van a implementar un sistema o que necesitan ordenar su operación y su estructura.",
+    para: "Empresas que van a implementar un sistema o que necesitan ordenar su operación y su estructura.",
     resuelve:
       "Procesos sin documentar, roles poco claros y una operación que depende de personas. Automatizar sobre ese desorden no funciona.",
     incluye: [
@@ -404,7 +362,7 @@ export const LINEAS: Linea[] = [
     corto: "Dirigimos y operamos tu área de tecnología como un servicio continuo.",
     entrada: "Asumimos la dirección de tecnología de tu empresa: estrategia, proveedores, procesos y estructura.",
     que: "ZELENA asume la dirección de tecnología del cliente: estrategia, proveedores, procesos y estructura del área.",
-    para: "Pymes sin área de tecnología o con un área sin dirección clara.",
+    para: "Empresas sin área de tecnología o con un área sin dirección clara.",
     resuelve:
       "Tecnología manejada por varios proveedores sueltos, sin estrategia ni responsable, y un gerente que termina coordinándolos.",
     incluye: [
@@ -449,47 +407,22 @@ export const LINEAS: Linea[] = [
 ];
 
 /**
- * Lo que vive una pyme, dicho como lo diría ella, y cómo lo resolvemos. `lineas` son las
- * líneas del portafolio que lo resuelven (las recomienda el buscador).
+ * Lo que vive una empresa, dicho como lo diría ella y en pocas palabras: cada frase es una
+ * píldora. `lineas` son las líneas del portafolio que lo resuelven (se marcan "Para ti").
  */
-export const NECESIDADES: ReadonlyArray<{ texto: string; solucion: string; lineas: readonly string[] }> = [
-  { texto: "El inventario no cuadra.", solucion: "Inventario exacto, ubicación por ubicación.", lineas: ["wms", "odoo"] },
-  { texto: "Despachamos con errores.", solucion: "Cada pedido se valida antes de salir.", lineas: ["wms"] },
-  {
-    texto: "Trabajamos en Excel y en sistemas que no se hablan.",
-    solucion: "Un solo sistema para todo el negocio.",
-    lineas: ["odoo", "data"],
-  },
-  {
-    texto: "La factura y la contabilidad van por separado.",
-    solucion: "Factura electrónica DIAN y contabilidad en el mismo lugar.",
-    lineas: ["odoo"],
-  },
-  { texto: "Solo una persona sabe cómo se hacen las cosas.", solucion: "Procesos documentados, con responsable.", lineas: ["td"] },
-  { texto: "Los informes se arman a mano.", solucion: "Tableros al día para cada área.", lineas: ["data"] },
-  {
-    texto: "Los sistemas se caen y nadie sabe dónde viven.",
-    solucion: "Una nube administrada, con respaldos y monitoreo.",
-    lineas: ["cloud"],
-  },
-  { texto: "Nadie dirige la tecnología.", solucion: "Una dirección de tecnología con hoja de ruta.", lineas: ["ti"] },
-  { texto: "Vamos a crecer y no sabemos por dónde empezar.", solucion: "Un diagnóstico y un plan por etapas.", lineas: ["td", "ti"] },
-  {
-    texto: "Las campañas con influenciadores se miden en un Excel.",
-    solucion: "Cada campaña con su histórico, sus metas y sus resultados.",
-    lineas: ["social"],
-  },
-  {
-    texto: "No sabemos qué dice la gente de la marca.",
-    solucion: "Los comentarios, recogidos y clasificados cada semana.",
-    lineas: ["social", "data"],
-  },
-  {
-    texto: "El equipo rota o no se siente reconocido.",
-    solucion: "Incentivos por desempeño, en dólares digitales.",
-    lineas: ["incentivos", "wms"],
-  },
-  { texto: "Tenemos una idea y nadie que la construya.", solucion: "La diseñamos y la construimos contigo.", lineas: ["medida"] },
+export const NECESIDADES: ReadonlyArray<{ texto: string; lineas: readonly string[] }> = [
+  { texto: "El inventario no cuadra", lineas: ["wms", "odoo"] },
+  { texto: "Despachamos con errores", lineas: ["wms"] },
+  { texto: "Todo vive en Excel", lineas: ["odoo", "data"] },
+  { texto: "Facturación y contabilidad aparte", lineas: ["odoo"] },
+  { texto: "Informes hechos a mano", lineas: ["data"] },
+  { texto: "Todo depende de una persona", lineas: ["td"] },
+  { texto: "Los sistemas se caen", lineas: ["cloud", "ti"] },
+  { texto: "Nadie dirige la tecnología", lineas: ["ti"] },
+  { texto: "Influenciadores medidos en Excel", lineas: ["social"] },
+  { texto: "No sabemos qué dicen de la marca", lineas: ["social", "data"] },
+  { texto: "El equipo rota mucho", lineas: ["incentivos", "wms"] },
+  { texto: "Una idea que nadie construye", lineas: ["medida"] },
 ];
 
 export const PASOS_CICLO = [

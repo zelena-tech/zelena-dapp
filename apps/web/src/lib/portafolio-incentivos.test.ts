@@ -1,9 +1,12 @@
 /**
- * Portafolio e incentivos para empresas (/empresas/portafolio, /empresas/incentivos).
+ * La inicio (el portafolio), los incentivos y el contacto para empresas (/,
+ * /empresas/incentivos, /empresas/contacto).
  *
- * Pedido del founder (2026-11-17): las dos páginas llevan el diseño de zelena.tech (el
- * cromo claro de la landing), pero en español. Estas pruebas fijan:
- *  - el cromo: las dos rutas traen su propio marco claro, y el documento sigue en español;
+ * Pedido del founder (2026-11-17): las páginas llevan el diseño de zelena.tech (el cromo
+ * claro de la landing), pero en español, y ningún enlace lleva al diseño oscuro viejo.
+ * Estas pruebas fijan:
+ *  - el cromo: las tres rutas traen su propio marco claro, y el documento sigue en español;
+ *  - la historia de la inicio: la frase de gancho, a quiénes hemos impactado y los servicios;
  *  - el contenido del portafolio: cada línea lleva a un interés que el formulario ofrece;
  *  - lo que la página de incentivos puede afirmar: lo mismo que /empresas (USDC a la
  *    billetera es lo real; pesos a la cuenta bancaria es la meta), sin promesas de ganancia.
@@ -17,6 +20,7 @@ import {
   MENU_EMPRESAS,
   RUTAS_CROMO_CLARO_ES,
   RUTAS_LANDING,
+  RUTA_CONTACTO,
   RUTA_INCENTIVOS,
   RUTA_PORTAFOLIO,
   esRutaCromoClaroEs,
@@ -24,16 +28,20 @@ import {
 } from "./menu";
 import { RUTAS_SITEMAP } from "./seo";
 import { INTERESES, INTERES_A_LA_MEDIDA, SLUGS_INTERES } from "./servicios";
+import * as EMPRESAS from "../../app/_landing/copy-empresas";
 import { CABECERA_EMPRESAS, PIE_EMPRESAS, contactoCon } from "../../app/_landing/copy-empresas";
+import * as PORTAFOLIO_COPY from "../../app/_landing/copy-portafolio";
 import {
+  CIERRE_PORTAFOLIO,
   COLABORAR,
-  CUATRO_LINEAS,
   HERO_PORTAFOLIO,
   IMPACTO,
   LINEAS,
+  META_PORTAFOLIO,
   NECESIDADES,
   PORTAFOLIO,
 } from "../../app/_landing/copy-portafolio";
+import * as CONTACTO from "../../app/_landing/copy-contacto";
 import { CLIENTES } from "../../app/_landing/copy-home";
 import * as INCENTIVOS from "../../app/_landing/copy-incentivos";
 
@@ -52,16 +60,17 @@ const DE_EMPRESAS = fs
   .map((n) => `app/_landing/empresas/${n}`);
 
 describe("cromo claro en español", () => {
-  it("las dos rutas, exactas, y ninguna es de la landing en inglés", () => {
-    expect([...RUTAS_CROMO_CLARO_ES]).toEqual(["/", "/empresas/incentivos"]);
+  it("las tres rutas, exactas, y ninguna es de la landing en inglés", () => {
+    expect([...RUTAS_CROMO_CLARO_ES]).toEqual(["/", "/empresas/incentivos", "/empresas/contacto"]);
     expect(RUTA_PORTAFOLIO).toBe("/");
     expect(RUTA_INCENTIVOS).toBe("/empresas/incentivos");
+    expect(RUTA_CONTACTO).toBe("/empresas/contacto");
     for (const r of RUTAS_CROMO_CLARO_ES) {
       expect(esRutaCromoClaroEs(r), r).toBe(true);
       expect(esRutaLanding(r), r).toBe(false);
       expect(RUTAS_LANDING, r).not.toContain(r);
     }
-    for (const r of ["/empresas", "/empresas/servicios", "/empresas/contacto", "/empresas/portafolio", "/en", ""]) {
+    for (const r of ["/empresas", "/empresas/servicios", "/empresas/portafolio", "/en", ""]) {
       expect(esRutaCromoClaroEs(r), r).toBe(false);
     }
     expect(esRutaCromoClaroEs(null)).toBe(false);
@@ -89,8 +98,11 @@ describe("cromo claro en español", () => {
     expect(marco).toContain("<Reveal />");
     // No lee la sesión: a una empresa la píldora la lleva a hablar con nosotros.
     expect(marco).not.toMatch(/getSession|getDb/);
-    expect(CABECERA_EMPRESAS.pestanas.map((t) => t.href)).toEqual([RUTA_PORTAFOLIO, RUTA_INCENTIVOS]);
+    // Servicios | Incentivos | Colaborar | Manifiesto (pedido del founder: faltaban colaborar y el manifiesto).
+    expect(CABECERA_EMPRESAS.pestanas.map((t) => t.href)).toEqual(["/#servicios", RUTA_INCENTIVOS, "/#colaborar", "/manifiesto"]);
+    expect(CABECERA_EMPRESAS.pestanas.filter((t) => t.enIngles).map((t) => t.href)).toEqual(["/manifiesto"]);
     expect(marco).toContain('aria-current={t.pagina === pagina ? "page" : undefined}');
+    expect(marco).toContain('hrefLang={t.enIngles ? "en" : undefined}');
   });
 
   it("cada página va en ese marco, clara, en español, sin la tarjeta de la comunidad y con un solo h1", () => {
@@ -135,10 +147,78 @@ describe("cromo claro en español", () => {
     expect(RUTAS_SITEMAP).toContain(RUTA_PORTAFOLIO);
     expect(RUTAS_SITEMAP).toContain(RUTA_INCENTIVOS);
     const pie = PIE_EMPRESAS.enlaces.map((e) => e.href);
-    for (const h of [RUTA_PORTAFOLIO, RUTA_INCENTIVOS, "/empresas/contacto", "/en"]) expect(pie).toContain(h);
-    // Solo la landing en inglés está en inglés: es el único enlace del pie que lo marca.
-    expect(PIE_EMPRESAS.enlaces.filter((e) => e.enIngles).map((e) => e.href)).toEqual(["/en"]);
+    for (const h of [RUTA_PORTAFOLIO, RUTA_INCENTIVOS, "/empresas/contacto", "/manifiesto", "/en"]) expect(pie).toContain(h);
+    // El manifiesto y la landing están en inglés: son los enlaces del pie que lo marcan.
+    expect(PIE_EMPRESAS.enlaces.filter((e) => e.enIngles).map((e) => e.href)).toEqual(["/manifiesto", "/en"]);
     expect(leer("app/empresas/page.tsx")).toContain('<Link href="/" className="group');
+  });
+});
+
+/**
+ * Pedido del founder (2026-11-17): ningún enlace del cromo claro en español lleva a una
+ * página con el diseño oscuro viejo. /empresas y /empresas/servicios redirigen a la inicio,
+ * el contacto se pinta con el diseño de zelena.tech, y la comunidad, el método viejo y el
+ * Ágora no se enlazan desde aquí (las dos últimas son del diseño viejo).
+ */
+describe("ningún enlace al diseño oscuro viejo", () => {
+  const VIEJAS = ["/empresas", "/empresas/servicios", "/metodo", "/agora", "/entrar"];
+  const destino = (h: string) => h.split(/[?#]/)[0] || "/";
+  /** Cada texto del copy que es una ruta del sitio ("/..."), recorriendo objetos y listas. */
+  const rutas = (v: unknown): string[] =>
+    typeof v === "string"
+      ? /^\/[^<\s]*$/.test(v)
+        ? [v]
+        : []
+      : v && typeof v === "object"
+        ? Object.values(v).flatMap(rutas)
+        : [];
+
+  it("los enlaces de la cabecera, el pie, la inicio y el contacto llevan a páginas con el diseño nuevo", () => {
+    const hrefs = [
+      ...CABECERA_EMPRESAS.pestanas.map((t) => t.href),
+      ...PIE_EMPRESAS.enlaces.map((e) => e.href),
+      ...rutas(EMPRESAS),
+      ...rutas(PORTAFOLIO_COPY),
+      ...rutas(CONTACTO),
+    ];
+    expect(hrefs).toContain("/empresas/contacto?interes=a-la-medida");
+    const nuevas = new Set([...RUTAS_CROMO_CLARO_ES, ...RUTAS_LANDING]);
+    for (const h of hrefs) {
+      expect(VIEJAS, h).not.toContain(destino(h));
+      expect(nuevas.has(destino(h)), h).toBe(true);
+    }
+  });
+
+  it("/empresas y /empresas/servicios redirigen (307) a la inicio y a sus servicios", async () => {
+    const mod = (await import("../../next.config.mjs")) as {
+      default: { redirects: () => Promise<Array<{ source: string; destination: string; permanent: boolean }>> };
+    };
+    const r = await mod.default.redirects();
+    expect(r).toContainEqual({ source: "/empresas", destination: "/", permanent: false });
+    expect(r).toContainEqual({ source: "/empresas/servicios", destination: "/#servicios", permanent: false });
+    expect(PORTAFOLIO.ancla).toBe("servicios");
+  });
+
+  it("el contacto va en el marco claro, en español, con el formulario de la demo y su casilla de autorización", () => {
+    const src = leer("app/empresas/contacto/page.tsx");
+    expect(src).toContain('<MarcoEmpresas pagina="contacto">');
+    expect(src).toContain('export const viewport: Viewport = { themeColor: "#FFFFFF", colorScheme: "light" };');
+    expect(src).toContain('export const dynamic = "force-dynamic";');
+    expect(src).toMatch(/idioma: "es",\n[\s\S]*?imagen: null,/);
+    expect(src).toContain("ruta: RUTA_CONTACTO,");
+    expect(src).not.toMatch(/font-serif|text-paper|bg-surface|btn-primary|ContactoForm/);
+    expect(src).toContain("formulario={FORMULARIO_CONTACTO}");
+    // Los intereses son los del formulario de siempre (la API los valida), sin uno marcado de más.
+    expect(CONTACTO.FORMULARIO_CONTACTO.intereses.map((i) => i.slug)).toEqual(SLUGS_INTERES);
+    expect(CONTACTO.interesContacto("wms")).toBe("wms");
+    expect(CONTACTO.interesContacto("no-existe")).toBe("");
+    expect(CONTACTO.interesContacto(undefined)).toBe("");
+    // La casilla de autorización (Ley 1581) sigue en el formulario que pinta: nunca premarcada.
+    const form = leer("app/_landing/demo/FormularioDemo.tsx");
+    expect(form).toContain('<input id="demo-acepto" name="acepto" type="checkbox" required');
+    expect(form).not.toMatch(/defaultChecked|checked=\{true\}/);
+    // Sin plazos inventados.
+    expect(JSON.stringify(CONTACTO)).not.toMatch(/24 ?h|horas h[aá]biles|en \d+ d[ií]as/i);
   });
 });
 
@@ -187,35 +267,34 @@ describe("portafolio · nueve líneas que llevan a un contacto real", () => {
   it("los incentivos tienen página propia y entran por Harmony", () => {
     const inc = LINEAS.find((l) => l.id === "incentivos");
     expect(inc).toMatchObject({ tipo: "Programa", interes: "harmony", enlace: RUTA_INCENTIVOS });
-    expect(CUATRO_LINEAS.lineas.map((l) => l.verbo)).toEqual(["Ordenamos", "Operamos", "Reconocemos", "Colaboramos"]);
-    expect(CUATRO_LINEAS.lineas[2].href).toBe(RUTA_INCENTIVOS);
+    expect(CIERRE_PORTAFOLIO.secundario.href).toBe(RUTA_INCENTIVOS);
   });
 });
 
 /**
- * Pedido del founder (2026-11-17): al portafolio le faltaba la parte de colaborar. Dice lo
- * mismo que /metodo y lleva a páginas que existen; no promete pagos ni nombra la red.
+ * Pedido del founder (2026-11-17): al portafolio le faltaba la parte de colaborar, y en
+ * ella el manifiesto. Lleva a páginas que existen y tienen el diseño nuevo; no promete
+ * pagos ni nombra la red.
  */
 describe("portafolio · la parte de colaborar", () => {
-  it("es la cuarta línea y tiene su sección, con ancla", () => {
-    expect(CUATRO_LINEAS.lineas[3]).toMatchObject({ verbo: "Colaboramos", href: "#colaborar" });
+  it("tiene su sección con ancla, y su pestaña en la cabecera y su enlace en el pie", () => {
     expect(COLABORAR.ancla).toBe("colaborar");
     expect(`${COLABORAR.h2.linea1} ${COLABORAR.h2.antes}${COLABORAR.h2.enfasis}`).toBe("Rediseñamos la forma de colaborar.");
     expect(leer("app/page.tsx")).toContain("<Colaborar />");
     expect(leer("app/_landing/empresas/SeccionesPortafolio.tsx")).toContain("id={COLABORAR.ancla}");
+    expect(CABECERA_EMPRESAS.pestanas.map((t) => t.label)).toContain("Colaborar");
+    expect(PIE_EMPRESAS.enlaces.map((e) => e.href)).toContain("/#colaborar");
   });
 
-  it("sus puertas llevan a rutas reales: contacto a la medida, proyectos abiertos, método, comunidad y manifiesto", () => {
-    expect(COLABORAR.puertas.map((p) => p.href)).toEqual(["/empresas/contacto?interes=a-la-medida", "/agora", "/metodo"]);
-    expect(COLABORAR.comunidad.href).toBe("/comunidad");
-    expect(COLABORAR.manifiesto.href).toBe("/manifiesto");
-    for (const r of ["app/agora/page.tsx", "app/metodo/page.tsx", "app/comunidad/page.tsx", "app/manifiesto/page.tsx"]) {
+  it("sus tres puertas: contarnos una necesidad, la comunidad y el manifiesto", () => {
+    expect(COLABORAR.puertas.map((p) => p.href)).toEqual(["/empresas/contacto?interes=a-la-medida", "/comunidad", "/manifiesto"]);
+    expect(COLABORAR.puertas.map((p) => p.t)).toEqual(["Trae una necesidad", "Construye con nosotros", "Lee el manifiesto"]);
+    for (const r of ["app/comunidad/page.tsx", "app/manifiesto/page.tsx"]) {
       expect(fs.existsSync(path.join(WEB, r)), r).toBe(true);
     }
     // La comunidad y el manifiesto son de la landing en inglés: el enlace lo marca.
-    const seccion = leer("app/_landing/empresas/SeccionesPortafolio.tsx");
-    expect(seccion).toContain('<SecondaryCta href={COLABORAR.comunidad.href} hrefLang="en"');
-    expect(seccion).toContain('<SecondaryCta href={COLABORAR.manifiesto.href} hrefLang="en"');
+    expect(COLABORAR.puertas.filter((p) => p.enIngles).map((p) => p.href)).toEqual(["/comunidad", "/manifiesto"]);
+    expect(leer("app/_landing/empresas/SeccionesPortafolio.tsx")).toContain('hrefLang={p.enIngles ? "en" : undefined}');
   });
 
   it("no promete pagos, ni cifras, ni nombra la red", () => {
@@ -270,23 +349,38 @@ describe("incentivos · lo que la página puede afirmar", () => {
 });
 
 /**
- * Pedido del founder (2026-11-17): el portafolio cuenta una historia (la tecnología de
- * las grandes empresas, al alcance de una pyme) y nombra a empresas reales. Solo las que
- * él autorizó para la home, y solo con lo que el sitio ya sostiene: nada de cifras de
- * impacto inventadas.
+ * Pedido del founder (2026-11-17): la inicio cuenta una historia en tres tiempos (la frase
+ * de gancho, a quiénes hemos impactado y los servicios) y nombra a empresas reales. Solo
+ * las que él autorizó para la home, y solo con lo que el sitio ya sostiene: nada de cifras
+ * de impacto inventadas. Se le habla a "tu negocio", nunca a "tu pyme".
  */
 describe("portafolio · la historia y los clientes", () => {
-  it("el titular tacha 'solo para ellas' y el lector de pantalla oye la frase completa", () => {
+  it("el titular tacha 'complicarte' y el lector de pantalla oye 'Tecnología para mejorar tu negocio.'", () => {
     const h = HERO_PORTAFOLIO.h1;
-    expect(`${h.linea1} ${h.tachadoLeido} ${h.resaltado}`).toBe(
-      "La tecnología de las grandes empresas, ya no solo para ellas: para tu pyme."
-    );
+    expect(`${h.linea1} ${h.resaltado}`).toBe("Tecnología para mejorar tu negocio.");
+    expect(h.tachado).toBe("complicarte");
+    expect(META_PORTAFOLIO.titulo).toBe("Zelena · Tecnología para mejorar tu negocio");
     const hero = leer("app/_landing/empresas/SeccionesPortafolio.tsx");
     expect(hero).toContain('<span className={e.tachado} aria-hidden="true">');
-    expect(hero).toContain("<span className={s.srOnly}>{h.h1.tachadoLeido}</span>");
     // El único movimiento al cargar respeta "menos movimiento".
     const css = leer("app/_landing/empresas/empresas.module.css");
     expect(css).toMatch(/@media \(prefers-reduced-motion: no-preference\) \{\s*\.tachado::after/);
+  });
+
+  it("la historia va en tres tiempos: la frase, a quiénes hemos impactado y los servicios", () => {
+    const inicio = leer("app/page.tsx");
+    const orden = ["<HeroPortafolio />", "<Impacto />", "<Explorador />", "<CicloDeTrabajo />", "<Colaborar />", "<CierreEmpresas"];
+    const pos = orden.map((x) => inicio.indexOf(x));
+    expect(pos.every((p) => p >= 0), String(pos)).toBe(true);
+    expect([...pos].sort((a, b) => a - b)).toEqual(pos);
+    expect(IMPACTO.titulo).toBe("A quiénes hemos impactado.");
+    // "Un solo aliado" salió: repetía los servicios y alargaba el camino hasta ellos.
+    expect(inicio).not.toMatch(/CuatroLineas/);
+    expect(leer("app/_landing/empresas/SeccionesPortafolio.tsx")).not.toMatch(/CuatroLineas|CUATRO_LINEAS/);
+  });
+
+  it("nunca dice 'pyme': ni la inicio, ni el contacto, ni el cromo", () => {
+    for (const m of [PORTAFOLIO_COPY, EMPRESAS, CONTACTO]) expect(JSON.stringify(m)).not.toMatch(/pyme/i);
   });
 
   it("los clientes son exactamente los autorizados para la home, con su Instagram", () => {
@@ -306,11 +400,17 @@ describe("portafolio · la historia y los clientes", () => {
     expect(texto).not.toMatch(/\d+ ?%|millones|miles de|cientos de|\d+ (empresas|clientes|bodegas)/i);
   });
 
-  it("cada situación para tachar trae su solución, y la lista vive en botones con estado", () => {
-    for (const n of NECESIDADES) expect(n.solucion.length, n.texto).toBeGreaterThan(10);
+  // Pedido del founder (2026-11-17): la lista de situaciones "se hacía eterna". Ahora son
+  // píldoras cortas dentro de los servicios, no una sección propia fila por fila.
+  it("las situaciones para tachar son píldoras cortas dentro de los servicios, en botones con estado", () => {
+    for (const n of NECESIDADES) expect(n.texto.length, n.texto).toBeLessThanOrEqual(34);
+    expect(NECESIDADES.length).toBeLessThanOrEqual(12);
     const explorador = leer("app/_landing/empresas/Explorador.tsx");
     expect(explorador).toContain("aria-pressed={elegidas.has(i)}");
-    expect(explorador).toContain("{n.solucion}");
+    expect(explorador).toContain("{n.texto}");
+    // Dentro de la sección de servicios, después de su titular: no una sección aparte.
+    expect(explorador.match(/<section\b/g) ?? []).toHaveLength(1);
+    expect(explorador.indexOf("PORTAFOLIO.h2")).toBeLessThan(explorador.indexOf("NECESIDADES.map"));
   });
 
   it("sin etiquetas numeradas encima de los titulares ni aparición al hacer scroll en el portafolio", () => {
@@ -334,7 +434,7 @@ describe("portafolio · ZELENA Social Listening", () => {
     expect(social).toMatchObject({ tipo: "Producto", nombre: "ZELENA Social Listening", interes: "social-listening" });
     expect(SLUGS_INTERES).toContain("social-listening");
     expect(NECESIDADES.filter((n) => n.lineas.includes("social")).length).toBeGreaterThanOrEqual(2);
-    expect(CUATRO_LINEAS.lineas[1].como).toContain("ZELENA Social Listening");
+    expect(META_PORTAFOLIO.descripcion).toContain("ZELENA Social Listening");
   });
 
   it("no promete lo que no se obtiene: ni demografía de la audiencia, ni ventas, ni acceso a la cuenta", () => {

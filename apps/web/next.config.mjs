@@ -85,6 +85,11 @@ const nextConfig = {
       { source: "/whitepaper", destination: "/manifiesto", permanent: true },
       // El portafolio pasó a ser la inicio (founder, 2026-11-17); la landing en inglés vive en /en.
       { source: "/empresas/portafolio", destination: "/", permanent: true },
+      // Las páginas para empresas con el diseño oscuro viejo (founder, 2026-11-17: nada del
+      // diseño viejo): lo que decían lo cuentan ahora la inicio y sus servicios. 307 y no 308
+      // mientras se decide si vuelven con el diseño nuevo (un 308 queda guardado en el navegador).
+      { source: "/empresas", destination: "/", permanent: false },
+      { source: "/empresas/servicios", destination: "/#servicios", permanent: false },
       // La pantalla de seguimiento de la línea anterior (a6194b9) la reemplaza el tablero de Seguimiento.
       { source: "/equipo/seguimiento", destination: "/equipo/dashboard", permanent: true },
       // Host canónico: www. El dominio sin www llega directo al App Service (registro A en

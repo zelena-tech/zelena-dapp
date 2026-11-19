@@ -23,6 +23,24 @@ export const META_DEMO = {
     "Tell us how your warehouse runs and we’ll show you how Zelena measures your operators’ work and pays the bonus they earn in USDC, on Stellar.",
 } as const;
 
+/** Textos del hero de la demo; el contacto en español (copy-contacto.ts) pinta el mismo hero. */
+export interface TextosHeroDemo {
+  chip: string;
+  h1: { linea1: string; antes: string; resaltado: string; despues: string };
+  parrafo: string;
+  agendaTitulo: string;
+  agenda: readonly string[];
+  /** El hecho verificable de la home (en inglés): el contacto en español no lo lleva. */
+  prueba?: string;
+}
+
+/** Qué pasa después de enviar; también lo usa el contacto en español. */
+export interface TextosPasosDemo {
+  titulo: string;
+  pasos: ReadonlyArray<{ n: string; titulo: string; texto: string }>;
+  enlace: { nombre: string; href: string };
+}
+
 export const HERO_DEMO = {
   chip: "Book a demo",
   /** H1 en dos líneas forzadas; "warehouse" con el resaltado lima. */
@@ -43,7 +61,7 @@ export const HERO_DEMO = {
   ],
   /** El mismo hecho verificable que acompaña al CTA de la home. */
   prueba: HERO_INICIO.prueba,
-} as const;
+} as const satisfies TextosHeroDemo;
 
 /** Qué pasa después de enviar (las mismas tres etapas que el formulario en español). */
 export const PASOS_DEMO = {
@@ -55,7 +73,7 @@ export const PASOS_DEMO = {
   ],
   /** Para quien todavía no quiere escribir: la sección "how it works" de la home. */
   enlace: { nombre: "See how it works first", href: `${ENLACES.inicio}#${COMO_FUNCIONA.ancla}` },
-} as const;
+} as const satisfies TextosPasosDemo;
 
 /**
  * Textos del formulario (isla de cliente): solo cadenas, se pasan como props. Los `slug`

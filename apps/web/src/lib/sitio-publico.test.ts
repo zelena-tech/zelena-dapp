@@ -464,9 +464,10 @@ describe("E1-10 · la landing en inglés (/, /comunidad, la demo y el manifiesto
     expect(leer("app/_landing/home/CierreHome.tsx")).toContain("href={ENLACES.reservarDemo}");
     expect(coincidencias(LANDING, /reservarDemo[^\n]*hrefLang/)).toEqual([]);
     expect(demo).toContain("<HeroDemo interesInicial={interesDe(searchParams.interes)} />");
-    expect(leer("app/_landing/demo/HeroDemo.tsx")).toContain(
-      "<FormularioDemo textos={FORMULARIO_DEMO} interesInicial={interesInicial} />"
-    );
+    // En inglés por defecto; el contacto en español (/empresas/contacto) pasa sus textos.
+    const heroDemo = leer("app/_landing/demo/HeroDemo.tsx");
+    expect(heroDemo).toContain("formulario = FORMULARIO_DEMO,");
+    expect(heroDemo).toContain("<FormularioDemo textos={formulario} interesInicial={interesInicial} />");
     expect(ENLACES.entrar).toBe("/entrar");
     expect(CABECERA.entrar).toBe("Log in");
     expect(shell).toContain("if (!session) return { href: ENLACES.entrar, etiqueta: CABECERA.entrar };");

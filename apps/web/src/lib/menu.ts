@@ -54,6 +54,8 @@ export function esRutaLanding(ruta: string | null | undefined): boolean {
  */
 export const RUTA_PORTAFOLIO = "/";
 export const RUTA_INCENTIVOS = "/empresas/incentivos";
+/** El formulario de contacto en español: desde el 2026-11-17, con el diseño de zelena.tech. */
+export const RUTA_CONTACTO = "/empresas/contacto";
 
 /**
  * Páginas en ESPAÑOL que llevan el cromo claro de la landing (pedido del founder,
@@ -61,7 +63,7 @@ export const RUTA_INCENTIVOS = "/empresas/incentivos";
  * `RUTAS_LANDING`, pero el documento sigue en español: por eso no entran en esa lista
  * (que también decide el `<html lang="en">`). Solo la ruta exacta.
  */
-export const RUTAS_CROMO_CLARO_ES: readonly string[] = [RUTA_PORTAFOLIO, RUTA_INCENTIVOS];
+export const RUTAS_CROMO_CLARO_ES: readonly string[] = [RUTA_PORTAFOLIO, RUTA_INCENTIVOS, RUTA_CONTACTO];
 
 /** ¿La ruta trae el cromo claro en español? (decide el cromo en MarcoSitio). */
 export function esRutaCromoClaroEs(ruta: string | null | undefined): boolean {

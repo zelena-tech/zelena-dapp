@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import s from "../landing.module.css";
 import m from "../manifiesto/manifiesto.module.css";
 import e from "./empresas.module.css";
@@ -11,11 +11,12 @@ import { contactoCon } from "../copy-empresas";
 import { FICHA, LINEAS, NECESIDADES, PORTAFOLIO, SITUACION, type Linea, type TipoLinea } from "../copy-portafolio";
 
 /**
- * La parte interactiva del portafolio: "tacha lo que te pasa" (cada situación es un
- * botón; al tacharla se marca en lima cómo la resolvemos y se recomiendan sus líneas), la
- * rejilla de líneas con su filtro y la ficha de detalle. `entre` se pinta entre las dos
- * secciones (un solo aliado). El contenido viene de copy-portafolio.ts; aquí solo vive el
- * estado. Sin JavaScript se ven igual cada situación con su solución y las ocho tarjetas.
+ * Los servicios, la parte interactiva de la inicio: la rejilla de líneas con su filtro,
+ * "tacha lo que te pasa" (una fila de píldoras: al tachar una, las líneas que lo resuelven
+ * se marcan "Para ti") y la ficha de detalle. Antes la lista de situaciones era una
+ * sección propia, fila por fila, y hacía eterno llegar a los servicios (pedido del
+ * founder, 2026-11-17). El contenido viene de copy-portafolio.ts; aquí solo vive el
+ * estado. Sin JavaScript se ven las píldoras y las nueve tarjetas.
  */
 
 type Filtro = "Todo" | TipoLinea;
@@ -45,7 +46,7 @@ function Icono({ trazos, tamano = 22 }: { trazos: string; tamano?: number }) {
   );
 }
 
-export default function Explorador({ entre }: { entre?: ReactNode }) {
+export default function Explorador() {
   const [elegidas, setElegidas] = useState<ReadonlySet<number>>(new Set());
   const [filtro, setFiltro] = useState<Filtro>("Todo");
   const [abierta, setAbierta] = useState<number | null>(null);
@@ -81,63 +82,7 @@ export default function Explorador({ entre }: { entre?: ReactNode }) {
 
   return (
     <>
-      {/* ----- Tacha lo que te pasa ----- */}
-      <section
-        id={SITUACION.ancla}
-        className={`${m.grupo} ${e.bloque} ${e.pegado} ${s.ancla}`}
-        aria-labelledby="situacion-titulo"
-      >
-        <Titular id="situacion-titulo" h2={SITUACION.h2} intro={SITUACION.intro} sinAparicion />
-        <ul className={e.tachas} aria-label={SITUACION.listaAria}>
-          {NECESIDADES.map((n, i) => (
-            <li key={n.texto} className={e.tachaFila}>
-              <button type="button" className={e.tacha} aria-pressed={elegidas.has(i)} onClick={() => alternar(i)}>
-                <span className={e.tachaProblema}>{n.texto}</span>
-                <span className={e.tachaSolucion}>
-                  <span className={e.tachaCheck} aria-hidden="true">
-                    <IconoCheck tamano={11} trazo={3.25} />
-                  </span>
-                  <span className={e.tachaSolucionTexto}>{n.solucion}</span>
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
-        <div className={e.resultado} aria-live="polite">
-          {recomendadas.size === 0 ? (
-            <p className={e.resultadoVacio}>{SITUACION.vacio}</p>
-          ) : (
-            <>
-              <div className={e.resultadoCabeza}>
-                <p className={m.etiqueta}>{SITUACION.recomendamos}</p>
-                <button type="button" className={e.borrar} onClick={() => setElegidas(new Set())}>
-                  {SITUACION.borrar}
-                </button>
-              </div>
-              <ul className={e.recomendadas}>
-                {[...recomendadas].map((id) => {
-                  const l = LINEAS.find((x) => x.id === id);
-                  if (!l) return null;
-                  return (
-                    <li key={id}>
-                      <button type="button" className={e.recomendada} onClick={() => abrir(id)}>
-                        <span>{l.nombre}</span>
-                        <span className={e.recomendadaFlecha} aria-hidden="true">
-                          <IconoFlechaDiagonal tamano={13} />
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </>
-          )}
-        </div>
-      </section>
-
-      {entre}
-
-      {/* ----- Todo lo que hacemos ----- */}
+      {/* ----- Todo lo que hacemos por tu negocio ----- */}
       <section id={PORTAFOLIO.ancla} className={`${s.seccion} ${s.ancla}`} aria-labelledby="portafolio-lineas-titulo">
         <div className={e.cabezaPortafolio}>
           <Titular id="portafolio-lineas-titulo" h2={PORTAFOLIO.h2} intro={PORTAFOLIO.intro} sinAparicion />
@@ -153,6 +98,53 @@ export default function Explorador({ entre }: { entre?: ReactNode }) {
                 {f.nombre}
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* ----- Tacha lo que te pasa: una fila de píldoras ----- */}
+        <div className={e.situaciones}>
+          <p className={e.situacionesTexto}>
+            <strong className={e.situacionesPregunta}>{SITUACION.pregunta}</strong> {SITUACION.instruccion}
+          </p>
+          <ul className={e.pildoras} aria-label={SITUACION.listaAria}>
+            {NECESIDADES.map((n, i) => (
+              <li key={n.texto}>
+                <button
+                  type="button"
+                  className={`${e.situacion} ${e.pildora}`}
+                  aria-pressed={elegidas.has(i)}
+                  onClick={() => alternar(i)}
+                >
+                  {n.texto}
+                </button>
+              </li>
+            ))}
+          </ul>
+          <div aria-live="polite">
+            {recomendadas.size > 0 ? (
+              <div className={e.resultadoLinea}>
+                <p className={m.etiqueta}>{SITUACION.recomendamos}</p>
+                <ul className={e.recomendadas}>
+                  {[...recomendadas].map((id) => {
+                    const l = LINEAS.find((x) => x.id === id);
+                    if (!l) return null;
+                    return (
+                      <li key={id}>
+                        <button type="button" className={e.recomendada} onClick={() => abrir(id)}>
+                          <span>{l.nombre}</span>
+                          <span className={e.recomendadaFlecha} aria-hidden="true">
+                            <IconoFlechaDiagonal tamano={13} />
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+                <button type="button" className={e.borrar} onClick={() => setElegidas(new Set())}>
+                  {SITUACION.borrar}
+                </button>
+              </div>
+            ) : null}
           </div>
         </div>
 

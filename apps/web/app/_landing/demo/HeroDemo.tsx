@@ -3,15 +3,24 @@ import d from "./demo.module.css";
 import Chip from "../Chip";
 import { IconoCheck } from "../Iconos";
 import FormularioDemo from "./FormularioDemo";
-import { FORMULARIO_DEMO, HERO_DEMO } from "../copy-demo";
+import { FORMULARIO_DEMO, HERO_DEMO, type TextosFormularioDemo, type TextosHeroDemo } from "../copy-demo";
 
 /**
  * Hero de la demo: a la izquierda, el H1, qué se ve en la demo y el hecho verificable de la
  * home; a la derecha, el formulario sobre panel gris (isla de cliente). En el teléfono, el
- * texto va primero. Sin aparición al hacer scroll: es el hero.
+ * texto va primero. Sin aparición al hacer scroll: es el hero. Por defecto, en inglés
+ * (/book-a-demo); el contacto en español pasa sus textos.
  */
-export default function HeroDemo({ interesInicial }: { interesInicial: string }) {
-  const h = HERO_DEMO;
+export default function HeroDemo({
+  interesInicial,
+  hero = HERO_DEMO,
+  formulario = FORMULARIO_DEMO,
+}: {
+  interesInicial: string;
+  hero?: TextosHeroDemo;
+  formulario?: TextosFormularioDemo;
+}) {
+  const h = hero;
   return (
     <section className={d.hero} aria-labelledby="demo-titulo">
       <div className={d.texto}>
@@ -41,13 +50,15 @@ export default function HeroDemo({ interesInicial }: { interesInicial: string })
           </ul>
         </div>
 
-        <Chip tono="tinta" tamano="sm" punto className={d.prueba}>
-          {h.prueba}
-        </Chip>
+        {h.prueba ? (
+          <Chip tono="tinta" tamano="sm" punto className={d.prueba}>
+            {h.prueba}
+          </Chip>
+        ) : null}
       </div>
 
       <div className={d.tarjeta}>
-        <FormularioDemo textos={FORMULARIO_DEMO} interesInicial={interesInicial} />
+        <FormularioDemo textos={formulario} interesInicial={interesInicial} />
       </div>
     </section>
   );

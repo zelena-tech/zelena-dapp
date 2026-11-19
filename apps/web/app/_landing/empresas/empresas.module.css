@@ -12,6 +12,37 @@
 }
 
 /* ------------------------------------------------------------------ */
+/* Cabecera: cuatro pestañas                                           */
+/* ------------------------------------------------------------------ */
+
+/* Con cuatro pestañas la fila no cabe a 375px con el aire de la landing: en teléfono las
+   pestañas se aprietan y, si aun así no caben, la fila se desliza de lado (nunca parte). */
+.segmentoEmpresas {
+  white-space: nowrap;
+}
+@media (max-width: 559px) {
+  .navEmpresas {
+    justify-content: flex-start;
+    max-width: 100%;
+  }
+  .segmentosEmpresas {
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .segmentosEmpresas::-webkit-scrollbar {
+    display: none;
+  }
+  .segmentosEmpresas {
+    gap: 2px;
+  }
+  .segmentosEmpresas .segmentoEmpresas {
+    padding: 6px 9px;
+    font-size: 13px;
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /* Hero                                                                */
 /* ------------------------------------------------------------------ */
 
@@ -66,84 +97,6 @@
 }
 
 /* ------------------------------------------------------------------ */
-/* Zelena en cuatro líneas                                             */
-/* ------------------------------------------------------------------ */
-
-/* Cuatro en una fila desde 1100px de ventana, dos desde 700px, una en teléfono (el tramo
-   intermedio lo fijan las reglas del final de la hoja: nunca 3 + 1). */
-.tres {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 232px), 1fr));
-  gap: 12px;
-  margin: 18px 0 0;
-  padding: 0;
-  list-style: none;
-}
-.tresItem {
-  display: flex;
-}
-.linea {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  border-radius: 24px;
-  padding: clamp(22px, 2.4vw, 28px);
-  color: var(--tinta);
-}
-.lineaPanel {
-  background: var(--panel);
-}
-.lineaLima {
-  background: var(--lima);
-}
-.lineaTinta {
-  background: var(--tinta);
-  color: var(--blanco);
-}
-.linea.lineaTinta .lineaEnlace {
-  color: var(--lima);
-}
-.lineaTinta .lineaComo {
-  color: var(--claro-sobre-tinta);
-}
-/* El verbo más largo ("Reconocemos", "Colaboramos": 11 letras, unos 5,8em de ancho) tiene
-   que caber en la tarjeta más angosta (cuatro columnas). El tamaño sigue al ancho de la
-   tarjeta (cqi), no al de la ventana; 34px es el respaldo sin unidades de contenedor. */
-.linea {
-  container-type: inline-size;
-}
-.linea .lineaVerbo {
-  font-size: 34px;
-  font-size: clamp(32px, 16.5cqi, 60px);
-  line-height: 0.9;
-}
-.lineaQue {
-  margin-top: 4px;
-  font-size: 18px;
-  font-weight: 700;
-  line-height: 1.25;
-  text-wrap: balance;
-}
-.lineaComo {
-  font-size: 15px;
-  line-height: 1.5;
-  color: var(--gris-cuerpo);
-}
-.lineaLima .lineaComo {
-  color: var(--sobre-lima);
-}
-.lineaEnlace {
-  margin-top: auto;
-  padding-top: 14px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 700;
-}
-
-/* ------------------------------------------------------------------ */
 /* Tacha lo que te pasa                                                */
 /* ------------------------------------------------------------------ */
 
@@ -171,23 +124,75 @@
   color: var(--lima);
 }
 
-.resultado {
-  margin-top: 20px;
-  min-height: 96px;
-  padding: 20px 22px;
-  border-radius: 20px;
-  background: var(--blanco);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 12px;
+/* La fila de píldoras va dentro de los servicios, en un panel gris bajo el titular. */
+.situaciones {
+  margin-top: 24px;
+  padding: clamp(18px, 2vw, 24px);
+  border-radius: 24px;
+  background: var(--panel);
 }
-.resultadoVacio {
+.situacionesTexto {
   margin: 0;
-  font-family: var(--fuente-mono);
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--gris-suave);
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--gris-cuerpo);
+}
+.situacionesPregunta {
+  color: var(--tinta);
+  font-weight: 700;
+}
+.pildoras {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+/* Elegida: tinta con texto lima y, además, tachada (el recurso de la página). */
+.situacion.pildora {
+  min-height: 40px;
+  padding: 8px 16px;
+  font-size: 14px;
+}
+.situacion.pildora[aria-pressed="true"] {
+  text-decoration-line: line-through;
+  text-decoration-thickness: 2px;
+}
+/* En teléfono no caben dos píldoras por renglón y la lista volvía a ser larga: van en un
+   carril de tres filas que se desliza de lado, pegado al borde derecho del panel (la
+   píldora cortada en el borde dice que hay más). La página nunca se desliza de lado. */
+@media (max-width: 559px) {
+  .pildoras {
+    display: grid;
+    grid-auto-flow: column;
+    grid-template-rows: repeat(3, auto);
+    grid-auto-columns: max-content;
+    gap: 6px;
+    margin-right: -18px;
+    padding-right: 18px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .pildoras::-webkit-scrollbar {
+    display: none;
+  }
+  .situacion.pildora {
+    min-height: 36px;
+    padding: 6px 12px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+}
+.resultadoLinea {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 16px;
+}
+.resultadoLinea > p {
+  margin: 0;
 }
 .recomendadas {
   display: flex;
@@ -271,6 +276,15 @@
 .filtro[aria-pressed="true"] {
   background: var(--tinta);
   color: var(--blanco);
+}
+/* En teléfono los cuatro filtros caben en un renglón (antes "Servicios" caía solo abajo). */
+@media (max-width: 559px) {
+  .filtros {
+    gap: 2px;
+  }
+  .filtros .filtro {
+    padding: 8px 9px;
+  }
 }
 
 .tarjetas {
@@ -730,12 +744,6 @@ ul.dosTarjetas {
 .puertaEnlace:hover {
   color: var(--verde-texto);
 }
-.colaborarAcciones {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 28px;
-}
 
 /* ------------------------------------------------------------------ */
 /* Ajustes por ancho                                                   */
@@ -744,14 +752,12 @@ ul.dosTarjetas {
 /* Rejillas de cuatro elementos: 1, 2 o 4 columnas; nunca 3 + 1 (auto-fit dejaba una
    tarjeta sola entre ~820 y ~1085px). Por debajo de 700px manda el auto-fit de cada una. */
 @media (min-width: 700px) {
-  .tres,
   .pasos.pasosCuatro,
   .cuatro.cuatro {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 @media (min-width: 1100px) {
-  .tres,
   .pasos.pasosCuatro {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
@@ -768,8 +774,8 @@ ul.dosTarjetas {
 /* Titular del portafolio: tachar y marcar                             */
 /* ------------------------------------------------------------------ */
 
-/* "solo para ellas": gris y tachado con una línea de tinta. Una sola línea de texto, para
-   que el trazo la cruce entera. */
+/* "complicarte": gris y tachado con una línea de tinta. Una sola línea de texto, para que
+   el trazo la cruce entera. */
 .tachado {
   position: relative;
   display: inline-block;
@@ -786,12 +792,20 @@ ul.dosTarjetas {
   background: var(--tinta);
   transform-origin: left center;
 }
-/* "para tu pyme.": el resaltado lima de la landing, que entra después del tachado. Dos
-   clases para ganarle al `background` de .resaltado sin depender del orden de las hojas;
-   en una sola línea, para que la frase no se parta ("pyme." sola). */
+/* "mejorar tu negocio.": el resaltado lima de la landing, que entra después del tachado.
+   Dos clases para ganarle al `background` de .resaltado sin depender del orden de las
+   hojas; en una sola línea, para que la frase no se parta ("negocio." sola). En teléfonos
+   angostos no cabe en una línea: ahí sí parte, y cada renglón lleva su lima. */
 .hero .marcado {
   white-space: nowrap;
   background: linear-gradient(var(--lima), var(--lima)) no-repeat left center / 100% 100%;
+}
+@media (max-width: 520px) {
+  .hero .marcado {
+    white-space: normal;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+  }
 }
 /* El único movimiento de la página: al cargar, la línea tacha y después el lima marca. */
 @media (prefers-reduced-motion: no-preference) {
@@ -819,10 +833,6 @@ ul.dosTarjetas {
   }
 }
 
-/* Titular de una sección sin etiqueta encima. */
-.h2Seccion.h2Seccion {
-  margin: 0;
-}
 
 /* ------------------------------------------------------------------ */
 /* Impacto: la creencia y la prueba, sobre tinta                       */
@@ -950,113 +960,6 @@ ul.dosTarjetas {
   color: var(--claro-sobre-tinta);
 }
 
-/* ------------------------------------------------------------------ */
-/* Tacha lo que te pasa                                                */
-/* ------------------------------------------------------------------ */
-
-.tachas {
-  margin: 28px 0 0;
-  padding: 0;
-  list-style: none;
-  border-top: 1px solid rgba(12, 15, 10, 0.14);
-}
-.tachaFila {
-  border-bottom: 1px solid rgba(12, 15, 10, 0.14);
-}
-/* Cada fila es un botón: la frase de la pyme a la izquierda, la solución a la derecha. */
-.tacha {
-  width: 100%;
-  min-height: 64px;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 8px;
-  align-items: center;
-  padding: 16px 4px;
-  border: 0;
-  background: transparent;
-  color: var(--tinta);
-  font-family: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-@media (min-width: 760px) {
-  .tacha {
-    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
-    gap: 32px;
-  }
-}
-.tachaProblema {
-  font-family: var(--fuente-display);
-  font-weight: 800;
-  font-stretch: 65%;
-  text-transform: uppercase;
-  font-size: clamp(24px, 3.2vw, 40px);
-  line-height: 0.98;
-  letter-spacing: -0.005em;
-  text-wrap: balance;
-  text-decoration-line: line-through;
-  text-decoration-thickness: 0.09em;
-  text-decoration-color: transparent;
-  transition: color 0.2s ease, text-decoration-color 0.2s ease;
-}
-.tacha:hover .tachaProblema {
-  text-decoration-color: rgba(12, 15, 10, 0.28);
-}
-.tacha[aria-pressed="true"] .tachaProblema {
-  color: var(--gris-suave);
-  text-decoration-color: var(--tinta);
-}
-.tachaSolucion {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  font-size: 16px;
-  font-weight: 600;
-  line-height: 1.4;
-  color: var(--gris-cuerpo);
-}
-.tachaCheck {
-  flex: none;
-  width: 20px;
-  height: 20px;
-  margin-top: 1px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background: transparent;
-  color: transparent;
-  box-shadow: inset 0 0 0 1.5px rgba(12, 15, 10, 0.3);
-  transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
-}
-/* Lo que lo resuelve se marca en lima, como "para tu pyme" en el titular. */
-.tachaSolucionTexto {
-  padding: 0 0.12em;
-  background-image: linear-gradient(var(--lima), var(--lima));
-  background-repeat: no-repeat;
-  background-size: 0% 100%;
-  -webkit-box-decoration-break: clone;
-  box-decoration-break: clone;
-  transition: background-size 0.35s cubic-bezier(0.2, 0.7, 0.2, 1);
-}
-.tacha[aria-pressed="true"] .tachaSolucion {
-  color: var(--tinta);
-}
-.tacha[aria-pressed="true"] .tachaSolucionTexto {
-  background-size: 100% 100%;
-}
-.tacha[aria-pressed="true"] .tachaCheck {
-  background: var(--tinta);
-  color: var(--lima);
-  box-shadow: none;
-}
-
-.resultadoCabeza {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px 16px;
-}
 .borrar {
   min-height: 44px;
   padding: 0;

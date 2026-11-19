@@ -9,17 +9,17 @@ import { IconoFlechaDerecha } from "../Iconos";
 import { PrimaryCta, SecondaryCta } from "../Ctas";
 import { Titular } from "./Comunes";
 import { CLIENTES } from "../copy-home";
-import { CICLO, COLABORAR, CUATRO_LINEAS, HERO_PORTAFOLIO, IMPACTO, PASOS_CICLO, SECTORES } from "../copy-portafolio";
+import { CICLO, COLABORAR, HERO_PORTAFOLIO, IMPACTO, PASOS_CICLO, SECTORES } from "../copy-portafolio";
 
-// Las secciones del portafolio, en el orden de la historia: el titular, la creencia y la
-// prueba (los clientes), un solo aliado, cómo trabajamos y colaborar. Sin efecto de
-// aparición al hacer scroll: el único movimiento de la página es el tachado del titular
-// (y el que provoca quien tacha en la lista de situaciones).
+// Las secciones de la inicio, en el orden de la historia: la frase de gancho, a quiénes
+// hemos impactado, (los servicios, en Explorador), cómo trabajamos y colaborar. Sin efecto
+// de aparición al hacer scroll: el único movimiento de la página es el tachado del titular
+// (y el que provoca quien tacha lo que le pasa, en los servicios).
 
 /**
- * Titular: "La tecnología de las grandes empresas, ~solo para ellas~ para tu pyme." Al
- * cargar, una línea tacha "solo para ellas" y el lima marca "para tu pyme". El tachado es
- * decorativo para el lector de pantalla, que oye "ya no solo para ellas:" en su lugar.
+ * Titular: "Tecnología para ~complicarte~ mejorar tu negocio." Al cargar, una línea tacha
+ * "complicarte" y el lima marca "mejorar tu negocio". El tachado es decorativo: el lector
+ * de pantalla oye "Tecnología para mejorar tu negocio."
  */
 export function HeroPortafolio() {
   const h = HERO_PORTAFOLIO;
@@ -33,8 +33,7 @@ export function HeroPortafolio() {
         <br />
         <span className={e.tachado} aria-hidden="true">
           {h.h1.tachado}
-        </span>
-        <span className={s.srOnly}>{h.h1.tachadoLeido}</span>{" "}
+        </span>{" "}
         <span className={`${s.resaltado} ${e.marcado}`}>{h.h1.resaltado}</span>
       </h1>
       <p className={`${s.lead} ${e.heroLead}`}>{h.lead}</p>
@@ -47,16 +46,20 @@ export function HeroPortafolio() {
 }
 
 /**
- * La creencia y la prueba, sobre tinta: por qué existimos, dos años con operaciones
- * reales y algunas de las empresas con las que trabajamos (las de la home, autorizadas).
- * Cada logo abre el Instagram de la empresa en otra pestaña.
+ * A quiénes hemos impactado, sobre tinta: dos años con operaciones reales y algunas de las
+ * empresas con las que trabajamos (las de la home, autorizadas). Cada logo abre el
+ * Instagram de la empresa en otra pestaña.
  */
 export function Impacto() {
   const i = IMPACTO;
   return (
-    <section className={`${m.creencia} ${e.bloque} ${e.bloquePrimero} ${s.superficieOscura}`} aria-labelledby="impacto-titulo">
+    <section
+      id={i.ancla}
+      className={`${m.creencia} ${e.bloque} ${e.bloquePrimero} ${s.superficieOscura} ${s.ancla}`}
+      aria-labelledby="impacto-titulo"
+    >
       <h2 id="impacto-titulo" className={`${s.display} ${m.frase} ${e.impactoFrase}`}>
-        {i.frase}
+        {i.titulo}
       </h2>
       <div className={e.impactoCuerpo}>
         <p className={e.impactoHistoria}>{i.historia}</p>
@@ -102,44 +105,6 @@ export function Impacto() {
   );
 }
 
-const TONO_LINEA = { panel: e.lineaPanel, lima: e.lineaLima, tinta: e.lineaTinta } as const;
-
-/**
- * Un solo aliado para toda la operación: cuatro verbos, cada uno enlace a su parte. Los
- * servicios y el producto en gris, los incentivos en lima y la comunidad en tinta.
- */
-export function CuatroLineas() {
-  const c = CUATRO_LINEAS;
-  return (
-    <section className={s.seccion} aria-labelledby="lineas-titulo">
-      <h2 id="lineas-titulo" className={`${s.titulo2} ${e.h2Seccion}`}>
-        {c.titulo.linea1}{" "}
-        <br />
-        {c.titulo.linea2}
-      </h2>
-      <ul className={e.tres}>
-        {c.lineas.map((l) => (
-          <li key={l.verbo} className={e.tresItem}>
-            <Link
-              href={l.href}
-              hrefLang={l.enIngles ? "en" : undefined}
-              className={`${e.linea} ${TONO_LINEA[l.tono]} ${s.elevable}`}
-            >
-              <span className={`${s.display} ${e.lineaVerbo}`}>{l.verbo}</span>
-              <span className={e.lineaQue}>{l.que}</span>
-              <span className={e.lineaComo}>{l.como}</span>
-              <span className={e.lineaEnlace}>
-                {l.enlace}
-                <IconoFlechaDerecha tamano={14} trazo={2.5} />
-              </span>
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
 /** Cómo trabajamos: los cuatro pasos del ciclo (una secuencia: por eso van numerados). */
 export function CicloDeTrabajo() {
   return (
@@ -162,8 +127,8 @@ export function CicloDeTrabajo() {
 
 /**
  * Colaborar: abrir la tecnología también es abrir el trabajo. Bloque gris con tres
- * puertas (traer una necesidad, construir, conocer el método) y, debajo, la comunidad y
- * el manifiesto, que son páginas de la landing en inglés.
+ * puertas: traer una necesidad (el formulario), construir con nosotros (la comunidad) y
+ * leer el manifiesto. Las dos últimas son páginas de la landing en inglés (hrefLang).
  */
 export function Colaborar() {
   return (
@@ -185,10 +150,6 @@ export function Colaborar() {
           </li>
         ))}
       </ul>
-      <div className={e.colaborarAcciones}>
-        <SecondaryCta href={COLABORAR.comunidad.href} hrefLang="en" nombre={COLABORAR.comunidad.nombre} />
-        <SecondaryCta href={COLABORAR.manifiesto.href} hrefLang="en" nombre={COLABORAR.manifiesto.nombre} />
-      </div>
     </section>
   );
 }
